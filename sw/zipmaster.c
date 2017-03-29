@@ -2,17 +2,19 @@
 //
 // Filename: 	zipmaster.c
 //
-// Project:	VideoZip, a ZipCPU SoC supporting video functionality
+// Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 //
 // Purpose:	To describe what needs to be done to make the ZipCPU a part
-//		of a main .v file.
+//		of a main .v file.  This Wishbone Master description doesn't
+//	yet work with our newer format, yet it still illustrates how some of
+//	how that newer format might work.
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2015-2017, Gisselquist Technology, LLC
+// Copyright (C) 2017, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published

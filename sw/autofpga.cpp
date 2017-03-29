@@ -1,8 +1,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	autogen.cpp
+// Filename: 	autofpga.cpp
 //
-// Project:	VideoZip, a ZipCPU SoC supporting video functionality
+// Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 //
 // Purpose:	
 //
@@ -11,7 +11,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2015-2017, Gisselquist Technology, LLC
+// Copyright (C) 2017, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
