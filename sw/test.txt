@@ -1,0 +1,452 @@
+// assigning     uart_... to 00000400
+// assigning     gpsu_... to 00000410
+// assigning     mous_... to 00000420
+// assigning    flctl_... to 00000430
+// assigning   sdcard_... to 00000440
+// assigning      gck_... to 00000450
+// assigning      gtb_... to 00000460
+// assigning     netp_... to 00000480
+// assigning     mdio_... to 00000500
+// assigning      cfg_... to 00000580
+// assigning     netb_... to 00004000
+// assigning      mem_... to 00200000
+// assigning    flash_... to 04000000
+
+
+`define	CONSOLE_ACCESS
+`define	GPSUART_ACCESS
+`define	MOUSE_ACCESS
+`define	SDSPI_ACCESS
+`define	GPS_CLOCK
+`define	ETHERNET_ACCESS
+`define	NETCTRL_ACCESS
+`define	CFG_ACCESS
+`define	BLKRAM_ACCESS
+`define	FLASH_ACCESS
+
+
+module	main(i_clk,
+		// The UART console
+		i_aux_rx, o_aux_tx, i_aux_cts_n, o_aux_rts_n,
+		// The GPS-UART
+		i_gps_rx, o_gps_tx,
+		// The PS/2 Mouse
+		i_ps2, o_ps2,
+		// The SD-Card wires
+		o_sd_sck, o_sd_cmd, o_sd_data, i_sd_cmd, i_sd_data, i_sd_detect,
+i_gps_pps,
+		// The ethernet MDIO wires
+		o_mdclk, o_mdio, o_mdwe, i_mdio,
+		// The QSPI Flash
+		o_qspi_cs_n, o_qspi_sck, o_qspi_dat, i_qspi_dat, o_qspi_mod);
+	input			i_clk;
+	input			i_aux_rx, i_aux_cts_n;
+	output	wire		o_aux_tx, o_aux_rts_n;
+	input			i_gps_rx;
+	output	wire		o_gps_tx;
+	// The PS/2 Mouse
+	input		[1:0]	i_ps2;
+	output	wire	[1:0]	o_ps2;
+	// SD-Card declarations
+	output	wire		o_sd_sck, o_sd_cmd;
+	output	wire	[3:0]	o_sd_data;
+	input			i_sd_cmd;
+	input		[3:0]	i_sd_data;
+	input			i_sd_detect;
+	//The GPS Clock
+	input			i_gps_pps;
+	// Ethernet control (MDIO)
+	output	wire		o_mdclk, o_mdio, o_mdwe;
+	input			i_mdio;
+	// The QSPI flash
+	output	wire		o_qspi_cs_n, o_qspi_sck;
+	output	wire	[3:0]	o_qspi_dat;
+	input	wire	[3:0]	i_qspi_dat;
+	output	wire	[1:0]	o_qspi_mod;
+
+
+	//
+	// Declaring Peripheral data, internal wires and registers
+	//
+	wire	gpsurx_int, gpsutx_int, gpsurxf_int, gpsutxf_int;
+
+	wire	[31:0]	scrn_mouse;
+	wire	gps_pps, ck_pps, gps_led, gps_locked;
+	wire	[63:0]	gps_now, gps_err, gps_step;
+
+
+	//
+	// Wishbone slave wire declarations
+	//
+
+	wire	uart_ack, uart_stall, uart_sel;
+	wire	[31:0]	uart_data;
+
+	wire	gpsu_ack, gpsu_stall, gpsu_sel;
+	wire	[31:0]	gpsu_data;
+
+	wire	mous_ack, mous_stall, mous_sel;
+	wire	[31:0]	mous_data;
+
+	wire	flctl_ack, flctl_stall, flctl_sel;
+	wire	[31:0]	flctl_data;
+
+	wire	sdcard_ack, sdcard_stall, sdcard_sel;
+	wire	[31:0]	sdcard_data;
+
+	wire	gck_ack, gck_stall, gck_sel;
+	wire	[31:0]	gck_data;
+
+	wire	gtb_ack, gtb_stall, gtb_sel;
+	wire	[31:0]	gtb_data;
+
+	wire	netp_ack, netp_stall, netp_sel;
+	wire	[31:0]	netp_data;
+
+	wire	mdio_ack, mdio_stall, mdio_sel;
+	wire	[31:0]	mdio_data;
+
+	wire	cfg_ack, cfg_stall, cfg_sel;
+	wire	[31:0]	cfg_data;
+
+	wire	netb_ack, netb_stall, netb_sel;
+	wire	[31:0]	netb_data;
+
+	wire	mem_ack, mem_stall, mem_sel;
+	wire	[31:0]	mem_data;
+
+	wire	flash_ack, flash_stall, flash_sel;
+	wire	[31:0]	flash_data;
+
+
+	// Wishbone peripheral address decoding
+
+	assign	  uart_sel = (wb_addr[29: 2] == 30'b00_0000_0000_0000_0000_0100_0000_00);
+	assign	  gpsu_sel = (wb_addr[29: 2] == 30'b00_0000_0000_0000_0000_0100_0001_00);
+	assign	  mous_sel = (wb_addr[29: 2] == 30'b00_0000_0000_0000_0000_0100_0010_00);
+	assign	 flctl_sel = (wb_addr[29: 2] == 30'b00_0000_0000_0000_0000_0100_0011_00);
+	assign	sdcard_sel = (wb_addr[29: 2] == 30'b00_0000_0000_0000_0000_0100_0100_00);
+	assign	   gck_sel = (wb_addr[29: 2] == 30'b00_0000_0000_0000_0000_0100_0101_00);
+	assign	   gtb_sel = (wb_addr[29: 3] == 29'b00_0000_0000_0000_0000_0100_0110_0);
+	assign	  netp_sel = (wb_addr[29: 3] == 29'b00_0000_0000_0000_0000_0100_1000_0);
+	assign	  mdio_sel = (wb_addr[29: 5] == 27'b00_0000_0000_0000_0000_0101_000);
+	assign	   cfg_sel = (wb_addr[29: 5] == 27'b00_0000_0000_0000_0000_0101_100);
+	assign	  netb_sel = (wb_addr[29:12] == 20'b00_0000_0000_0000_0100_);
+	assign	   mem_sel = (wb_addr[29:19] == 13'b00_0000_0010_0);
+	assign	 flash_sel = (wb_addr[29:24] == 8'b00_0100_);
+	assign	none_sel = (wb_stb)&&({ uart_sel, gpsu_sel, mous_sel, flctl_sel, sdcard_sel, gck_sel, gtb_sel, netp_sel, mdio_sel, cfg_sel, netb_sel, mem_sel, flash_sel } == 0);
+	always @(posedge i_clk)
+	begin
+		many_sel <= (wb_stb);
+		case({uart_sel, gpsu_sel, mous_sel, flctl_sel, sdcard_sel, gck_sel, gtb_sel, netp_sel, mdio_sel, cfg_sel, netb_sel, mem_sel, flash_sel })
+			13'h0: many_sel <= 1'b0;
+			13'b1000000000000: many_sel <= 1'b0;
+			13'b0100000000000: many_sel <= 1'b0;
+			13'b0010000000000: many_sel <= 1'b0;
+			13'b0001000000000: many_sel <= 1'b0;
+			13'b0000100000000: many_sel <= 1'b0;
+			13'b0000010000000: many_sel <= 1'b0;
+			13'b0000001000000: many_sel <= 1'b0;
+			13'b0000000100000: many_sel <= 1'b0;
+			13'b0000000010000: many_sel <= 1'b0;
+			13'b0000000001000: many_sel <= 1'b0;
+			13'b0000000000100: many_sel <= 1'b0;
+			13'b0000000000010: many_sel <= 1'b0;
+			13'b0000000000001: many_sel <= 1'b0;
+		endcase
+	end
+	always @(posedge i_clk)
+	begin
+		many_ack <= (wb_cyc);
+		case({uart_ack, gpsu_ack, mous_ack, flctl_ack, sdcard_ack, gck_ack, gtb_ack, netp_ack, mdio_ack, cfg_ack, netb_ack, mem_ack, flash_ack })
+			13'h0: many_ack <= 1'b0;
+			13'b1000000000000: many_ack <= 1'b0;
+			13'b0100000000000: many_ack <= 1'b0;
+			13'b0010000000000: many_ack <= 1'b0;
+			13'b0001000000000: many_ack <= 1'b0;
+			13'b0000100000000: many_ack <= 1'b0;
+			13'b0000010000000: many_ack <= 1'b0;
+			13'b0000001000000: many_ack <= 1'b0;
+			13'b0000000100000: many_ack <= 1'b0;
+			13'b0000000010000: many_ack <= 1'b0;
+			13'b0000000001000: many_ack <= 1'b0;
+			13'b0000000000100: many_ack <= 1'b0;
+			13'b0000000000010: many_ack <= 1'b0;
+			13'b0000000000001: many_ack <= 1'b0;
+		endcase
+	end
+	always @(posedge i_clk)
+		wb_err <= (none_sel)||(many_sel)||(many_ack);
+
+	always @(posedge i_clk)
+		if (wb_err)
+			r_bus_err <= wb_addr;
+
+`ifdef	GPSUART_ACCESS
+	wbuart #(.DEFAULT_STEP(GPSCLOCK_DEFAULT_STEP))
+		gpsuart(i_clk, 1'b0,
+			(wb_stb)&&(gpsu_sel), wb_we, wb_addr[1:0], wb_data,
+				gpsu_ack, gpsu_stall, gpsu_data,
+				i_aux_rx, o_aux_tx, i_aux_cts_n, o_aux_rts_n,
+				gpsurx_int, gpsutx_int, gpsurxf_int, gpsutxf_int);
+
+`else	// GPSUART_ACCESS
+
+	reg	r_gpsu_ack;
+	always @(posedge i_clk)
+		r_gpsu_ack <= (wb_stb)&&(gpsu_sel);
+
+	assign	gpsu_ack   = r_gpsu_ack;
+	assign	gpsu_stall = 1'b0;
+	assign	gpsu_data  = 32'h0;
+
+	assign	o_gps_tx = 1'b1;
+	assign	o_gpsurx_int = 1'b0;
+	assign	o_gpsutx_int = 1'b0;
+	assign	o_gpsurxf_int = 1'b0;
+	assign	o_gpsutxf_int = 1'b0;
+
+`endif	// GPSUART_ACCESS
+
+`ifdef	MOUSE_ACCESS
+	wbmouse
+		themouse(i_clk,
+			(wb_cyc), (wb_stb)&&(mous_sel), wb_we, wb_addr[1:0], wb_data,
+				mous_ack, mous_stall, mous_data,
+				i_ps2, o_ps2,
+				scrn_mouse, mous_interrupt);
+
+`else	// MOUSE_ACCESS
+
+	reg	r_mous_ack;
+	always @(posedge i_clk)
+		r_mous_ack <= (wb_stb)&&(mous_sel);
+
+	assign	mous_ack   = r_mous_ack;
+	assign	mous_stall = 1'b0;
+	assign	mous_data  = 32'h0;
+
+	assign	scrn_mouse     = 32'h00;
+	assign	mous_interrupt = 1'b0;
+	assign	o_ps2          = 2'b11;
+
+`endif	// MOUSE_ACCESS
+
+`ifdef	GPS_CLOCK
+	gpsclock #(.DEFAULT_STEP(GPSCLOCK_DEFAULT_STEP))
+		ppsck(i_clk, 1'b0, gps_pps, ck_pps, gps_led,
+			(wb_stb)&&(gck_sel), wb_we, wb_addr[1:0], wb_data,
+				gck_ack, gck_stall, gck_data,
+			gps_tracking, gps_now, gps_step, gps_err, gps_locked);
+
+`else	// GPS_CLOCK
+
+	reg	r_gck_ack;
+	always @(posedge i_clk)
+		r_gck_ack <= (wb_stb)&&(gck_sel);
+
+	assign	gck_ack   = r_gck_ack;
+	assign	gck_stall = 1'b0;
+	assign	gck_data  = 32'h0;
+
+	wire	[31:0]	pre_step;
+	assign	pre_step = { 16'h00, (({GPSCLOCK_DEFAULT_STEP[27:0],20'h00})>>GPSCLOCK_DEFAULT_STEP[31:28]) };
+	always @(posedge i_clk)
+		{ ck_pps, gps_step[31:0] } <= gps_step + pre_step;
+	assign	gck_stall  = 1'b0;
+	assign	gps_now    = 64'h0;
+	assign	gps_err    = 64'h0;
+	assign	gps_step   = 64'h0;
+	assign	gps_led    = 1'b0;
+	assign	gps_locked = 1'b0;
+
+`endif	// GPS_CLOCK
+
+
+
+endmodule;
+
+
+
+// TO BE PLACED INTO regdefs.h
+#define R_UART_SETUP	0x00000400
+#define R_UART_FIFO	0x00000404
+#define R_UART_UARTRX	0x00000408
+#define R_UART_UARTTX	0x0000040c
+#define R_UART_SETUP	0x00000410
+#define R_UART_FIFO	0x00000414
+#define R_UART_UARTRX	0x00000418
+#define R_UART_UARTTX	0x0000041c
+#define R_MOUSE_STAT	0x00000420
+#define R_MOUSE_RAW	0x00000424
+#define R_SCRN_MOUSE	0x00000428
+#define R_SCRN_SIZE	0x0000042c
+#define R_QSPI_EREG	0x00000430
+#define R_QSPI_CREG	0x00000434
+#define R_QSPI_SREG	0x00000438
+#define R_QSPI_IDREG	0x0000043c
+#define R_SDCARD_CTRL	0x00000440
+#define R_SDCARD_DATA	0x00000444
+#define R_SDCARD_FIFOA	0x00000448
+#define R_SDCARD_FIFOB	0x0000044c
+#define R_GPS_ALPHA	0x00000450
+#define R_GPS_BETA	0x00000454
+#define R_GPS_GAMMA	0x00000458
+#define R_GPS_STEP	0x0000045c
+#define R_GPSTB_FREQ	0x00000460
+#define R_GPSTB_JUMP	0x00000464
+#define R_GPSTB_ERRHI	0x00000468
+#define R_GPSTB_ERRLO	0x0000046c
+#define R_GPSTB_COUNTHI	0x00000470
+#define R_GPSTB_COUNTLO	0x00000474
+#define R_GPSTB_STEPHI	0x00000478
+#define R_GPSTB_STEPLO	0x0000047c
+#define R_NET_RXCMD	0x00000480
+#define R_NET_TXCMD	0x00000484
+#define R_NET_MACHI	0x00000488
+#define R_NET_MACLO	0x0000048c
+#define R_NET_RXMISS	0x00000490
+#define R_NET_RXERR	0x00000494
+#define R_NET_RXCRC	0x00000498
+#define R_NET_TXCOL	0x0000049c
+#define R_MDIO_BMCR	0x00000500
+#define R_MDIO_BMSR	0x00000504
+#define R_MDIO_PHYIDR1	0x00000508
+#define R_MDIO_PHYIDR2	0x0000050c
+#define R_MDIO_ANAR	0x00000510
+#define R_MDIO_ANLPAR	0x00000514
+#define R_MDIO_ANER	0x00000518
+#define R_MDIO_ANNPTR	0x0000051c
+#define R_MDIO_PHYSTS	0x00000540
+#define R_MDIO_FCSCR	0x00000550
+#define R_MDIO_RECR	0x00000554
+#define R_MDIO_PCSR	0x00000558
+#define R_MDIO_RBR	0x0000055c
+#define R_MDIO_LEDCR	0x00000560
+#define R_MDIO_PHYCR	0x00000564
+#define R_MDIO_BTSCR	0x00000568
+#define R_MDIO_CDCTRL	0x0000056c
+#define R_MDIO_EDCR	0x00000574
+#define R_CFG_CRC	0x00000580
+#define R_CFG_FAR	0x00000584
+#define R_CFG_FDRI	0x00000588
+#define R_CFG_FDRO	0x0000058c
+#define R_CFG_CMD	0x00000590
+#define R_CFG_CTL0	0x00000594
+#define R_CFG_MASK	0x00000598
+#define R_CFG_STAT	0x0000059c
+#define R_CFG_LOUT	0x000005a0
+#define R_CFG_COR0	0x000005a4
+#define R_CFG_MFWR	0x000005a8
+#define R_CFG_CBC	0x000005ac
+#define R_CFG_IDCODE	0x000005b0
+#define R_CFG_AXSS	0x000005b4
+#define R_CFG_COR1	0x000005b8
+#define R_CFG_WBSTAR	0x000005c0
+#define R_CFG_TIMER	0x000005c4
+#define R_CFG_BOOTSTS	0x000005d8
+#define R_CFG_CTL1	0x000005e0
+#define R_CFG_BSPI	0x000005fc
+#define R_NET_RXBUF	0x00004000
+#define R_NET_TXBUF	0x00006000
+#define BKRAM	0x00200000
+#define FLASHMEM	0x04000000
+
+
+
+// TO BE PLACED INTO regdefs.cpp
+#include <stdio.h>
+#include <stdlib.h>
+#include <strings.h>
+#include <ctype.h>
+#include "regdefs.h"
+
+const	REGNAME	raw_bregs[] = {
+	{ R_UART_SETUP,  	"USETUP"		},
+	{ R_UART_FIFO,   	"UFIFO"		},
+	{ R_UART_UARTRX, 	"RX"		},
+	{ R_UART_UARTTX, 	"TX"		},
+	{ R_UART_SETUP,  	"GPSSETUP"		},
+	{ R_UART_FIFO,   	"GPSFIFO"		},
+	{ R_UART_UARTRX, 	"GPSRX"		},
+	{ R_UART_UARTTX, 	"GPSTX"		},
+	{ R_MOUSE_STAT,  	"MSTAT"		},
+	{ R_MOUSE_RAW,   	"MRAW"		},
+	{ R_SCRN_MOUSE,  	"MOUSE"		},
+	{ R_SCRN_SIZE,   	"MSIZ"		},
+	{ R_QSPI_EREG,   	"QSPIE"		},
+	{ R_QSPI_CREG,   	"QSPIC"		},
+	{ R_QSPI_SREG,   	"QSPIS"		},
+	{ R_QSPI_IDREG,  	"QSPII"		},
+	{ R_SDCARD_CTRL, 	"SDCARD"		},
+	{ R_SDCARD_DATA, 	"SDDATA"		},
+	{ R_SDCARD_FIFOA,	"SDFIFOA"		},
+	{ R_SDCARD_FIFOB,	"SDFIFOB"		},
+	{ R_GPS_ALPHA,   	"ALPHA"		},
+	{ R_GPS_BETA,    	"BETA"		},
+	{ R_GPS_GAMMA,   	"GAMMA"		},
+	{ R_GPS_STEP,    	"STEP"		},
+	{ R_GPSTB_FREQ,  	"GPSFREQ"		},
+	{ R_GPSTB_JUMP,  	"GPSJUMP"		},
+	{ R_GPSTB_ERRHI, 	"ERRHI"		},
+	{ R_GPSTB_ERRLO, 	"ERRLO"		},
+	{ R_GPSTB_COUNTHI,	"CNTHI"		},
+	{ R_GPSTB_COUNTLO,	"CNTLO"		},
+	{ R_GPSTB_STEPHI,	"STEPHI"		},
+	{ R_GPSTB_STEPLO,	"STEPLO"		},
+	{ R_NET_RXCMD,   	"RXCMD"		},
+	{ R_NET_TXCMD,   	"TXCMD"		},
+	{ R_NET_MACHI,   	"MACHI"		},
+	{ R_NET_MACLO,   	"MACLO"		},
+	{ R_NET_RXMISS,  	"NETMISS"		},
+	{ R_NET_RXERR,   	"NETERR"		},
+	{ R_NET_RXCRC,   	"NETXCRC"		},
+	{ R_NET_TXCOL,   	"NETCOL"		},
+	{ R_MDIO_BMCR,   	"BMCR"		},
+	{ R_MDIO_BMSR,   	"BMSR"		},
+	{ R_MDIO_PHYIDR1,	"PHYIDR1"		},
+	{ R_MDIO_PHYIDR2,	"PHYIDR2"		},
+	{ R_MDIO_ANAR,   	"ANAR"		},
+	{ R_MDIO_ANLPAR, 	"ANLPAR"		},
+	{ R_MDIO_ANER,   	"ANER"		},
+	{ R_MDIO_ANNPTR, 	"ANNPTR"		},
+	{ R_MDIO_PHYSTS, 	"PHYSYTS"		},
+	{ R_MDIO_FCSCR,  	"FCSCR"		},
+	{ R_MDIO_RECR,   	"RECR"		},
+	{ R_MDIO_PCSR,   	"PCSR"		},
+	{ R_MDIO_RBR,    	"RBR"		},
+	{ R_MDIO_LEDCR,  	"LEDCR"		},
+	{ R_MDIO_PHYCR,  	"PHYCR"		},
+	{ R_MDIO_BTSCR,  	"BTSCR"		},
+	{ R_MDIO_CDCTRL, 	"CDCTRL"		},
+	{ R_MDIO_EDCR,   	"EDCR"		},
+	{ R_CFG_CRC,     	"FPGACRC"		},
+	{ R_CFG_FAR,     	"FPGAFAR"		},
+	{ R_CFG_FDRI,    	"FPGAFDRI"		},
+	{ R_CFG_FDRO,    	"FPGAFDRO"		},
+	{ R_CFG_CMD,     	"FPGACMD"		},
+	{ R_CFG_CTL0,    	"FPGACTL0"		},
+	{ R_CFG_MASK,    	"FPGAMASK"		},
+	{ R_CFG_STAT,    	"FPGASTAT"		},
+	{ R_CFG_LOUT,    	"FPGALOUT"		},
+	{ R_CFG_COR0,    	"FPGACOR0"		},
+	{ R_CFG_MFWR,    	"FPGAMFWR"		},
+	{ R_CFG_CBC,     	"FPGACBC"		},
+	{ R_CFG_IDCODE,  	"FPGAIDCODE"		},
+	{ R_CFG_AXSS,    	"FPGAAXSS"		},
+	{ R_CFG_COR1,    	"FPGACOR1"		},
+	{ R_CFG_WBSTAR,  	"WBSTAR"		},
+	{ R_CFG_TIMER,   	"CFGTIMER"		},
+	{ R_CFG_BOOTSTS, 	"BOOTSTS"		},
+	{ R_CFG_CTL1,    	"FPGACTL1"		},
+	{ R_CFG_BSPI,    	"FPGABSPI"		},
+	{ R_NET_RXBUF,   	"RAM"		},
+	{ R_NET_TXBUF,   	"RAM"		},
+	{ BKRAM,         	"RAM"		},
+	{ FLASHMEM,      	"FLASH"		}
+};
+
+#define	RAW_NREGS	(sizeof(raw_bregs)/sizeof(bregs[0]))
+
+const	REGNAME	*bregs = raw_bregs;
+const	int	NREGS = RAW_NREGS;
