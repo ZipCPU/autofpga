@@ -1,5 +1,62 @@
-@PREFIX= uart
-@NADDR= 4
+################################################################################
+##
+## Filename: 	
+##
+## Project:	AutoGen, a utility for composing FPGA designs from peripherals
+##
+## Purpose:	
+##
+## Creator:	Dan Gisselquist, Ph.D.
+##		Gisselquist Technology, LLC
+##
+################################################################################
+##
+## Copyright (C) 2017, Gisselquist Technology, LLC
+##
+## This program is free software (firmware): you can redistribute it and/or
+## modify it under the terms of  the GNU General Public License as published
+## by the Free Software Foundation, either version 3 of the License, or (at
+## your option) any later version.
+##
+## This program is distributed in the hope that it will be useful, but WITHOUT
+## ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY or
+## FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+## for more details.
+##
+## You should have received a copy of the GNU General Public License along
+## with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
+## target there if the PDF file isn't present.)  If not, see
+## <http://www.gnu.org/licenses/> for a copy.
+##
+## License:	GPL, v3, as defined and found on www.gnu.org,
+##		http://www.gnu.org/licenses/gpl.html
+##
+##
+################################################################################
+##
+##
+# The prefix is used to create a series of bus data lines for interaction with
+# the bus.  In this case, these will be uart_sel, uart_ack, uart_stall, and
+# uart_data.
+@PREFIX=uart
+# The number of addressable registers this peripheral has on the wishbone bus.
+# Set this to zero to have no bus presence.
+@NADDR=	4
+# The type of peripheral.  This can either:
+#	NOBUS	Doesn't reply on the bus
+#	SINGLE, for a peripheral that only has one address, and whose result
+#		is available on every clock.  In the future, these may be
+#		gathered together into a singleio.v file.
+#	DOUBLE, for a peripheral that takes one clock to access before its
+#		value is available on its output.  This might be true for a
+#		peripheral that has several single-clocked registers within it,
+#		which then selects from among these registers in one clock
+#		cycle.  In the future, these may be gathered together into a
+#		doubleio.v file.
+#	OTHER (the default), for a peripheral that may take *many* clocks to
+#		respond to a bus transaction, ... one that uses its stall
+#		line of a necessity.
+@PTYPE=	DOUBLE
 @ACCESS= CONSOLE_ACCESS
 @MAIN.PORTLIST=
 		// The UART console
