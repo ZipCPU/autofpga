@@ -3,3 +3,5 @@ obj-zip
 obj_dir
 legal.txt
 *.o
+.*.swp
+.*.swo
