@@ -36,7 +36,7 @@
 ##
 ##
 all:
-PROGRAMS := autofpga
+PROGRAMS := autofpga demo2.txt
 OBJDIR:= obj-pc
 CXX:= g++
 SED:= sed
@@ -53,6 +53,10 @@ $(OBJDIR)/%.o: %.cpp
 
 autofpga: $(OBJECTS)
 	$(CXX) $(CFLAGS) $(OBJECTS) -o $@
+
+VSRCS := bkram.txt enet.txt flash.txt gps.txt icape.txt mdio.txt wbuart.txt
+demo2.txt: autofpga $(VSRCS)
+	./autofpga $(VSRCS) > $@
 
 define	mk-objdir
 	@bash -c "if [ ! -e $(OBJDIR) ]; then mkdir -p $(OBJDIR); fi"
