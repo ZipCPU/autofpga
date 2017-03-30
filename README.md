@@ -1,6 +1,6 @@
 # AutoFPGA - An FPGA Design Automation routine
 
-After now having built several FPGA designs, such as the 
+After now having built several FPGA designs, such as the
 [xulalx25soc](https://github.com/ZipCPU/xulalx25soc),
 [s6soc](https://github.com/ZipCPU/s6soc),
 [openarty](https://github.com/ZipCPU/openarty),
@@ -24,7 +24,7 @@ the [wishbone scope](https://github.com/ZipCPU/wbscope),
 the [GPS controlled clock](https://github.com/ZipCPU/openarty/blob/master/rtl/gpsclock.v),
 the [GPS controlled clock](https://github.com/ZipCPU/openarty/blob/master/rtl/gpsclock.v),
 or even the [PWM Audio Controller](https://github.com/ZipCPU/wbpwmaudio).
-All of these peripherals have a very similar format when included within a 
+All of these peripherals have a very similar format when included within a
 top level design, all of these require a certain amount of care and feeding
 as part of that top level design, but yet rebuilding that top level design over
 and over just to repeat this information becomes a pain.
@@ -85,7 +85,8 @@ file), and sub (in case peripherals get lumped together beneath the main.v file)
 ## Classes
 
 Some peripherals might exist at multiple locations within a design.
-For example, the WBUART.  For now, we don't support classes, but rather
+For example, the WBUART can be used to create multiple serial ports.
+For now, we don't support classes, but rather
 individual peripheral files, since it's not clear what could stay the
 same.  In other words, MANY entries would need to change to avoid
 variable name contention.  Without solving this problem, we can't
@@ -101,9 +102,12 @@ also depend upon the master clock rate.
 # Status
 
 This project is currently in its bare infancy.  Some success has been
-demonstrated to date in building a bus, but nothing has been put together yet
-that has gone through an FPGA synthesis tool, much less demonstrated any
-success on a board.
+demonstrated to date in building a bus.  This success may be seen in the 
+(initial demo)[blob/master/sw/demo.txt], as well as in the updated and
+subsequent demo (this one may appear to regress ...)
+(initial demo)[blob/master/sw/demo2.txt].
+However, as you can see from the demo's, none of the files are ready to 
+meet a synthesis tool yet, much less demonstrated any success on a board.
 
 # License
 
