@@ -39,6 +39,89 @@
 @NADDR= 0x1000000
 @ACCESS= FLASH_ACCESS
 @PTYPE=  MEMORY
+@INTERRUPT= flash_interrupt
+@INTNAME= FLASH
+@TOP.PORTLIST=
+		// Top level Quad-SPI I/O ports
+		o_qspi_cs_n, io_qspi_dat
+@TOP.IODECL=
+	// Quad SPI flash
+	output	wire		o_qspi_cs_n;
+	inout	[3:0]		io_qspi_dat;
+@TOP.DEFNS=
+	wire		w_qspi_sck, w_qspi_cs_n;
+	wire	[1:0]	qspi_bmod;
+	wire	[3:0]	qspi_dat;
+	wire	[3:0]	i_qspi_dat;
+@TOP.MAIN=
+		// Quad SPI flash
+		w_qspi_cs_n, w_qspi_sck, qspi_dat, i_qspi_dat, qspi_bmod
+@TOP.INSERT=
+
+	// QSPI)BMOD, Quad SPI bus mode, Bus modes are:
+	//	0?	Normal serial mode, one bit in one bit out
+	//	10	Quad SPI mode, going out
+	//	11	Quad SPI mode coming from the device (read mode)
+	assign io_qspi_dat = (~qspi_bmod[1])?({2'b11,1'bz,qspi_dat[0]})
+				:((qspi_bmod[0])?(4'bzzzz):(qspi_dat[3:0]));
+
+	// The following primitive is necessary in many designs order to gain
+	// access to the o_qspi_sck pin.  It's not necessary on the Arty,
+	// simply because they provide two pins that can drive the QSPI
+	// clock pin.
+	wire	[3:0]	su_nc;	// Startup primitive, no connect
+	STARTUPE2 #(
+		// Leave PROG_USR false to avoid activating the program
+		// event security feature.  Notes state that such a feature
+		// requires encrypted bitstreams.
+		.PROG_USR("FALSE"),
+		// Sets the configuration clock frequency (in ns) for
+		// simulation.
+		.SIM_CCLK_FREQ(0.0)
+	) STARTUPE2_inst (
+	// CFGCLK, 1'b output: Configuration main clock output -- no connect
+	.CFGCLK(su_nc[0]),
+	// CFGMCLK, 1'b output: Configuration internal oscillator clock output
+	.CFGMCLK(su_nc[1]),
+	// EOS, 1'b output: Active high output indicating the End Of Startup.
+	.EOS(su_nc[2]),
+	// PREQ, 1'b output: PROGRAM request to fabric output
+	//	Only enabled if PROG_USR is set.  This lets the fabric know
+	//	that a request has been made (either JTAG or pin pulled low)
+	//	to program the device
+	.PREQ(su_nc[3]),
+	// CLK, 1'b input: User start-up clock input
+	.CLK(1'b0),
+	// GSR, 1'b input: Global Set/Reset input
+	.GSR(1'b0),
+	// GTS, 1'b input: Global 3-state input
+	.GTS(1'b0),
+	// KEYCLEARB, 1'b input: Clear AES Decrypter Key input from BBRAM
+	.KEYCLEARB(1'b0),
+	// PACK, 1-bit input: PROGRAM acknowledge input
+	//	This pin is only enabled if PROG_USR is set.  This allows the
+	//	FPGA to acknowledge a request for reprogram to allow the FPGA
+	//	to get itself into a reprogrammable state first.
+	.PACK(1'b0),
+	// USRCLKO, 1-bit input: User CCLK input -- This is why I am using this
+	// module at all.
+	.USRCCLKO(qspi_sck),
+	// USRCCLKTS, 1'b input: User CCLK 3-state enable input
+	//	An active high here places the clock into a high impedence
+	//	state.  Since we wish to use the clock as an active output
+	//	always, we drive this pin low.
+	.USRCCLKTS(1'b0),
+	// USRDONEO, 1'b input: User DONE pin output control
+	//	Set this to "high" to make sure that the DONE LED pin is
+	//	high.
+	.USRDONEO(1'b1),
+	// USRDONETS, 1'b input: User DONE 3-state enable output
+	//	This enables the FPGA DONE pin to be active.  Setting this
+	//	active high sets the DONE pin to high impedence, setting it
+	//	low allows the output of this pin to be as stated above.
+	.USRDONETS(1'b1)
+	);
+
 @MAIN.PORTLIST=
 		// The QSPI Flash
 		o_qspi_cs_n, o_qspi_sck, o_qspi_dat, i_qspi_dat, o_qspi_mod
@@ -48,9 +131,6 @@
 	output	wire	[3:0]	o_qspi_dat;
 	input	wire	[3:0]	i_qspi_dat;
 	output	wire	[1:0]	o_qspi_mod;
-# @MAIN.DEFNS=
-@MAIN.INTERRUPT= flash_interrupt
-# @DBGDEFNS=
 @MAIN.INSERT=
 	wbqspiflash #(24)
 		flashmem(i_clk,
@@ -66,7 +146,6 @@
 	assign	o_qspi_dat  = 4\'b1111;
 @MEM.NAME= flash
 @MEM.ACCESS = rx
-@TOPLEVEL=
 @REGS.N= 1
 @REGS.0= 0 FLASHMEM FLASH
 @CSTRUCT=
@@ -77,6 +156,7 @@
 @NADDR= 4
 @ACCESS= FLASH_ACCESS
 @PTYPE= DOUBLE
+@REGS.NOTE= // FLASH erase/program configuration registers
 @REGS.N= 4
 @REGS.0= 0 R_QSPI_EREG QSPIE
 @REGS.1= 1 R_QSPI_SREG QSPIC

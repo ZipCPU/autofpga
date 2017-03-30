@@ -1,12 +1,11 @@
 ################################################################################
 ##
-## Filename: 	icape.c
+## Filename: 	icape.txt
 ##
 ## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 ##
-## Purpose:	Older description of the wbicapetwo interface to Xilinx's ICAPE2.
-##		Doesn't work with the (newer) file format, but yet demonstrates
-##	some of how that newer format might work.
+## Purpose:	A description of how to connect the wbicapetwo interface for
+##		Xilinx's ICAPE2 interface to a wishbone bus.
 ##
 ## Creator:	Dan Gisselquist, Ph.D.
 ##		Gisselquist Technology, LLC

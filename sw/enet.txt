@@ -1,12 +1,10 @@
 ################################################################################
 ##
-## Filename: 	enet.c
+## Filename: 	enet.txt
 ##
 ## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 ##
-## Purpose:	Older description of an ethernet controller.  Doesn't work with
-##		the (newer) file format, but yet demonstrates some of how that
-##	newer format might work.
+## Purpose:	
 ##
 ## Creator:	Dan Gisselquist, Ph.D.
 ##		Gisselquist Technology, LLC
@@ -65,6 +63,8 @@
 @REGS.0= 0	R_NET_RXBUF NETRXB
 @REGS.1= 0x800	R_NET_TXBUF NETTXB
 @PREFIX=netp
+@INTERRUPT=enet_rx_int enet_tx_int
+@INTNAMES= NETRX, NETTX
 @NADDR=8
 @PTYPE=OTHER
 @ACCESS=ETHERNET_ACCESS
@@ -82,8 +82,6 @@
 	input			i_net_tx_clk;
 	output	wire		o_net_tx_en;
 	output	wire	[3:0]	o_net_txd;
-@MAIN.DEFNS=
-	wire	enet_rx_int, enet_tx_int;
 @MAIN.INSERT=
 	enetpackets	#(12)
 		netctrl(i_clk, i_rst, wb_cyc,(wb_stb)&&((netp_sel)||(netb_sel)),

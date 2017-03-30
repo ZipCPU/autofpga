@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Filename: 	gps.c
+## Filename: 	gps.txt
 ##
 ## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 ##
@@ -44,6 +44,7 @@
 @PTYPE=DOUBLE
 @ACCESS=GPS_CLOCK
 @MAIN.PORTLIST=
+		// The GPS 1PPS signal port
 		i_gps_pps
 @MAIN.IODECLS=
 	//The GPS Clock
@@ -71,6 +72,7 @@
 	assign	gps_led    = 1'b0;
 	assign	gps_locked = 1'b0;
 
+@REGS.NOTE= // GPS clock tracker, control loop settings registers
 @REGS.N=4
 @REGS.0= 0 R_GPS_ALPHA	ALPHA
 @REGS.1= 1 R_GPS_BETA	BETA
@@ -101,6 +103,7 @@ typedef	struct	GPSTRACKER_S	{
 
 `endif
 
+@REGS.NOTE= // GPS clock test bench registers, for measuring the clock trackers performance
 @REGS.N=8
 @REGS.0=  0 R_GPSTB_FREQ    GPSFREQ
 @REGS.1=  1 R_GPSTB_JUMP    GPSJUMP
@@ -123,14 +126,14 @@ typedef	struct	GPSTB_S	{
 @NADDR=4
 @PTYPE=DOUBLE
 @ACCESS=GPSUART_ACCESS
+@INTERRUPT= gpsurx_int, gpsutx_int, gpsurxf_int, gpsutxf_int
+@INTNAME= GPSRX,GPSTX,GPSRXF,GPSTXF
 @MAIN.PORTLIST=
 		// The GPS-UART
 		i_gps_rx, o_gps_tx
 @MAIN.IODECLS=
 	input			i_gps_rx;
 	output	wire		o_gps_tx;
-@MAIN.DEFNS=
-	wire	gpsurx_int, gpsutx_int, gpsurxf_int, gpsutxf_int;
 @MAIN.INSERT=
 	wbuart #(.DEFAULT_STEP(GPSCLOCK_DEFAULT_STEP))
 		gpsuart(i_clk, 1'b0,
@@ -138,8 +141,6 @@ typedef	struct	GPSTB_S	{
 				gpsu_ack, gpsu_stall, gpsu_data,
 			i_aux_rx, o_aux_tx, i_aux_cts_n, o_aux_rts_n,
 			gpsurx_int, gpsutx_int, gpsurxf_int, gpsutxf_int);
-@INTERRUPT= gpsurx_int, gpsutx_int, gpsurxf_int, gpsutxf_int
-@INTNAME= GPSRX,GPSTX,GPSRXF,GPSTXF
 @MAIN.ALT=
 	assign	o_gps_tx = 1'b1;
 	assign	o_gpsurx_int = 1'b0;
@@ -147,6 +148,7 @@ typedef	struct	GPSTB_S	{
 	assign	o_gpsurxf_int = 1'b0;
 	assign	o_gpsutxf_int = 1'b0;
 
+@REGS.NOTE= // GPS UART registers, similar to WBUART
 @REGS.N=4
 @REGS.0= 0 R_UART_SETUP  GPSSETUP
 @REGS.1= 1 R_UART_FIFO   GPSFIFO

@@ -59,6 +59,8 @@
 #		line of a necessity.
 @PTYPE=	DOUBLE
 @ACCESS= CONSOLE_ACCESS
+@INTERRUPT = uartrx_int, uarttx_int, uartrxf_int, uarttxf_int
+@INTNAME = UARTRX,UARTTX,UARTRXF,UARTTXF
 @MAIN.PORTLIST=
 		// The UART console
 		i_aux_rx, o_aux_tx, i_aux_cts_n, o_aux_rts_n
@@ -74,14 +76,13 @@
  			uart_ack, uart_stall, uart_data,
  			i_aux_rx, o_aux_tx, i_aux_cts_n, o_aux_rts_n,
 			uartrx_int, uarttx_int, uartrxf_int, uarttxf_int);
-@INTERRUPT = uartrx_int, uarttx_int, uartrxf_int, uarttxf_int
-@INTNAME = UARTRX,UARTTX,UARTRXF,UARTTXF
 @MAIN.ALT=
 	assign	o_uart_tx    = 1'b1;
 	assign	o_uart_rts_n = 1'b0;
 @TOPLEVEL=
 # @SCOPE.DATA=
 # @SCOPE.TRIGGER=
+@REGS.NOTE = // WBUART registers
 @REGS.N = 4
 @REGS.0 = 0 R_UART_SETUP	 USETUP
 @REGS.1 = 1 R_UART_FIFO		 UFIFO

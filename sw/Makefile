@@ -54,7 +54,12 @@ $(OBJDIR)/%.o: %.cpp
 autofpga: $(OBJECTS)
 	$(CXX) $(CFLAGS) $(OBJECTS) -o $@
 
-VSRCS := bkram.txt enet.txt flash.txt gps.txt icape.txt mdio.txt wbuart.txt
+VSRCS := bkram.txt enet.txt flash.txt gps.txt icape.txt mdio.txt wbuart.txt \
+	sdspi.txt wbmouse.txt wboled.txt
+
+.PHONY: demo demo2
+demo: demo2.txt
+demo2: demo2.txt
 demo2.txt: autofpga $(VSRCS)
 	./autofpga $(VSRCS) > $@
 

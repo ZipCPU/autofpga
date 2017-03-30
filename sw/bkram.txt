@@ -1,12 +1,10 @@
 ################################################################################
 ##
-## Filename: 	bkram.c
+## Filename: 	bkram.txt
 ##
 ## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 ##
-## Purpose:	Older description of a block RAM.  Doesn't work with the (newer)
-##		file format, but yet demonstrates some of how that newer format
-##	might work.
+## Purpose:	
 ##
 ## Creator:	Dan Gisselquist, Ph.D.
 ##		Gisselquist Technology, LLC
@@ -51,3 +49,5 @@
 @REGS.0= 0 BKRAM RAM
 # @CSTRUCT=
 # @IONAME=
+@LDSCRIPT.PSTR	wx
+@LDSCRIPT.PTR	blkram

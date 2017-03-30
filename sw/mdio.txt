@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Filename: 	mdio.c
+## Filename: 	mdio.txt
 ##
 ## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 ##
@@ -42,8 +42,8 @@
 @ACCESS=NETCTRL_ACCESS
 @PTYPE=OTHER
 @TOP.PORTLIST=
-	// The ethernet MDIO wires
-	o_eth_mdclk, io_eth_mdio
+		// Toplevel ethernet MDIO ports
+		o_eth_mdclk, io_eth_mdio
 @TOP.IODECLS=
 	// Ethernet control (MDIO)
 	output	wire		o_mdclk, o_mdio, o_mdwe;
@@ -51,7 +51,7 @@
 @TOP.DEFNS=
 	wire	w_mdio, w_mdwe;
 @TOP.MAIN=
-	o_eth_mdclk, w_mdio, w_mdwe, io_eth_mdio,
+		o_eth_mdclk, w_mdio, w_mdwe, io_eth_mdio
 @TOP.INSERT=
 	assign	io_eth_mdio = (w_mdwe)?w_mdio : 1'bz;
 @MAIN.PORTLIST=

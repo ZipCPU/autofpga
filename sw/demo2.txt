@@ -2,10 +2,13 @@
 // assigning     gpsu_... to 00000410
 // assigning     uart_... to 00000420
 // assigning    flctl_... to 00000430
-// assigning      gtb_... to 00000440
-// assigning     netp_... to 00000460
-// assigning     mdio_... to 00000480
-// assigning      cfg_... to 00000500
+// assigning   sdcard_... to 00000440
+// assigning     mous_... to 00000450
+// assigning     oled_... to 00000460
+// assigning      gtb_... to 00000480
+// assigning     netp_... to 000004a0
+// assigning     mdio_... to 00000500
+// assigning      cfg_... to 00000580
 // assigning     netb_... to 00004000
 // assigning      mem_... to 00200000
 // assigning    flash_... to 04000000
@@ -17,76 +20,96 @@
 #define	REGDEFS_H
 
 
+// GPS clock tracker, control loop settings registers
 #define	R_GPS_ALPHA    	0x00000400	// wbregs names: ALPHA
 #define	R_GPS_BETA     	0x00000404	// wbregs names: BETA
 #define	R_GPS_GAMMA    	0x00000408	// wbregs names: GAMMA
 #define	R_GPS_STEP     	0x0000040c	// wbregs names: STEP
+// GPS UART registers, similar to WBUART
 #define	R_UART_SETUP   	0x00000410	// wbregs names: GPSSETUP
 #define	R_UART_FIFO    	0x00000414	// wbregs names: GPSFIFO
 #define	R_UART_UARTRX  	0x00000418	// wbregs names: GPSRX
 #define	R_UART_UARTTX  	0x0000041c	// wbregs names: GPSTX
+// WBUART registers
 #define	R_UART_SETUP   	0x00000420	// wbregs names: USETUP
 #define	R_UART_FIFO    	0x00000424	// wbregs names: UFIFO
 #define	R_UART_UARTRX  	0x00000428	// wbregs names: RX
 #define	R_UART_UARTTX  	0x0000042c	// wbregs names: TX
+// FLASH erase/program configuration registers
 #define	R_QSPI_EREG    	0x00000430	// wbregs names: QSPIE
 #define	R_QSPI_SREG    	0x00000434	// wbregs names: QSPIC
 #define	R_QSPI_SREG    	0x00000438	// wbregs names: QSPIS
 #define	R_QSPI_IDREG   	0x0000043c	// wbregs names: QSPII
-#define	R_GPSTB_FREQ   	0x00000440	// wbregs names: GPSFREQ
-#define	R_GPSTB_JUMP   	0x00000444	// wbregs names: GPSJUMP
-#define	R_GPSTB_ERRHI  	0x00000448	// wbregs names: ERRHI
-#define	R_GPSTB_ERRLO  	0x0000044c	// wbregs names: ERRLO
-#define	R_GPSTB_COUNTHI	0x00000450	// wbregs names: CNTHI
-#define	R_GPSTB_COUNTLO	0x00000454	// wbregs names: CNTLO
-#define	R_GPSTB_STEPHI 	0x00000458	// wbregs names: STEPHI
-#define	R_GPSTB_STEPLO 	0x0000045c	// wbregs names: STEPLO
-#define	R_NET_RXCMD    	0x00000460	// wbregs names: RXCMD, NETRX
-#define	R_NET_TXCMD    	0x00000464	// wbregs names: TXCMD, NETTX
-#define	R_NET_MACHI    	0x00000468	// wbregs names: MACHI
-#define	R_NET_MACLO    	0x0000046c	// wbregs names: MACLO
-#define	R_NET_RXMISS   	0x00000470	// wbregs names: NETMISS
-#define	R_NET_RXERR    	0x00000474	// wbregs names: NETERR
-#define	R_NET_RXCRC    	0x00000478	// wbregs names: NETCRCERR
-#define	R_NET_TXCOL    	0x0000047c	// wbregs names: NETCOL
-#define	R_MDIO_BMCR    	0x00000480	// wbregs names: BMCR
-#define	R_MDIO_BMSR    	0x00000484	// wbregs names: BMSR
-#define	R_MDIO_PHYIDR1 	0x00000488	// wbregs names: PHYIDR1
-#define	R_MDIO_PHYIDR2 	0x0000048c	// wbregs names: PHYIDR2
-#define	R_MDIO_ANAR    	0x00000490	// wbregs names: ANAR
-#define	R_MDIO_ANLPAR  	0x00000494	// wbregs names: ANLPAR
-#define	R_MDIO_ANER    	0x00000498	// wbregs names: ANER
-#define	R_MDIO_ANNPTR  	0x0000049c	// wbregs names: ANNPTR
-#define	R_MDIO_PHYSTS  	0x000004c0	// wbregs names: PHYSYTS
-#define	R_MDIO_FCSCR   	0x000004d0	// wbregs names: FCSCR
-#define	R_MDIO_RECR    	0x000004d4	// wbregs names: RECR
-#define	R_MDIO_PCSR    	0x000004d8	// wbregs names: PCSR
-#define	R_MDIO_RBR     	0x000004dc	// wbregs names: RBR
-#define	R_MDIO_LEDCR   	0x000004e0	// wbregs names: LEDCR
-#define	R_MDIO_PHYCR   	0x000004e4	// wbregs names: PHYCR
-#define	R_MDIO_BTSCR   	0x000004e8	// wbregs names: BTSCR
-#define	R_MDIO_CDCTRL  	0x000004ec	// wbregs names: CDCTRL
-#define	R_MDIO_EDCR    	0x000004f4	// wbregs names: EDCR
-#define	R_CFG_CRC      	0x00000500	// wbregs names: FPGACRC
-#define	R_CFG_FAR      	0x00000504	// wbregs names: FPGAFAR
-#define	R_CFG_FDRI     	0x00000508	// wbregs names: FPGAFDRI
-#define	R_CFG_FDRO     	0x0000050c	// wbregs names: FPGAFDRO
-#define	R_CFG_CMD      	0x00000510	// wbregs names: FPGACMD
-#define	R_CFG_CTL0     	0x00000514	// wbregs names: FPGACTL0
-#define	R_CFG_MASK     	0x00000518	// wbregs names: FPGAMASK
-#define	R_CFG_STAT     	0x0000051c	// wbregs names: FPGASTAT
-#define	R_CFG_LOUT     	0x00000520	// wbregs names: FPGALOUT
-#define	R_CFG_COR0     	0x00000524	// wbregs names: FPGACOR0
-#define	R_CFG_MFWR     	0x00000528	// wbregs names: FPGAMFWR
-#define	R_CFG_CBC      	0x0000052c	// wbregs names: FPGACBC
-#define	R_CFG_IDCODE   	0x00000530	// wbregs names: FPGAIDCODE
-#define	R_CFG_AXSS     	0x00000534	// wbregs names: FPGAAXSS
-#define	R_CFG_COR1     	0x00000538	// wbregs names: FPGACOR1
-#define	R_CFG_WBSTAR   	0x00000540	// wbregs names: WBSTAR
-#define	R_CFG_TIMER    	0x00000544	// wbregs names: CFGTIMER
-#define	R_CFG_BOOTSTS  	0x00000558	// wbregs names: BOOTSTS
-#define	R_CFG_CTL1     	0x00000560	// wbregs names: FPGACTL1
-#define	R_CFG_BSPI     	0x0000057c	// wbregs names: FPGABSPI
+// SD-SPI addresses
+#define	R_SDCARD_CTRL  	0x00000440	// wbregs names: SDCARD
+#define	R_SDCARD_DATA  	0x00000444	// wbregs names: SDDATA
+#define	R_SDCARD_FIFOA 	0x00000448	// wbregs names: SDFIFOA, SDFIF0, SDFIFA
+#define	R_SDCARD_FIFOB 	0x0000044c	// wbregs names: SDFIFOB, SDFIF1, SDFIFB
+#define	R_MOUSE_STAT   	0x00000450	// wbregs names: MSTAT
+#define	R_MOUSE_RAW    	0x00000454	// wbregs names: MRAW
+#define	R_SCRN_MOUSE   	0x00000458	// wbregs names: MOUSE
+#define	R_SCRN_SIZE    	0x0000045c	// wbregs names: MSIZ
+#define	R_OLED_CMD     	0x00000460	// wbregs names: OLED
+#define	R_OLED_CDAT    	0x00000464	// wbregs names: OLEDCA
+#define	R_OLED_CDAT    	0x00000468	// wbregs names: OLEDCB
+#define	R_OLED_DATA    	0x0000046c	// wbregs names: ODATA
+// GPS clock test bench registers, for measuring the clock trackers performance
+#define	R_GPSTB_FREQ   	0x00000480	// wbregs names: GPSFREQ
+#define	R_GPSTB_JUMP   	0x00000484	// wbregs names: GPSJUMP
+#define	R_GPSTB_ERRHI  	0x00000488	// wbregs names: ERRHI
+#define	R_GPSTB_ERRLO  	0x0000048c	// wbregs names: ERRLO
+#define	R_GPSTB_COUNTHI	0x00000490	// wbregs names: CNTHI
+#define	R_GPSTB_COUNTLO	0x00000494	// wbregs names: CNTLO
+#define	R_GPSTB_STEPHI 	0x00000498	// wbregs names: STEPHI
+#define	R_GPSTB_STEPLO 	0x0000049c	// wbregs names: STEPLO
+#define	R_NET_RXCMD    	0x000004a0	// wbregs names: RXCMD, NETRX
+#define	R_NET_TXCMD    	0x000004a4	// wbregs names: TXCMD, NETTX
+#define	R_NET_MACHI    	0x000004a8	// wbregs names: MACHI
+#define	R_NET_MACLO    	0x000004ac	// wbregs names: MACLO
+#define	R_NET_RXMISS   	0x000004b0	// wbregs names: NETMISS
+#define	R_NET_RXERR    	0x000004b4	// wbregs names: NETERR
+#define	R_NET_RXCRC    	0x000004b8	// wbregs names: NETCRCERR
+#define	R_NET_TXCOL    	0x000004bc	// wbregs names: NETCOL
+// Ethernet configuration (MDIO) port
+#define	R_MDIO_BMCR    	0x00000500	// wbregs names: BMCR
+#define	R_MDIO_BMSR    	0x00000504	// wbregs names: BMSR
+#define	R_MDIO_PHYIDR1 	0x00000508	// wbregs names: PHYIDR1
+#define	R_MDIO_PHYIDR2 	0x0000050c	// wbregs names: PHYIDR2
+#define	R_MDIO_ANAR    	0x00000510	// wbregs names: ANAR
+#define	R_MDIO_ANLPAR  	0x00000514	// wbregs names: ANLPAR
+#define	R_MDIO_ANER    	0x00000518	// wbregs names: ANER
+#define	R_MDIO_ANNPTR  	0x0000051c	// wbregs names: ANNPTR
+#define	R_MDIO_PHYSTS  	0x00000540	// wbregs names: PHYSYTS
+#define	R_MDIO_FCSCR   	0x00000550	// wbregs names: FCSCR
+#define	R_MDIO_RECR    	0x00000554	// wbregs names: RECR
+#define	R_MDIO_PCSR    	0x00000558	// wbregs names: PCSR
+#define	R_MDIO_RBR     	0x0000055c	// wbregs names: RBR
+#define	R_MDIO_LEDCR   	0x00000560	// wbregs names: LEDCR
+#define	R_MDIO_PHYCR   	0x00000564	// wbregs names: PHYCR
+#define	R_MDIO_BTSCR   	0x00000568	// wbregs names: BTSCR
+#define	R_MDIO_CDCTRL  	0x0000056c	// wbregs names: CDCTRL
+#define	R_MDIO_EDCR    	0x00000574	// wbregs names: EDCR
+// FPGA CONFIG REGISTERS: 0x4e0-0x4ff
+#define	R_CFG_CRC      	0x00000580	// wbregs names: FPGACRC
+#define	R_CFG_FAR      	0x00000584	// wbregs names: FPGAFAR
+#define	R_CFG_FDRI     	0x00000588	// wbregs names: FPGAFDRI
+#define	R_CFG_FDRO     	0x0000058c	// wbregs names: FPGAFDRO
+#define	R_CFG_CMD      	0x00000590	// wbregs names: FPGACMD
+#define	R_CFG_CTL0     	0x00000594	// wbregs names: FPGACTL0
+#define	R_CFG_MASK     	0x00000598	// wbregs names: FPGAMASK
+#define	R_CFG_STAT     	0x0000059c	// wbregs names: FPGASTAT
+#define	R_CFG_LOUT     	0x000005a0	// wbregs names: FPGALOUT
+#define	R_CFG_COR0     	0x000005a4	// wbregs names: FPGACOR0
+#define	R_CFG_MFWR     	0x000005a8	// wbregs names: FPGAMFWR
+#define	R_CFG_CBC      	0x000005ac	// wbregs names: FPGACBC
+#define	R_CFG_IDCODE   	0x000005b0	// wbregs names: FPGAIDCODE
+#define	R_CFG_AXSS     	0x000005b4	// wbregs names: FPGAAXSS
+#define	R_CFG_COR1     	0x000005b8	// wbregs names: FPGACOR1
+#define	R_CFG_WBSTAR   	0x000005c0	// wbregs names: WBSTAR
+#define	R_CFG_TIMER    	0x000005c4	// wbregs names: CFGTIMER
+#define	R_CFG_BOOTSTS  	0x000005d8	// wbregs names: BOOTSTS
+#define	R_CFG_CTL1     	0x000005e0	// wbregs names: FPGACTL1
+#define	R_CFG_BSPI     	0x000005fc	// wbregs names: FPGABSPI
 #define	R_NET_RXBUF    	0x00004000	// wbregs names: NETRXB
 #define	R_NET_TXBUF    	0x00006000	// wbregs names: NETTXB
 #define	BKRAM          	0x00200000	// wbregs names: RAM
@@ -150,6 +173,22 @@ const	REGNAME	raw_bregs[] = {
 	{ R_QSPI_SREG    ,	"QSPIC"     	},
 	{ R_QSPI_SREG    ,	"QSPIS"     	},
 	{ R_QSPI_IDREG   ,	"QSPII"     	},
+	{ R_SDCARD_CTRL  ,	"SDCARD"    	},
+	{ R_SDCARD_DATA  ,	"SDDATA"    	},
+	{ R_SDCARD_FIFOA ,	"SDFIFOA"   	},
+	{ R_SDCARD_FIFOA ,	"SDFIF0"    	},
+	{ R_SDCARD_FIFOA ,	"SDFIFA"    	},
+	{ R_SDCARD_FIFOB ,	"SDFIFOB"   	},
+	{ R_SDCARD_FIFOB ,	"SDFIF1"    	},
+	{ R_SDCARD_FIFOB ,	"SDFIFB"    	},
+	{ R_MOUSE_STAT   ,	"MSTAT"     	},
+	{ R_MOUSE_RAW    ,	"MRAW"      	},
+	{ R_SCRN_MOUSE   ,	"MOUSE"     	},
+	{ R_SCRN_SIZE    ,	"MSIZ"      	},
+	{ R_OLED_CMD     ,	"OLED"      	},
+	{ R_OLED_CDAT    ,	"OLEDCA"    	},
+	{ R_OLED_CDAT    ,	"OLEDCB"    	},
+	{ R_OLED_DATA    ,	"ODATA"     	},
 	{ R_GPSTB_FREQ   ,	"GPSFREQ"   	},
 	{ R_GPSTB_JUMP   ,	"GPSJUMP"   	},
 	{ R_GPSTB_ERRHI  ,	"ERRHI"     	},
@@ -236,29 +275,271 @@ const	char *addrname(const unsigned v) {
 
 
 //
-// TO BE PLACED INTO main.v
+// TO BE PLACED INTO toplevel.v
 //
 `default_nettype	none
 
 
+//
+// Here we declare our toplevel.v (toplevel) design module.
+// All design logic must take place beneath this top level.
+//
+// The port declarations just copy data from the @TOP.PORTLIST
+// key, or equivalently from the @MAIN.PORTLIST key if
+// @TOP.PORTLIST is absent.  For those peripherals that don't need
+// any top level logic, the @MAIN.PORTLIST should be sufficent,
+// so the @TOP.PORTLIST key may be left undefined.
+//
+module	toplevel(i_clk,
+	// OLED control interface (roughly SPI)
+	o_oled_sck, o_oled_cs_n, o_oled_mosi, o_oled_dcn,
+	o_oled_reset_n, o_oled_vccen, o_oled_pmoden,
+		// The PS/2 Mouse
+		io_ps_clk, io_ps_data,
+		// SD Card
+		o_sd_sck, io_sd_cmd, io_sd, i_sd_cs, i_sd_wp,
+		// The UART console
+		i_aux_rx, o_aux_tx, i_aux_cts_n, o_aux_rts_n,
+		// Top level Quad-SPI I/O ports
+		o_qspi_cs_n, io_qspi_dat,
+		// Ethernet control (packets) lines
+		o_net_reset_n, i_net_rx_clk, i_net_col, i_net_crs, i_net_dv,
+			i_net_rxd, i_net_rxerr,
+		i_net_tx_clk, o_net_tx_en, o_net_txd,
+		// Toplevel ethernet MDIO ports
+		o_eth_mdclk, io_eth_mdio,
+		// The GPS-UART
+		i_gps_rx, o_gps_tx,
+		// The GPS 1PPS signal port
+		i_gps_pps);
+	//
+	// Declaring our input and output ports.  We listed these above,
+	// now we are declaring them here.
+	//
+	// These declarations just copy data from the @TOP.IODECLS key,
+	// or from the @MAIN.IODECLS key if @TOP.IODECLS is absent.  For
+	// those peripherals that don't do anything at the top level,
+	// the @MAIN.IODECLS key should be sufficient, so the @TOP.IODECLS
+	// key may be left undefined.
+	//
+	input			i_clk;
+	// OLEDRGB interface
+	output	wire		o_oled_sck, o_oled_cs_n, o_oled_mosi,
+				o_oled_dcn, o_oled_reset_n, o_oled_vccen,
+				o_oled_pmoden;
+	// SD-Card declarations
+	output	wire		o_sd_sck, o_sd_cmd;
+	output	wire	[3:0]	o_sd_data;
+	input			i_sd_cmd;
+	input		[3:0]	i_sd_data;
+	input			i_sd_detect;
+	// Ethernet control (MDIO)
+	output	wire		o_mdclk, o_mdio, o_mdwe;
+	input			i_mdio;
+	input			i_gps_rx;
+	output	wire		o_gps_tx;
+	//The GPS Clock
+	input			i_gps_pps;
+
+
+	//
+	// Declaring component data, internal wires and registers
+	//
+	// These declarations just copy data from the @TOP.DEFNS key
+	// within the component data files.
+	//
+	wire	[1:0]	w_ps2;
+	wire		w_sd_cmd;
+	wire	[3:0]	w_sd_data;
+	wire		w_qspi_sck, w_qspi_cs_n;
+	wire	[1:0]	qspi_bmod;
+	wire	[3:0]	qspi_dat;
+	wire	[3:0]	i_qspi_dat;
+	wire	w_mdio, w_mdwe;
+
+
+	//
+	// Time to call the main module within main.v.  Remember, the purpose
+	// of the main.v module is to contain all of our portable logic.
+	// Things that are Xilinx (or even Altera) specific, or for that
+	// matter anything that requires something other than on-off logic,
+	// such as the high impedence states required by many wires, is
+	// kept in this (toplevel.v) module.  Everything else goes in
+	// main.v.
+	//
+	// We automatically place s_clk, and s_reset here.  You may need
+	// to define those above.  (You did, didn't you?)  Other
+	// component descriptions come from the keys @TOP.MAIN (if it
+	// exists), or @MAIN.PORTLIST if it does not.
+	//
+
+	main(s_clk, s_reset,
+	// OLED control interface (roughly SPI)
+	o_oled_sck, o_oled_cs_n, o_oled_mosi, o_oled_dcn,
+	o_oled_reset_n, o_oled_vccen, o_oled_pmoden,
+		// The PS/2 Mouse
+		io_ps2, w_ps2,
+		// SD Card
+		o_sd_sck, w_sd_cmd, w_sd_data, io_sd_cmd, io_sd, i_sd_cs,
+		// The UART console
+		i_aux_rx, o_aux_tx, i_aux_cts_n, o_aux_rts_n,
+		// Quad SPI flash
+		w_qspi_cs_n, w_qspi_sck, qspi_dat, i_qspi_dat, qspi_bmod,
+		// Ethernet control (packets) lines
+		o_net_reset_n, i_net_rx_clk, i_net_col, i_net_crs, i_net_dv,
+			i_net_rxd, i_net_rxerr,
+		i_net_tx_clk, o_net_tx_en, o_net_txd,
+		o_eth_mdclk, w_mdio, w_mdwe, io_eth_mdio,
+		// The GPS-UART
+		i_gps_rx, o_gps_tx,
+		// The GPS 1PPS signal port
+		i_gps_pps);
+
+
+	//
+	// Our final section to the toplevel is used to provide all of
+	// that special logic that couldnt fit in main.  This logic is
+	// given by the @TOP.INSERT tag in our data files.
+	//
+
+
+	// WB-Mouse
+	//
+	// Adjustments necessary to turn the PS/2 logic to pull-up logic,
+	// with a high impedence state if not used.
+	assign	io_ps_clk  = (w_ps2[1])? 1'bz:1'b0;
+	assign	io_ps_data = (w_ps2[0])? 1'bz:1'b0;
+
+	//
+	//
+	// Wires for setting up the SD Card Controller
+	//
+	//
+	assign io_sd_cmd = w_sd_cmd ? 1'bz:1'b0;
+	assign io_sd[0] = w_sd_data[0]? 1'bz:1'b0;
+	assign io_sd[1] = w_sd_data[1]? 1'bz:1'b0;
+	assign io_sd[2] = w_sd_data[2]? 1'bz:1'b0;
+	assign io_sd[3] = w_sd_data[3]? 1'bz:1'b0;
+
+
+	// QSPI)BMOD, Quad SPI bus mode, Bus modes are:
+	//	0?	Normal serial mode, one bit in one bit out
+	//	10	Quad SPI mode, going out
+	//	11	Quad SPI mode coming from the device (read mode)
+	assign io_qspi_dat = (~qspi_bmod[1])?({2'b11,1'bz,qspi_dat[0]})
+				:((qspi_bmod[0])?(4'bzzzz):(qspi_dat[3:0]));
+
+	// The following primitive is necessary in many designs order to gain
+	// access to the o_qspi_sck pin.  It's not necessary on the Arty,
+	// simply because they provide two pins that can drive the QSPI
+	// clock pin.
+	wire	[3:0]	su_nc;	// Startup primitive, no connect
+	STARTUPE2 #(
+		// Leave PROG_USR false to avoid activating the program
+		// event security feature.  Notes state that such a feature
+		// requires encrypted bitstreams.
+		.PROG_USR("FALSE"),
+		// Sets the configuration clock frequency (in ns) for
+		// simulation.
+		.SIM_CCLK_FREQ(0.0)
+	) STARTUPE2_inst (
+	// CFGCLK, 1'b output: Configuration main clock output -- no connect
+	.CFGCLK(su_nc[0]),
+	// CFGMCLK, 1'b output: Configuration internal oscillator clock output
+	.CFGMCLK(su_nc[1]),
+	// EOS, 1'b output: Active high output indicating the End Of Startup.
+	.EOS(su_nc[2]),
+	// PREQ, 1'b output: PROGRAM request to fabric output
+	//	Only enabled if PROG_USR is set.  This lets the fabric know
+	//	that a request has been made (either JTAG or pin pulled low)
+	//	to program the device
+	.PREQ(su_nc[3]),
+	// CLK, 1'b input: User start-up clock input
+	.CLK(1'b0),
+	// GSR, 1'b input: Global Set/Reset input
+	.GSR(1'b0),
+	// GTS, 1'b input: Global 3-state input
+	.GTS(1'b0),
+	// KEYCLEARB, 1'b input: Clear AES Decrypter Key input from BBRAM
+	.KEYCLEARB(1'b0),
+	// PACK, 1-bit input: PROGRAM acknowledge input
+	//	This pin is only enabled if PROG_USR is set.  This allows the
+	//	FPGA to acknowledge a request for reprogram to allow the FPGA
+	//	to get itself into a reprogrammable state first.
+	.PACK(1'b0),
+	// USRCLKO, 1-bit input: User CCLK input -- This is why I am using this
+	// module at all.
+	.USRCCLKO(qspi_sck),
+	// USRCCLKTS, 1'b input: User CCLK 3-state enable input
+	//	An active high here places the clock into a high impedence
+	//	state.  Since we wish to use the clock as an active output
+	//	always, we drive this pin low.
+	.USRCCLKTS(1'b0),
+	// USRDONEO, 1'b input: User DONE pin output control
+	//	Set this to "high" to make sure that the DONE LED pin is
+	//	high.
+	.USRDONEO(1'b1),
+	// USRDONETS, 1'b input: User DONE 3-state enable output
+	//	This enables the FPGA DONE pin to be active.  Setting this
+	//	active high sets the DONE pin to high impedence, setting it
+	//	low allows the output of this pin to be as stated above.
+	.USRDONETS(1'b1)
+	);
+
+
+	assign	io_eth_mdio = (w_mdwe)?w_mdio : 1'bz;
+
+
+
+endmodule; // end of toplevel.v module definition
+
+
+
+//
+// TO BE PLACED INTO main.v
+//
+`default_nettype	none
+//
+//
 // Here is a list of defines which may be used, post auto-design
 // (not post-build), to turn particular peripherals (and bus masters)
-// on and off.
+// on and off.  In particular, to turn off support for a particular
+// design component, just comment out its respective define below
 //
-// First for the bus masters
+// These lines are taken from the respective @ACCESS tags for each of our
+// components.  If a component doesn't have an @ACCESS tag, it will not
+// be listed here.
+//
+// First, the access fields for any bus masters
 // And then for the peripherals
-#define	CFG_ACCESS
-#define	FLASH_ACCESS
-#define	CONSOLE_ACCESS
-#define	FLASH_ACCESS
-#define	ETHERNET_ACCESS
-#define	BLKRAM_ACCESS
-#define	NETCTRL_ACCESS
-#define	GPSUART_ACCESS
-#define	GPS_CLOCK
-
-
-module	main(i_clk,
+`define	OLEDRGB_ACCESS
+`define	MOUSE_ACCESS
+`define	SDSPI_ACCESS
+`define	CFG_ACCESS
+`define	FLASH_ACCESS
+`define	CONSOLE_ACCESS
+`define	FLASH_ACCESS
+`define	ETHERNET_ACCESS
+`define	BLKRAM_ACCESS
+`define	NETCTRL_ACCESS
+`define	GPSUART_ACCESS
+`define	GPS_CLOCK
+//
+//
+// Finally, we define our main module itself.  We start with the list of
+// I/O ports, or wires, passed into (or out of) the main function.
+//
+// These fields are copied verbatim from the respective I/O port lists,
+// from the fields given by @MAIN.PORTLIST
+//
+module	main(i_clk, i_reset,
+	// OLED control interface (roughly SPI)
+	o_oled_sck, o_oled_cs_n, o_oled_mosi, o_oled_dcn,
+	o_oled_reset_n, o_oled_vccen, o_oled_pmoden,
+		// The PS/2 Mouse
+		i_ps2, o_ps2,
+		// The SD-Card wires
+		o_sd_sck, o_sd_cmd, o_sd_data, i_sd_cmd, i_sd_data, i_sd_detect,
 		// The UART console
 		i_aux_rx, o_aux_tx, i_aux_cts_n, o_aux_rts_n,
 		// The QSPI Flash
@@ -271,8 +552,32 @@ module	main(i_clk,
 		o_mdclk, o_mdio, o_mdwe, i_mdio,
 		// The GPS-UART
 		i_gps_rx, o_gps_tx,
+		// The GPS 1PPS signal port
 		i_gps_pps);
-	input			i_clk;
+//
+////////////////////////////////////////
+/// PARAMETER SUPPORT BELONGS HERE
+/// (it hasn't been written yet
+////////////////////////////////////////
+//
+//
+// The next step is to declare all of the various ports that were just
+// listed above.  
+//
+// The following declarations are taken from the values of the various
+// @MAIN.IODECLS keys.
+//
+	input			i_clk, i_reset;
+	// OLEDRGB interface
+	output	wire		o_oled_sck, o_oled_cs_n, o_oled_mosi,
+				o_oled_dcn, o_oled_reset_n, o_oled_vccen,
+				o_oled_pmoden;
+	// SD-Card declarations
+	output	wire		o_sd_sck, o_sd_cmd;
+	output	wire	[3:0]	o_sd_data;
+	input			i_sd_cmd;
+	input		[3:0]	i_sd_data;
+	input			i_sd_detect;
 	// Ethernet control (MDIO)
 	output	wire		o_mdclk, o_mdio, o_mdwe;
 	input			i_mdio;
@@ -291,20 +596,64 @@ module	main(i_clk,
 
 
 
+////////////////////////////////////////
+/// BUS MASTER declarations belong here
+////////////////////////////////////////
+
 
 	//
 	// Declaring Peripheral data, internal wires and registers
 	//
+	// These declarations come from the various components values
+	// given under the @MAIN.DEFNS key.
+	//
+	// wires are also declared for any interrupts defined by the
+	// @INTERRUPT key
+	//
+	wire	oled_int;
+	// scrn_mouse is a 32-bit field containing 16-bits of x-position and
+	// 16-bits of y position, limited to the size of the screen.
+	wire	[31:0]	scrn_mouse;
+	wire	mous_interrupt;
+	wire	sdcard_int;
 	wire	uartrx_int, uarttx_int, uartrxf_int, uarttxf_int;
-	wire	enet_rx_int, enet_tx_int;
-	wire	gpsurx_int, gpsutx_int, gpsurxf_int, gpsutxf_int;
+	wire	uartrx_int;
+	wire	uarttx_int;
+	wire	uartrxf_int;
+	wire	uarttxf_int;
+	wire	flash_interrupt;
+	wire	enet_rx_int;
+	wire	enet_tx_int;
+	wire	gpsurx_int;
+	wire	gpsutx_int;
+	wire	gpsurxf_int;
+	wire	gpsutxf_int;
 	wire	gps_pps, ck_pps, gps_led, gps_locked;
 	wire	[63:0]	gps_now, gps_err, gps_step;
 	wire	[1:0]	gps_dbg_tick;
 
+	// Declare those signals necessary to build the bus, and detect
+	// bus errors upon it.
+	//
+	wire	none_sel;
+	reg	many_sel, many_ack;
+	reg	[31:0]	r_bus_err;
+
 	//
 	// Wishbone slave wire declarations
 	//
+	// These are given for every configuration file with a @PTYPE
+	// tag, and the names are given by the @PREFIX tag.
+	//
+
+	wire	oled_ack, oled_stall, oled_sel;
+	wire	[31:0]	oled_data;
+
+	wire	mous_ack, mous_stall, mous_sel;
+	wire	[31:0]	mous_data;
+
+	wire	sdcard_ack, sdcard_stall, sdcard_sel;
+	wire	[31:0]	sdcard_data;
 
 	wire	netb_ack, netb_stall, netb_sel;
 	wire	[31:0]	netb_data;
@@ -341,18 +690,428 @@ module	main(i_clk,
 
 
 	// Wishbone peripheral address decoding
+	// This particular address decoder decodes addresses for all
+	// peripherals (components with a @PTYPE tag), based upon their
+	// NADDR (number of addresses required) tag
+	//
 
 	assign	   gck_sel = (wb_addr[29: 2] == 30'b00_0000_0000_0000_0000_0100_0000_00);
 	assign	  gpsu_sel = (wb_addr[29: 2] == 30'b00_0000_0000_0000_0000_0100_0001_00);
 	assign	  uart_sel = (wb_addr[29: 2] == 30'b00_0000_0000_0000_0000_0100_0010_00);
 	assign	 flctl_sel = (wb_addr[29: 2] == 30'b00_0000_0000_0000_0000_0100_0011_00);
-	assign	   gtb_sel = (wb_addr[29: 3] == 29'b00_0000_0000_0000_0000_0100_0100_0);
-	assign	  netp_sel = (wb_addr[29: 3] == 29'b00_0000_0000_0000_0000_0100_0110_0);
-	assign	  mdio_sel = (wb_addr[29: 5] == 27'b00_0000_0000_0000_0000_0100_100);
-	assign	   cfg_sel = (wb_addr[29: 5] == 27'b00_0000_0000_0000_0000_0101_000);
+	assign	sdcard_sel = (wb_addr[29: 2] == 30'b00_0000_0000_0000_0000_0100_0100_00);
+	assign	  mous_sel = (wb_addr[29: 2] == 30'b00_0000_0000_0000_0000_0100_0101_00);
+	assign	  oled_sel = (wb_addr[29: 2] == 30'b00_0000_0000_0000_0000_0100_0110_00);
+	assign	   gtb_sel = (wb_addr[29: 3] == 29'b00_0000_0000_0000_0000_0100_1000_0);
+	assign	  netp_sel = (wb_addr[29: 3] == 29'b00_0000_0000_0000_0000_0100_1010_0);
+	assign	  mdio_sel = (wb_addr[29: 5] == 27'b00_0000_0000_0000_0000_0101_000);
+	assign	   cfg_sel = (wb_addr[29: 5] == 27'b00_0000_0000_0000_0000_0101_100);
 	assign	  netb_sel = (wb_addr[29:12] == 20'b00_0000_0000_0000_0100_);
 	assign	   mem_sel = (wb_addr[29:19] == 13'b00_0000_0010_0);
 	assign	 flash_sel = (wb_addr[29:24] == 8'b00_0100_);
+	assign	none_sel = (wb_stb)&&({ gck_sel, gpsu_sel, uart_sel, flctl_sel, sdcard_sel, mous_sel, oled_sel, gtb_sel, netp_sel, mdio_sel, cfg_sel, netb_sel, mem_sel, flash_sel } == 0);
+	always @(*)
+	begin
+		many_sel <= (wb_stb);
+		case({gck_sel, gpsu_sel, uart_sel, flctl_sel, sdcard_sel, mous_sel, oled_sel, gtb_sel, netp_sel, mdio_sel, cfg_sel, netb_sel, mem_sel, flash_sel })
+			14'h0: many_sel <= 1'b0;
+			14'b10000000000000: many_sel <= 1'b0;
+			14'b01000000000000: many_sel <= 1'b0;
+			14'b00100000000000: many_sel <= 1'b0;
+			14'b00010000000000: many_sel <= 1'b0;
+			14'b00001000000000: many_sel <= 1'b0;
+			14'b00000100000000: many_sel <= 1'b0;
+			14'b00000010000000: many_sel <= 1'b0;
+			14'b00000001000000: many_sel <= 1'b0;
+			14'b00000000100000: many_sel <= 1'b0;
+			14'b00000000010000: many_sel <= 1'b0;
+			14'b00000000001000: many_sel <= 1'b0;
+			14'b00000000000100: many_sel <= 1'b0;
+			14'b00000000000010: many_sel <= 1'b0;
+			14'b00000000000001: many_sel <= 1'b0;
+		endcase
+	end
+	always @(posedge i_clk)
+	begin
+		many_ack <= (wb_cyc);
+		case({gck_ack, gpsu_ack, uart_ack, flctl_ack, sdcard_ack, mous_ack, oled_ack, gtb_ack, netp_ack, mdio_ack, cfg_ack, netb_ack, mem_ack, flash_ack })
+			14'h0: many_ack <= 1'b0;
+			14'b10000000000000: many_ack <= 1'b0;
+			14'b01000000000000: many_ack <= 1'b0;
+			14'b00100000000000: many_ack <= 1'b0;
+			14'b00010000000000: many_ack <= 1'b0;
+			14'b00001000000000: many_ack <= 1'b0;
+			14'b00000100000000: many_ack <= 1'b0;
+			14'b00000010000000: many_ack <= 1'b0;
+			14'b00000001000000: many_ack <= 1'b0;
+			14'b00000000100000: many_ack <= 1'b0;
+			14'b00000000010000: many_ack <= 1'b0;
+			14'b00000000001000: many_ack <= 1'b0;
+			14'b00000000000100: many_ack <= 1'b0;
+			14'b00000000000010: many_ack <= 1'b0;
+			14'b00000000000001: many_ack <= 1'b0;
+		endcase
+	end
+	always @(posedge i_clk)
+		wb_err <= (none_sel)||(many_sel)||(many_ack);
+
+	always @(posedge i_clk)
+		if (wb_err)
+			r_bus_err <= wb_addr;
+
+	//Now we turn to defining all of the parts and pieces of what
+	// each of the various peripherals does, and what logic it needs.
+	//
+	// This information comes from the @MAIN.INSERT and @MAIN.ALT tags.
+	// If an @ACCESS tag is available, an ifdef is created to handle
+	// having the access and not.  If the @ACCESS tag is `defined above
+	// then the @MAIN.INSERT code is executed.  If not, the @MAIN.ALT
+	// code is exeucted, together with any other cleanup settings that
+	// might need to take place--such as returning zeros to the bus,
+	// or making sure all of the various interrupt wires are set to
+	// zero if the component is not included.
+	//
+`ifdef	OLEDRGB_ACCESS
+	wboled #(.CBITS(4)) oledctrl(i_clk,
+		(wb_cyc), (wb_stb)&&(oled_sel), wb_we,
+				wb_addr[1:0], wb_data,
+			oled_ack, oled_stall, oled_data,
+		o_oled_sck, o_oled_cs_n, o_oled_mosi, o_oled_dcn,
+		{ o_oled_reset_n, o_oled_vccen, o_oled_pmoden },
+		oled_int);
+`else	// OLEDRGB_ACCESS
+	assign	o_oled_cs_n    = 1'b1;
+	assign	o_oled_sck     = 1'b1;
+	assign	o_oled_mosi    = 1'b1;
+	assign	o_oled_dcn     = 1'b1;
+	assign	o_oled_reset_n = 1'b0;
+	assign	o_oled_vccen   = 1'b0;
+	assign	o_oled_pmoden  = 1'b0;
 
 
-endmodule;
+	reg	r_oled_ack;
+	always @(posedge i_clk)
+		r_oled_ack <= (wb_stb)&&(oled_sel);
+
+	assign	oled_ack   = r_oled_ack;
+	assign	oled_stall = 1'b0;
+	assign	oled_data  = 32'h0;
+
+	assign	oled_int = 1'b0;
+`endif	// OLEDRGB_ACCESS
+
+`ifdef	MOUSE_ACCESS
+	wbmouse themouse(i_clk,
+		(wb_cyc), (wb_stb)&&(mous_sel), wb_we, wb_addr[1:0], wb_data,
+			mous_ack, mous_stall, mous_data,
+		i_ps2, o_ps2,
+		scrn_mouse, mous_interrupt);
+`else	// MOUSE_ACCESS
+	// If there is no mouse, declare mouse types of things to be .. absent
+	assign	scrn_mouse     = 32'h00;
+	assign	mous_interrupt = 1'b0;
+	assign	o_ps2          = 2'b11;
+
+	reg	r_mous_ack;
+	always @(posedge i_clk)
+		r_mous_ack <= (wb_stb)&&(mous_sel);
+
+	assign	mous_ack   = r_mous_ack;
+	assign	mous_stall = 1'b0;
+	assign	mous_data  = 32'h0;
+
+	assign	mous_interrupt = 1'b0;
+`endif	// MOUSE_ACCESS
+
+`ifdef	SDSPI_ACCESS
+	wire[31:0]	sd_debug;
+	// SPI mapping
+	wire	w_sd_cs_n, w_sd_mosi, w_s_miso;
+
+	sdspi	sdctrl(i_clk,
+		wb_cyc, (wb_stb)&&(sdcard_sel), wb_we,
+			wb_addr[1:0], wb_data,
+			sdcard_ack, sdcard_stall, sdcard_data,
+		w_sd_cs_n, o_sd_sck, w_sd_mosi, w_sd_miso,
+		sdcard_int, 1\'b1, sd_dbg);
+
+	assign	w_sd_miso = i_sd_data[0];
+	assign	o_sd_data = { w_sd_cs_n, 3\'b111 };
+	assign	o_sd_cmd  = w_sd_mosi;
+`else	// SDSPI_ACCESS
+	assign	o_sd_sck   = 1\'b1;
+	assign	o_sd_cmd   = 1\'b1;
+	assign	o_sd_data  = 4\'hf;
+	assign	sdcard_int = 1'b0
+
+	reg	r_sdcard_ack;
+	always @(posedge i_clk)
+		r_sdcard_ack <= (wb_stb)&&(sdcard_sel);
+
+	assign	sdcard_ack   = r_sdcard_ack;
+	assign	sdcard_stall = 1'b0;
+	assign	sdcard_data  = 32'h0;
+
+	assign	sdcard_int = 1'b0;
+`endif	// SDSPI_ACCESS
+
+`ifndef	ETHERNET_ACCESS
+	// Ethernet packet memory declaration
+	//
+	// The only time this needs to be defined is when the ethernet module
+	// itself isnt defined.  Otherwise, the access is accomplished by the
+	// ethernet module
+
+	memdev #(13)
+		enet_buffers(i_clk,
+			(wb_cyc), (wb_stb)&&(netb_sel),(wb_we)&&(wb_addr[11]),
+				wb_addr[11:0], wb_data, wb_sel
+				netb_ack, netb_stall, netb_data);
+
+`else
+
+	assign	netb_ack   = 1'b0;
+	assign	netb_stall = 1'b0;
+
+`endif
+
+`ifdef	CFG_ACCESS
+	wire[31:0]	cfg_debug;
+`ifdef	VERILATOR
+	reg	r_cfg_ack;
+	always @(posedge i_clk)
+		r_cfg_ack <= (wb_stb)&&(cfg_sel);
+	assign	cfg_stall = 1'b0;
+	assign	cfg_data  = 32'h00;
+`else
+	wbicapetwo #(ICAPE_LGDIV)
+		cfgport(i_clk, wb_cyc, (wb_stb)&&(cfg_sel), wb_we,
+			wb_addr[4:0], wb_data,
+			cfg_ack, cfg_stall, cfg_data);
+`endif
+
+	reg	r_cfg_ack;
+	always @(posedge i_clk)
+		r_cfg_ack <= (wb_stb)&&(cfg_sel);
+
+	assign	cfg_ack   = r_cfg_ack;
+	assign	cfg_stall = 1'b0;
+	assign	cfg_data  = 32'h0;
+
+`endif	// CFG_ACCESS
+
+`ifdef	CONSOLE_ACCESS
+	wbuart #(.DEFAULT_STEP(GPSCLOCK_DEFAULT_STEP))
+ 		console(i_clk, 1'b0,
+ 			(wb_stb)&&(uart_sel), wb_we, wb_addr[1:0], wb_data,
+ 			uart_ack, uart_stall, uart_data,
+ 			i_aux_rx, o_aux_tx, i_aux_cts_n, o_aux_rts_n,
+			uartrx_int, uarttx_int, uartrxf_int, uarttxf_int);
+`else	// CONSOLE_ACCESS
+	assign	o_uart_tx    = 1'b1;
+	assign	o_uart_rts_n = 1'b0;
+
+	reg	r_uart_ack;
+	always @(posedge i_clk)
+		r_uart_ack <= (wb_stb)&&(uart_sel);
+
+	assign	uart_ack   = r_uart_ack;
+	assign	uart_stall = 1'b0;
+	assign	uart_data  = 32'h0;
+
+	assign	uartrx_int = 1'b0;
+	assign	uarttx_int = 1'b0;
+	assign	uartrxf_int = 1'b0;
+	assign	uarttxf_int = 1'b0;
+`endif	// CONSOLE_ACCESS
+
+`ifdef	FLASH_ACCESS
+	wbqspiflash #(24)
+		flashmem(i_clk,
+			(wb_cyc), (wb_stb)&&(flash_sel), (wb_stb)&&(flctl_sel),wb_we,
+			wb_addr[23:0], wb_data,
+			flash_ack, flash_stall, flash_data,
+			o_qspi_sck, o_qspi_cs_n, o_qspi_dat, i_qspi_dat,
+			flash_interrupt)
+`else	// FLASH_ACCESS
+	assign	o_qspi_sck  = 1\'b1;
+	assign	o_qspi_cs_n = 1\'b1;
+	assign	o_qspi_mod  = 2\'b01;
+	assign	o_qspi_dat  = 4\'b1111;
+
+	reg	r_flash_ack;
+	always @(posedge i_clk)
+		r_flash_ack <= (wb_stb)&&(flash_sel);
+
+	assign	flash_ack   = r_flash_ack;
+	assign	flash_stall = 1'b0;
+	assign	flash_data  = 32'h0;
+
+	assign	flash_interrupt = 1'b0;
+`endif	// FLASH_ACCESS
+
+`ifdef	ETHERNET_ACCESS
+	enetpackets	#(12)
+		netctrl(i_clk, i_rst, wb_cyc,(wb_stb)&&((netp_sel)||(netb_sel)),
+			wb_we, { (netb_sel), wb_addr[10:0] }, wb_data, wb_sel,
+				netp_ack, netp_stall, netp_data,
+			o_net_reset_n,
+			i_net_rx_clk, i_net_col, i_net_crs, i_net_dv, i_net_rxd,
+				i_net_rxerr,
+			i_net_tx_clk, o_net_tx_en, o_net_txd,
+			enet_rx_int, enet_tx_int);
+
+	reg	r_netp_ack;
+	always @(posedge i_clk)
+		r_netp_ack <= (wb_stb)&&(netp_sel);
+
+	assign	netp_ack   = r_netp_ack;
+	assign	netp_stall = 1'b0;
+	assign	netp_data  = 32'h0;
+
+	assign	enet_rx_int = 1'b0;
+	assign	enet_tx_int = 1'b0;
+`endif	// ETHERNET_ACCESS
+
+`ifdef	BLKRAM_ACCESS
+	memdev #(.LGMEMSZ(20), .EXTRACLOCK(0))
+		blkram(i_clk,
+			(wb_cyc), (wb_stb)&&(mem_sel), wb_we,
+				wb_addr[17:0], wb_data, wb_sel,
+				mem_ack, mem_stall, mem_data);
+
+	reg	r_mem_ack;
+	always @(posedge i_clk)
+		r_mem_ack <= (wb_stb)&&(mem_sel);
+
+	assign	mem_ack   = r_mem_ack;
+	assign	mem_stall = 1'b0;
+	assign	mem_data  = 32'h0;
+
+`endif	// BLKRAM_ACCESS
+
+`ifdef	GPS_CLOCK
+
+	gpsclock_tb
+		ppsck(i_clk, ck_pps, tb_pps,
+			(wb_stb)&&(gtb_sel), wb_we, wb_addr[2:0], wb_data,
+				gtb_ack, gtb_stall, gtb_data,
+			gps_err, gps_now, gps_step);
+
+`ifdef	GPSTB
+	assign	gps_pps = tb_pps;
+`else
+	assign	gps_pps = i_gps_pps;
+`endif
+
+`endif
+
+`ifdef	NETCTRL_ACCESS
+	wire[31:0]	mdio_debug;
+	enetctrl #(2)
+		mdio(i_clk, i_rst, wb_cyc, (wb_stb)&&(mdio_sel), wb_we,
+				wb_addr[4:0], wb_data[15:0],
+			mdio_ack, mdio_stall, mdio_data,
+			o_mdclk, o_mdio, i_mdio, o_mdwe);;
+static	const	char	*alt_insert = ""
+	assign	o_mdclk = 1'b1;
+	assign	o_mdio  = 1'b1;
+	assign	o_mdwe  = 1'b0;;
+
+	reg	r_mdio_ack;
+	always @(posedge i_clk)
+		r_mdio_ack <= (wb_stb)&&(mdio_sel);
+
+	assign	mdio_ack   = r_mdio_ack;
+	assign	mdio_stall = 1'b0;
+	assign	mdio_data  = 32'h0;
+
+`endif	// NETCTRL_ACCESS
+
+`ifdef	GPSUART_ACCESS
+	wbuart #(.DEFAULT_STEP(GPSCLOCK_DEFAULT_STEP))
+		gpsuart(i_clk, 1'b0,
+			(wb_stb)&&(gpsu_sel), wb_we, wb_addr[1:0], wb_data,
+				gpsu_ack, gpsu_stall, gpsu_data,
+			i_aux_rx, o_aux_tx, i_aux_cts_n, o_aux_rts_n,
+			gpsurx_int, gpsutx_int, gpsurxf_int, gpsutxf_int);
+`else	// GPSUART_ACCESS
+	assign	o_gps_tx = 1'b1;
+	assign	o_gpsurx_int = 1'b0;
+	assign	o_gpsutx_int = 1'b0;
+	assign	o_gpsurxf_int = 1'b0;
+	assign	o_gpsutxf_int = 1'b0;
+
+
+	reg	r_gpsu_ack;
+	always @(posedge i_clk)
+		r_gpsu_ack <= (wb_stb)&&(gpsu_sel);
+
+	assign	gpsu_ack   = r_gpsu_ack;
+	assign	gpsu_stall = 1'b0;
+	assign	gpsu_data  = 32'h0;
+
+	assign	gpsurx_int = 1'b0;
+	assign	gpsutx_int = 1'b0;
+	assign	gpsurxf_int = 1'b0;
+	assign	gpsutxf_int = 1'b0;
+`endif	// GPSUART_ACCESS
+
+`ifdef	GPS_CLOCK
+	gpsclock #(.DEFAULT_STEP(GPSCLOCK_DEFAULT_STEP))
+		ppsck(i_clk, 1'b0, gps_pps, ck_pps, gps_led,
+			(wb_stb)&&(gck_sel), wb_we, wb_addr[1:0], wb_data,
+				gck_ack, gck_stall, gck_data,
+			gps_tracking, gps_now, gps_step, gps_err, gps_locked);
+`else	// GPS_CLOCK
+	wire	[31:0]	pre_step;
+	assign	pre_step = { 16'h00, (({GPSCLOCK_DEFAULT_STEP[27:0],20'h00})
+				>>GPSCLOCK_DEFAULT_STEP[31:28]) };
+	always @(posedge i_clk)
+		{ ck_pps, gps_step[31:0] } <= gps_step + pre_step;
+	assign	gck_stall  = 1'b0;
+	assign	gps_now    = 64'h0;
+	assign	gps_err    = 64'h0;
+	assign	gps_step   = 64'h0;
+	assign	gps_led    = 1'b0;
+	assign	gps_locked = 1'b0;
+
+
+	reg	r_gck_ack;
+	always @(posedge i_clk)
+		r_gck_ack <= (wb_stb)&&(gck_sel);
+
+	assign	gck_ack   = r_gck_ack;
+	assign	gck_stall = 1'b0;
+	assign	gck_data  = 32'h0;
+
+`endif	// GPS_CLOCK
+
+	//
+	// Finally, determine what the response is from the
+	// wishbone bus
+	//
+	// Any peripheral component with a @PTYPE value will be listed
+	// here.
+	//
+	always @(*)
+		casez({gck_ack, gpsu_ack, uart_ack, flctl_ack, sdcard_ack, mous_ack, oled_ack, gtb_ack, netp_ack, mdio_ack, cfg_ack, netb_ack, mem_ack, flash_ack })
+			14'b1?????????????: wb_data <= gck_data;
+			14'b01????????????: wb_data <= gpsu_data;
+			14'b001???????????: wb_data <= uart_data;
+			14'b0001??????????: wb_data <= flctl_data;
+			14'b00001?????????: wb_data <= sdcard_data;
+			14'b000001????????: wb_data <= mous_data;
+			14'b0000001???????: wb_data <= oled_data;
+			14'b00000001??????: wb_data <= gtb_data;
+			14'b000000001?????: wb_data <= netp_data;
+			14'b0000000001????: wb_data <= mdio_data;
+			14'b00000000001???: wb_data <= cfg_data;
+			14'b000000000001??: wb_data <= netb_data;
+			14'b0000000000001?: wb_data <= mem_data;
+			14'b00000000000001: wb_data <= flash_data;
+		endcase
+	end
+
+
+endmodule; // main.v

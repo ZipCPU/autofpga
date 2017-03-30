@@ -1,0 +1,96 @@
+################################################################################
+##
+## Filename: 	wboled.txt
+##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+##
+## Purpose:	To describe how to interact with an OLED device driver, in order
+##		to drive an OLED display.
+##
+## Creator:	Dan Gisselquist, Ph.D.
+##		Gisselquist Technology, LLC
+##
+################################################################################
+##
+## Copyright (C) 2017, Gisselquist Technology, LLC
+##
+## This program is free software (firmware): you can redistribute it and/or
+## modify it under the terms of  the GNU General Public License as published
+## by the Free Software Foundation, either version 3 of the License, or (at
+## your option) any later version.
+##
+## This program is distributed in the hope that it will be useful, but WITHOUT
+## ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY or
+## FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+## for more details.
+##
+## You should have received a copy of the GNU General Public License along
+## with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
+## target there if the PDF file isn't present.)  If not, see
+## <http://www.gnu.org/licenses/> for a copy.
+##
+## License:	GPL, v3, as defined and found on www.gnu.org,
+##		http://www.gnu.org/licenses/gpl.html
+##
+##
+################################################################################
+##
+##
+@PREFIX=oled
+@NADDR=4
+@PTYPE=DOUBLE
+@ACCESS=OLEDRGB_ACCESS
+@INTERRUPT=oled_int
+@INTNAME=	OLED
+@MAIN.PORTLIST=
+	// OLED control interface (roughly SPI)
+	o_oled_sck, o_oled_cs_n, o_oled_mosi, o_oled_dcn,
+	o_oled_reset_n, o_oled_vccen, o_oled_pmoden
+@MAIN.IODECLS=
+	// OLEDRGB interface
+	output	wire		o_oled_sck, o_oled_cs_n, o_oled_mosi,
+				o_oled_dcn, o_oled_reset_n, o_oled_vccen,
+				o_oled_pmoden;
+@MAIN.INSERT=
+	wboled #(.CBITS(4)) oledctrl(i_clk,
+		(wb_cyc), (wb_stb)&&(oled_sel), wb_we,
+				wb_addr[1:0], wb_data,
+			oled_ack, oled_stall, oled_data,
+		o_oled_sck, o_oled_cs_n, o_oled_mosi, o_oled_dcn,
+		{ o_oled_reset_n, o_oled_vccen, o_oled_pmoden },
+		oled_int);
+@MAIN.ALT=
+	assign	o_oled_cs_n    = 1'b1;
+	assign	o_oled_sck     = 1'b1;
+	assign	o_oled_mosi    = 1'b1;
+	assign	o_oled_dcn     = 1'b1;
+	assign	o_oled_reset_n = 1'b0;
+	assign	o_oled_vccen   = 1'b0;
+	assign	o_oled_pmoden  = 1'b0;
+
+@REGS.N=4
+@REGS.0= 0 R_OLED_CMD		OLED
+@REGS.1= 1 R_OLED_CDAT		OLEDCA
+@REGS.2= 2 R_OLED_CDAT		OLEDCB
+@REGS.3= 3 R_OLED_DATA		ODATA
+@BDEF.DEFN=
+// Definitions to interact with the OLED device
+#define	OLED_PMODEN		0x0010001
+#define	OLED_PMODEN_OFF		0x0010000
+#define	OLED_IOPWR		OLED_PMODEN
+#define	OLED_VCCEN		0x0020002
+#define	OLED_VCC_DISABLE	0x0020000
+#define	OLED_RESET		0x0040000
+#define	OLED_RESET_CLR		0x0040004
+#define	OLED_FULLPOWER		(OLED_PMODEN|OLED_VCCEN|OLED_RESET_CLR)
+#define	OLED_POWER_DOWN		(OLED_PMODEN_OFF|OLED_VCCEN|OLED_RESET_CLR)
+#define	OLED_BUSY(dev)		(dev.o_ctrl & 1)
+#define	OLED_DISPLAYON		0x0af	// To be sent over the control channel
+typedef	struct OLED_S {
+	unsigned	o_ctrl, o_a, o_b, o_data;
+} OLEDRGB;
+
+@BDEF.IONAME=io_oled
+@BDEF.IOTYPE=OLEDRGB
+@BDEF.OSDEF= _ZIP_HAS_OLED
+@BDEF.OSVAL= static volatile OLEDRGB *const _oled = &((BOARD *)PERIPHERAL_ADDR)->io_oled;
