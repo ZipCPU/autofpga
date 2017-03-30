@@ -1,0 +1,358 @@
+// assigning      gck_... to 00000400
+// assigning     gpsu_... to 00000410
+// assigning     uart_... to 00000420
+// assigning    flctl_... to 00000430
+// assigning      gtb_... to 00000440
+// assigning     netp_... to 00000460
+// assigning     mdio_... to 00000480
+// assigning      cfg_... to 00000500
+// assigning     netb_... to 00004000
+// assigning      mem_... to 00200000
+// assigning    flash_... to 04000000
+
+
+
+// TO BE PLACED INTO regdefs.h
+#ifndef	REGDEFS_H
+#define	REGDEFS_H
+
+
+#define	R_GPS_ALPHA    	0x00000400	// wbregs names: ALPHA
+#define	R_GPS_BETA     	0x00000404	// wbregs names: BETA
+#define	R_GPS_GAMMA    	0x00000408	// wbregs names: GAMMA
+#define	R_GPS_STEP     	0x0000040c	// wbregs names: STEP
+#define	R_UART_SETUP   	0x00000410	// wbregs names: GPSSETUP
+#define	R_UART_FIFO    	0x00000414	// wbregs names: GPSFIFO
+#define	R_UART_UARTRX  	0x00000418	// wbregs names: GPSRX
+#define	R_UART_UARTTX  	0x0000041c	// wbregs names: GPSTX
+#define	R_UART_SETUP   	0x00000420	// wbregs names: USETUP
+#define	R_UART_FIFO    	0x00000424	// wbregs names: UFIFO
+#define	R_UART_UARTRX  	0x00000428	// wbregs names: RX
+#define	R_UART_UARTTX  	0x0000042c	// wbregs names: TX
+#define	R_QSPI_EREG    	0x00000430	// wbregs names: QSPIE
+#define	R_QSPI_SREG    	0x00000434	// wbregs names: QSPIC
+#define	R_QSPI_SREG    	0x00000438	// wbregs names: QSPIS
+#define	R_QSPI_IDREG   	0x0000043c	// wbregs names: QSPII
+#define	R_GPSTB_FREQ   	0x00000440	// wbregs names: GPSFREQ
+#define	R_GPSTB_JUMP   	0x00000444	// wbregs names: GPSJUMP
+#define	R_GPSTB_ERRHI  	0x00000448	// wbregs names: ERRHI
+#define	R_GPSTB_ERRLO  	0x0000044c	// wbregs names: ERRLO
+#define	R_GPSTB_COUNTHI	0x00000450	// wbregs names: CNTHI
+#define	R_GPSTB_COUNTLO	0x00000454	// wbregs names: CNTLO
+#define	R_GPSTB_STEPHI 	0x00000458	// wbregs names: STEPHI
+#define	R_GPSTB_STEPLO 	0x0000045c	// wbregs names: STEPLO
+#define	R_NET_RXCMD    	0x00000460	// wbregs names: RXCMD, NETRX
+#define	R_NET_TXCMD    	0x00000464	// wbregs names: TXCMD, NETTX
+#define	R_NET_MACHI    	0x00000468	// wbregs names: MACHI
+#define	R_NET_MACLO    	0x0000046c	// wbregs names: MACLO
+#define	R_NET_RXMISS   	0x00000470	// wbregs names: NETMISS
+#define	R_NET_RXERR    	0x00000474	// wbregs names: NETERR
+#define	R_NET_RXCRC    	0x00000478	// wbregs names: NETCRCERR
+#define	R_NET_TXCOL    	0x0000047c	// wbregs names: NETCOL
+#define	R_MDIO_BMCR    	0x00000480	// wbregs names: BMCR
+#define	R_MDIO_BMSR    	0x00000484	// wbregs names: BMSR
+#define	R_MDIO_PHYIDR1 	0x00000488	// wbregs names: PHYIDR1
+#define	R_MDIO_PHYIDR2 	0x0000048c	// wbregs names: PHYIDR2
+#define	R_MDIO_ANAR    	0x00000490	// wbregs names: ANAR
+#define	R_MDIO_ANLPAR  	0x00000494	// wbregs names: ANLPAR
+#define	R_MDIO_ANER    	0x00000498	// wbregs names: ANER
+#define	R_MDIO_ANNPTR  	0x0000049c	// wbregs names: ANNPTR
+#define	R_MDIO_PHYSTS  	0x000004c0	// wbregs names: PHYSYTS
+#define	R_MDIO_FCSCR   	0x000004d0	// wbregs names: FCSCR
+#define	R_MDIO_RECR    	0x000004d4	// wbregs names: RECR
+#define	R_MDIO_PCSR    	0x000004d8	// wbregs names: PCSR
+#define	R_MDIO_RBR     	0x000004dc	// wbregs names: RBR
+#define	R_MDIO_LEDCR   	0x000004e0	// wbregs names: LEDCR
+#define	R_MDIO_PHYCR   	0x000004e4	// wbregs names: PHYCR
+#define	R_MDIO_BTSCR   	0x000004e8	// wbregs names: BTSCR
+#define	R_MDIO_CDCTRL  	0x000004ec	// wbregs names: CDCTRL
+#define	R_MDIO_EDCR    	0x000004f4	// wbregs names: EDCR
+#define	R_CFG_CRC      	0x00000500	// wbregs names: FPGACRC
+#define	R_CFG_FAR      	0x00000504	// wbregs names: FPGAFAR
+#define	R_CFG_FDRI     	0x00000508	// wbregs names: FPGAFDRI
+#define	R_CFG_FDRO     	0x0000050c	// wbregs names: FPGAFDRO
+#define	R_CFG_CMD      	0x00000510	// wbregs names: FPGACMD
+#define	R_CFG_CTL0     	0x00000514	// wbregs names: FPGACTL0
+#define	R_CFG_MASK     	0x00000518	// wbregs names: FPGAMASK
+#define	R_CFG_STAT     	0x0000051c	// wbregs names: FPGASTAT
+#define	R_CFG_LOUT     	0x00000520	// wbregs names: FPGALOUT
+#define	R_CFG_COR0     	0x00000524	// wbregs names: FPGACOR0
+#define	R_CFG_MFWR     	0x00000528	// wbregs names: FPGAMFWR
+#define	R_CFG_CBC      	0x0000052c	// wbregs names: FPGACBC
+#define	R_CFG_IDCODE   	0x00000530	// wbregs names: FPGAIDCODE
+#define	R_CFG_AXSS     	0x00000534	// wbregs names: FPGAAXSS
+#define	R_CFG_COR1     	0x00000538	// wbregs names: FPGACOR1
+#define	R_CFG_WBSTAR   	0x00000540	// wbregs names: WBSTAR
+#define	R_CFG_TIMER    	0x00000544	// wbregs names: CFGTIMER
+#define	R_CFG_BOOTSTS  	0x00000558	// wbregs names: BOOTSTS
+#define	R_CFG_CTL1     	0x00000560	// wbregs names: FPGACTL1
+#define	R_CFG_BSPI     	0x0000057c	// wbregs names: FPGABSPI
+#define	R_NET_RXBUF    	0x00004000	// wbregs names: NETRXB
+#define	R_NET_TXBUF    	0x00006000	// wbregs names: NETTXB
+#define	BKRAM          	0x00200000	// wbregs names: RAM
+#define	FLASHMEM       	0x04000000	// wbregs names: FLASH
+
+
+// Definitions for the bus masters
+// And then from the peripherals
+#define	SZPAGEB		256
+#define	PGLENB		256
+#define	SZPAGEW		64
+#define	PGLENW		64
+#define	NPAGES		256
+#define	SECTORSZB	(NPAGES * SZPAGEB)	// In bytes, not words!!
+#define	SECTORSZW	(NPAGES * SZPAGEW)	// In words
+#define	NSECTORS	64
+#define	SECTOROF(A)	((A) & (-1<<16))
+#define	SUBSECTOROF(A)	((A) & (-1<<12))
+#define	PAGEOF(A)	((A) & (-1<<8))
+
+// End of definitions from REGS.INSERT.H
+
+
+typedef	struct {
+	unsigned	m_addr;
+	const char	*m_name;
+} REGNAME;
+
+extern	const	REGNAME	*bregs;
+extern	const	int	NREGS;
+// #define	NREGS	(sizeof(bregs)/sizeof(bregs[0]))
+
+extern	unsigned	addrdecode(const char *v);
+extern	const	char *addrname(const unsigned v);
+
+#endif	// REGDEFS_H
+
+
+
+// TO BE PLACED INTO regdefs.cpp
+#include <stdio.h>
+#include <stdlib.h>
+#include <strings.h>
+#include <ctype.h>
+#include "regdefs.h"
+
+const	REGNAME	raw_bregs[] = {
+	{ R_GPS_ALPHA    ,	"ALPHA"     	},
+	{ R_GPS_BETA     ,	"BETA"      	},
+	{ R_GPS_GAMMA    ,	"GAMMA"     	},
+	{ R_GPS_STEP     ,	"STEP"      	},
+	{ R_UART_SETUP   ,	"GPSSETUP"  	},
+	{ R_UART_FIFO    ,	"GPSFIFO"   	},
+	{ R_UART_UARTRX  ,	"GPSRX"     	},
+	{ R_UART_UARTTX  ,	"GPSTX"     	},
+	{ R_UART_SETUP   ,	"USETUP"    	},
+	{ R_UART_FIFO    ,	"UFIFO"     	},
+	{ R_UART_UARTRX  ,	"RX"        	},
+	{ R_UART_UARTTX  ,	"TX"        	},
+	{ R_QSPI_EREG    ,	"QSPIE"     	},
+	{ R_QSPI_SREG    ,	"QSPIC"     	},
+	{ R_QSPI_SREG    ,	"QSPIS"     	},
+	{ R_QSPI_IDREG   ,	"QSPII"     	},
+	{ R_GPSTB_FREQ   ,	"GPSFREQ"   	},
+	{ R_GPSTB_JUMP   ,	"GPSJUMP"   	},
+	{ R_GPSTB_ERRHI  ,	"ERRHI"     	},
+	{ R_GPSTB_ERRLO  ,	"ERRLO"     	},
+	{ R_GPSTB_COUNTHI,	"CNTHI"     	},
+	{ R_GPSTB_COUNTLO,	"CNTLO"     	},
+	{ R_GPSTB_STEPHI ,	"STEPHI"    	},
+	{ R_GPSTB_STEPLO ,	"STEPLO"    	},
+	{ R_NET_RXCMD    ,	"RXCMD"     	},
+	{ R_NET_RXCMD    ,	"NETRX"     	},
+	{ R_NET_TXCMD    ,	"TXCMD"     	},
+	{ R_NET_TXCMD    ,	"NETTX"     	},
+	{ R_NET_MACHI    ,	"MACHI"     	},
+	{ R_NET_MACLO    ,	"MACLO"     	},
+	{ R_NET_RXMISS   ,	"NETMISS"   	},
+	{ R_NET_RXERR    ,	"NETERR"    	},
+	{ R_NET_RXCRC    ,	"NETCRCERR" 	},
+	{ R_NET_TXCOL    ,	"NETCOL"    	},
+	{ R_MDIO_BMCR    ,	"BMCR"      	},
+	{ R_MDIO_BMSR    ,	"BMSR"      	},
+	{ R_MDIO_PHYIDR1 ,	"PHYIDR1"   	},
+	{ R_MDIO_PHYIDR2 ,	"PHYIDR2"   	},
+	{ R_MDIO_ANAR    ,	"ANAR"      	},
+	{ R_MDIO_ANLPAR  ,	"ANLPAR"    	},
+	{ R_MDIO_ANER    ,	"ANER"      	},
+	{ R_MDIO_ANNPTR  ,	"ANNPTR"    	},
+	{ R_MDIO_PHYSTS  ,	"PHYSYTS"   	},
+	{ R_MDIO_FCSCR   ,	"FCSCR"     	},
+	{ R_MDIO_RECR    ,	"RECR"      	},
+	{ R_MDIO_PCSR    ,	"PCSR"      	},
+	{ R_MDIO_RBR     ,	"RBR"       	},
+	{ R_MDIO_LEDCR   ,	"LEDCR"     	},
+	{ R_MDIO_PHYCR   ,	"PHYCR"     	},
+	{ R_MDIO_BTSCR   ,	"BTSCR"     	},
+	{ R_MDIO_CDCTRL  ,	"CDCTRL"    	},
+	{ R_MDIO_EDCR    ,	"EDCR"      	},
+	{ R_CFG_CRC      ,	"FPGACRC"   	},
+	{ R_CFG_FAR      ,	"FPGAFAR"   	},
+	{ R_CFG_FDRI     ,	"FPGAFDRI"  	},
+	{ R_CFG_FDRO     ,	"FPGAFDRO"  	},
+	{ R_CFG_CMD      ,	"FPGACMD"   	},
+	{ R_CFG_CTL0     ,	"FPGACTL0"  	},
+	{ R_CFG_MASK     ,	"FPGAMASK"  	},
+	{ R_CFG_STAT     ,	"FPGASTAT"  	},
+	{ R_CFG_LOUT     ,	"FPGALOUT"  	},
+	{ R_CFG_COR0     ,	"FPGACOR0"  	},
+	{ R_CFG_MFWR     ,	"FPGAMFWR"  	},
+	{ R_CFG_CBC      ,	"FPGACBC"   	},
+	{ R_CFG_IDCODE   ,	"FPGAIDCODE"	},
+	{ R_CFG_AXSS     ,	"FPGAAXSS"  	},
+	{ R_CFG_COR1     ,	"FPGACOR1"  	},
+	{ R_CFG_WBSTAR   ,	"WBSTAR"    	},
+	{ R_CFG_TIMER    ,	"CFGTIMER"  	},
+	{ R_CFG_BOOTSTS  ,	"BOOTSTS"   	},
+	{ R_CFG_CTL1     ,	"FPGACTL1"  	},
+	{ R_CFG_BSPI     ,	"FPGABSPI"  	},
+	{ R_NET_RXBUF    ,	"NETRXB"    	},
+	{ R_NET_TXBUF    ,	"NETTXB"    	},
+	{ BKRAM          ,	"RAM"       	},
+	{ FLASHMEM       ,	"FLASH"     	}
+};
+
+#define	RAW_NREGS	(sizeof(raw_bregs)/sizeof(bregs[0]))
+
+const	REGNAME	*bregs = raw_bregs;
+unsigned	addrdecode(const char *v) {
+	if (isalpha(v[0])) {
+		for(int i=0; i<NREGS; i++)
+			if (strcasecmp(v, bregs[i].m_name)==0)
+				return bregs[i].m_addr;
+		fprintf(stderr, "Unknown register: %s\n", v);
+		exit(-2);
+	} else
+		return strtoul(v, NULL, 0); 
+}
+
+const	char *addrname(const unsigned v) {
+	for(int i=0; i<NREGS; i++)
+		if (bregs[i].m_addr == v)
+			return bregs[i].m_name;
+	return NULL;
+}
+
+
+
+//
+// TO BE PLACED INTO main.v
+//
+`default_nettype	none
+
+
+// Here is a list of defines which may be used, post auto-design
+// (not post-build), to turn particular peripherals (and bus masters)
+// on and off.
+//
+// First for the bus masters
+// And then for the peripherals
+#define	CFG_ACCESS
+#define	FLASH_ACCESS
+#define	CONSOLE_ACCESS
+#define	FLASH_ACCESS
+#define	ETHERNET_ACCESS
+#define	BLKRAM_ACCESS
+#define	NETCTRL_ACCESS
+#define	GPSUART_ACCESS
+#define	GPS_CLOCK
+
+
+module	main(i_clk,
+		// The UART console
+		i_aux_rx, o_aux_tx, i_aux_cts_n, o_aux_rts_n,
+		// The QSPI Flash
+		o_qspi_cs_n, o_qspi_sck, o_qspi_dat, i_qspi_dat, o_qspi_mod,
+		// Ethernet control (packets) lines
+		o_net_reset_n, i_net_rx_clk, i_net_col, i_net_crs, i_net_dv,
+			i_net_rxd, i_net_rxerr,
+		i_net_tx_clk, o_net_tx_en, o_net_txd,
+		// The ethernet MDIO wires
+		o_mdclk, o_mdio, o_mdwe, i_mdio,
+		// The GPS-UART
+		i_gps_rx, o_gps_tx,
+		i_gps_pps);
+	input			i_clk;
+	// Ethernet control (MDIO)
+	output	wire		o_mdclk, o_mdio, o_mdwe;
+	input			i_mdio;
+	input			i_gps_rx;
+	output	wire		o_gps_tx;
+	//The GPS Clock
+	input			i_gps_pps;
+
+
+	//
+	// Declaring wishbone master bus data
+	//
+	wire		wb_cyc, wb_stb, wb_we, wb_stall, wb_ack, wb_err;
+	wire	[31:0]	wb_data, wb_idata, wb_addr;
+	wire	[3:0]	wb_sel;
+
+
+
+
+	//
+	// Declaring Peripheral data, internal wires and registers
+	//
+	wire	uartrx_int, uarttx_int, uartrxf_int, uarttxf_int;
+	wire	enet_rx_int, enet_tx_int;
+	wire	gpsurx_int, gpsutx_int, gpsurxf_int, gpsutxf_int;
+	wire	gps_pps, ck_pps, gps_led, gps_locked;
+	wire	[63:0]	gps_now, gps_err, gps_step;
+	wire	[1:0]	gps_dbg_tick;
+
+	//
+	// Wishbone slave wire declarations
+	//
+
+	wire	netb_ack, netb_stall, netb_sel;
+	wire	[31:0]	netb_data;
+
+	wire	cfg_ack, cfg_stall, cfg_sel;
+	wire	[31:0]	cfg_data;
+
+	wire	flctl_ack, flctl_stall, flctl_sel;
+	wire	[31:0]	flctl_data;
+
+	wire	uart_ack, uart_stall, uart_sel;
+	wire	[31:0]	uart_data;
+
+	wire	flash_ack, flash_stall, flash_sel;
+	wire	[31:0]	flash_data;
+
+	wire	netp_ack, netp_stall, netp_sel;
+	wire	[31:0]	netp_data;
+
+	wire	mem_ack, mem_stall, mem_sel;
+	wire	[31:0]	mem_data;
+
+	wire	gtb_ack, gtb_stall, gtb_sel;
+	wire	[31:0]	gtb_data;
+
+	wire	mdio_ack, mdio_stall, mdio_sel;
+	wire	[31:0]	mdio_data;
+
+	wire	gpsu_ack, gpsu_stall, gpsu_sel;
+	wire	[31:0]	gpsu_data;
+
+	wire	gck_ack, gck_stall, gck_sel;
+	wire	[31:0]	gck_data;
+
+
+	// Wishbone peripheral address decoding
+
+	assign	   gck_sel = (wb_addr[29: 2] == 30'b00_0000_0000_0000_0000_0100_0000_00);
+	assign	  gpsu_sel = (wb_addr[29: 2] == 30'b00_0000_0000_0000_0000_0100_0001_00);
+	assign	  uart_sel = (wb_addr[29: 2] == 30'b00_0000_0000_0000_0000_0100_0010_00);
+	assign	 flctl_sel = (wb_addr[29: 2] == 30'b00_0000_0000_0000_0000_0100_0011_00);
+	assign	   gtb_sel = (wb_addr[29: 3] == 29'b00_0000_0000_0000_0000_0100_0100_0);
+	assign	  netp_sel = (wb_addr[29: 3] == 29'b00_0000_0000_0000_0000_0100_0110_0);
+	assign	  mdio_sel = (wb_addr[29: 5] == 27'b00_0000_0000_0000_0000_0100_100);
+	assign	   cfg_sel = (wb_addr[29: 5] == 27'b00_0000_0000_0000_0000_0101_000);
+	assign	  netb_sel = (wb_addr[29:12] == 20'b00_0000_0000_0000_0100_);
+	assign	   mem_sel = (wb_addr[29:19] == 13'b00_0000_0010_0);
+	assign	 flash_sel = (wb_addr[29:24] == 8'b00_0100_);
+
+
+endmodule;

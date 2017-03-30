@@ -53,6 +53,7 @@
 #		which then selects from among these registers in one clock
 #		cycle.  In the future, these may be gathered together into a
 #		doubleio.v file.
+#	MEMORY
 #	OTHER (the default), for a peripheral that may take *many* clocks to
 #		respond to a bus transaction, ... one that uses its stall
 #		line of a necessity.
@@ -63,19 +64,21 @@
 		i_aux_rx, o_aux_tx, i_aux_cts_n, o_aux_rts_n
 @MAIN.IODECL=
 	input			i_aux_rx, i_aux_cts_n;
-	output	wire		o_aux_tx, o_aux_rts_n;";
-# @MAIN.DEFNS=
+	output	wire		o_aux_tx, o_aux_rts_n;
+@MAIN.DEFNS=
+	wire	uartrx_int, uarttx_int, uartrxf_int, uarttxf_int;
 @MAIN.INSERT=
 	wbuart #(.DEFAULT_STEP(GPSCLOCK_DEFAULT_STEP))
- 		console(i_clk, 1\'b0,
+ 		console(i_clk, 1'b0,
  			(wb_stb)&&(uart_sel), wb_we, wb_addr[1:0], wb_data,
  			uart_ack, uart_stall, uart_data,
  			i_aux_rx, o_aux_tx, i_aux_cts_n, o_aux_rts_n,
 			uartrx_int, uarttx_int, uartrxf_int, uarttxf_int);
-@MAIN.INTERRUPTS = uartrx_int, uarttx_int, uartrxf_int, uarttxf_int
-@MAIN.ALT
-	assign	o_uart_tx    = 1\'b1;
-	assign	o_uart_rts_n = 1\'b0;
+@INTERRUPT = uartrx_int, uarttx_int, uartrxf_int, uarttxf_int
+@INTNAME = UARTRX,UARTTX,UARTRXF,UARTTXF
+@MAIN.ALT=
+	assign	o_uart_tx    = 1'b1;
+	assign	o_uart_rts_n = 1'b0;
 @TOPLEVEL=
 # @SCOPE.DATA=
 # @SCOPE.TRIGGER=

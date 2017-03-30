@@ -1,0 +1,102 @@
+################################################################################
+##
+## Filename: 	flash.txt
+##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+##
+## Purpose:	Describes the flash in our new data format.
+##
+## Creator:	Dan Gisselquist, Ph.D.
+##		Gisselquist Technology, LLC
+##
+################################################################################
+##
+## Copyright (C) 2017, Gisselquist Technology, LLC
+##
+## This program is free software (firmware): you can redistribute it and/or
+## modify it under the terms of  the GNU General Public License as published
+## by the Free Software Foundation, either version 3 of the License, or (at
+## your option) any later version.
+##
+## This program is distributed in the hope that it will be useful, but WITHOUT
+## ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY or
+## FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+## for more details.
+##
+## You should have received a copy of the GNU General Public License along
+## with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
+## target there if the PDF file isn't present.)  If not, see
+## <http://www.gnu.org/licenses/> for a copy.
+##
+## License:	GPL, v3, as defined and found on www.gnu.org,
+##		http://www.gnu.org/licenses/gpl.html
+##
+##
+################################################################################
+##
+##
+@PREFIX= flash
+@NADDR= 0x1000000
+@ACCESS= FLASH_ACCESS
+@PTYPE=  MEMORY
+@MAIN.PORTLIST=
+		// The QSPI Flash
+		o_qspi_cs_n, o_qspi_sck, o_qspi_dat, i_qspi_dat, o_qspi_mod
+@MAIN.IODECL=
+	// The QSPI flash
+	output	wire		o_qspi_cs_n, o_qspi_sck;
+	output	wire	[3:0]	o_qspi_dat;
+	input	wire	[3:0]	i_qspi_dat;
+	output	wire	[1:0]	o_qspi_mod;
+# @MAIN.DEFNS=
+@MAIN.INTERRUPT= flash_interrupt
+# @DBGDEFNS=
+@MAIN.INSERT=
+	wbqspiflash #(24)
+		flashmem(i_clk,
+			(wb_cyc), (wb_stb)&&(flash_sel), (wb_stb)&&(flctl_sel),wb_we,
+			wb_addr[23:0], wb_data,
+			flash_ack, flash_stall, flash_data,
+			o_qspi_sck, o_qspi_cs_n, o_qspi_dat, i_qspi_dat,
+			flash_interrupt)
+@MAIN.ALT=
+	assign	o_qspi_sck  = 1\'b1;
+	assign	o_qspi_cs_n = 1\'b1;
+	assign	o_qspi_mod  = 2\'b01;
+	assign	o_qspi_dat  = 4\'b1111;
+@MEM.NAME= flash
+@MEM.ACCESS = rx
+@TOPLEVEL=
+@REGS.N= 1
+@REGS.0= 0 FLASHMEM FLASH
+@CSTRUCT=
+@IONAME=
+#
+# Now, the control interface
+@PREFIX= flctl
+@NADDR= 4
+@ACCESS= FLASH_ACCESS
+@PTYPE= DOUBLE
+@REGS.N= 4
+@REGS.0= 0 R_QSPI_EREG QSPIE
+@REGS.1= 1 R_QSPI_SREG QSPIC
+@REGS.2= 2 R_QSPI_SREG QSPIS
+@REGS.3= 3 R_QSPI_IDREG QSPII
+@CSTRUCT=
+typedef struct FLASHCTL_S {
+	unsigned\tf_ereg, f_config, f_status, f_id;
+} FLASHCTL;
+@REGS.INSERT.H=
+#define	SZPAGEB		256
+#define	PGLENB		256
+#define	SZPAGEW		64
+#define	PGLENW		64
+#define	NPAGES		256
+#define	SECTORSZB	(NPAGES * SZPAGEB)	// In bytes, not words!!
+#define	SECTORSZW	(NPAGES * SZPAGEW)	// In words
+#define	NSECTORS	64
+#define	SECTOROF(A)	((A) & (-1<<16))
+#define	SUBSECTOROF(A)	((A) & (-1<<12))
+#define	PAGEOF(A)	((A) & (-1<<8))
+
+@IONAME= io_flctl

@@ -1,0 +1,128 @@
+################################################################################
+##
+## Filename: 	mdio.c
+##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+##
+## Purpose:	This file describes how the network MDIO core is to be 
+##		connected to the rest of the design, for use by the autofpga
+##	program.
+##
+## Creator:	Dan Gisselquist, Ph.D.
+##		Gisselquist Technology, LLC
+##
+################################################################################
+##
+## Copyright (C) 2017, Gisselquist Technology, LLC
+##
+## This program is free software (firmware): you can redistribute it and/or
+## modify it under the terms of  the GNU General Public License as published
+## by the Free Software Foundation, either version 3 of the License, or (at
+## your option) any later version.
+##
+## This program is distributed in the hope that it will be useful, but WITHOUT
+## ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY or
+## FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+## for more details.
+##
+## You should have received a copy of the GNU General Public License along
+## with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
+## target there if the PDF file isn't present.)  If not, see
+## <http://www.gnu.org/licenses/> for a copy.
+##
+## License:	GPL, v3, as defined and found on www.gnu.org,
+##		http://www.gnu.org/licenses/gpl.html
+##
+##
+################################################################################
+##
+##
+@PREFIX=mdio
+@NADDR=32
+@ACCESS=NETCTRL_ACCESS
+@PTYPE=OTHER
+@TOP.PORTLIST=
+	// The ethernet MDIO wires
+	o_eth_mdclk, io_eth_mdio
+@TOP.IODECLS=
+	// Ethernet control (MDIO)
+	output	wire		o_mdclk, o_mdio, o_mdwe;
+	input			i_mdio;
+@TOP.DEFNS=
+	wire	w_mdio, w_mdwe;
+@TOP.MAIN=
+	o_eth_mdclk, w_mdio, w_mdwe, io_eth_mdio,
+@TOP.INSERT=
+	assign	io_eth_mdio = (w_mdwe)?w_mdio : 1'bz;
+@MAIN.PORTLIST=
+		// The ethernet MDIO wires
+		o_mdclk, o_mdio, o_mdwe, i_mdio
+@MAIN.IODECLS=
+	// Ethernet control (MDIO)
+	output	wire		o_mdclk, o_mdio, o_mdwe;
+	input			i_mdio;
+@MAIN.INSERT=
+	wire[31:0]	mdio_debug;
+	enetctrl #(2)
+		mdio(i_clk, i_rst, wb_cyc, (wb_stb)&&(mdio_sel), wb_we,
+				wb_addr[4:0], wb_data[15:0],
+			mdio_ack, mdio_stall, mdio_data,
+			o_mdclk, o_mdio, i_mdio, o_mdwe);;
+static	const	char	*alt_insert = ""
+	assign	o_mdclk = 1'b1;
+	assign	o_mdio  = 1'b1;
+	assign	o_mdwe  = 1'b0;;
+@REGS.NOTE= // Ethernet configuration (MDIO) port
+@REGS.N=18
+@REGS.0=  0 R_MDIO_BMCR  	BMCR
+@REGS.1=  1 R_MDIO_BMSR 	BMSR
+@REGS.2=  2 R_MDIO_PHYIDR1	PHYIDR1
+@REGS.3=  3 R_MDIO_PHYIDR2	PHYIDR2
+@REGS.4=  4 R_MDIO_ANAR		ANAR
+@REGS.5=  5 R_MDIO_ANLPAR	ANLPAR
+# // 5 is also the ANLPARNP register
+@REGS.6=  6 R_MDIO_ANER		ANER
+@REGS.7=  7 R_MDIO_ANNPTR	ANNPTR
+# // Registers 8-15 are reserved, and so not defined here
+@REGS.8= 16 R_MDIO_PHYSTS	PHYSYTS
+# // Registers 17-19 are reserved
+@REGS.9= 20 R_MDIO_FCSCR	FCSCR
+@REGS.10=21 R_MDIO_RECR		RECR
+@REGS.11=22 R_MDIO_PCSR		PCSR
+@REGS.12=23 R_MDIO_RBR		RBR
+@REGS.13=24 R_MDIO_LEDCR	LEDCR
+@REGS.14=25 R_MDIO_PHYCR	PHYCR
+@REGS.15=26 R_MDIO_BTSCR	BTSCR
+@REGS.16=27 R_MDIO_CDCTRL	CDCTRL
+# // 28 is reserved
+@REGS.17=29 R_MDIO_EDCR		EDCR
+@CSTRUCT=
+//
+// The Ethernet MDIO interface
+//
+#define MDIO_BMCR	0x00
+#define MDIO_BMSR	0x01
+#define MDIO_PHYIDR1	0x02
+#define MDIO_PHYIDR2	0x03
+#define MDIO_ANAR	0x04
+#define MDIO_ANLPAR	0x05
+#define MDIO_ANLPARNP	0x05	// Duplicate register address
+#define MDIO_ANER	0x06
+#define MDIO_ANNPTR	0x07
+#define MDIO_PHYSTS	0x10
+#define MDIO_FCSCR	0x14
+#define MDIO_RECR	0x15
+#define MDIO_PCSR	0x16
+#define MDIO_RBR	0x17
+#define MDIO_LEDCR	0x18
+#define MDIO_PHYCR	0x19
+#define MDIO_BTSCR	0x1a
+#define MDIO_CDCTRL	0x1b
+#define MDIO_EDCR	0x1d
+
+typedef struct ENETMDIO_S {
+	unsigned	e_v[32];
+} ENETMDIO;
+
+
+@IONAME= io_netmd

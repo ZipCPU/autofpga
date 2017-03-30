@@ -1,0 +1,187 @@
+################################################################################
+##
+## Filename: 	gps.c
+##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+##
+## Purpose:	This file describes the three interfaces created by the GPS:
+##		1) a GPS-locked clock, 2) a "testbench" which is used to
+##	measure the performance of the GPS-locked lock, and 3) a wishbone
+##	controlled UART which can be used to read from the UART stream coming
+##	from the GPS.
+##
+## Creator:	Dan Gisselquist, Ph.D.
+##		Gisselquist Technology, LLC
+##
+################################################################################
+##
+## Copyright (C) 2017, Gisselquist Technology, LLC
+##
+## This program is free software (firmware): you can redistribute it and/or
+## modify it under the terms of  the GNU General Public License as published
+## by the Free Software Foundation, either version 3 of the License, or (at
+## your option) any later version.
+##
+## This program is distributed in the hope that it will be useful, but WITHOUT
+## ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY or
+## FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+## for more details.
+##
+## You should have received a copy of the GNU General Public License along
+## with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
+## target there if the PDF file isn't present.)  If not, see
+## <http://www.gnu.org/licenses/> for a copy.
+##
+## License:	GPL, v3, as defined and found on www.gnu.org,
+##		http://www.gnu.org/licenses/gpl.html
+##
+##
+################################################################################
+##
+##
+@PREFIX=gck
+@NADDR=4
+@PTYPE=DOUBLE
+@ACCESS=GPS_CLOCK
+@MAIN.PORTLIST=
+		i_gps_pps
+@MAIN.IODECLS=
+	//The GPS Clock
+	input			i_gps_pps;
+@MAIN.DEFNS=
+	wire	gps_pps, ck_pps, gps_led, gps_locked;
+	wire	[63:0]	gps_now, gps_err, gps_step;
+	wire	[1:0]	gps_dbg_tick;
+@MAIN.INSERT=
+	gpsclock #(.DEFAULT_STEP(GPSCLOCK_DEFAULT_STEP))
+		ppsck(i_clk, 1'b0, gps_pps, ck_pps, gps_led,
+			(wb_stb)&&(gck_sel), wb_we, wb_addr[1:0], wb_data,
+				gck_ack, gck_stall, gck_data,
+			gps_tracking, gps_now, gps_step, gps_err, gps_locked);
+@MAIN.ALT=
+	wire	[31:0]	pre_step;
+	assign	pre_step = { 16'h00, (({GPSCLOCK_DEFAULT_STEP[27:0],20'h00})
+				>>GPSCLOCK_DEFAULT_STEP[31:28]) };
+	always @(posedge i_clk)
+		{ ck_pps, gps_step[31:0] } <= gps_step + pre_step;
+	assign	gck_stall  = 1'b0;
+	assign	gps_now    = 64'h0;
+	assign	gps_err    = 64'h0;
+	assign	gps_step   = 64'h0;
+	assign	gps_led    = 1'b0;
+	assign	gps_locked = 1'b0;
+
+@REGS.N=4
+@REGS.0= 0 R_GPS_ALPHA	ALPHA
+@REGS.1= 1 R_GPS_BETA	BETA
+@REGS.2= 2 R_GPS_GAMMA	GAMMA
+@REGS.3= 3 R_GPS_STEP	STEP
+@CSTRUCT=
+typedef	struct	GPSTRACKER_S	{
+	unsigned	g_alpha, g_beta, g_gamma, g_step;
+} GPSTRACKER;
+@IONAME=io_gps
+@PREFIX=gtb
+@NADDR=8
+@PTYPE=DOUBLE
+@MAIN.INSERT=
+`ifdef	GPS_CLOCK
+
+	gpsclock_tb
+		ppsck(i_clk, ck_pps, tb_pps,
+			(wb_stb)&&(gtb_sel), wb_we, wb_addr[2:0], wb_data,
+				gtb_ack, gtb_stall, gtb_data,
+			gps_err, gps_now, gps_step);
+
+`ifdef	GPSTB
+	assign	gps_pps = tb_pps;
+`else
+	assign	gps_pps = i_gps_pps;
+`endif
+
+`endif
+
+@REGS.N=8
+@REGS.0=  0 R_GPSTB_FREQ    GPSFREQ
+@REGS.1=  1 R_GPSTB_JUMP    GPSJUMP
+@REGS.2=  2 R_GPSTB_ERRHI   ERRHI
+@REGS.3=  3 R_GPSTB_ERRLO   ERRLO
+@REGS.4=  4 R_GPSTB_COUNTHI CNTHI
+@REGS.5=  5 R_GPSTB_COUNTLO CNTLO
+@REGS.6=  6 R_GPSTB_STEPHI  STEPHI
+@REGS.7=  7 R_GPSTB_STEPLO  STEPLO
+@CSTRUCT=
+typedef	struct	GPSTB_S	{
+	unsigned	tb_maxcount; tb_jump;
+	unsigned long	tb_err, tb_count, tb_step;
+} GPSTB;
+@IONAME=io_gpstb
+#
+#
+#
+@PREFIX=gpsu
+@NADDR=4
+@PTYPE=DOUBLE
+@ACCESS=GPSUART_ACCESS
+@MAIN.PORTLIST=
+		// The GPS-UART
+		i_gps_rx, o_gps_tx
+@MAIN.IODECLS=
+	input			i_gps_rx;
+	output	wire		o_gps_tx;
+@MAIN.DEFNS=
+	wire	gpsurx_int, gpsutx_int, gpsurxf_int, gpsutxf_int;
+@MAIN.INSERT=
+	wbuart #(.DEFAULT_STEP(GPSCLOCK_DEFAULT_STEP))
+		gpsuart(i_clk, 1'b0,
+			(wb_stb)&&(gpsu_sel), wb_we, wb_addr[1:0], wb_data,
+				gpsu_ack, gpsu_stall, gpsu_data,
+			i_aux_rx, o_aux_tx, i_aux_cts_n, o_aux_rts_n,
+			gpsurx_int, gpsutx_int, gpsurxf_int, gpsutxf_int);
+@INTERRUPT= gpsurx_int, gpsutx_int, gpsurxf_int, gpsutxf_int
+@INTNAME= GPSRX,GPSTX,GPSRXF,GPSTXF
+@MAIN.ALT=
+	assign	o_gps_tx = 1'b1;
+	assign	o_gpsurx_int = 1'b0;
+	assign	o_gpsutx_int = 1'b0;
+	assign	o_gpsurxf_int = 1'b0;
+	assign	o_gpsutxf_int = 1'b0;
+
+@REGS.N=4
+@REGS.0= 0 R_UART_SETUP  GPSSETUP
+@REGS.1= 1 R_UART_FIFO   GPSFIFO
+@REGS.2= 2 R_UART_UARTRX GPSRX
+@REGS.3= 3 R_UART_UARTTX GPSTX
+@CSTRUCT=
+#ifndef	WBUART_H
+#define	WBUART_H
+
+#define UART_PARITY_NONE        0
+#define UART_HWFLOW_OFF         0x40000000
+#define UART_PARITY_ODD         0x04000000
+#define UART_PARITY_EVEN        0x05000000
+#define UART_PARITY_SPACE       0x06000000
+#define UART_PARITY_MARK        0x07000000
+#define UART_STOP_ONEBIT        0
+#define UART_STOP_TWOBITS       0x08000000
+#define UART_DATA_8BITS         0
+#define UART_DATA_7BITS         0x10000000
+#define UART_DATA_6BITS         0x20000000
+#define UART_DATA_5BITS         0x30000000
+#define UART_RX_BREAK           0x0800
+#define UART_RX_FRAMEERR        0x0400
+#define UART_RX_PARITYERR       0x0200
+#define UART_RX_NOTREADY        0x0100
+#define UART_RX_ERR             (-256)
+#define UART_TX_BUSY            0x0100
+#define UART_TX_BREAK           0x0200
+
+typedef struct  WBUART_S {
+		unsigned	u_setup;
+		unsigned	u_fifo;
+		unsigned	u_rx, u_tx;
+} WBUART;
+#endif
+@IONAME=io_gpsu
+#
+#

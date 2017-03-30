@@ -1,12 +1,12 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	bkram.c
+// Filename: 	parser.h
 //
 // Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 //
-// Purpose:	Older description of a block RAM.  Doesn't work with the (newer)
-//		file format, but yet demonstrates some of how that newer format
-//	might work.
+// Purpose:	To define the structures used by a parsed input file.  Of
+//		particular note is the key-value pair unordered map structure,
+//	and the components of that structure.
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
@@ -37,38 +37,48 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 //
+#ifndef	PARSER_H
+#define	PARSER_H
+
+#include <stdlib.h>
 #include <stdio.h>
-#include "autopdata.h"
+#include <string.h>
+#include <assert.h>
 
-static	const char	*prefix = "mem";
-static	int	naddr = (1<<19);
-static	const	char	*access  = "BLKRAM_ACCESS";
-static	const	char	*ext_ports  = "";
-static	const	char	*ext_decls  = "";
-static	const	char	*main_defns = "";
-static	const	char	*dbg_defns  = "";
-static	const	char	*main_insert = ""
-	"\tmemdev #(.LGMEMSZ(20), .EXTRACLOCK(0))\n"
-		"\t\tblkram(i_clk,\n"
-		"\t\t\t(wb_cyc), (wb_stb)&&(mem_sel), wb_we,\n"
-		"\t\t\t\twb_addr[17:0], wb_data, wb_sel\n"
-		"\t\t\t\tmem_ack, mem_stall, mem_data);\n";
-static	const	char	*alt_insert = "";
-static	const	char	*toplvl = "";
-static	const	char	*dbg_insert = "";
-static	REGINFO	ipregs[] = {
-	{ 0, "BKRAM",  "RAM" },
-	{-1, "", "" } };
-static REGINFO *pregs = &ipregs[0];
+#include <string>
+#include <unordered_map>
 
-static	const	char	*cstruct = "";
-static	const	char	*ioname = "";
+#define	MAPT_INT	0
+#define	MAPT_STRING	1
+#define	MAPT_MAP	2
+// Contains a "soft-link" to a hash entry, in other words, this is the "name" of another hash entry--one which we will use instead
+// #define	MAPT_SLINK	3
 
+typedef	std::string *STRINGP, STRING;
+typedef std::unordered_map<STRING,struct MAPT_S> MAPDHASH;
 
-extern	AUTOPDATA	mem_data;
+typedef	struct MAPT_S {
+	int	m_typ;
+	union {
+		int		m_v;
+		STRINGP		m_s;
+		MAPDHASH		*m_m;
+	} u;
+} MAPT;
 
-AUTOPDATA	mem_data = {
-	prefix, naddr, access, ext_ports, ext_decls, main_defns, dbg_defns,
-		main_insert, alt_insert, dbg_insert, pregs, cstruct, ioname
-	};
+typedef	std::pair<STRING,MAPT>	KEYVALUE;
 
+extern	STRING	*rawline(FILE *fp);
+extern	STRING	*getline(FILE *fp);
+extern	STRING	*trim(STRING &s);
+extern	void	addtomap(MAPDHASH &fm, STRING ky, STRING vl);
+extern	MAPDHASH	*parsefile(FILE *fp);
+extern	MAPDHASH	*parsefile(const char *fname);
+extern	MAPDHASH	*parsefile(const STRING &fname);
+extern	void	mapdump(MAPDHASH &fm);
+extern	void	mergemaps(MAPDHASH &master, MAPDHASH &sub);
+extern	void	trimall(MAPDHASH &mp, STRING &sky);
+extern	void	cvtint(MAPDHASH &mp, STRING &sky);
+extern	MAPDHASH::iterator	findkey(MAPDHASH &mp, STRING &sky);
+
+#endif
