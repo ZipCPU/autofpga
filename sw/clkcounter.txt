@@ -1,10 +1,11 @@
 ################################################################################
 ##
-## Filename: 	version.txt
+## Filename: 	clkcounter.txt
 ##
-## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## Project:	AutoGen, a utility for composing FPGA designs from peripherals
 ##
-## Purpose:	
+## Purpose:	To describe the clkcounter's interface for autofpga to work
+##		with.
 ##
 ## Creator:	Dan Gisselquist, Ph.D.
 ##		Gisselquist Technology, LLC
@@ -35,10 +36,28 @@
 ################################################################################
 ##
 ##
-@PREFIX=version
-@NADDR=1
-@PTYPE=SINGLE
+@PREFIX=clkhdmiin
+@NADDR=	1
+@PTYPE=	SINGLE
+@SINGLE.INPUTS=	ck_pps i_hdmi_in_clk
 @MAIN.INSERT=
-	assign	version_data = `DATESTAMP;
-@REGS.N=1
-@REGS.0= 0 R_VERSION VERSION
+	clkcounter clkhmdiin(i_clk, ck_pps, i_hdmi_in_clk,
+ 			clkhdmiin_data);
+@REGS.NOTE = // HDMI-IN Clock Counter (measures clock speed)
+@REGS.N = 1
+@REGS.0 = 0 R_HDMI_INCLK	 HCLKIN
+@BDEF.IONAME= io_clkhdmiin
+@BDEF.IOTYPE= unsigned
+#
+#
+@PREFIX=clkhdmiout
+@NADDR=	1
+@PTYPE=	SINGLE
+@SINGLE.INPUTS=	ck_pps i_hdmi_out_clk
+@MAIN.INSERT=
+	clkcounter clkhmdiout(i_clk, ck_pps, i_hdmi_out_clk, clkhdmiin_data);
+@REGS.NOTE = // HDMI-OUT Clock Counter (measures clock speed)
+@REGS.N = 1
+@REGS.0 = 0 R_HDMI_OUTCLK	 HCLKOUT
+@BDEF.IONAME= io_clkhdmiout
+@BDEF.IOTYPE= unsigned

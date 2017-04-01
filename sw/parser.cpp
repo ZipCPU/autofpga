@@ -147,16 +147,27 @@ MAPDHASH	*parsefile(FILE *fp) {
 			// to be stored.
 			if (key.length()>0) {
 				if (key == pfkey) {
-					MAPT	elm;
+					MAPDHASH::iterator	kvpair;
+					kvpair = fm->find(value);
+					if (kvpair == fm->end()) {
+						MAPT	elm;
 
-					prefix = value;
-					devm = new MAPDHASH;
-					elm.m_typ = MAPT_MAP;
-					elm.u.m_m = devm;
+						prefix = value;
+						devm = new MAPDHASH;
+						elm.m_typ = MAPT_MAP;
+						elm.u.m_m = devm;
 
-					fm->insert(KEYVALUE(value, elm ) );
+						fm->insert(KEYVALUE(value,elm));
+					} else if (kvpair->second.m_typ == MAPT_MAP) {
+						devm = kvpair->second.u.m_m;
+					} else {
+						fprintf(stderr, "NAME-CONFLICT!!\n");
+						exit(EXIT_FAILURE);
+					}
 				} if (devm)
 					addtomap(*devm, key, value);
+				else
+					addtomap(*fm, key, value);
 			}
 
 			if ((pos = ln->find("="))
@@ -246,12 +257,26 @@ void	mapdump(MAPDHASH &fm) {
 	mapdump_aux(fm, 0);
 }
 
+//
+// Merge two maps, a master and a sub
+//
 void	mergemaps(MAPDHASH &master, MAPDHASH &sub) {
-	MAPDHASH::iterator	kvpair;
+	MAPDHASH::iterator	kvpair, kvsub;
 
 	for(kvpair = sub.begin(); kvpair != sub.end(); kvpair++) {
 		if ((*kvpair).second.m_typ == MAPT_MAP) {
-			master.insert(KEYVALUE((*kvpair).first, (*kvpair).second ) );
+			kvsub = master.find(kvpair->first);
+			if (kvsub == master.end()) {
+				// Not found
+				master.insert(KEYVALUE((*kvpair).first,
+					(*kvpair).second ) );
+			} else if (kvsub->second.m_typ == MAPT_MAP) {
+				mergemaps(*kvsub->second.u.m_m,
+					*kvpair->second.u.m_m);
+			} else {
+				fprintf(stderr,
+					"NAME CONFLICT!  Files not merged\n");
+			}
 		}
 	}
 }
@@ -335,4 +360,29 @@ MAPDHASH::iterator findkey_aux(MAPDHASH &master, STRING &ky, STRING &pre) {
 MAPDHASH::iterator findkey(MAPDHASH &master, STRING &ky) {
 	STRING	empty("");
 	return findkey_aux(master, ky, empty);
+}
+
+STRINGP getstring(MAPDHASH &master, STRING &ky) {
+	MAPDHASH::iterator	r;
+
+	r = findkey(master, ky);
+	if (r == master.end())
+		return NULL;
+	else if (r->second.m_typ != MAPT_STRING)
+		return NULL;
+	return r->second.u.m_s;
+}
+
+int getvalue(MAPDHASH &master, STRING &ky, int &value) {
+	MAPDHASH::iterator	r;
+
+	value = -1;
+
+	r = findkey(master, ky);
+	if (r == master.end())
+		return -1;
+	else if (r->second.m_typ != MAPT_INT)
+		return -1;
+	value = r->second.u.m_v;
+	return 0;
 }

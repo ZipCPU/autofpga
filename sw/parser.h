@@ -80,5 +80,7 @@ extern	void	mergemaps(MAPDHASH &master, MAPDHASH &sub);
 extern	void	trimall(MAPDHASH &mp, STRING &sky);
 extern	void	cvtint(MAPDHASH &mp, STRING &sky);
 extern	MAPDHASH::iterator	findkey(MAPDHASH &mp, STRING &sky);
+extern	STRINGP	getstring(MAPDHASH &mp, STRING &sky);
+extern	int	getint(MAPDHASH &mp, STRING &sky, int &value);
 
 #endif

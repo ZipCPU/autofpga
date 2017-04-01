@@ -155,7 +155,9 @@
 @PREFIX= flctl
 @NADDR= 4
 @ACCESS= FLASH_ACCESS
-@PTYPE= DOUBLE
+# This cannot be a DOUBLE peripheral type, since our response may take more than
+# two clock cycles.
+@PTYPE= OTHER
 @REGS.NOTE= // FLASH erase/program configuration registers
 @REGS.N= 4
 @REGS.0= 0 R_QSPI_EREG QSPIE

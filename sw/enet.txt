@@ -37,7 +37,10 @@
 ##
 @PREFIX=netb
 @NADDR=0x1000
-@PTYPE=DOUBLE
+# Technically, this could be DOUBLE memory.  It meets the requirements.
+# Here, we place it into OTHER anyway, to guarantee it gets shuffled into
+# an address last.
+@PTYPE=OTHER
 @MAIN.INSERT=
 `ifndef	ETHERNET_ACCESS
 	// Ethernet packet memory declaration
@@ -66,7 +69,7 @@
 @INTERRUPT=enet_rx_int enet_tx_int
 @INTNAMES= NETRX, NETTX
 @NADDR=8
-@PTYPE=OTHER
+@PTYPE=DOUBLE
 @ACCESS=ETHERNET_ACCESS
 @MAIN.PORTLIST=
 		// Ethernet control (packets) lines

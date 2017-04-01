@@ -1,0 +1,113 @@
+################################################################################
+##
+## Filename: 	zipmaster.txt
+##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+##
+## Purpose:	To describe what needs to be done to make the ZipCPU a part
+##		of a main .v file.  This Wishbone Master description
+##	illustrates how some of how a wishbone bus master might be integrated
+##	into the automatic FPGA designer.
+##
+## Creator:	Dan Gisselquist, Ph.D.
+##		Gisselquist Technology, LLC
+##
+################################################################################
+##
+## Copyright (C) 2017, Gisselquist Technology, LLC
+##
+## This program is free software (firmware): you can redistribute it and/or
+## modify it under the terms of  the GNU General Public License as published
+## by the Free Software Foundation, either version 3 of the License, or (at
+## your option) any later version.
+##
+## This program is distributed in the hope that it will be useful, but WITHOUT
+## ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY or
+## FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+## for more details.
+##
+## You should have received a copy of the GNU General Public License along
+## with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
+## target there if the PDF file isn't present.)  If not, see
+## <http://www.gnu.org/licenses/> for a copy.
+##
+## License:	GPL, v3, as defined and found on www.gnu.org,
+##		http://www.gnu.org/licenses/gpl.html
+##
+##
+################################################################################
+##
+##
+@PREFIX=zip
+@ACCESS=INCLUDE_ZIPCPU
+@MTYPE=CPU
+@SCOPE.TRIGGER=zip_debug[31]
+@SCOPE.DATA=zip_debug
+@MAIN.PARAM=
+	//
+	//
+	// Variables/definitions needed by the ZipCPU BUS master
+	//
+	//
+	// A 32-bit address indicating where teh ZipCPU should start running
+	// from
+	localparam	RESET_ADDRESS = 32\'h01000000;
+	//
+	// The number of valid bits on the bus
+	localparam	ZIP_ADDRESS_WIDTH = 30;	// Zip-CPU address width
+	//
+	// Number of ZipCPU interrupts
+	localparam	ZIP_INTS = 14;
+	//
+	// ZIP_STARTS_HALTED
+	//
+	// A boolean, indicating whether or not the ZipCPU be halted on startup?
+	localparam	ZIP_STARTS_HALTED=1'b0;
+@MAIN.DEFNS=
+	wire		zip_cyc, zip_stb, zip_we, zip_cpu_int;
+	wire	[(ZA-1):0]	w_zip_addr;
+	wire	[31:0]	zip_addr, zip_data;
+	wire	[3:0]	zip_sel;
+	// and then coming from devices
+	wire		zip_ack, zip_stall, zip_err;
+	// And for the debug scope (if supported)
+	wire	[31:0]	zip_debug;
+	wire		zip_trigger;
+	assign	zip_trigger = zip_debug[0];
+@MAIN.INSERT=
+	//
+	//
+	// The ZipCPU/ZipSystem BUS master
+	//
+	//
+`ifndef	WBUBUS_MASTER
+	wire	wbu_zip_sel;
+	assign	wbu_zip_sel = 1'b0;
+`endif
+	wire	zip_reset;
+	assign	zip_reset = 1'b0;
+	zipsystem #(RESET_ADDRESS,ZIP_ADDRESS_WIDTH,10,ZIP_START_HALTED,ZIP_INTS)
+		swic(i_clk, zip_reset,
+			// Zippys wishbone interface
+			zip_cyc, zip_stb, zip_we, w_zip_addr, zip_data, zip_sel,
+					zip_ack, zip_stall, dwb_idata, zip_err,
+			w_ints_to_zip_cpu, zip_cpu_int,
+			// Debug wishbone interface
+			((wbu_cyc)&&(wbu_zip_sel)),
+			((wbu_stb)&&(wbu_zip_sel)),wbu_we, wbu_addr[0],
+			wbu_data, zip_dbg_ack, zip_dbg_stall, zip_dbg_data,
+			zip_debug);
+#
+#
+#
+@PREFIX=syspic
+@PIC.BUS= sys_int_vector
+@PIC.MAX=15
+@PIC.ASSIGNED= DMAC JIFFIES TMC TMB TMA ALT
+#
+@PREFIX=altpic
+@PIC.BUS= alt_int_vector
+@PIC.MAX=15
+@PIC.ASSIGNED= UIC UOC UPC UTC MIC MOC MPC MTC
+#
+#

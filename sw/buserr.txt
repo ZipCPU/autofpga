@@ -1,10 +1,11 @@
 ################################################################################
 ##
-## Filename: 	version.txt
+## Filename: 	buserr.txt
 ##
 ## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 ##
-## Purpose:	
+## Purpose:	Provide a readable memory location containing the address of the
+##		last bus error.
 ##
 ## Creator:	Dan Gisselquist, Ph.D.
 ##		Gisselquist Technology, LLC
@@ -35,10 +36,13 @@
 ################################################################################
 ##
 ##
-@PREFIX=version
+@PREFIX=buserr
 @NADDR=1
 @PTYPE=SINGLE
+@SINGLE.INPUT= r_bus_err
 @MAIN.INSERT=
-	assign	version_data = `DATESTAMP;
+	assign	buserr_data = r_bus_err;
 @REGS.N=1
-@REGS.0= 0 R_VERSION VERSION
+@REGS.0= 0 R_BUSERR BUSERR
+@BDEF.IONAME=io_buserr
+@BDEF.IOTYPE=unsigned

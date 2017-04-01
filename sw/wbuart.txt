@@ -118,4 +118,6 @@ typedef struct  WBUART_S {
 } WBUART;
 
 
-@IONAME= io_uart
+@BDEF.IONAME= io_uart
+@BDEF.IOTYPE= WBUART
+@BDEF.OSDEF=	_BOARD_HAS_WBUART

@@ -55,7 +55,8 @@ autofpga: $(OBJECTS)
 	$(CXX) $(CFLAGS) $(OBJECTS) -o $@
 
 VSRCS := bkram.txt enet.txt flash.txt gps.txt icape.txt mdio.txt wbuart.txt \
-	sdspi.txt wbmouse.txt wboled.txt
+	sdspi.txt wbmouse.txt wboled.txt clkcounter.txt gpio.txt pwrcount.txt \
+	version.txt buserr.txt
 
 .PHONY: demo demo2
 demo: demo2.txt

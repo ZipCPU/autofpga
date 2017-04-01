@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Filename: 	version.txt
+## Filename: 	pic.txt
 ##
 ## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 ##
@@ -35,10 +35,30 @@
 ################################################################################
 ##
 ##
-@PREFIX=version
+@PREFIX=bpic
 @NADDR=1
 @PTYPE=SINGLE
+@PIC.BUS= bus_int_vector
+@PIC.ASSIGNED= zip_int, flash_int
+@PIC.MAX= 15
+@INTERRUPT= o_bus_int
+@INTNAME= BUS
 @MAIN.INSERT=
-	assign	version_data = `DATESTAMP;
+	//
+	// The BUS Interrupt controller
+	//
+	icontrol #(15)	buspic(i_clk, 1'b0,
+		(w_wb_stb)&&(w_wb_addr==5'h1),
+			i_wb_data, pic_data,
+		{ zip_int, oled_int, sdcard_int,
+			gpsrx_int, scop_int, flash_int, gpio_int,
+			auxtx_int, auxrx_int, nettx_int, netrx_int,
+			rtc_int, pps_int, sw_int, btn_int },
+			o_bus_int);
+@MAIN.ALT=
 @REGS.N=1
-@REGS.0= 0 R_VERSION VERSION
+@REGS.0= 0 R_PIC PIC
+@BDEF.IONAME= i_pic
+@BDEF.IOTYPE= unsigned
+@BDEF.OSDEF= _BOARD_HAS_BUSPIC
+@BDEF.OSVAL= static volatile unsigned *const _buspic = &((BOARD *)PERIPHERAL_ADDR)->io_single.i_pic
