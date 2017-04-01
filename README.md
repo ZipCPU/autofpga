@@ -103,11 +103,11 @@ also depend upon the master clock rate.
 
 This project is currently in its bare infancy.  Some success has been
 demonstrated to date in building a bus.  This success may be seen in the 
-(initial demo)[blob/master/sw/demo.txt], as well as in the updated and
-subsequent demo (this one may appear to regress ...)
-(initial demo)[blob/master/sw/demo2.txt].
-However, as you can see from the demo's, none of the files are ready to 
-meet a synthesis tool yet, much less demonstrated any success on a board.
+original [initial demo][tree/master/sw/demo.txt], as well as in the updated and
+[subsequent demo](tree/master/sw/demo-out/).
+However, as you can see from the two demo's, none of the files are ready to 
+meet a synthesis tool ... yet, much less demonstrated any success on a board.
+(We are getting closer, though.)
 
 # License
 
