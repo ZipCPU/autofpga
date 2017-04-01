@@ -36,7 +36,7 @@
 ##
 ##
 all:
-PROGRAMS := autofpga demo2.txt
+PROGRAMS := autofpga demo
 OBJDIR:= obj-pc
 CXX:= g++
 SED:= sed
@@ -58,11 +58,9 @@ VSRCS := bkram.txt enet.txt flash.txt gps.txt icape.txt mdio.txt wbuart.txt \
 	sdspi.txt wbmouse.txt wboled.txt clkcounter.txt gpio.txt pwrcount.txt \
 	version.txt buserr.txt
 
-.PHONY: demo demo2
-demo: demo2.txt
-demo2: demo2.txt
-demo2.txt: autofpga $(VSRCS)
-	./autofpga $(VSRCS) > $@
+.PHONY: demo
+demo: autofpga $(VSRCS)
+	./autofpga $(VSRCS) 
 
 define	mk-objdir
 	@bash -c "if [ ! -e $(OBJDIR) ]; then mkdir -p $(OBJDIR); fi"
