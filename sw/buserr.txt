@@ -46,3 +46,5 @@
 @REGS.0= 0 R_BUSERR BUSERR
 @BDEF.IONAME=io_buserr
 @BDEF.IOTYPE=unsigned
+@BDEF.OSDEF=_BOARD_HAS_BUSERR
+@BDEF.OSVAL=static volatile *const _buserr = &((unsigned *)@THIS.BASE);

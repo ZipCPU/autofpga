@@ -77,7 +77,8 @@
 @REGS.17= 22 R_CFG_BOOTSTS	BOOTSTS
 @REGS.18= 24 R_CFG_CTL1		FPGACTL1
 @REGS.19= 31 R_CFG_BSPI		FPGABSPI
-@CSTRUCT=
+@BDEF.DEFN=
+// Offsets for the ICAPE2 interface
 #define	CFG_CRC		0
 #define	CFG_FAR		1
 #define	CFG_FDRI	2
@@ -98,4 +99,7 @@
 #define	CFG_BOOTSTS	22
 #define	CFG_CTL1	24
 #define	CFG_BSPI	31
-@IONAME=io_icape[32]
+@BDEF.IONAME=io_icape[32]
+@BDEF.IOTYPE=unsigned
+@BDEF.OSDEF=_BOARD_HAS_ICAPTETWO
+@BDEF.OSVAL=static volatile @$THIS.BDEF.IOTYPE *const _icape = &((unsigned *)@$THIS.BASE);

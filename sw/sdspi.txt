@@ -78,7 +78,7 @@
 @MAIN.PORTLIST=
 		// The SD-Card wires
 		o_sd_sck, o_sd_cmd, o_sd_data, i_sd_cmd, i_sd_data, i_sd_detect
-@MAIN.IODECLS=
+@MAIN.IODECL=
 	// SD-Card declarations
 	output	wire		o_sd_sck, o_sd_cmd;
 	output	wire	[3:0]	o_sd_data;

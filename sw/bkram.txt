@@ -40,14 +40,15 @@
 @ACCESS=BLKRAM_ACCESS
 @PTYPE=MEMORY
 @MAIN.INSERT=
-	memdev #(.LGMEMSZ(20), .EXTRACLOCK(0))
+	memdev #(.LGMEMSZ(19), .EXTRACLOCK(0))
 		blkram(i_clk,
 			(wb_cyc), (wb_stb)&&(mem_sel), wb_we,
 				wb_addr[17:0], wb_data, wb_sel,
 				mem_ack, mem_stall, mem_data);
 @REGS.N=1
 @REGS.0= 0 BKRAM RAM
-# @CSTRUCT=
-# @IONAME=
+@BDEF.OSDEF=_BOARD_HAS_BLKRAM
+@BDEF.OSVAL=extern int	_blkram[1];
 @LDSCRIPT.PSTR	wx
 @LDSCRIPT.PTR	blkram
+@LDSCRIPT.DEF=_blkram = ORIGIN(blkram);

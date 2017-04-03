@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Filename: 	
+## Filename: 	Makefile
 ##
 ## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 ##
@@ -41,7 +41,7 @@ OBJDIR:= obj-pc
 CXX:= g++
 SED:= sed
 CFLAGS:= -std=c++11 -g -Og
-SOURCES := autofpga.cpp parser.cpp
+SOURCES := autofpga.cpp parser.cpp kveval.cpp keys.cpp
 HEADERS := $(foreach header,$(subst .cpp,.h,$(SOURCES)),$(wildcard $(header)))
 OBJECTS := $(addprefix $(OBJDIR)/,$(subst .cpp,.o,$(SOURCES)))
 
@@ -56,7 +56,7 @@ autofpga: $(OBJECTS)
 
 VSRCS := bkram.txt enet.txt flash.txt gps.txt icape.txt mdio.txt wbuart.txt \
 	sdspi.txt wbmouse.txt wboled.txt clkcounter.txt gpio.txt pwrcount.txt \
-	version.txt buserr.txt
+	version.txt buserr.txt zipmaster.txt
 
 .PHONY: demo
 demo: autofpga $(VSRCS)

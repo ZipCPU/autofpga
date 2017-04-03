@@ -2,7 +2,7 @@
 ##
 ## Filename: 	wbuart.txt
 ##
-## Project:	AutoGen, a utility for composing FPGA designs from peripherals
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 ##
 ## Purpose:	To describe a UART for autogen to work with.
 ##
@@ -89,7 +89,9 @@
 @REGS.2 = 2 R_UART_UARTRX	 RX
 @REGS.3 = 3 R_UART_UARTTX	 TX
 
-@CSTRUCT =
+@BDEF.DEFN =
+#ifndef	WBUART_H
+#define	WBUART_H
 
 #define UART_PARITY_NONE        0
 #define UART_HWFLOW_OFF         0x40000000
@@ -117,7 +119,9 @@ typedef struct  WBUART_S {
 	unsigned\t_rx, u_tx;
 } WBUART;
 
+#endif
 
 @BDEF.IONAME= io_uart
 @BDEF.IOTYPE= WBUART
 @BDEF.OSDEF=	_BOARD_HAS_WBUART
+@BDEF.OSVAL=static volatile WBUART *const _uart = &((WBUART *)@$THIS.BASE);

@@ -46,7 +46,7 @@
 @MAIN.PORTLIST=
 		// The GPS 1PPS signal port
 		i_gps_pps
-@MAIN.IODECLS=
+@MAIN.IODECL=
 	//The GPS Clock
 	input			i_gps_pps;
 @MAIN.DEFNS=
@@ -131,7 +131,7 @@ typedef	struct	GPSTB_S	{
 @MAIN.PORTLIST=
 		// The GPS-UART
 		i_gps_rx, o_gps_tx
-@MAIN.IODECLS=
+@MAIN.IODECL=
 	input			i_gps_rx;
 	output	wire		o_gps_tx;
 @MAIN.INSERT=
@@ -154,7 +154,7 @@ typedef	struct	GPSTB_S	{
 @REGS.1= 1 R_UART_FIFO   GPSFIFO
 @REGS.2= 2 R_UART_UARTRX GPSRX
 @REGS.3= 3 R_UART_UARTTX GPSTX
-@CSTRUCT=
+@BDEF.DEFN=
 #ifndef	WBUART_H
 #define	WBUART_H
 
@@ -184,6 +184,9 @@ typedef struct  WBUART_S {
 		unsigned	u_rx, u_tx;
 } WBUART;
 #endif
-@IONAME=io_gpsu
+@BDEF.IONAME=io_gpsu
+@BDEF.IOTYPE=WBUART
+@BDEF.OSDEF=_BOARD_HAS_GPS_UART
+@BDEF.OSVAL=static volatile WBUART *const _gpsu = &((WBUART)@$THIS.BASE);
 #
 #

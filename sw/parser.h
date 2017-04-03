@@ -71,16 +71,17 @@ typedef	std::pair<STRING,MAPT>	KEYVALUE;
 extern	STRING	*rawline(FILE *fp);
 extern	STRING	*getline(FILE *fp);
 extern	STRING	*trim(STRING &s);
-extern	void	addtomap(MAPDHASH &fm, STRING ky, STRING vl);
+extern	void	addtomap(MAPDHASH &fm, const STRING ky, STRING vl);
 extern	MAPDHASH	*parsefile(FILE *fp);
 extern	MAPDHASH	*parsefile(const char *fname);
 extern	MAPDHASH	*parsefile(const STRING &fname);
 extern	void	mapdump(MAPDHASH &fm);
 extern	void	mergemaps(MAPDHASH &master, MAPDHASH &sub);
-extern	void	trimall(MAPDHASH &mp, STRING &sky);
-extern	void	cvtint(MAPDHASH &mp, STRING &sky);
-extern	MAPDHASH::iterator	findkey(MAPDHASH &mp, STRING &sky);
-extern	STRINGP	getstring(MAPDHASH &mp, STRING &sky);
-extern	int	getint(MAPDHASH &mp, STRING &sky, int &value);
+extern	void	trimall(MAPDHASH &mp, const STRING &sky);
+extern	void	cvtint(MAPDHASH &mp, const STRING &sky);
+extern	MAPDHASH::iterator	findkey(MAPDHASH &mp, const STRING &sky);
+extern	STRINGP	getstring(MAPDHASH &mp, const STRING &sky);
+extern	bool	getvalue(MAPDHASH &mp, const STRING &sky, int &value);
+extern	void	setvalue(MAPDHASH &mp, const STRING &sky, int value);
 
 #endif

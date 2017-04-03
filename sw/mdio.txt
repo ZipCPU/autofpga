@@ -44,7 +44,7 @@
 @TOP.PORTLIST=
 		// Toplevel ethernet MDIO ports
 		o_eth_mdclk, io_eth_mdio
-@TOP.IODECLS=
+@TOP.IODECL=
 	// Ethernet control (MDIO)
 	output	wire		o_mdclk, o_mdio, o_mdwe;
 	input			i_mdio;
@@ -57,7 +57,7 @@
 @MAIN.PORTLIST=
 		// The ethernet MDIO wires
 		o_mdclk, o_mdio, o_mdwe, i_mdio
-@MAIN.IODECLS=
+@MAIN.IODECL=
 	// Ethernet control (MDIO)
 	output	wire		o_mdclk, o_mdio, o_mdwe;
 	input			i_mdio;
@@ -68,7 +68,7 @@
 				wb_addr[4:0], wb_data[15:0],
 			mdio_ack, mdio_stall, mdio_data,
 			o_mdclk, o_mdio, i_mdio, o_mdwe);;
-static	const	char	*alt_insert = ""
+@MAIN.ALT=
 	assign	o_mdclk = 1'b1;
 	assign	o_mdio  = 1'b1;
 	assign	o_mdwe  = 1'b0;;
@@ -96,7 +96,7 @@ static	const	char	*alt_insert = ""
 @REGS.16=27 R_MDIO_CDCTRL	CDCTRL
 # // 28 is reserved
 @REGS.17=29 R_MDIO_EDCR		EDCR
-@CSTRUCT=
+@BDEF.DEFN=
 //
 // The Ethernet MDIO interface
 //
@@ -124,5 +124,7 @@ typedef struct ENETMDIO_S {
 	unsigned	e_v[32];
 } ENETMDIO;
 
-
-@IONAME= io_netmd
+@BDEF.IOTYPE= ENETMDIO
+@BDEF.IONAME= io_netmdio
+@BDEF.OSDEF= _BOARD_HAS_NETMDIO
+@BDEF.OSVAL= static volatile @$THIS.BDEF.IOTYPE *const _mdio = &((@$THIS.BDEF.IOTYPE *)@$THIS.BASE);

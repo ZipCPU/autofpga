@@ -57,7 +57,11 @@
 		// Quad SPI flash
 		w_qspi_cs_n, w_qspi_sck, qspi_dat, i_qspi_dat, qspi_bmod
 @TOP.INSERT=
-
+	//
+	//
+	// Wires for setting up the QSPI flash wishbone peripheral
+	//
+	//
 	// QSPI)BMOD, Quad SPI bus mode, Bus modes are:
 	//	0?	Normal serial mode, one bit in one bit out
 	//	10	Quad SPI mode, going out
@@ -148,8 +152,11 @@
 @MEM.ACCESS = rx
 @REGS.N= 1
 @REGS.0= 0 FLASHMEM FLASH
-@CSTRUCT=
-@IONAME=
+@BDEF.OSDEF=_BOARD_HASH_FLASH
+@BDEF.OSVAL=extern int _flash[1];
+@LDSCRIPT.PSTR	rx
+@LDSCRIPT.PTR	flash
+@LDSCRIPT.DEF	_flash=ORIGIN(flash);
 #
 # Now, the control interface
 @PREFIX= flctl
@@ -181,4 +188,4 @@ typedef struct FLASHCTL_S {
 #define	SUBSECTOROF(A)	((A) & (-1<<12))
 #define	PAGEOF(A)	((A) & (-1<<8))
 
-@IONAME= io_flctl
+@BDEF.IONAME= io_flctl

@@ -46,6 +46,8 @@
 #include <sys/types.h>
 
 #include "parser.h"
+#include "keys.h"
+#include "kveval.h"
 
 unsigned	nextlg(unsigned vl) {
 	unsigned r;
@@ -169,6 +171,7 @@ int count_pics(MAPDHASH &info) {
 
 	return npics;
 }
+
 int count_scopes(MAPDHASH &info) {
 	MAPDHASH::iterator	kvpair;
 	kvpair = info.find("NSCOPES");
@@ -192,6 +195,57 @@ int count_scopes(MAPDHASH &info) {
 	info.insert(KEYVALUE(STRING("NSCOPES"), elm));
 
 	return count;
+}
+
+void	legal_notice(MAPDHASH &info, FILE *fp, STRING &fname) {
+	char	line[512];
+	FILE	*lglfp;
+	STRING	str;
+
+	STRINGP	legal_fname = getstring(info, str = STRING("LEGAL"));
+	if (!legal_fname) {
+		fprintf(stderr, "WARNING: NO COPYRIGHT NOTICE\n\nPlease be considerate and license this under the GPL\n");
+		fprintf(fp, "WARNING: NO COPYRIGHT NOTICE\n\nPlease be considerate and license this under the GPL\n");
+		return;
+	}
+
+	lglfp = fopen(legal_fname->c_str(), "r");
+	if (!lglfp) {
+		fprintf(stderr, "WARNING: NO COPYRIGHT NOTICE\n\nPlease be considerate and license this project under the GPL\n");
+		fprintf(fp, "WARNING: NO COPYRIGHT NOTICE\n\nPlease be considerate and license this project under the GPL\n");
+		perror("O/S Err:");
+		return;
+	}
+
+	while(fgets(line, sizeof(line), lglfp)) {
+		static const char	nonce[] = "// Filename:";
+		if (strncasecmp(line, nonce, strlen(nonce))==0)
+			break;
+		fputs(line, fp);
+	} if (!feof(lglfp)) {
+		// Must have just found the filename line
+		while((line[0])&&(isspace(line[strlen(line)-1])))
+			line[strlen(line)-1] = '\0';
+		fprintf(fp, "%s\t%s\n", line, fname.c_str());
+		while(fgets(line, sizeof(line), lglfp)) {
+			static const char	nonce[] = "// CmdLine:";
+			if (strncasecmp(line, nonce, strlen(nonce))==0)
+				break;
+			fputs(line, fp);
+		} if (!feof(lglfp)) {
+			// Must have just found the command line ... line
+			STRINGP	cmdline= getstring(info, str=STRING("CMDLINE"));
+			while((line[0])&&(isspace(line[strlen(line)-1])))
+				line[strlen(line)-1] = '\0';
+			if (cmdline)
+				fprintf(fp, "%s\t%s\n", line, cmdline->c_str());
+			else
+				fprintf(fp, "%s\t(No command line found)\n", line);
+			while(fgets(line, sizeof(line), lglfp))
+				fputs(line, fp);
+		}
+		
+	}
 }
 
 typedef	struct PERIPH_S {
@@ -223,8 +277,7 @@ bool	compare_naddr(PERIPHP a, PERIPHP b) {
 
 void	build_plist(MAPDHASH &info) {
 	MAPDHASH::iterator	kvpair;
-	STRING	straddr = STRING("NADDR");
-	cvtint(info, straddr);
+	cvtint(info, KYNADDR);
 
 	int np = count_peripherals(info);
 
@@ -284,8 +337,7 @@ void	build_plist(MAPDHASH &info) {
 void assign_addresses(MAPDHASH &info, unsigned first_address = 0x400) {
 	unsigned	start_address = first_address;
 	MAPDHASH::iterator	kvpair;
-	STRING	straddr = STRING("NADDR");
-	cvtint(info, straddr);
+	cvtint(info, KYNADDR);
 
 	int np = count_peripherals(info);
 
@@ -302,6 +354,8 @@ void assign_addresses(MAPDHASH &info, unsigned first_address = 0x400) {
 		for(int i=0; i<slist.size(); i++) {
 			slist[i]->p_base = start_address + 4*i;
 			printf("// Assigning %12s_... to %08x\n", slist[i]->p_name->c_str(), slist[i]->p_base);
+
+			setvalue(*slist[i]->p_phash, KYBASE, slist[i]->p_base);
 		}
 		naddr = nextlg(naddr)+2;
 		start_address += (1<<naddr);
@@ -329,6 +383,8 @@ printf("// start address for d = %08x\n", start_address);
 			dlist[i]->p_base += start_address;
 			printf("// Assigning %12s_... to %08x\n",
 				dlist[i]->p_name->c_str(), dlist[i]->p_base);
+
+			setvalue(*dlist[i]->p_phash, KYBASE, dlist[i]->p_base);
 		}
 
 		start_address += (1<<dnaddr);
@@ -347,11 +403,11 @@ printf("// start address for d = %08x\n", start_address);
 			plist[i]->p_base);
 		start_address = plist[i]->p_base + (1<<(plist[i]->p_awid));
 
-		MAPT	elm;
-		elm.m_typ = MAPT_INT;
-		elm.u.m_v = plist[i]->p_base;
-		plist[i]->p_phash->insert(KEYVALUE("BASE", elm));
+		setvalue(*plist[i]->p_phash, KYBASE, plist[i]->p_base);
 	}
+
+	// Now, go back and see if anything references this address
+	reeval(info);
 }
 
 class INTINFO {
@@ -430,12 +486,13 @@ void	assign_scopes(    MAPDHASH &master) {
 #endif
 }
 
-void	build_regdefs_h(  MAPDHASH &master, FILE *fp) {
+void	build_regdefs_h(  MAPDHASH &master, FILE *fp, STRING &fname) {
 	MAPDHASH::iterator	kvpair, kvaccess;
 	int	nregs;
 	STRING	str;
 
-	fprintf(fp, "\n\n\n// TO BE PLACED INTO regdefs.h\n");
+	legal_notice(master, fp, fname);
+
 	fprintf(fp, "#ifndef\tREGDEFS_H\n");
 	fprintf(fp, "#define\tREGDEFS_H\n");
 	fprintf(fp, "\n\n");
@@ -602,11 +659,12 @@ void	build_regdefs_h(  MAPDHASH &master, FILE *fp) {
 	fprintf(fp, "#endif\t// REGDEFS_H\n");
 }
 
-void	build_regdefs_cpp(MAPDHASH &master, FILE *fp) {
+void	build_regdefs_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 	int	nregs;
 	STRING	str;
 
-	fprintf(fp, "\n\n\n// TO BE PLACED INTO regdefs.cpp\n");
+	legal_notice(master, fp, fname);
+
 	fprintf(fp, "#include <stdio.h>\n");
 	fprintf(fp, "#include <stdlib.h>\n");
 	fprintf(fp, "#include <strings.h>\n");
@@ -752,17 +810,60 @@ void	build_regdefs_cpp(MAPDHASH &master, FILE *fp) {
 
 }
 
-void	build_board_h(    MAPDHASH &master) {
-#ifdef	NEW_FILE_FORMAT
-#endif
+void	build_board_h(    MAPDHASH &master, FILE *fp, STRING &fname) {
+	MAPDHASH::iterator	kvpair;
+	STRING	str, astr;
+
+	legal_notice(master, fp, fname);
+	fprintf(fp, "#ifndef	BOARD_H\n#define\tBOARD_H\n\n\n");
+
+	str = "BDEF.DEFN";
+	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
+		STRINGP	defns;
+		if (kvpair->second.m_typ != MAPT_MAP)
+			continue;
+		defns = getstring(*kvpair->second.u.m_m, str);
+		if (defns)
+			fprintf(fp, "%s\n\n", defns->c_str());
+	}
+
+	str = "REGS.INSERT.H";
+	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
+		STRINGP	defns;
+		if (kvpair->second.m_typ != MAPT_MAP)
+			continue;
+		defns = getstring(*kvpair->second.u.m_m, str);
+		if (defns)
+			fprintf(fp, "%s\n\n", defns->c_str());
+	}
+
+	str = "BDEF.OSDEF";
+	astr = "BDEF.OSVAL";
+	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
+		STRINGP	osdef, osval;
+		if (kvpair->second.m_typ != MAPT_MAP)
+			continue;
+		osdef = getstring(*kvpair->second.u.m_m, str);
+		if (osdef)
+			fprintf(fp, "#define\t%s\n", osdef->c_str());
+		osval = getstring(*kvpair->second.u.m_m, astr);
+		if (osval)
+			fputs(osval->c_str(), fp);
+		if ((osdef)||(osval)) {
+			fprintf(fp, "\n\n");
+		}
+	}
+
 }
 
 void	build_board_ld(   MAPDHASH &master) {
+	// legal_notice(master, fp, fname);
 #ifdef	NEW_FILE_FORMAT
 #endif
 }
 
 void	build_latex_tbls( MAPDHASH &master) {
+	// legal_notice(master, fp, fname);
 #ifdef	NEW_FILE_FORMAT
 	printf("\n\n\n// TO BE PLACED INTO doc/src\n");
 
@@ -774,12 +875,12 @@ void	build_latex_tbls( MAPDHASH &master) {
 #endif
 }
 
-void	build_toplevel_v( MAPDHASH &master, FILE *fp) {
+void	build_toplevel_v( MAPDHASH &master, FILE *fp, STRING &fname) {
 	MAPDHASH::iterator	kvpair, kvaccess, kvsearch;
 	STRING	str = "ACCESS", astr;
 	int	first, np;
 
-	fprintf(fp, "\n\n\n//\n// TO BE PLACED INTO toplevel.v\n//\n");
+	legal_notice(master, fp, fname);
 	fprintf(fp, "`default_nettype\tnone\n");
 	// Include a legal notice
 	// Build a set of ifdefs to turn things on or off
@@ -828,29 +929,24 @@ void	build_toplevel_v( MAPDHASH &master, FILE *fp) {
 	"\t// now we are declaring them here.\n"
 	"\t//\n"
 	"\t// These declarations just copy data from the @TOP.IODECLS key,\n"
-	"\t// or from the @MAIN.IODECLS key if @TOP.IODECLS is absent.  For\n"
+	"\t// or from the @MAIN.IODECL key if @TOP.IODECL is absent.  For\n"
 	"\t// those peripherals that don't do anything at the top level,\n"
-	"\t// the @MAIN.IODECLS key should be sufficient, so the @TOP.IODECLS\n"
+	"\t// the @MAIN.IODECL key should be sufficient, so the @TOP.IODECL\n"
 	"\t// key may be left undefined.\n"
 	"\t//\n");
 	fprintf(fp, "\tinput\t\t\ti_clk;\n");
-	str = "TOP.IODECLS";
-	astr = "MAIN.IODECLS";
+	str = "TOP.IODECL";
+	astr = "MAIN.IODECL";
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
 		kvsearch = findkey(*kvpair->second.u.m_m, str);
 
-		// If there's no TOP.PORTLIST, check for a MAIN.PORTLIST
-		if ((kvsearch == kvpair->second.u.m_m->end())
-				||(kvsearch->second.m_typ != MAPT_STRING))
-			kvsearch = findkey(*kvpair->second.u.m_m, astr);
-		if ((kvsearch == kvpair->second.u.m_m->end())
-				||(kvsearch->second.m_typ != MAPT_STRING))
-			continue;
-		
-		STRING	tmps(*kvsearch->second.u.m_s);
-		fprintf(fp, "%s", kvsearch->second.u.m_s->c_str());
+		STRINGP strp = getstring(master, str);
+		if (!strp)
+			strp = getstring(master, astr);
+		if (strp)
+			fprintf(fp, "%s", strp->c_str());
 	}
 
 	// Declare peripheral data
@@ -865,12 +961,9 @@ void	build_toplevel_v( MAPDHASH &master, FILE *fp) {
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
-		kvsearch = findkey(*kvpair->second.u.m_m, str);
-		if (kvsearch == kvpair->second.u.m_m->end())
-			continue;
-		if (kvsearch->second.m_typ != MAPT_STRING)
-			continue;
-		fprintf(fp, "%s", kvsearch->second.u.m_s->c_str());
+		STRINGP	strp = getstring(master, str);
+		if (strp)
+			fprintf(fp, "%s", strp->c_str());
 	}
 
 	fprintf(fp, "\n\n");
@@ -898,18 +991,16 @@ void	build_toplevel_v( MAPDHASH &master, FILE *fp) {
 			continue;
 		kvsearch = findkey(*kvpair->second.u.m_m, str);
 
-		// If there's no TOP.PORTLIST, check for a MAIN.PORTLIST
-		if ((kvsearch == kvpair->second.u.m_m->end())
-				||(kvsearch->second.m_typ != MAPT_STRING))
-			kvsearch = findkey(*kvpair->second.u.m_m, astr);
-		if ((kvsearch == kvpair->second.u.m_m->end())
-				||(kvsearch->second.m_typ != MAPT_STRING))
+		STRINGP strp = getstring(master, str);
+		if (!strp)
+			strp = getstring(master, astr);
+		if (!strp)
 			continue;
-		
+
 		if (!first)
 			fprintf(fp, ",\n");
 		first=0;
-		STRING	tmps(*kvsearch->second.u.m_s);
+		STRING	tmps(*strp);
 		while(isspace(*tmps.rbegin()))
 			*tmps.rbegin() = '\0';
 		fprintf(fp, "%s", tmps.c_str());
@@ -925,26 +1016,24 @@ void	build_toplevel_v( MAPDHASH &master, FILE *fp) {
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
-		kvsearch = findkey(*kvpair->second.u.m_m, str);
-		if (kvsearch == kvpair->second.u.m_m->end())
+		STRINGP strp = getstring(master, str);
+		if (!strp)
 			continue;
-		if (kvsearch->second.m_typ != MAPT_STRING)
-			continue;
-		fprintf(fp, "%s\n", kvsearch->second.u.m_s->c_str());
+		fprintf(fp, "%s\n", strp->c_str());
 	}
 
 	fprintf(fp, "\n\nendmodule; // end of toplevel.v module definition\n");
 
 }
 
-void	build_main_v(     MAPDHASH &master, FILE *fp) {
+void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 	MAPDHASH::iterator	kvpair, kvaccess, kvsearch;
 	STRING	str = "ACCESS", astr, sellist, acklist, siosel_str, diosel_str;
 	int	first, np, nsel = 0, nacks = 0, baw;
 
+	legal_notice(master, fp, fname);
 	baw = get_address_width(master);
 
-	fprintf(fp, "\n\n\n//\n// TO BE PLACED INTO main.v\n//\n");
 	// Include a legal notice
 	// Build a set of ifdefs to turn things on or off
 	fprintf(fp, "`default_nettype\tnone\n");
@@ -966,12 +1055,9 @@ void	build_main_v(     MAPDHASH &master, FILE *fp) {
 			continue;
 		if (isperipheral(kvpair->second))
 			continue;
-		kvaccess = findkey(*kvpair->second.u.m_m, str);
-		if (kvaccess == kvpair->second.u.m_m->end())
-			continue;
-		if (kvaccess->second.m_typ != MAPT_STRING)
-			continue;
-		fprintf(fp, "`define\t%s\n", kvaccess->second.u.m_s->c_str());
+		STRINGP	strp = getstring(*kvpair->second.u.m_m, str);
+		if (strp)
+			fprintf(fp, "`define\t%s\n", strp->c_str());
 	}
 
 	fprintf(fp, "// And then for the peripherals\n");
@@ -980,12 +1066,9 @@ void	build_main_v(     MAPDHASH &master, FILE *fp) {
 			continue;
 		if (!isperipheral(kvpair->second))
 			continue;
-		kvaccess = findkey(*kvpair->second.u.m_m, str);
-		if (kvaccess == kvpair->second.u.m_m->end())
-			continue;
-		if (kvaccess->second.m_typ != MAPT_STRING)
-			continue;
-		fprintf(fp, "`define\t%s\n", kvaccess->second.u.m_s->c_str());
+		STRINGP	strp = getstring(*kvpair->second.u.m_m, str);
+		if (strp)
+			fprintf(fp, "`define\t%s\n", strp->c_str());
 	}
 
 	fprintf(fp, "//\n//\n");
@@ -1004,15 +1087,13 @@ void	build_main_v(     MAPDHASH &master, FILE *fp) {
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
-		kvsearch = findkey(*kvpair->second.u.m_m, str);
-		if (kvsearch == kvpair->second.u.m_m->end())
-			continue;
-		if (kvsearch->second.m_typ != MAPT_STRING)
+		STRINGP	strp = getstring(*kvpair->second.u.m_m, str);
+		if (!strp)
 			continue;
 		if (!first)
 			fprintf(fp, ",\n");
 		first=0;
-		STRING	tmps(*kvsearch->second.u.m_s);
+		STRING	tmps(*strp);
 		while(isspace(*tmps.rbegin()))
 			*tmps.rbegin() = '\0';
 		fprintf(fp, "%s", tmps.c_str());
@@ -1021,7 +1102,7 @@ void	build_main_v(     MAPDHASH &master, FILE *fp) {
 	fprintf(fp, "//\n"
 "////////////////////////////////////////\n"
 "/// PARAMETER SUPPORT BELONGS HERE\n"
-"/// (it hasn\'t been written yet\n"
+"/// (it hasn\'t been written yet)\n"
 "////////////////////////////////////////\n//\n");
 
 	fprintf(fp, "//\n"
@@ -1029,7 +1110,7 @@ void	build_main_v(     MAPDHASH &master, FILE *fp) {
 "// listed above.  \n"
 "//\n"
 "// The following declarations are taken from the values of the various\n"
-"// @MAIN.IODECLS keys.\n"
+"// @MAIN.IODECL keys.\n"
 "//\n");
 
 // #warning "How do I know these will be in the same order?
@@ -1038,16 +1119,14 @@ void	build_main_v(     MAPDHASH &master, FILE *fp) {
 //
 	// External declarations (input/output) for our various ports
 	fprintf(fp, "\tinput\t\t\ti_clk, i_reset;\n");
-	str = "MAIN.IODECLS";
+	str = "MAIN.IODECL";
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
+		STRINGP	strp;
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
-		kvsearch = findkey(*kvpair->second.u.m_m, str);
-		if (kvsearch == kvpair->second.u.m_m->end())
-			continue;
-		if (kvsearch->second.m_typ != MAPT_STRING)
-			continue;
-		fprintf(fp, "%s", kvsearch->second.u.m_s->c_str());
+		strp = getstring(*kvpair->second.u.m_m, str);
+		if (strp)
+			fprintf(fp, "%s", strp->c_str());
 	}
 
 	// Declare Bus master data
@@ -1071,10 +1150,33 @@ void	build_main_v(     MAPDHASH &master, FILE *fp) {
 	}
 	fprintf(fp, "\n\n");
 
-fprintf(fp, "\n"
-"////////////////////////////////////////\n"
-"/// BUS MASTER declarations belong here\n"
-"////////////////////////////////////////\n");
+	// Bus master declarations
+	str = "MAIN.DEFNS";
+	astr= "INTERRUPT";
+	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
+		STRINGP	defnstr, intstr;
+		if (kvpair->second.m_typ != MAPT_MAP)
+			continue;
+		if (isperipheral(kvpair->second))
+			continue;
+		defnstr = getstring(*kvpair->second.u.m_m, str);
+		if (defnstr)
+			fprintf(fp, "%s", defnstr->c_str());
+
+		// Look for and declare any interrupts that need to be
+		// declared
+		intstr = getstring(*kvpair->second.u.m_m, astr);
+		if (intstr) {
+			char	*istr = strdup(intstr->c_str()), *tok;
+
+			tok = strtok(istr, ", \t\n");
+			while(NULL != tok) {
+				fprintf(fp, "\twire\t%s;\n", tok);
+				tok = strtok(NULL, ", \t\n");
+			} free(istr);
+		}
+	}
+
 
 	// Declare peripheral data
 	fprintf(fp,
@@ -1087,20 +1189,19 @@ fprintf(fp, "\n"
 	str = "MAIN.DEFNS";
 	astr= "INTERRUPT";
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
+		STRINGP	defnstr, intstr;
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
-		kvsearch = findkey(*kvpair->second.u.m_m, str);
-		if ((kvsearch != kvpair->second.u.m_m->end())
-				&&(kvsearch->second.m_typ == MAPT_STRING)) {
-			fprintf(fp, "%s", kvsearch->second.u.m_s->c_str());
-		}
+		if (!isperipheral(kvpair->second))
+			continue;
+		defnstr = getstring(*kvpair->second.u.m_m, str);
+		if (defnstr)
+			fprintf(fp, "%s", defnstr->c_str());
 
 		// Look for any interrupt lines that need to be declared
-		kvsearch = findkey(*kvpair->second.u.m_m, astr);
-		if ((kvsearch != kvpair->second.u.m_m->end())
-				&&(kvsearch->second.m_typ == MAPT_STRING)) {
-			char	*istr = strdup(kvsearch->second.u.m_s->c_str()),
-				*tok;
+		intstr = getstring(*kvpair->second.u.m_m, astr);
+		if (intstr) {
+			char	*istr = strdup(intstr->c_str()), *tok;
 
 			tok = strtok(istr, ", \t\n");
 			while(NULL != tok) {
@@ -1133,13 +1234,8 @@ fprintf(fp, "\n"
 		if (!isperipheral(*kvpair->second.u.m_m))
 			continue;
 
-		kvsearch = findkey(*kvpair->second.u.m_m, str);
-		if (kvsearch == kvpair->second.u.m_m->end())
-			continue;
-		if (kvsearch->second.m_typ != MAPT_STRING)
-			continue;
-
-		const char	*pfx = kvsearch->second.u.m_s->c_str();
+		STRINGP	strp = getstring(*kvpair->second.u.m_m, str);
+		const char	*pfx = strp->c_str();
 
 		fprintf(fp, "\twire\t%s_ack, %s_stall, %s_sel;\n", pfx, pfx, pfx);
 		fprintf(fp, "\twire\t[31:0]\t%s_data;\n", pfx);
@@ -1456,10 +1552,7 @@ fprintf(fp, "\n"
 	"\t// or making sure all of the various interrupt wires are set to\n"
 	"\t// zero if the component is not included.\n"
 	"\t//\n");
-	str = "MAIN.INSERT";
 	{
-		STRING	straccess = "ACCESS";
-		STRING	stralt = "MAIN.ALT";
 		STRING	strint = "INTERRUPT";
 
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
@@ -1469,9 +1562,9 @@ fprintf(fp, "\n"
 
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
-		kvinsert = findkey(*kvpair->second.u.m_m, str);
-		kvaccess = findkey(*kvpair->second.u.m_m, straccess);
-		kvalt    = findkey(*kvpair->second.u.m_m, stralt);
+		kvinsert = findkey(*kvpair->second.u.m_m, KYMAIN_INSERT);
+		kvaccess = findkey(*kvpair->second.u.m_m, KYACCESS);
+		kvalt    = findkey(*kvpair->second.u.m_m, KYMAIN_ALT);
 
 		nomain   = false;
 		noaccess = false;
@@ -1638,6 +1731,18 @@ int	main(int argc, char **argv) {
 	MAPDHASH	master;
 	FILE		*fp;
 	STRING		str;
+	STRING		cmdline;
+
+	if (argc > 0) {
+		cmdline = STRING(argv[0]);
+		for(argn=0; argn<argc; argn++) {
+			cmdline = cmdline + " " + STRING(argv[argn]);
+		}
+		MAPT	elm;
+		elm.m_typ = MAPT_STRING;
+		elm.u.m_s = new STRING(cmdline);
+		master.insert(KEYVALUE(str = STRING("CMDLINE"), elm));
+	}
 
 	for(argn=1; argn<argc; argn++) {
 		if (0 == access(argv[argn], R_OK)) {
@@ -1688,17 +1793,33 @@ int	main(int argc, char **argv) {
 		}
 	}
 
-	trimall(master, str = STRING("PREFIX"));
+	STRINGP	legal = getstring(master, str=STRING("LEGAL"));
+	if (legal == NULL) {
+		legal = getstring(master, str=STRING("COPYRIGHT"));
+		if (legal == NULL)
+			legal = new STRING("legalgen.txt");
+		MAPT	elm;
+		elm.m_typ = MAPT_STRING;
+		elm.u.m_s = legal;
+		master.insert(KEYVALUE(str=STRING("LEGAL"), elm));
+	}
+	
+
+	trimall(master, KYPREFIX);
 	trimall(master, str = STRING("IONAME"));
-	trimall(master, str = STRING("ACCESS"));
+	trimall(master, KYACCESS);
 	trimall(master, str = STRING("INTERRUPTS"));
-	trimall(master, str = STRING("PTYPE"));
-	trimall(master, str = STRING("NADDR"));
-	cvtint(master, str = STRING("BUS_ADDRESS_WIDTH"));
-	cvtint(master, str = STRING("NPIC"));
-	cvtint(master, str = STRING("NSCOPES"));
+	trimall(master, KYPTYPE);
+	trimall(master, KYNADDR);
+	trimall(master, KYFORMAT);
+	trimall(master, KYBDEF_IOTYPE);
+	cvtint(master, KYBUS_ADDRESS_WIDTH);
+	cvtint(master, KYNPIC);
+	cvtint(master, KYNSCOPES);
 	cvtint(master, str = STRING("PIC.MAX"));
-	cvtint(master, str = STRING("REGS.N"));
+	cvtint(master, KYREGS_N);
+	reeval(master);
+
 	count_peripherals(master);
 	build_plist(master);
 	assign_interrupts(master);
@@ -1707,21 +1828,24 @@ int	main(int argc, char **argv) {
 
 	str = subd->c_str(); str += "/regdefs.h";
 	fp = fopen(str.c_str(), "w");
-	if (fp) { build_regdefs_h(  master, fp); fclose(fp); }
+	if (fp) { build_regdefs_h(  master, fp, str); fclose(fp); }
 
 	str = subd->c_str(); str += "/regdefs.cpp";
 	fp = fopen(str.c_str(), "w");
-	if (fp) { build_regdefs_cpp(  master, fp); fclose(fp); }
+	if (fp) { build_regdefs_cpp(  master, fp, str); fclose(fp); }
 
-	build_board_h(    master);
+	str = subd->c_str(); str += "/board.h";
+	fp = fopen(str.c_str(), "w");
+	if (fp) { build_board_h(  master, fp, str); fclose(fp); }
+
 	build_board_ld(   master);
 	build_latex_tbls( master);
 
 	str = subd->c_str(); str += "/toplevel.v";
 	fp = fopen(str.c_str(), "w");
-	if (fp) { build_toplevel_v(  master, fp); fclose(fp); }
+	if (fp) { build_toplevel_v(  master, fp, str); fclose(fp); }
 
 	str = subd->c_str(); str += "/main.v";
 	fp = fopen(str.c_str(), "w");
-	if (fp) { build_main_v(  master, fp); fclose(fp); }
+	if (fp) { build_main_v(  master, fp, str); fclose(fp); }
 }

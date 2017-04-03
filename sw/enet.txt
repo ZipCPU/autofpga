@@ -104,7 +104,7 @@
 @REGS.5= 5 R_NET_RXERR	NETERR
 @REGS.6= 6 R_NET_RXCRC	NETCRCERR
 @REGS.7= 7 R_NET_TXCOL	NETCOL
-@CSTRUCT=
+@BDEF.DEFN=
 // Network packet interface
 #define	ENET_TXGO		0x004000
 #define	ENET_TXBUSY		0x004000
@@ -131,4 +131,7 @@ typedef	struct ENETPACKET_S {
 	unsigned long	n_mac;
 	unsigned	n_rxmiss, n_rxerr, n_rxcrc, n_txcol;
 } ENETPACKET;
-@IONAME=io_enet
+@BDEF.IONAME=io_enet
+@BDEF.IOTYPE=ENETPACKET
+@BDEF.OSDEF=_BOARD_HAS_ENETP
+@BDEF.OSVAL=static volatile *const _netp = &((ENETPACKET *)@$THIS.BASE);
