@@ -97,5 +97,6 @@ tags: $(SOURCES) $(HEADERS)
 .PHONY: clean
 clean:
 	rm -rf $(OBJDIR)/ $(PROGRAMS)
+	rm -rf lex.yy.cpp lex.yy.h expr.tab.cpp expr.tab.h expr.output
 
 -include $(OBJDIR)/depends.txt
