@@ -1,0 +1,151 @@
+/*******************************************************************************
+**
+** Filename: 	zasm.y
+**
+** Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+**
+** Purpose:	
+**
+** Creator:	Dan Gisselquist, Ph.D.
+**		Gisselquist Technology, LLC
+**
+********************************************************************************
+**
+** Copyright (C) 2017, Gisselquist Technology, LLC
+**
+** This program is free software (firmware): you can redistribute it and/or
+** modify it under the terms of  the GNU General Public License as published
+** by the Free Software Foundation, either version 3 of the License, or (at
+** your option) any later version.
+**
+** This program is distributed in the hope that it will be useful, but WITHOUT
+** ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY or
+** FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+** for more details.
+**
+** You should have received a copy of the GNU General Public License along
+** with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
+** target there if the PDF file isn't present.)  If not, see
+** <http://www.gnu.org/licenses/> for a copy.
+**
+** License:	GPL, v3, as defined and found on www.gnu.org,
+**		http://www.gnu.org/licenses/gpl.html
+**
+**
+********************************************************************************
+**
+*/
+
+%{
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
+ #include "parser.h"
+ #include "ast.h"
+
+#define	DEFAULT_OUTPUT_FNAME	"z.out"
+#define YYDEBUG 1
+
+  extern "C" int yylex(void);
+  extern "C" int yyparse(void);
+  // extern "C" FILE *yyin;
+  void yyerror(const char *);
+
+  static AST *toplevel_ast;
+%}
+
+%token PLUS MINUS TIMES DIVIDE MODULO
+%token UPSHIFT DOWNSHIFT
+%token BITWISEOR BITWISEAND BITWISEXOR BITWISENOT
+%token BOOLEANOR BOOLEANAND BOOLEANEQ BOOLEANNOT
+%token COLON QUESTION
+%token IDENTIFIER INT
+
+%union {
+	long			u_ival;
+	char			*u_id;
+	AST			*u_ast;
+}
+
+%type	<u_ival>	INT
+%type	<u_id>		IDENTIFIER
+%type	<u_ast>		expr value
+
+%left QUESTION COLON
+%left BOOLEANOR
+%left BOOLEANAND
+%left BOOLEANEQ
+%left BOOLEANNOT
+%left UPSHIFT DOWNSHIFT
+%left BITWISEOR BITWISEXOR
+%left BITWISEAND
+%left BITWISENOT
+%left MODULO
+%left PLUS MINUS
+%left TIMES DIVIDE
+
+%% /* The grammar follows */
+
+input:
+  %empty
+| expr { toplevel_ast = $1; }
+;
+
+expr:
+	value			{ $$ = $1; }
+|	MINUS value %prec TIMES	 { $$ = new AST_BRANCH('-',new AST_NUMBER(0), $2); }
+|	expr PLUS expr		{ $$ = new AST_BRANCH('+',$1,$3); }
+|	expr MINUS expr		{ $$ = new AST_BRANCH('-',$1,$3); }
+|	expr TIMES expr		{ $$ = new AST_BRANCH('*',$1,$3); }
+|	expr DIVIDE expr	{ $$ = new AST_BRANCH('/',$1,$3); }
+|	expr MODULO expr	{ $$ = new AST_BRANCH('%',$1,$3); }
+|	expr BITWISEOR expr	{ $$ = new AST_BRANCH('|',$1,$3); }
+|	expr BITWISEAND expr	{ $$ = new AST_BRANCH('&',$1,$3); }
+|	expr BITWISEXOR expr	{ $$ = new AST_BRANCH('^',$1,$3); }
+|	expr BITWISENOT expr	{ $$ = new AST_BRANCH('~',$1,$3); }
+|	expr UPSHIFT expr	{ $$ = new AST_BRANCH('u',$1,$3); }
+|	expr DOWNSHIFT expr	{ $$ = new AST_BRANCH('d',$1,$3); }
+|	expr BOOLEANOR expr	{ $$ = new AST_BRANCH('o',$1,$3); }
+|	expr BOOLEANAND expr	{ $$ = new AST_BRANCH('a',$1,$3); }
+|	expr BOOLEANEQ expr	{ $$ = new AST_BRANCH('e',$1,$3); }
+|	expr QUESTION expr COLON expr { $$ = new AST_TRIOP($1,$3,$5); }
+|	'(' expr ')'		{ $$ = $2; }
+;
+	/* |	BITWISENOT expr	{ $$ = new AST_SINGLEOP('~',$2); } */
+	/* |	BOOLEANNOT expr	{ $$ = new AST_SINGLEOP('!',$2); } */
+
+value:
+	INT	{ $$ = new AST_NUMBER($1); }
+| IDENTIFIER	{ $$ = new AST_IDENTIFIER($1); }
+;
+%%
+
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <sys/stat.h>
+#include <sys/fcntl.h>
+#include <assert.h>
+#include <string>
+//
+#include "lex.yy.h"
+
+static	char	*topstr;
+
+void	yyerror(const char *str) {
+	fflush(stdout);
+	fprintf(stderr, "EXPR ERR: %s\n", str);
+	fprintf(stderr, "ERR: While processing \"%s\"\n", topstr);
+}
+
+AST	*parse_ast(const STRING &str) {
+	size_t	ln = str.size() + 4;
+	char	*buf = new char[ln];
+	topstr	= buf;
+
+	memset(buf, 0, ln);
+	strcpy(buf, str.c_str());
+	yy_scan_string(buf);
+	yyparse();
+	return	toplevel_ast;
+}

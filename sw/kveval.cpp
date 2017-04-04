@@ -37,6 +37,7 @@
 //
 #include "kveval.h"
 #include "keys.h"
+#include "ast.h"
 
 bool	get_named_value(MAPDHASH &top, MAPDHASH &here, STRING &key, int &value){
 	MAPDHASH::iterator	kvpair, kvsub;
@@ -118,20 +119,27 @@ STRINGP	get_named_string(MAPDHASH &top, MAPDHASH &here, STRING &key){
 	} return NULL;
 }
 
-bool	sexpr_eval(MAPDHASH &top, MAPDHASH &here, STRINGP expr, int &value) {
-#warning "BUILD-ME"
-	return false;
-}
-
 void	expr_eval(MAPDHASH &top, MAPDHASH &here, MAPDHASH &sub, MAPT &expr) {
+	AST	*ast;
 	if (expr.m_typ == MAPT_STRING) {
-		int	value;
-		bool	valid;
-
-		valid = sexpr_eval(top, here, expr.u.m_s, value);
-		if (valid) {
+		ast = parse_ast(*expr.u.m_s);
+		ast->define(top, here);
+		if (ast->isdefined()) {
 			expr.m_typ = MAPT_INT;
-			expr.u.m_v = value;
+			expr.u.m_v = ast->eval();
+			delete	ast;
+		} else {
+			expr.m_typ = MAPT_AST;
+			expr.u.m_a = ast;
+		}
+	} else if (expr.m_typ == MAPT_AST) {
+		ast = expr.u.m_a;
+		ast->define(top, here);
+		if (ast->isdefined()) {
+			int	v = (int)ast->eval();
+			expr.m_typ = MAPT_INT;
+			expr.u.m_v = v;
+			delete	ast;
 		}
 	}
 }
@@ -156,6 +164,25 @@ bool	find_any_unevaluated_sub(MAPDHASH &top, MAPDHASH *here, MAPDHASH &sub) {
 				expr_eval(top, *component, sub, subi->second);
 				if (subi->second.m_typ != MAPT_STRING)
 					changed = true;
+			} else if (subi->second.m_typ == MAPT_AST) {
+				AST	*ast = subi->second.u.m_a;
+				ast->define(top, *component);
+				if (ast->isdefined()) {
+					subi->second.m_typ = MAPT_INT;
+					subi->second.u.m_v = ast->eval();
+					delete ast;
+					changed = true;
+				}
+			}
+		} else if (subi->second.m_typ == MAPT_AST) {
+			AST	*ast = subi->second.u.m_a;
+			ast->define(top, *component);
+			if (ast->isdefined()) {
+				int	val = ast->eval();
+				subi->second.m_typ = MAPT_INT;
+				subi->second.u.m_v = val;
+				delete ast;
+				changed = true;
 			}
 		}
 	} return changed;
@@ -202,7 +229,6 @@ void	subresults_into(MAPDHASH &info, MAPDHASH *here, STRINGP &sval) {
 			} else sloc++;
 		}
 	} while (changed);
-	
 }
 
 void	substitute_any_results_sub(MAPDHASH &info, MAPDHASH *here,

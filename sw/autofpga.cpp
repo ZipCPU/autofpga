@@ -91,18 +91,14 @@ public:
 		if (getvalue( pic, KYPIC_MAX, mx)) {
 			i_max = mx;
 		} else {
-			printf("Cannot find PIC.MAX within ...\n");
+			printf("ERR: Cannot find PIC.MAX within ...\n");
 			mapdump(pic);
 		}
 		i_nassigned  = 0;
 		i_nallocated = 0;
 	} void add(MAPDHASH &psrc, STRINGP iname) {
-		printf("N-ALLOCATED = %d, I-MAX = %d\n", i_nallocated, i_max);
 		if ((!iname)||(i_nallocated >= i_max))
 			return;
-
-		printf("Attempting to add INT %s to %s\n", iname->c_str(),
-			i_name->c_str());
 
 		STRING	ky = KY_INT + "." + (*iname) + ".WIRE";
 
@@ -113,10 +109,12 @@ public:
 		ip->i_id   = i_max;
 		i_nallocated++;
 	} void add(unsigned id, MAPDHASH &psrc, STRINGP iname) {
-		printf("Attempting to add INT(%d) %s to %s\n", id, iname->c_str(),
-			i_name->c_str());
-		if ((!iname)||(id >= i_max)) {
-			printf("Invalid interrupt\n");
+		if (!iname) {
+			fprintf(stderr, "WARNING: No name given for interrupt\n");
+			return;
+		} else if (id >= i_max) {
+			fprintf(stderr, "ERR: Interrupt ID %d out of bounds [0..%d]\n",
+				id, i_max);
 		}
 		for(unsigned i=0; i<i_nallocated; i++) {
 			if (i_ilist[i]->i_id == id) {
@@ -137,13 +135,6 @@ public:
 		i_nassigned++;
 		i_nallocated++;
 	} void assignids(void) {
-		printf("Assigning ID\'s for PIC %s, max = %d, nassigned/allocated = %d/%d\n",
-			i_name->c_str(), i_max, i_nassigned, i_nallocated);
-		for(unsigned iid=0; iid<i_nallocated; iid++) {
-			printf("PRE-ASSIGN, INT[%d] is %d/%s\n", iid,
-				i_ilist[iid]->i_id,
-				i_ilist[iid]->i_name->c_str());
-		}
 		for(unsigned iid=0; iid<i_max; iid++) {
 			for(unsigned jid=0; jid < i_ilist.size(); jid++) {
 				if (i_ilist[jid]->i_id == iid) {
@@ -158,38 +149,27 @@ public:
 				}
 			}
 		}
-		for(unsigned iid=0; iid<i_nallocated; iid++) {
-			printf("MID-ASSIGN, INT[%d] is %d/%s\n", iid,
-				i_ilist[iid]->i_id,
-				i_ilist[iid]->i_name->c_str());
-		}
 		for(unsigned iid=0; iid<i_max; iid++) {
 			unsigned mx = (i_ilist.size() > i_max)?i_ilist.size():i_max;
 			unsigned	aid = mx, uid = mx;
-			printf("IID = %d\n", iid);
 			for(unsigned jid=0; jid < i_ilist.size(); jid++) {
 				if (i_ilist[jid]->i_id == iid) {
-printf("Found [JID] is %s\n", i_ilist[jid]->i_name->c_str());
 					aid = jid;
 					break;
 				} else if ((i_ilist[jid]->i_id >= i_max)
 						&&(uid >= i_max)) {
 					uid = jid;
-printf("CouldBe [JID] is %s\n", i_ilist[jid]->i_name->c_str());
 				}
 			}
 
-			printf("IID %d assigned to %d/%d\n", iid, aid, uid);
 			if (aid < mx)
 				continue; /// Interrupt has an assignment
 			else if (uid < mx) {
-printf("Using UID=%d/%s, setting its int to %d\n", uid, i_ilist[uid]->i_name->c_str(), iid);
 				i_ilist[uid]->i_id = iid;
 				i_nassigned++;
 			} else
 				continue; // All interrupts assigned
-		}
-
+		} 
 		if (i_max < i_ilist.size()) {
 			fprintf(stderr, "WARNING: Too many interrupts assigned to PIC %s\n", i_name->c_str());
 		}
@@ -437,7 +417,6 @@ bool	compare_naddr(PERIPHP a, PERIPHP b) {
 
 void	build_plist(MAPDHASH &info) {
 	MAPDHASH::iterator	kvpair;
-	cvtint(info, KYNADDR);
 
 	int np = count_peripherals(info);
 
@@ -497,7 +476,6 @@ void	build_plist(MAPDHASH &info) {
 void assign_addresses(MAPDHASH &info, unsigned first_address = 0x400) {
 	unsigned	start_address = first_address;
 	MAPDHASH::iterator	kvpair;
-	cvtint(info, KYNADDR);
 
 	int np = count_peripherals(info);
 
@@ -619,7 +597,7 @@ void	assign_interrupts(MAPDHASH &master) {
 				if (NULL==(picname=getstring(
 					*kvline->second.u.m_m, KYPIC))) {
 						fprintf(stderr,
-						"No bus defined for INT_%s\n",
+						"ERR: No bus defined for INT_%s\n",
 						kvpair->first.c_str());
 					continue;
 				}
@@ -635,15 +613,13 @@ void	assign_interrupts(MAPDHASH &master) {
 						if (*piclist[pid]->i_name == tok)
 							break;
 					if (pid >= piclist.size()) {
-						printf("PIC NOT FOUND: %s\n", tok);
+						printf("ERR: PIC NOT FOUND: %s\n", tok);
 					} else if (getvalue(*kvline->second.u.m_m,
 							KY_ID,inum)) {
-						printf("PIC[PID=%d, ID=%d] - %s\n", pid, inum, kvline->first.c_str());
 						piclist[pid]->add((unsigned)inum,
 							*kvline->second.u.m_m,
 							new STRING(kvline->first));
 					} else {
-						printf("PIC[PID=%d] - %s\n", pid, kvline->first.c_str());
 						piclist[pid]->add(*kvline->second.u.m_m,
 							new STRING(kvline->first));
 					}
@@ -1998,15 +1974,14 @@ int	main(int argc, char **argv) {
 	
 
 	trimall(master, KYPREFIX);
-	trimall(master, str = STRING("IONAME"));
 	trimall(master, KYACCESS);
-	trimall(master, str = STRING("INTERRUPTS"));
 	trimall(master, KYPTYPE);
 	trimall(master, KYNADDR);
 	trimall(master, KYFORMAT);
 	trimall(master, KYBDEF_IOTYPE);
 	trimall(master, KY_WIRE);
 	cvtint(master, KYBUS_ADDRESS_WIDTH);
+	cvtint(master, KYNADDR);
 	cvtint(master, KYNPIC);
 	cvtint(master, KYNSCOPES);
 	cvtint(master, KYPIC_MAX);

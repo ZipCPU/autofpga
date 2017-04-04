@@ -90,7 +90,7 @@
 #define	R_MDIO_EDCR   	0x00000774	// wbregs names: EDCR
 #define	R_NET_RXBUF   	0x00004000	// wbregs names: NETRXB
 #define	R_NET_TXBUF   	0x00006000	// wbregs names: NETTXB
-#define	BKRAM         	0x00200000	// wbregs names: RAM
+#define	BKRAM         	0x00080000	// wbregs names: RAM
 #define	FLASHMEM      	0x04000000	// wbregs names: FLASH
 
 

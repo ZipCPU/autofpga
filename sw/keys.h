@@ -39,7 +39,7 @@
 #define	ICD_H
 
 #include <string>
-#include "parser.h"
+#include "mapdhash.h"
 
 //
 extern const	STRING	KYLEGAL;

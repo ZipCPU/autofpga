@@ -39,7 +39,7 @@
 #ifndef	KVEVAL_H
 #define	KVEVAL_H
 
-#include "parser.h"
+#include "mapdhash.h"
 
 extern	void	reeval(MAPDHASH &info);
 #endif

@@ -36,14 +36,15 @@
 ##
 ##
 @PREFIX=mem
-@NADDR=0x80000
+@$LGMEMSZ=19
+@$NADDR=(1<<(@$THIS.LGMEMSZ-2))
 @ACCESS=BLKRAM_ACCESS
 @PTYPE=MEMORY
 @MAIN.INSERT=
-	memdev #(.LGMEMSZ(19), .EXTRACLOCK(0))
+	memdev #(.LGMEMSZ(@$THIS.LGMEMSZ), .EXTRACLOCK(0))
 		blkram(i_clk,
 			(wb_cyc), (wb_stb)&&(mem_sel), wb_we,
-				wb_addr[17:0], wb_data, wb_sel,
+				wb_addr[(@$THIS.LGMEMSZ-2):0], wb_data, wb_sel,
 				mem_ack, mem_stall, mem_data);
 @REGS.N=1
 @REGS.0= 0 BKRAM RAM

@@ -41,9 +41,11 @@ OBJDIR:= obj-pc
 CXX:= g++
 SED:= sed
 CFLAGS:= -std=c++11 -g -Og -Wall
-SOURCES := autofpga.cpp parser.cpp kveval.cpp keys.cpp
-HEADERS := $(foreach header,$(subst .cpp,.h,$(SOURCES)),$(wildcard $(header)))
-OBJECTS := $(addprefix $(OBJDIR)/,$(subst .cpp,.o,$(SOURCES)))
+SOURCES := autofpga.cpp parser.cpp kveval.cpp keys.cpp mapdhash.cpp ast.cpp \
+	expr.tab.cpp lex.yy.cpp
+POSSHDRS:= $(subst .c,.h,$(subst .cpp,.h,$(SOURCES)))
+HEADERS := $(foreach header,$(POSSHDRS),$(wildcard $(header)))
+OBJECTS := $(addprefix $(OBJDIR)/,$(subst .c,.o,$(subst .cpp,.o,$(SOURCES))))
 
 all: $(PROGRAMS)
 
@@ -51,7 +53,18 @@ $(OBJDIR)/%.o: %.cpp
 	$(mk-objdir)
 	$(CXX) $(CFLAGS) -c $< -o $@
 
+$(OBJDIR)/%.o: %.c
+	$(mk-objdir)
+	$(CXX) $(CFLAGS) -c $< -o $@
+
+expr.tab.cpp expr.tab.h: expr.ypp
+	bison --defines=expr.tab.h expr.ypp
+
+lex.yy.cpp lex.yy.h: expr.l
+	flex --header-file=lex.yy.h -o lex.yy.cpp expr.l
+
 autofpga: $(OBJECTS)
+	echo $(OBJECTS)
 	$(CXX) $(CFLAGS) $(OBJECTS) -o $@
 
 VSRCS := bkram.txt enet.txt flash.txt gps.txt icape.txt mdio.txt wbuart.txt \

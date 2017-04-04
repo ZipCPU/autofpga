@@ -294,7 +294,7 @@ module	main(i_clk, i_reset,
 	assign	   cfg_sel = (wb_addr[29: 5] == 25'b0000_0000_0000_0000_0000_0110_1);
 	assign	  mdio_sel = (wb_addr[29: 5] == 25'b0000_0000_0000_0000_0000_0111_0);
 	assign	  netb_sel = (wb_addr[29:12] == 18'b0000_0000_0000_0000_01);
-	assign	   mem_sel = (wb_addr[29:19] == 11'b0000_0000_001);
+	assign	   mem_sel = (wb_addr[29:17] == 13'b0000_0000_0000_1);
 	assign	 flash_sel = (wb_addr[29:24] ==  6'b0000_01);
 	assign	none_sel = (wb_stb)&&({ flash, mem, netb, mdio, cfg, flctl, dio_sel, sio_sel} == 0);
 	//
@@ -516,10 +516,10 @@ module	main(i_clk, i_reset,
 `endif
 
 `ifdef	BLKRAM_ACCESS
-	memdev #(.LGMEMSZ(19), .EXTRACLOCK(0))
+	memdev #(.LGMEMSZ(0x00000013), .EXTRACLOCK(0))
 		blkram(i_clk,
 			(wb_cyc), (wb_stb)&&(mem_sel), wb_we,
-				wb_addr[17:0], wb_data, wb_sel,
+				wb_addr[(0x00000013-2):0], wb_data, wb_sel,
 				mem_ack, mem_stall, mem_data);
 
 	reg	r_mem_ack;

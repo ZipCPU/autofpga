@@ -4,9 +4,10 @@
 //
 // Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 //
-// Purpose:	To define the structures used by a parsed input file.  Of
-//		particular note is the key-value pair unordered map structure,
-//	and the components of that structure.
+// Purpose:	To define the processes used to parse a raw input file.  This
+//		does not include the code necessary to evaluate any strings
+//	within that input file, only the code to turn the input file into
+//	KEY-VALUE pairs. used by a parsed input file.  
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
@@ -45,43 +46,12 @@
 #include <string.h>
 #include <assert.h>
 
-#include <string>
-#include <unordered_map>
-
-#define	MAPT_INT	0
-#define	MAPT_STRING	1
-#define	MAPT_MAP	2
-// Contains a "soft-link" to a hash entry, in other words, this is the "name" of another hash entry--one which we will use instead
-// #define	MAPT_SLINK	3
-
-typedef	std::string *STRINGP, STRING;
-typedef std::unordered_map<STRING,struct MAPT_S> MAPDHASH;
-
-typedef	struct MAPT_S {
-	int	m_typ;
-	union {
-		int		m_v;
-		STRINGP		m_s;
-		MAPDHASH		*m_m;
-	} u;
-} MAPT;
-
-typedef	std::pair<STRING,MAPT>	KEYVALUE;
+#include "mapdhash.h"
 
 extern	STRING	*rawline(FILE *fp);
 extern	STRING	*getline(FILE *fp);
-extern	STRING	*trim(STRING &s);
-extern	void	addtomap(MAPDHASH &fm, const STRING ky, STRING vl);
 extern	MAPDHASH	*parsefile(FILE *fp);
 extern	MAPDHASH	*parsefile(const char *fname);
 extern	MAPDHASH	*parsefile(const STRING &fname);
-extern	void	mapdump(MAPDHASH &fm);
-extern	void	mergemaps(MAPDHASH &master, MAPDHASH &sub);
-extern	void	trimall(MAPDHASH &mp, const STRING &sky);
-extern	void	cvtint(MAPDHASH &mp, const STRING &sky);
-extern	MAPDHASH::iterator	findkey(MAPDHASH &mp, const STRING &sky);
-extern	STRINGP	getstring(MAPDHASH &mp, const STRING &sky);
-extern	bool	getvalue(MAPDHASH &mp, const STRING &sky, int &value);
-extern	void	setvalue(MAPDHASH &mp, const STRING &sky, int value);
 
 #endif
