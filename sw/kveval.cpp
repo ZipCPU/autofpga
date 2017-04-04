@@ -72,11 +72,9 @@ bool	get_named_value(MAPDHASH &top, MAPDHASH &here, STRING &key, int &value){
 STRINGP	get_named_string(MAPDHASH &top, MAPDHASH &here, STRING &key){
 	MAPDHASH::iterator	kvpair, kvsub, kvstr, kvfmt;
 
-printf("GET-NAMED-STRING, Looking for key %s\n", key.c_str());
 	if (strncmp(key.c_str(), KYTHISDOT.c_str(), KYTHISDOT.size())==0) {
 		STRING	subkey = key.substr(KYTHISDOT.size(),
 					key.size()-KYTHISDOT.size());
-printf("GET-NAMED-STRING, Looking for subkey %s\n", subkey.c_str());
 		kvpair = findkey(here, subkey);
 		if (kvpair == here.end())
 			return NULL;
@@ -185,25 +183,21 @@ void	subresults_into(MAPDHASH &info, MAPDHASH *here, STRINGP &sval) {
 
 		sloc = 0;
 		while(STRING::npos != (sloc = sval->find("@$", sloc))) {
-printf("VALUE FOR SUBSTITUTION = %s\n", sval->c_str());
 			int	kylen = 0, value;
 			const char *ptr = sval->c_str() + sloc + 2;
 			for(; ptr[kylen]; kylen++) {
 				if((!isalpha(ptr[kylen]))&&(ptr[kylen] != '.'))
 					break;
 			} if (kylen > 0) {
-printf("KEYLEN = %d\n", kylen);
 				STRING key = sval->substr(sloc+2, kylen), *vstr;
-				if (vstr = get_named_string(info,*here, key)) {
+				if (NULL != (vstr = get_named_string(info,*here, key))) {
 					sval->replace(sloc, kylen+2, *vstr);
-printf("REPLACED STR = %s\n", sval->c_str());
 				}else if(get_named_value(info,*here,key,value)){
 					char	buffer[64];
 					STRING	tmp;
 					sprintf(buffer, "0x%08x", value);
 					tmp = buffer;
 					sval->replace(sloc, kylen+2, tmp);
-printf("REPLACED VALUE = %s\n", sval->c_str());
 				} else sloc++;
 			} else sloc++;
 		}

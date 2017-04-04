@@ -103,11 +103,76 @@
 @PREFIX=syspic
 @PIC.BUS= sys_int_vector
 @PIC.MAX=15
-@PIC.ASSIGNED= DMAC JIFFIES TMC TMB TMA ALT
+@PREFIX=zip_dmac
+@INT.DMAC.WIRE=
+@INT.DMAC.PIC= syspic
+@INT.DMAC.ID=0
+@PREFIX=zip_jiffies
+@INT.JIFFIES.WIRE=
+@INT.JIFFIES.PIC= syspic
+@INT.JIFFIES.ID=1
+@PREFIX=zip_tmc
+@INT.TMC.WIRE=
+@INT.TMC.PIC= syspic
+@INT.TMC.ID=2
+@PREFIX=zip_tmb
+@INT.TMB.WIRE=
+@INT.TMB.PIC= syspic
+@INT.TMB.ID=3
+@PREFIX=TMA
+@INT.TMA.WIRE=
+@INT.TMA.PIC= syspic
+@INT.TMA.ID=4
+@PREFIX=alt
+@INT.ALT.WIRE=
+@INT.ALT.PIC= syspic
+@INT.ALT.ID=5
 #
 @PREFIX=altpic
 @PIC.BUS= alt_int_vector
 @PIC.MAX=15
-@PIC.ASSIGNED= UIC UOC UPC UTC MIC MOC MPC MTC
+#
+# @PIC.ASSIGNED= UIC UOC UPC UTC MIC MOC MPC MTC
+#
+@PREFIX=zip_alt_uic
+@INT.UIC.WIRE=
+@INT.UIC.PIC=altpic
+@INT.UIC.ID=0
+#
+@PREFIX=zip_alt_uoc
+@INT.UOC.WIRE=
+@INT.UOC.PIC=altpic
+@INT.UOC.ID=1
+#
+@PREFIX=zip_alt_upc
+@INT.UPC.WIRE=
+@INT.UPC.PIC=altpic
+@INT.UPC.ID=2
+#
+@PREFIX=zip_alt_utc
+@INT.UTC.WIRE=
+@INT.UTC.PIC=altpic
+@INT.UTC.ID=3
+#
+@PREFIX=zip_alt_mic
+@INT.MIC.WIRE=
+@INT.MIC.PIC=altpic
+@INT.MIC.ID=4
+#
+@PREFIX=zip_alt_moc
+@INT.MOC.WIRE=
+@INT.MOC.PIC=altpic
+@INT.MOC.ID=5
+#
+@PREFIX=zip_alt_mpc
+@INT.MPC.WIRE=
+@INT.MPC.PIC=altpic
+@INT.MPC.ID=6
+#
+@PREFIX=zip_alt_mtc
+@INT.MTC.WIRE=
+@INT.MTC.PIC=altpic
+@INT.MTC.ID=7
+#
 #
 #

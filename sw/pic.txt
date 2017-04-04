@@ -35,14 +35,14 @@
 ################################################################################
 ##
 ##
-@PREFIX=bpic
+@PREFIX=buspic
 @NADDR=1
 @PTYPE=SINGLE
 @PIC.BUS= bus_int_vector
-@PIC.ASSIGNED= zip_int, flash_int
 @PIC.MAX= 15
-@INTERRUPT= o_bus_int
-@INTNAME= BUS
+@INT.BUS.WIRE= o_bus_int
+@INT.BUS.PIC=  syspic
+@INT.BUS.ID=   6
 @MAIN.INSERT=
 	//
 	// The BUS Interrupt controller
@@ -61,4 +61,4 @@
 @BDEF.IONAME= i_pic
 @BDEF.IOTYPE= unsigned
 @BDEF.OSDEF= _BOARD_HAS_BUSPIC
-@BDEF.OSVAL= static volatile unsigned *const _buspic = &((BOARD *)PERIPHERAL_ADDR)->io_single.i_pic
+@BDEF.OSVAL= static volatile @$THIS.BDEF.IOTYPE *const _buspic = &((@$THIS.BDEF.IOTYPE *)@$THIS.BASE);

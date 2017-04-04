@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	icd.h
+// Filename: 	keys.h
 //
 // Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 //
@@ -65,7 +65,6 @@ extern const	STRING	KYMEMORY;
 extern const	STRING	KYSINGLE;
 extern const	STRING	KYDOUBLE;
 //
-extern const	STRING	KYPIC;
 extern const	STRING	KYNP;
 extern const	STRING	KYNPIC;
 extern const	STRING	KYNPSINGLE;
@@ -92,6 +91,10 @@ extern const	STRING	KYMAIN_IODECL;
 extern const	STRING	KYMAIN_DEFNS;
 extern const	STRING	KYMAIN_INSERT;
 extern const	STRING	KYMAIN_ALT;
+// PIC definitions
+extern	const	STRING	KYPIC, KYPIC_BUS, KYPIC_MAX;
+// Interrupt definitions
+extern	const	STRING	KY_INT, KY_WIRE, KY_DOTWIRE, KY_ID;
 //
 extern const	STRING	KYSTHIS;
 extern const	STRING	KYTHISDOT;

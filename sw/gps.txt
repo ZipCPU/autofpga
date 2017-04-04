@@ -126,8 +126,14 @@ typedef	struct	GPSTB_S	{
 @NADDR=4
 @PTYPE=DOUBLE
 @ACCESS=GPSUART_ACCESS
-@INTERRUPT= gpsurx_int, gpsutx_int, gpsurxf_int, gpsutxf_int
-@INTNAME= GPSRX,GPSTX,GPSRXF,GPSTXF
+@INT.GPSRX.WIRE=  gpsurx_int
+@INT.GPSTX.WIRE=  gpsutx_int
+@INT.GPSRXF.WIRE= gpsurxf_int
+@INT.GPSTXF.WIRE= gpsutxf_int
+@INT.GPSRX.PIC=  altpic
+@INT.GPSTX.PIC=  altpic
+@INT.GPSRXF.PIC= syspic
+@INT.GPSTXF.PIC= altpic
 @MAIN.PORTLIST=
 		// The GPS-UART
 		i_gps_rx, o_gps_tx

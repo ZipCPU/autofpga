@@ -41,8 +41,8 @@
 @NADDR=4
 @ACCESS=MOUSE_ACCESS
 @PTYPE=DOUBLE
-@INTERRUPT= mous_interrupt
-@INTNAME= MOUSE
+@INT.MOUSE.WIRE= mous_interrupt
+@INT.MOUSE.PIC= buspic syspic
 @TOP.PORTLIST=
 		// The PS/2 Mouse
 		io_ps_clk, io_ps_data
@@ -87,9 +87,11 @@
 @REGS.1= 1 R_MOUSE_RAW   MRAW
 @REGS.2= 2 R_SCRN_MOUSE  MOUSE
 @REGS.3= 3 R_SCRN_SIZE   MSIZ
-@CSTRUCT=
-
+@BDEF.DEFN=
+// Mouse definitions
 typedef struct  WBMOUSE_S {
 	unsigned	m_bus, m_raw, m_screen, m_size;
-} WBUART;
-@IONAME=io_mouse
+} WBMOUSE;
+@BDEF.IOTYPE=WBMOUSE
+@BDEF.OSDEF=_BOARD_HAS_WBMOUSE
+@BDEF.OSVAL=static volatile @$THIS.BDEF.IOTYPE *const _mouse = &((@$THIS.BDEF.IOTYPE *)@$THIS.BASE);

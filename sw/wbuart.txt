@@ -59,8 +59,14 @@
 #		line of a necessity.
 @PTYPE=	DOUBLE
 @ACCESS= CONSOLE_ACCESS
-@INTERRUPT = uartrx_int, uarttx_int, uartrxf_int, uarttxf_int
-@INTNAME = UARTRX,UARTTX,UARTRXF,UARTTXF
+@INT.UARTRX.WIRE=uartrx_int
+@INT.UARTTX.WIRE=uarttx_int
+@INT.UARTRXF.WIRE=uartrxf_int
+@INT.UARTTXF.WIRE=uarttxf_int
+@INT.UARTRX.PIC=altpic
+@INT.UARTTX.PIC=altpic
+@INT.UARTRXF.PIC=syspic
+@INT.UARTTXF.PIC=syspic
 @MAIN.PORTLIST=
 		// The UART console
 		i_aux_rx, o_aux_tx, i_aux_cts_n, o_aux_rts_n

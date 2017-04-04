@@ -95,8 +95,6 @@ STRING	*trim(STRING &s) {
 	a = s.c_str();
 	b = s.c_str() + s.length()-1;
 
-printf("Trimming s.c_str() = %s\n", s.c_str());
-
 	for(; (*a)&&(a<b); a++)
 		if (!isspace(*a))
 			break;
@@ -104,7 +102,6 @@ printf("Trimming s.c_str() = %s\n", s.c_str());
 		if (!isspace(*b))
 			break;
 	strp = new STRING(s.substr(a-s.c_str(), b-a+1));
-	printf("TRIM\'d to: %s\n", strp->c_str());
 	return strp;
 }
 
@@ -123,10 +120,14 @@ bool	splitkey(const STRING &ky, STRING &mkey, STRING &subky) {
 
 void	addtomap(MAPDHASH &fm, STRING ky, STRING vl) {
 	STRING	mkey, subky;
+	STRINGP	trimmed;
 
-	if (splitkey(ky, mkey, subky)) {
+	trimmed = trim(ky);
+
+	if (splitkey(*trimmed, mkey, subky)) {
 		MAPT	subfm;
 		MAPDHASH::iterator	subloc = fm.find(mkey);
+		delete	trimmed;
 		if (subloc == fm.end()) {
 			subfm.m_typ = MAPT_MAP;
 			subfm.u.m_m = new MAPDHASH;
@@ -145,7 +146,8 @@ void	addtomap(MAPDHASH &fm, STRING ky, STRING vl) {
 	MAPT	elm;
 	elm.m_typ = MAPT_STRING;
 	elm.u.m_s = new STRING(vl);
-	fm.insert(KEYVALUE(ky, elm ) );
+	fm.insert(KEYVALUE(*trimmed, elm ) );
+	delete	trimmed;
 }
 
 MAPDHASH	*parsefile(FILE *fp) {
@@ -154,7 +156,7 @@ MAPDHASH	*parsefile(FILE *fp) {
 	size_t		pos;
 
 	key = ""; value = "";
-	while(ln = getline(fp)) {
+	while(NULL != (ln = getline(fp))) {
 		if (iskeyline(*ln)) {
 
 			// We may have a completed key-value pair that needs
@@ -165,13 +167,15 @@ MAPDHASH	*parsefile(FILE *fp) {
 					kvpair = fm->find(value);
 					if (kvpair == fm->end()) {
 						MAPT	elm;
+						STRINGP	kyp = trim(value);
 
 						prefix = value;
 						devm = new MAPDHASH;
 						elm.m_typ = MAPT_MAP;
 						elm.u.m_m = devm;
 
-						fm->insert(KEYVALUE(value,elm));
+						fm->insert(KEYVALUE(STRING(*kyp),elm));
+						delete kyp;
 					} else if (kvpair->second.m_typ == MAPT_MAP) {
 						devm = kvpair->second.u.m_m;
 					} else {
@@ -317,8 +321,19 @@ void	trimall(MAPDHASH &mp, const STRING &sky) {
 
 void	cvtint(MAPDHASH &mp, const STRING &sky) {
 	MAPDHASH::iterator	kvpair;
+	STRING	mkey, subky;
 
-	for(kvpair = mp.begin(); kvpair != mp.end(); kvpair++) {
+	if (splitkey(sky, mkey, subky)) {
+		if (mp.end() != (kvpair=mp.find(mkey))) {
+			if (kvpair->second.m_typ == MAPT_MAP) {
+				cvtint(*kvpair->second.u.m_m, subky);
+			}
+		} else for(kvpair = mp.begin(); kvpair != mp.end(); kvpair++) {
+			if (kvpair->second.m_typ == MAPT_MAP) {
+				cvtint(*kvpair->second.u.m_m, sky);
+			}
+		}
+	} else for(kvpair = mp.begin(); kvpair != mp.end(); kvpair++) {
 		if ((*kvpair).second.m_typ == MAPT_MAP) {
 			cvtint(*(*kvpair).second.u.m_m, sky);
 		} else if ((*kvpair).second.m_typ == MAPT_STRING) {
@@ -380,6 +395,17 @@ MAPDHASH::iterator findkey(MAPDHASH &master, const STRING &ky) {
 	return findkey_aux(master, ky, empty);
 }
 
+MAPDHASH *getmap(MAPDHASH &master, const STRING &ky) {
+	MAPDHASH::iterator	r;
+
+	r = findkey(master, ky);
+	if (r == master.end())
+		return NULL;
+	else if (r->second.m_typ != MAPT_MAP)
+		return NULL;
+	return r->second.u.m_m;
+}
+
 STRINGP getstring(MAPDHASH &master, const STRING &ky) {
 	MAPDHASH::iterator	r;
 
@@ -396,16 +422,20 @@ bool getvalue(MAPDHASH &master, const STRING &ky, int &value) {
 
 	value = -1;
 
+printf("Looking for value of %s\n", ky.c_str());
 	r = findkey(master, ky);
-	if (r == master.end())
+	if (r == master.end()) {
+		printf("Key not found\n");
 		return false;
-	else if (r->second.m_typ != MAPT_MAP) {
+	} else if (r->second.m_typ == MAPT_MAP) {
 		MAPDHASH::iterator	kvpair;
 		kvpair = r->second.u.m_m->find(STRING("VAL"));
 		if (kvpair != r->second.u.m_m->end())
 			r = kvpair;
-		else
+		else {
+			printf("Key is not an integer\n");
 			return false;
+		}
 	} else if (r->second.m_typ != MAPT_INT) {
 		return false;
 	}
@@ -416,7 +446,7 @@ bool getvalue(MAPDHASH &master, const STRING &ky, int &value) {
 void	setvalue(MAPDHASH &master, const STRING &ky, int value) {
 	MAPDHASH::iterator	kvpair, kvsub;
 
-	kvpair = master.find(ky);
+	kvpair = findkey(master, ky);
 	if (kvpair == master.end()) {
 		MAPT	elm;
 		elm.m_typ = MAPT_INT;

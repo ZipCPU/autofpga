@@ -39,8 +39,8 @@
 @NADDR= 0x1000000
 @ACCESS= FLASH_ACCESS
 @PTYPE=  MEMORY
-@INTERRUPT= flash_interrupt
-@INTNAME= FLASH
+@INT.FLASH.WIRE= flash_interrupt
+@INT.FLASH.PIC= buspic
 @TOP.PORTLIST=
 		// Top level Quad-SPI I/O ports
 		o_qspi_cs_n, io_qspi_dat

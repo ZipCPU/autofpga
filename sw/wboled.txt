@@ -40,8 +40,8 @@
 @NADDR=4
 @PTYPE=DOUBLE
 @ACCESS=OLEDRGB_ACCESS
-@INTERRUPT=oled_int
-@INTNAME=	OLED
+@INT.OLED.WIRE=	oled_int
+@INT.OLED.PIC=syspic
 @MAIN.PORTLIST=
 	// OLED control interface (roughly SPI)
 	o_oled_sck, o_oled_cs_n, o_oled_mosi, o_oled_dcn,
@@ -93,4 +93,4 @@ typedef	struct OLED_S {
 @BDEF.IONAME=io_oled
 @BDEF.IOTYPE=OLEDRGB
 @BDEF.OSDEF= _BOARD_HAS_OLED
-@BDEF.OSVAL= static volatile OLEDRGB *const _oled = &((OLEDRGB *)@THIS.BASE);
+@BDEF.OSVAL= static volatile @$THIS.BDEF.IOTYPE *const _oled = &((@$THIS.BDEF.IOTYPE *)@$THIS.BASE);

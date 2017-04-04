@@ -59,4 +59,4 @@
 @BDEF.IONAME=	i_gpio
 @BDEF.IOTYPE=	unsigned
 @BDEF.OSDEF=	_BOARD_HAS_GPIO
-@BDEF.OSVAL=	static volatile *const _gpio = &((unsigned *)@THIS.BASE);
+@BDEF.OSVAL=	static volatile @$THIS.BDEF.IOTYPE *const _gpio = &((@$THIS.BDEF.IOTYPE *)@$THIS.BASE);

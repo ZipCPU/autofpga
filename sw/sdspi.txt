@@ -46,8 +46,8 @@
 @NADDR=4
 @ACCESS=SDSPI_ACCESS
 @PTYPE=DOUBLE
-@INTERRUPT= sdcard_int
-@INTNAME= SDCARD
+@INT.SDCARD.WIRE= sdcard_int
+@INT.SDCARD.PIC= buspic syspic
 @TOP.PORTLIST=
 		// SD Card
 		o_sd_sck, io_sd_cmd, io_sd, i_sd_cs, i_sd_wp
