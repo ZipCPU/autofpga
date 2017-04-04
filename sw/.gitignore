@@ -1,1 +1,5 @@
 autofpga
+expr.tab.h
+expr.tab.cpp
+lex.yy.h
+lex.yy.cpp
