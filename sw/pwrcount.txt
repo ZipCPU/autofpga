@@ -38,8 +38,6 @@
 @PREFIX=pwrcount
 @NADDR=1
 @PTYPE=SINGLE
-@MAIN.DEFNS=
-	reg	[31:0]	pwrcount_data;
 @MAIN.INSERT=
 	initial	pwrcount_data = 32'h0;
 	always @(posedge i_clk)

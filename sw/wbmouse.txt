@@ -80,7 +80,6 @@
 @MAIN.ALT=
 	// If there is no mouse, declare mouse types of things to be .. absent
 	assign	scrn_mouse     = 32'h00;
-	assign	mous_interrupt = 1'b0;
 	assign	o_ps2          = 2'b11;
 @REGS.N=4
 @REGS.0= 0 R_MOUSE_STAT  MSTAT

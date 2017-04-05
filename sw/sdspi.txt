@@ -51,7 +51,7 @@
 @TOP.PORTLIST=
 		// SD Card
 		o_sd_sck, io_sd_cmd, io_sd, i_sd_cs, i_sd_wp
-@TOP.DECL=
+@TOP.IODECL=
 	// SD Card
 	output	wire		o_sd_sck;
 	inout			io_sd_cmd;
@@ -88,23 +88,22 @@
 @MAIN.INSERT=
 	wire[31:0]	sd_debug;
 	// SPI mapping
-	wire	w_sd_cs_n, w_sd_mosi, w_s_miso;
+	wire	w_sd_cs_n, w_sd_mosi, w_sd_miso;
 
 	sdspi	sdctrl(i_clk,
 		wb_cyc, (wb_stb)&&(sdcard_sel), wb_we,
 			wb_addr[1:0], wb_data,
 			sdcard_ack, sdcard_stall, sdcard_data,
 		w_sd_cs_n, o_sd_sck, w_sd_mosi, w_sd_miso,
-		sdcard_int, 1\'b1, sd_dbg);
+		sdcard_int, 1'b1, sd_debug);
 
 	assign	w_sd_miso = i_sd_data[0];
-	assign	o_sd_data = { w_sd_cs_n, 3\'b111 };
+	assign	o_sd_data = { w_sd_cs_n, 3'b111 };
 	assign	o_sd_cmd  = w_sd_mosi;
 @MAIN.ALT=
-	assign	o_sd_sck   = 1\'b1;
-	assign	o_sd_cmd   = 1\'b1;
-	assign	o_sd_data  = 4\'hf;
-	assign	sdcard_int = 1'b0
+	assign	o_sd_sck   = 1'b1;
+	assign	o_sd_cmd   = 1'b1;
+	assign	o_sd_data  = 4'hf;
 @TOP.INSERT=
 	//
 	//

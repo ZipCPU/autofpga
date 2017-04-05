@@ -43,6 +43,7 @@
 #include "parser.h"
 #include "keys.h"
 #include "ast.h"
+#include "kveval.h"
 
 STRING	*trim(STRING &s) {
 	const char	*a, *b;
@@ -79,7 +80,11 @@ void	addtomap(MAPDHASH &fm, STRING ky, STRING vl) {
 	bool	astnode = false;
 
 	trimmed = trim(ky);
-	if ((*trimmed)[0] == '$') {
+	if ((*trimmed)[0] == '@') {
+		STRINGP	tmp = new STRING(trimmed->substr(1,trimmed->size()));
+		delete trimmed;
+		trimmed = tmp;
+	} if ((*trimmed)[0] == '$') {
 		astnode = true;
 		STRINGP	tmp = new STRING(trimmed->substr(1,trimmed->size()));
 		delete trimmed;
@@ -184,7 +189,8 @@ void	mergemaps(MAPDHASH &master, MAPDHASH &sub) {
 				fprintf(stderr,
 					"NAME CONFLICT!  Files not merged\n");
 			}
-		}
+		} else
+			master.insert(KEYVALUE(kvpair->first, kvpair->second));
 	}
 }
 
@@ -302,6 +308,19 @@ MAPDHASH *getmap(MAPDHASH &master, const STRING &ky) {
 	return r->second.u.m_m;
 }
 
+STRINGP getstring(MAPDHASH &m) {
+	MAPDHASH::iterator	r;
+
+	resolve(m);
+
+	// Can we build this string?
+	r = m.find(KYSTR);
+	if (r != m.end()) {
+		if (r->second.m_typ == MAPT_STRING)
+			return r->second.u.m_s;
+	} return NULL;
+}
+
 STRINGP getstring(MAPDHASH &master, const STRING &ky) {
 	MAPDHASH::iterator	r;
 
@@ -314,39 +333,7 @@ STRINGP getstring(MAPDHASH &master, const STRING &ky) {
 		// Check for a .STR key within this
 		r = m->find(KYSTR);
 		if (r == m->end()) {
-			// Can we build this string?
-			r = m->find(KYEXPR);
-			if (r != m->end()) {
-				if (r->second.m_typ == MAPT_AST) {
-					AST	*ast = r->second.u.m_a;
-					if (ast->isdefined()) {
-						r->second.m_typ = MAPT_INT;
-						r->second.u.m_v = ast->eval();
-						delete ast;
-					}
-				} if (r->second.m_typ == MAPT_INT) {
-					MAPDHASH::iterator	kvfmt;
-					char	buf[512];
-					STRINGP	nstr;
-
-					kvfmt = m->find(KYFORMAT);
-					if ((kvfmt == m->end())||(kvfmt->second.m_typ != MAPT_STRING)) {
-						sprintf(buf, "0x%08x",
-							r->second.u.m_v);
-						nstr = new STRING(buf);
-					} else {
-						sprintf(buf, kvfmt->second.u.m_s->c_str(), r->second.u.m_v);
-						nstr = new STRING(buf);
-					}
-
-					MAPT	elm;
-					elm.m_typ = MAPT_STRING;
-					elm.u.m_s = nstr;
-					m->insert(KEYVALUE(KYSTR,elm));
-					return nstr;
-				}
-			}
-			return NULL;
+			return getstring(master);
 		} if (r->second.m_typ != MAPT_STRING) {
 			fprintf(stderr, "ERR: STRING expression isnt a string!! (KEY=%s)\n", ky.c_str());
 			return NULL;
@@ -358,6 +345,42 @@ STRINGP getstring(MAPDHASH &master, const STRING &ky) {
 	return r->second.u.m_s;
 }
 
+bool getvalue(MAPDHASH &map, int &value) {
+	MAPDHASH::iterator	kvpair;
+
+	kvpair = map.find(KYVAL);
+	if (kvpair != map.end()) {
+		value = kvpair->second.u.m_v;
+		return (kvpair->second.m_typ == MAPT_INT);
+	}
+	kvpair = map.find(KYEXPR);
+	if (kvpair == map.end())
+		return false;
+
+	if (kvpair->second.m_typ == MAPT_AST) {
+		AST	*ast;
+		ast = kvpair->second.u.m_a;
+		if (ast->isdefined()) {
+			kvpair->second.m_typ = MAPT_INT;
+			kvpair->second.u.m_v = ast->eval();
+			delete ast;
+		} else
+			return false;
+	}
+
+	if (kvpair->second.m_typ == MAPT_INT) {
+		/*
+		MAPT	elm;
+		elm.m_typ = MAPT_INT;
+		elm.u.m_v = kvpair->second.u.m_v;
+		map.insert(KEYVALUE(KYVAL, elm));
+		value = elm.u.m_v;
+		*/
+		value=kvpair->second.u.m_v;
+		return true;
+	} return false;
+}
+
 bool getvalue(MAPDHASH &master, const STRING &ky, int &value) {
 	MAPDHASH::iterator	r;
 
@@ -367,13 +390,7 @@ bool getvalue(MAPDHASH &master, const STRING &ky, int &value) {
 	if (r == master.end()) {
 		return false;
 	} else if (r->second.m_typ == MAPT_MAP) {
-		MAPDHASH::iterator	kvpair;
-		kvpair = r->second.u.m_m->find(STRING("VAL"));
-		if (kvpair != r->second.u.m_m->end())
-			r = kvpair;
-		else {
-			return false;
-		}
+		return getvalue(*r->second.u.m_m, value);
 	} else if (r->second.m_typ == MAPT_AST) {
 		AST	*ast = r->second.u.m_a;
 		if (ast->isdefined()) {
@@ -382,6 +399,9 @@ bool getvalue(MAPDHASH &master, const STRING &ky, int &value) {
 			delete ast;
 		} else
 			return false;
+	} else if (r->second.m_typ == MAPT_STRING) {
+		value = strtoul(r->second.u.m_s->c_str(), NULL, 0);
+		return true;
 	} else if (r->second.m_typ != MAPT_INT) {
 		return false;
 	}

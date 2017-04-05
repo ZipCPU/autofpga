@@ -59,6 +59,9 @@
 #		line of a necessity.
 @PTYPE=	DOUBLE
 @ACCESS= CONSOLE_ACCESS
+@$BAUDRATE=1000000
+@$UARTSETUP.EXPR=@$CLKFREQHZ/@$THIS.BAUDRATE
+@UARTSETUP.FORMAT=31'h%08x
 @INT.UARTRX.WIRE=uartrx_int
 @INT.UARTTX.WIRE=uarttx_int
 @INT.UARTRXF.WIRE=uartrxf_int
@@ -73,12 +76,11 @@
 @MAIN.IODECL=
 	input			i_aux_rx, i_aux_cts_n;
 	output	wire		o_aux_tx, o_aux_rts_n;
-@MAIN.DEFNS=
-	wire	uartrx_int, uarttx_int, uartrxf_int, uarttxf_int;
 @MAIN.INSERT=
-	wbuart #(.DEFAULT_STEP(GPSCLOCK_DEFAULT_STEP))
+	wbuart #(.INITIAL_SETUP(@$THIS.UARTSETUP))
  		console(i_clk, 1'b0,
- 			(wb_stb)&&(uart_sel), wb_we, wb_addr[1:0], wb_data,
+ 			wb_cyc, (wb_stb)&&(uart_sel), wb_we,
+				wb_addr[1:0], wb_data,
  			uart_ack, uart_stall, uart_data,
  			i_aux_rx, o_aux_tx, i_aux_cts_n, o_aux_rts_n,
 			uartrx_int, uarttx_int, uartrxf_int, uarttxf_int);

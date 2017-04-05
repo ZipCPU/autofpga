@@ -3,3 +3,5 @@ expr.tab.h
 expr.tab.cpp
 lex.yy.h
 lex.yy.cpp
+*tmp.txt
+tmp*.txt

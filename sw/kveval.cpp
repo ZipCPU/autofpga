@@ -60,13 +60,7 @@ bool	get_named_value(MAPDHASH &top, MAPDHASH &here, STRING &key, int &value){
 		value = kvpair->second.u.m_v;
 		return true; // Found it!
 	} else if (kvpair->second.m_typ == MAPT_MAP) {
-		kvsub = kvpair->second.u.m_m->find(KYVAL);
-		if (kvsub != kvpair->second.u.m_m->end()) {
-			if (kvsub->second.m_typ == MAPT_INT) {
-				value = kvsub->second.u.m_v;
-				return true; // Found it!
-			}
-		}
+		return (getvalue(*kvpair->second.u.m_m, value));
 	} return false;
 }
 
@@ -88,34 +82,8 @@ STRINGP	get_named_string(MAPDHASH &top, MAPDHASH &here, STRING &key){
 	if (kvpair->second.m_typ == MAPT_STRING) {
 		return kvpair->second.u.m_s; // Found it!
 	} else if (kvpair->second.m_typ == MAPT_MAP) {
-		kvsub = kvpair->second.u.m_m->find(KYVAL);
-		if (kvsub != kvpair->second.u.m_m->end()) {
-			// We have a value!!
-			kvstr = kvsub->second.u.m_m->find(KYSTR);
-			if (kvstr != kvsub->second.u.m_m->end()) {
-				return kvstr->second.u.m_s; // Found it!
-			}
-			kvfmt = kvsub->second.u.m_m->find(KYFORMAT);
-			if (kvsub->second.m_typ == MAPT_INT) {
-				// The value exists, but ... needs to be
-				// created into a string
-				char	buffer[512];
-
-				if (kvfmt != kvsub->second.u.m_m->end()) {
-					sprintf(buffer,
-						kvfmt->second.u.m_s->c_str(),
-						kvsub->second.u.m_v);
-				} else
-					sprintf(buffer, "0x%08x",
-						kvsub->second.u.m_v);
-
-				MAPT	elm;
-				elm.m_typ = MAPT_STRING;
-				elm.u.m_s = new STRING(buffer);
-				kvsub->second.u.m_m->insert(KEYVALUE(KYSTR, elm));
-				return elm.u.m_s; // Just created it
-			}
-		}
+		// Need to dig within the map created for this value to get this
+		return getstring(*kvpair->second.u.m_m);
 	} return NULL;
 }
 
@@ -202,39 +170,121 @@ void	find_any_unevaluated(MAPDHASH &info) {
 	} while(changed);
 }
 
-void	subresults_into(MAPDHASH &info, MAPDHASH *here, STRINGP &sval) {
-	bool	changed = false;
+bool	subresults_into(MAPDHASH &info, MAPDHASH *here, STRINGP &sval) {
+	bool	changed = false, everchanged = false;;
 
 	do {
 		unsigned long	sloc = -1;
 
+		changed = false;
 		sloc = 0;
 		while(STRING::npos != (sloc = sval->find("@$", sloc))) {
 			int	kylen = 0, value;
 			const char *ptr = sval->c_str() + sloc + 2;
 			for(; ptr[kylen]; kylen++) {
-				if((!isalpha(ptr[kylen]))&&(ptr[kylen] != '.'))
+				if((!isalpha(ptr[kylen]))
+						&&(!isdigit(ptr[kylen]))
+						&&(ptr[kylen] != '_')
+						&&(ptr[kylen] != '.'))
 					break;
 			} if (kylen > 0) {
 				STRING key = sval->substr(sloc+2, kylen), *vstr;
 				if (NULL != (vstr = get_named_string(info,*here, key))) {
 					sval->replace(sloc, kylen+2, *vstr);
+					changed = true;
 				}else if(get_named_value(info,*here,key,value)){
 					char	buffer[64];
 					STRING	tmp;
-					sprintf(buffer, "0x%08x", value);
+					sprintf(buffer, "%d", value);
 					tmp = buffer;
 					sval->replace(sloc, kylen+2, tmp);
+					changed = true;
 				} else sloc++;
 			} else sloc++;
-		}
+		} everchanged = everchanged || changed;
 	} while (changed);
+
+	return everchanged;
 }
 
-void	substitute_any_results_sub(MAPDHASH &info, MAPDHASH *here,
+STRINGP	genstr(STRING fmt, int val) {
+	char	*buf = new char[fmt.size()+64];
+	STRINGP	r;
+
+	if (fmt.size() > 0) {
+		sprintf(buf, fmt.c_str(), val);
+	} else {
+		printf("No format\n");
+		sprintf(buf, "%d", val);
+	} printf("New string is %s\n", buf);
+	r = new STRING(buf);
+	delete[] buf;
+	return r;
+}
+
+void	resolve(MAPDHASH &exmap) {
+	MAPDHASH::iterator	kvexpr, kvval, kvfmt, kvstr;
+	MAPT	elm;
+	STRINGP	strp;
+	AST	*ast;
+
+	kvexpr = exmap.find(KYEXPR);
+	kvval  = exmap.find(KYVAL);
+	kvfmt  = exmap.find(KYFORMAT);
+	kvstr  = exmap.find(KYSTR);
+
+	if (kvstr != exmap.end())
+		return;
+
+	if (kvexpr == exmap.end()) {
+		printf("No-Expr found\n");
+		return;
+	}
+
+	if ((kvval != exmap.end())&&(kvval->second.m_typ == MAPT_INT)) {
+		strp = genstr((kvfmt != exmap.end())
+				? *kvfmt->second.u.m_s
+				: STRING(""),
+			kvval->second.u.m_v);
+		MAPT	elm;
+		elm.m_typ = MAPT_STRING;
+		elm.u.m_s = strp;
+		exmap.insert(KEYVALUE(KYSTR, elm));
+
+		return;
+	}
+
+	if ((kvexpr != exmap.end())&&(kvexpr->second.m_typ == MAPT_STRING)) {
+		AST *ast = parse_ast(*kvexpr->second.u.m_s);
+		kvexpr->second.m_typ = MAPT_AST;
+		kvexpr->second.u.m_a = ast;
+	}
+
+	if ((kvexpr != exmap.end())
+			&&((kvexpr->second.m_typ == MAPT_AST)
+			 ||(kvexpr->second.m_typ == MAPT_INT))) {
+		if (kvexpr->second.m_typ == MAPT_AST) {
+			ast = kvexpr->second.u.m_a;
+			if (!ast->isdefined()) {
+				return;
+			} kvexpr->second.m_typ = MAPT_INT;
+			kvexpr->second.u.m_v = ast->eval();
+			delete ast;
+		}
+
+		elm.m_typ = MAPT_INT;
+		elm.u.m_v = kvexpr->second.u.m_v;
+		exmap.insert(KEYVALUE(KYVAL, elm));
+
+		resolve(exmap);
+	}
+}
+
+bool	substitute_any_results_sub(MAPDHASH &info, MAPDHASH *here,
 		MAPDHASH &sub) {
-	MAPDHASH::iterator	pfx = sub.end(), subi;
+	MAPDHASH::iterator	pfx = sub.end(), subi, kvelm, kvstr, kvfmt;
 	MAPDHASH	*component;
+	bool		v = false;
 
 	pfx = sub.find(KYPREFIX);
 	if (pfx != sub.end())
@@ -246,19 +296,28 @@ void	substitute_any_results_sub(MAPDHASH &info, MAPDHASH *here,
 		if (subi->second.m_typ == MAPT_MAP) {
 			substitute_any_results_sub(info, component,
 				*subi->second.u.m_m);
+			kvelm = subi->second.u.m_m->find(KYEXPR);
+			kvstr  = subi->second.u.m_m->find(KYSTR);
+			kvfmt  = subi->second.u.m_m->find(KYFORMAT);
+			if ((kvstr == subi->second.u.m_m->end())
+				&&(kvelm != subi->second.u.m_m->end())) {
+				resolve(*subi->second.u.m_m);
+				v = true;
+			}
 		} else if (subi->second.m_typ == MAPT_STRING) {
-			subresults_into(info, here, subi->second.u.m_s);
+			v = subresults_into(info, here, subi->second.u.m_s) ||v;
 		}
-	}
+	} return v;
 }
 
-void	substitute_any_results(MAPDHASH &info) {
-	substitute_any_results_sub(info, &info, info);
+bool	substitute_any_results(MAPDHASH &info) {
+	return substitute_any_results_sub(info, &info, info);
 }
 
 void	reeval(MAPDHASH &info) {
-	// First, find expressions that need evalution
-	find_any_unevaluated(info);
-	// Then, substitute their results back in as necessary
-	substitute_any_results(info);
+	do {
+		// First, find expressions that need evalution
+		find_any_unevaluated(info);
+		// Then, substitute their results back in as necessary
+	} while(substitute_any_results(info));
 }

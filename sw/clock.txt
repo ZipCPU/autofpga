@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Filename: 	gpio.txt
+## Filename: 	clock.txt
 ##
 ## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 ##
@@ -35,37 +35,9 @@
 ################################################################################
 ##
 ##
-@PREFIX=gpio
-@NADDR=1
-@ACCESS=GPIO_ACCESS
-@PTYPE=SINGLE
-# @SINGLE.OUTPUTS= o_gpio
-# @SINGLE.INPUTS=  i_gpio
-@INT.GPIO.WIRE=gpio_int
-@INT.GPIO.PIC=altpic
-@MAIN.PORTLIST=
-		// GPIO ports
-		i_gpio, o_gpio
-@MAIN.DEFNS=
-	localparam	NGPI = 15, NGPO=15;
-	// GPIO ports
-	input		[(NGPI-1):0]	i_gpio;
-	output	wire	[(NGPO-1):0]	o_gpio;
-@MAIN.INSERT=
-	//
-	// GPIO
-	//
-	// Not used (yet), but this interface should allow us to control up to
-	// 16 GPIO inputs, and another 16 GPIO outputs.  The interrupt trips
-	// when any of the inputs changes.  (Sorry, which input isn't (yet)
-	// selectable.)
-	//
-	wbgpio	#(NGPI, NGPO)
-		gpioi(i_clk, 1'b1, (wb_stb)&&(gpio_sel), 1'b1,
-			wb_data, gpio_data, i_gpio, o_gpio, gpio_int);
-@REGS.N=1
-@REGS.0= 0 R_GPIO RTCDATE DATE
-@BDEF.IONAME=	i_gpio
-@BDEF.IOTYPE=	unsigned
-@BDEF.OSDEF=	_BOARD_HAS_GPIO
-@BDEF.OSVAL=	static volatile @$THIS.BDEF.IOTYPE *const _gpio = &((@$THIS.BDEF.IOTYPE *)@$THIS.BASE);
+@$CLKFREQHZ=100000000
+@PREFIX=clk
+@TOP.DECL=
+	wire	s_clk;
+@TOP.INSERT=
+	assign	s_clk = i_clk;

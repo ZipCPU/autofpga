@@ -141,13 +141,13 @@
 			(wb_cyc), (wb_stb)&&(flash_sel), (wb_stb)&&(flctl_sel),wb_we,
 			wb_addr[23:0], wb_data,
 			flash_ack, flash_stall, flash_data,
-			o_qspi_sck, o_qspi_cs_n, o_qspi_dat, i_qspi_dat,
-			flash_interrupt)
+			o_qspi_sck, o_qspi_cs_n, o_qspi_mod, o_qspi_dat, i_qspi_dat,
+			flash_interrupt);
 @MAIN.ALT=
-	assign	o_qspi_sck  = 1\'b1;
-	assign	o_qspi_cs_n = 1\'b1;
-	assign	o_qspi_mod  = 2\'b01;
-	assign	o_qspi_dat  = 4\'b1111;
+	assign	o_qspi_sck  = 1'b1;
+	assign	o_qspi_cs_n = 1'b1;
+	assign	o_qspi_mod  = 2'b01;
+	assign	o_qspi_dat  = 4'b1111;
 @MEM.NAME= flash
 @MEM.ACCESS = rx
 @REGS.N= 1
@@ -171,9 +171,9 @@
 @REGS.1= 1 R_QSPI_SREG QSPIC
 @REGS.2= 2 R_QSPI_SREG QSPIS
 @REGS.3= 3 R_QSPI_IDREG QSPII
-@CSTRUCT=
+@BDEF.DEFNS=
 typedef struct FLASHCTL_S {
-	unsigned\tf_ereg, f_config, f_status, f_id;
+	unsigned	f_ereg, f_config, f_status, f_id;
 } FLASHCTL;
 @REGS.INSERT.H=
 #define	SZPAGEB		256

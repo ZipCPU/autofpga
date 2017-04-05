@@ -43,22 +43,29 @@
 @NADDR=4
 @PTYPE=DOUBLE
 @ACCESS=GPS_CLOCK
+@$GPS_STEP_EXPONENT=10
+@$GPS_STEP.EXPR=((((1<<60)/@$CLKFREQHZ)>>(@$THIS.GPS_STEP_EXPONENT-4))&0x0fffffff)|((@$THIS.GPS_STEP_EXPONENT&0x0f)<<28)
+@GPS_STEP.FORMAT=32'h%08x
 @MAIN.PORTLIST=
 		// The GPS 1PPS signal port
 		i_gps_pps
 @MAIN.IODECL=
 	//The GPS Clock
 	input			i_gps_pps;
+	localparam [31:0] GPSCLOCK_DEFAULT_STEP = @$THIS.GPS_STEP;
 @MAIN.DEFNS=
-	wire	gps_pps, ck_pps, gps_led, gps_locked;
+	wire	gps_pps, ck_pps, gps_led, gps_locked, gps_tracking;
 	wire	[63:0]	gps_now, gps_err, gps_step;
 	wire	[1:0]	gps_dbg_tick;
 @MAIN.INSERT=
+	wire	[1:0]	ck_dbg;
+
 	gpsclock #(.DEFAULT_STEP(GPSCLOCK_DEFAULT_STEP))
 		ppsck(i_clk, 1'b0, gps_pps, ck_pps, gps_led,
 			(wb_stb)&&(gck_sel), wb_we, wb_addr[1:0], wb_data,
 				gck_ack, gck_stall, gck_data,
-			gps_tracking, gps_now, gps_step, gps_err, gps_locked);
+			gps_tracking, gps_now, gps_step, gps_err, gps_locked,
+			ck_dbg);
 @MAIN.ALT=
 	wire	[31:0]	pre_step;
 	assign	pre_step = { 16'h00, (({GPSCLOCK_DEFAULT_STEP[27:0],20'h00})
@@ -78,19 +85,19 @@
 @REGS.1= 1 R_GPS_BETA	BETA
 @REGS.2= 2 R_GPS_GAMMA	GAMMA
 @REGS.3= 3 R_GPS_STEP	STEP
-@CSTRUCT=
+@BDEF.DEFN=
 typedef	struct	GPSTRACKER_S	{
 	unsigned	g_alpha, g_beta, g_gamma, g_step;
 } GPSTRACKER;
-@IONAME=io_gps
+@BDEF.IONAME=io_gps
 @PREFIX=gtb
 @NADDR=8
 @PTYPE=DOUBLE
+@MAIN.DEFNS=
+	wire	tb_pps;
 @MAIN.INSERT=
 `ifdef	GPS_CLOCK
-
-	gpsclock_tb
-		ppsck(i_clk, ck_pps, tb_pps,
+	gpsclock_tb ppstb(i_clk, ck_pps, tb_pps,
 			(wb_stb)&&(gtb_sel), wb_we, wb_addr[2:0], wb_data,
 				gtb_ack, gtb_stall, gtb_data,
 			gps_err, gps_now, gps_step);
@@ -113,18 +120,21 @@ typedef	struct	GPSTRACKER_S	{
 @REGS.5=  5 R_GPSTB_COUNTLO CNTLO
 @REGS.6=  6 R_GPSTB_STEPHI  STEPHI
 @REGS.7=  7 R_GPSTB_STEPLO  STEPLO
-@CSTRUCT=
+@BDEF.DEFN=
 typedef	struct	GPSTB_S	{
 	unsigned	tb_maxcount; tb_jump;
 	unsigned long	tb_err, tb_count, tb_step;
 } GPSTB;
-@IONAME=io_gpstb
+@BDEF.IONAME=io_gpstb
 #
 #
 #
 @PREFIX=gpsu
 @NADDR=4
 @PTYPE=DOUBLE
+@$BAUDRATE=9600
+@$UARTSETUP.EXPR=@$CLKFREQHZ/@$THIS.BAUDRATE
+@UARTSETUP.FORMAT=31'h%08x
 @ACCESS=GPSUART_ACCESS
 @INT.GPSRX.WIRE=  gpsurx_int
 @INT.GPSTX.WIRE=  gpsutx_int
@@ -141,18 +151,13 @@ typedef	struct	GPSTB_S	{
 	input			i_gps_rx;
 	output	wire		o_gps_tx;
 @MAIN.INSERT=
-	wbuart #(.DEFAULT_STEP(GPSCLOCK_DEFAULT_STEP))
-		gpsuart(i_clk, 1'b0,
-			(wb_stb)&&(gpsu_sel), wb_we, wb_addr[1:0], wb_data,
-				gpsu_ack, gpsu_stall, gpsu_data,
-			i_aux_rx, o_aux_tx, i_aux_cts_n, o_aux_rts_n,
-			gpsurx_int, gpsutx_int, gpsurxf_int, gpsutxf_int);
+	wbuart #(@$THIS.UARTSETUP) gpsuart(i_clk, 1'b0,
+		wb_stb, (wb_stb)&&(gpsu_sel), wb_we, wb_addr[1:0], wb_data,
+			gpsu_ack, gpsu_stall, gpsu_data,
+		i_aux_rx, o_aux_tx, i_aux_cts_n, o_aux_rts_n,
+		gpsurx_int, gpsutx_int, gpsurxf_int, gpsutxf_int);
 @MAIN.ALT=
 	assign	o_gps_tx = 1'b1;
-	assign	o_gpsurx_int = 1'b0;
-	assign	o_gpsutx_int = 1'b0;
-	assign	o_gpsurxf_int = 1'b0;
-	assign	o_gpsutxf_int = 1'b0;
 
 @REGS.NOTE= // GPS UART registers, similar to WBUART
 @REGS.N=4
@@ -193,6 +198,6 @@ typedef struct  WBUART_S {
 @BDEF.IONAME=io_gpsu
 @BDEF.IOTYPE=WBUART
 @BDEF.OSDEF=_BOARD_HAS_GPS_UART
-@BDEF.OSVAL=static volatile WBUART *const _gpsu = &((WBUART)@$THIS.BASE);
+@BDEF.OSVAL=static volatile @$THIS.IOTYPE *const _gpsu = &((@$THIS.IOTYPE *)@$THIS.BASE);
 #
 #

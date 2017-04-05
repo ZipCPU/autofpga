@@ -133,23 +133,18 @@ void	AST_NUMBER::dump(int offset) {
 bool	AST_IDENTIFIER::isdefined(void) { return m_def; }
 long	AST_IDENTIFIER::eval(void) { return m_v; }
 bool	AST_IDENTIFIER::define(MAPDHASH &map, MAPDHASH &here) {
-	printf("Checking for the definition of %s\n", m_id.c_str());
 	if (m_def)
 		return false; // No change
-	printf("Looking for the definition of %s\n", m_id.c_str());
 	if (strncmp(m_id.c_str(), KYTHISDOT.c_str(), KYTHISDOT.size())==0) {
 		STRING	tmp = m_id.substr(KYTHISDOT.size(), m_id.size()-KYTHISDOT.size());
 		if (getvalue(here, tmp, m_v)) {
-			printf("FOUND!  It = %d\n", m_v);
 			m_def = true;
 			return true;	// We now know our value
 		}
 	} else if (getvalue(map, m_id, m_v)) {
 		m_def = true;
-		printf("FOUND!  It = %d\n", m_v);
 		return true;	// We now know our value
-	}
-	return false;	// Nothing changed, still don't know it
+	} return false;	// Nothing changed, still don't know it
 }
 void	AST_IDENTIFIER::dump(int offset) {
 	if (m_def)

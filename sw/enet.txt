@@ -52,7 +52,7 @@
 	memdev #(13)
 		enet_buffers(i_clk,
 			(wb_cyc), (wb_stb)&&(netb_sel),(wb_we)&&(wb_addr[11]),
-				wb_addr[11:0], wb_data, wb_sel
+				wb_addr[11:0], wb_data, wb_sel,
 				netb_ack, netb_stall, netb_data);
 
 `else
@@ -66,8 +66,8 @@
 @REGS.0= 0	R_NET_RXBUF NETRXB
 @REGS.1= 0x800	R_NET_TXBUF NETTXB
 @PREFIX=netp
-@INT.NETRX.WIRE=enet_rx_int
-@INT.NETTX.WIRE=enet_tx_int
+@INT.NETRX.WIRE=netrx_int
+@INT.NETTX.WIRE=nettx_int
 @INT.NETRX.PIC=syspic
 @INT.NETTX.PIC=syspic
 @NADDR=8
@@ -89,14 +89,14 @@
 	output	wire	[3:0]	o_net_txd;
 @MAIN.INSERT=
 	enetpackets	#(12)
-		netctrl(i_clk, i_rst, wb_cyc,(wb_stb)&&((netp_sel)||(netb_sel)),
+		netctrl(i_clk, i_reset, wb_cyc,(wb_stb)&&((netp_sel)||(netb_sel)),
 			wb_we, { (netb_sel), wb_addr[10:0] }, wb_data, wb_sel,
 				netp_ack, netp_stall, netp_data,
 			o_net_reset_n,
 			i_net_rx_clk, i_net_col, i_net_crs, i_net_dv, i_net_rxd,
 				i_net_rxerr,
 			i_net_tx_clk, o_net_tx_en, o_net_txd,
-			enet_rx_int, enet_tx_int);
+			netrx_int, nettx_int);
 @REGS.N=8
 @REGS.0= 0 R_NET_RXCMD	RXCMD,NETRX
 @REGS.1= 1 R_NET_TXCMD	TXCMD,NETTX

@@ -38,6 +38,8 @@
 @PREFIX=version
 @NADDR=1
 @PTYPE=SINGLE
+@MAIN.DEFNS=
+`include "builddate.v"
 @MAIN.INSERT=
 	assign	version_data = `DATESTAMP;
 @REGS.N=1

@@ -65,8 +65,7 @@
 	localparam	ZIP_STARTS_HALTED=1'b0;
 @MAIN.DEFNS=
 	wire		zip_cyc, zip_stb, zip_we, zip_cpu_int;
-	wire	[(ZA-1):0]	w_zip_addr;
-	wire	[31:0]	zip_addr, zip_data;
+	wire	[29:0]	zip_addr, zip_data;
 	wire	[3:0]	zip_sel;
 	// and then coming from devices
 	wire		zip_ack, zip_stall, zip_err;
@@ -74,6 +73,7 @@
 	wire	[31:0]	zip_debug;
 	wire		zip_trigger;
 	assign	zip_trigger = zip_debug[0];
+	localparam	ZIP_INTS=@$syspic.PIC.MAX+@$altpic.PIC.MAX;
 @MAIN.INSERT=
 	//
 	//
@@ -86,12 +86,14 @@
 `endif
 	wire	zip_reset;
 	assign	zip_reset = 1'b0;
-	zipsystem #(RESET_ADDRESS,ZIP_ADDRESS_WIDTH,10,ZIP_START_HALTED,ZIP_INTS)
+	wire	[29:0] zip_int_vector;
+	assign	zip_int_vector = { altpic[14:8], syspic[14:6] };
+	zipsystem #(RESET_ADDRESS,29,10,ZIP_START_HALTED,ZIP_INTS)
 		swic(i_clk, zip_reset,
 			// Zippys wishbone interface
-			zip_cyc, zip_stb, zip_we, w_zip_addr, zip_data, zip_sel,
+			zip_cyc, zip_stb, zip_we, zip_addr, zip_data, zip_sel,
 					zip_ack, zip_stall, dwb_idata, zip_err,
-			w_ints_to_zip_cpu, zip_cpu_int,
+			zip_int_vector, zip_cpu_int,
 			// Debug wishbone interface
 			((wbu_cyc)&&(wbu_zip_sel)),
 			((wbu_stb)&&(wbu_zip_sel)),wbu_we, wbu_addr[0],

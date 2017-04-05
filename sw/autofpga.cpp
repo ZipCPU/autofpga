@@ -56,6 +56,7 @@ typedef	struct PERIPH_S {
 	unsigned	p_base;
 	unsigned	p_naddr;
 	unsigned	p_awid;
+	unsigned	p_mask;
 	STRINGP		p_name;
 	MAPDHASH	*p_phash;
 } PERIPH, *PERIPHP;
@@ -100,12 +101,10 @@ public:
 		if ((!iname)||(i_nallocated >= i_max))
 			return;
 
-		STRING	ky = KY_INT + "." + (*iname) + ".WIRE";
-
 		INTP	ip = new INTID();
 		i_ilist.push_back(ip);
 		ip->i_name = iname;
-		ip->i_wire = getstring(psrc, ky);
+		ip->i_wire = getstring(psrc, KY_WIRE);
 		ip->i_id   = i_max;
 		i_nallocated++;
 	} void add(unsigned id, MAPDHASH &psrc, STRINGP iname) {
@@ -130,7 +129,7 @@ public:
 		INTP	ip = new INTID();
 		i_ilist.push_back(ip);
 		ip->i_name = iname;
-		ip->i_wire = getstring(psrc, KYPREFIX);
+		ip->i_wire = getstring(psrc, KY_WIRE);
 		ip->i_id   = id;
 		i_nassigned++;
 		i_nallocated++;
@@ -188,6 +187,7 @@ typedef	std::vector<PICP>	PICLIST;
 
 PLIST	plist, slist, dlist, mlist;
 PICLIST	piclist;
+unsigned	unusedmsk;
 
 
 unsigned	nextlg(unsigned vl) {
@@ -497,6 +497,11 @@ void assign_addresses(MAPDHASH &info, unsigned first_address = 0x400) {
 		}
 		naddr = nextlg(naddr)+2;
 		start_address += (1<<naddr);
+
+		for(unsigned i=0; i<slist.size(); i++) {
+			slist[i]->p_mask = (-1<<naddr);
+			setvalue(*slist[i]->p_phash, KYMASK, slist[i]->p_mask);
+		}
 	}
 
 	// Assign double-peripheral bus addresses
@@ -522,6 +527,8 @@ printf("// start address for d = %08x\n", start_address);
 				dlist[i]->p_name->c_str(), dlist[i]->p_base);
 
 			setvalue(*dlist[i]->p_phash, KYBASE, dlist[i]->p_base);
+			dlist[i]->p_mask = (-1<<dnaddr);
+			setvalue(*dlist[i]->p_phash, KYMASK, dlist[i]->p_mask);
 		}
 
 		start_address += (1<<dnaddr);
@@ -539,11 +546,72 @@ printf("// start address for d = %08x\n", start_address);
 			plist[i]->p_name->c_str(),
 			plist[i]->p_base);
 		start_address = plist[i]->p_base + (1<<(plist[i]->p_awid));
+		plist[i]->p_mask = (-1<<(plist[i]->p_awid));
 
 		setvalue(*plist[i]->p_phash, KYBASE, plist[i]->p_base);
+		setvalue(*plist[i]->p_phash, KYMASK, plist[i]->p_mask);
 	}
 
-	// Now, go back and see if anything references this address
+	// Adjust the mask to find only those bits that are needed
+	unsigned	masteraddr = 0;
+	for(int bit=32; bit >= 0; bit--) {
+		unsigned	bmsk = (1<<bit), bvl;
+		bool	bset = false, onebit=true;
+
+		for(unsigned i=0; i<slist.size(); i++) {
+			if (bmsk & slist[i]->p_mask) {
+				if (!bset) {
+					bvl = bmsk & slist[i]->p_base;
+					bset = true;
+					onebit = true;
+				} else if ((slist[i]->p_base & bmsk)!=bvl) {
+					onebit = false;
+				}
+			}
+		} if (!onebit)
+			continue;
+
+		for(unsigned i=0; i<dlist.size(); i++) {
+			if (bmsk & dlist[i]->p_mask) {
+				if (!bset) {
+					bvl = bmsk & dlist[i]->p_base;
+					bset = true;
+					onebit = true;
+				} else if ((dlist[i]->p_base & bmsk)!=bvl) {
+					onebit = false;
+				}
+			}
+		} if (!onebit)
+			continue;
+
+		for(unsigned i=0; i<plist.size(); i++) {
+			if (bmsk & plist[i]->p_mask) {
+				if (!bset) {
+					bvl = bmsk & plist[i]->p_base;
+					bset = true;
+					onebit = true;
+				} else if ((plist[i]->p_base & bmsk)!=bvl) {
+					onebit = false;
+				}
+			}
+		} if (!onebit)
+			continue;
+
+		if ((!bset)||(onebit)) {
+			unusedmsk &= (~bmsk);
+			masteraddr|= bvl;
+		}
+	}
+
+	if ((1u<<nextlg(first_address))==first_address) {
+		printf("// Adding in null-address\n");
+		unusedmsk |= (first_address);
+	}
+	printf("// Overall  Mask: %08x\n", unusedmsk);
+	printf("// SkipAddr Mask: %08x\n", ~unusedmsk);
+
+	// Now, go back and see if anything references this address or these
+	// masks
 	reeval(info);
 }
 
@@ -580,6 +648,8 @@ void	assign_interrupts(MAPDHASH &master) {
 				continue;
 
 
+			// NAME is now @comp.INT.
+
 			// Yes, an INT hash exists within this component.
 			// Hence the component has one (or more) interrupts.
 			// Let's loop over those interrupts
@@ -589,6 +659,12 @@ void	assign_interrupts(MAPDHASH &master) {
 				if (kvline->second.m_typ != MAPT_MAP)
 					continue;
 
+			// NAME is now @comp.INT.<name>
+
+printf("Examining: @%s.%s.%s\n",
+	kvpair->first.c_str(),
+	kvint->first.c_str(),
+	kvline->first.c_str());
 				STRINGP	picname;
 				int inum;
 				trimall(*kvline->second.u.m_m, KYPIC);
@@ -1301,11 +1377,13 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 	fprintf(fp, "\n\n");
 	fprintf(fp, "\t//\n\t// Declaring wishbone master bus data\n\t//\n");
 	fprintf(fp, "\twire\t\twb_cyc, wb_stb, wb_we, wb_stall, wb_ack, wb_err;\n");
-	fprintf(fp, "\twire\t[31:0]\twb_data, wb_idata, wb_addr;\n");
+	fprintf(fp, "\twire\t[31:0]\twb_data, wb_addr;\n");
+	fprintf(fp, "\treg\t[31:0]\twb_idata;\n");
 	fprintf(fp, "\twire\t[3:0]\twb_sel;\n");
 	if ((slist.size()>0)&&(dlist.size()>0)) {
 		fprintf(fp, "\twire\tsio_sel, dio_sel;\n");
 		fprintf(fp, "\treg\tsio_ack, dio_ack;\n");
+		fprintf(fp, "\treg\t[1:0]\tpre_dio_ack;\n");
 		fprintf(fp, "\treg\t[31:0]\tsio_data, dio_data;\n");
 	} else if (slist.size()>0) {
 		fprintf(fp, "\twire\tsio_sel;\n");
@@ -1313,35 +1391,57 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 		fprintf(fp, "\treg\t[31:0]\tsio_data;\n");
 	} else if (dlist.size()>0) {
 		fprintf(fp, "\twire\tdio_sel;\n");
-		fprintf(fp, "\treg\tpre_dio_ack, dio_ack;\n");
+		fprintf(fp, "\treg\tdio_ack;\n");
+		fprintf(fp, "\treg\t[1:0]\tpre_dio_ack;\n");
 		fprintf(fp, "\treg\t[31:0]\tdio_data;\n");
 	}
 	fprintf(fp, "\n\n");
 
 	// Bus master declarations
-	str = "MAIN.DEFNS";
-	astr= "INTERRUPT";
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
-		STRINGP	defnstr, intstr;
+		STRINGP	defnstr;
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
 		if (isperipheral(kvpair->second))
 			continue;
-		defnstr = getstring(*kvpair->second.u.m_m, str);
+		defnstr = getstring(*kvpair->second.u.m_m, KYMAIN_DEFNS);
 		if (defnstr)
 			fprintf(fp, "%s", defnstr->c_str());
+	}
 
-		// Look for and declare any interrupts that need to be
-		// declared
-		intstr = getstring(*kvpair->second.u.m_m, astr);
-		if (intstr) {
-			char	*istr = strdup(intstr->c_str()), *tok;
 
-			tok = strtok(istr, ", \t\n");
-			while(NULL != tok) {
-				fprintf(fp, "\twire\t%s;\n", tok);
-				tok = strtok(NULL, ", \t\n");
-			} free(istr);
+	fprintf(fp,
+	"\n\n"
+	"\t//\n\t// Declaring interrupt lines\n\t//\n"
+	"\t// These declarations come from the various components values\n"
+	"\t// given under the @INT.<interrupt name>.WIRE key.\n\t//\n");
+	// Define any interrupt wires
+	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
+		MAPDHASH::iterator	kvint, kvsub, kvwire;
+		if (kvpair->second.m_typ != MAPT_MAP)
+			continue;
+		kvint = kvpair->second.u.m_m->find(KY_INT);
+		if (kvint == kvpair->second.u.m_m->end())
+			continue;
+		if (kvint->second.m_typ != MAPT_MAP)
+			continue;
+		for(kvsub=kvint->second.u.m_m->begin();
+				kvsub != kvint->second.u.m_m->end(); kvsub++) {
+			if (kvsub->second.m_typ != MAPT_MAP)
+				continue;
+			kvwire = kvsub->second.u.m_m->find(KY_WIRE);
+			if (kvwire == kvsub->second.u.m_m->end())
+				continue;
+			if (kvwire->second.m_typ != MAPT_STRING)
+				continue;
+			if (kvwire->second.u.m_s->size() == 0)
+				continue;
+			fprintf(fp, "\twire\t%s;\t// %s.%s.%s.%s\n",
+				kvwire->second.u.m_s->c_str(),
+				kvpair->first.c_str(),
+				kvint->first.c_str(),
+				kvsub->first.c_str(),
+				kvwire->first.c_str());
 		}
 	}
 
@@ -1351,32 +1451,16 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 	"\n\n"
 	"\t//\n\t// Declaring Peripheral data, internal wires and registers\n\t//\n"
 	"\t// These declarations come from the various components values\n"
-	"\t// given under the @MAIN.DEFNS key.\n\t//\n"
-	"\t// wires are also declared for any interrupts defined by the\n"
-	"\t// @INTERRUPT key\n\t//\n");
-	str = "MAIN.DEFNS";
-	astr= "INTERRUPT";
+	"\t// given under the @MAIN.DEFNS key.\n\t//\n");
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
-		STRINGP	defnstr, intstr;
+		STRINGP	defnstr;
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
 		if (!isperipheral(kvpair->second))
 			continue;
-		defnstr = getstring(*kvpair->second.u.m_m, str);
+		defnstr = getstring(*kvpair->second.u.m_m, KYMAIN_DEFNS);
 		if (defnstr)
 			fprintf(fp, "%s", defnstr->c_str());
-
-		// Look for any interrupt lines that need to be declared
-		intstr = getstring(*kvpair->second.u.m_m, astr);
-		if (intstr) {
-			char	*istr = strdup(intstr->c_str()), *tok;
-
-			tok = strtok(istr, ", \t\n");
-			while(NULL != tok) {
-				fprintf(fp, "\twire\t%s;\n", tok);
-				tok = strtok(NULL, ", \t\n");
-			} free(istr);
-		}
 	}
 
 	// Declare wishbone lines
@@ -1395,14 +1479,13 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 	"\t// tag, and the names are given by the @PREFIX tag.\n"
 	"\t//\n"
 	"\n");
-	str = "PREFIX";
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
 		if (!isperipheral(*kvpair->second.u.m_m))
 			continue;
 
-		STRINGP	strp = getstring(*kvpair->second.u.m_m, str);
+		STRINGP	strp = getstring(*kvpair->second.u.m_m, KYPREFIX);
 		const char	*pfx = strp->c_str();
 
 		fprintf(fp, "\twire\t%s_ack, %s_stall, %s_sel;\n", pfx, pfx, pfx);
@@ -1442,7 +1525,7 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 					((sbase>>(bit+2))&1)?1:0);
 				if (((bit+2)&3)==0)
 					sprintf(sbuf, "%s_", sbuf);
-			} sprintf(sbuf, "%s;\n", sbuf);
+			} sprintf(sbuf, "%s);\n", sbuf);
 			siosel_str = STRING(sbuf);
 		}
 		
@@ -1493,7 +1576,7 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 					((dbase>>(bit+2))&1)?1:0);
 				if (((bit+2)&3)==0)
 					sprintf(sbuf, "%s_", sbuf);
-			} sprintf(sbuf, "%s;\n", sbuf);
+			} sprintf(sbuf, "%s);\n", sbuf);
 			diosel_str = STRING(sbuf);
 		}
 		
@@ -1534,11 +1617,11 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 
 	if (plist.size()>0) {
 		if (sellist == "")
-			sellist = (*plist[0]->p_name);
+			sellist = (*plist[0]->p_name) + "_sel";
 		else
-			sellist = (*plist[0]->p_name) + ", " + sellist;
+			sellist = (*plist[0]->p_name) + "_sel, " + sellist;
 	} for(unsigned i=1; i<plist.size(); i++)
-		sellist = (*plist[i]->p_name)+", "+sellist;
+		sellist = (*plist[i]->p_name)+"_sel, "+sellist;
 	nsel += plist.size();
 
 	// Define none_sel
@@ -1583,12 +1666,12 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 
 	if (plist.size() > 0) {
 		if (nacks > 0)
-			acklist = (*plist[0]->p_name) + ", " + acklist;
+			acklist = (*plist[0]->p_name) + "_ack, " + acklist;
 		else
-			acklist = (*plist[0]->p_name);
+			acklist = (*plist[0]->p_name) + "_ack";
 		nacks++;
 	} for(unsigned i=1; i < plist.size(); i++) {
-		acklist = (*plist[i]->p_name) + ", " + acklist;
+		acklist = (*plist[i]->p_name) + "_ack, " + acklist;
 		nacks++;
 	}
 
@@ -1636,8 +1719,8 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 	if (slist.size() > 0)
 		fprintf(fp, "\talways @(posedge i_clk)\n\t\tsio_ack <= (wb_sel)&&(sio_sel);\n");
 	if (dlist.size() > 0) {
-		fprintf(fp, "\talways @(posedge i_clk)\n\t\tpre_dio_ack <= (wb_sel)&&(dio_sel);\n");
-		fprintf(fp, "\talways @(posedge i_clk)\n\t\tdio_ack <= pre_dio_ack;\n");
+		fprintf(fp, "\talways @(posedge i_clk)\n\t\tpre_dio_ack[1:0] <= { pre_dio_ack[0], (wb_stb)&&(dio_sel) };\n");
+		fprintf(fp, "\talways @(posedge i_clk)\n\t\tdio_ack <= pre_dio_ack[1];\n");
 	}
 	if (acklist.size() > 0) {
 		fprintf(fp, "\tassign\twb_ack = (wb_cyc)&&(|{%s});\n\n\n",
@@ -1720,12 +1803,30 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 	"\t// or making sure all of the various interrupt wires are set to\n"
 	"\t// zero if the component is not included.\n"
 	"\t//\n");
-	{
-		STRING	strint = "INTERRUPT";
+
+	fprintf(fp, "\t//\n\t// Declare the interrupt busses\n\t//\n");
+	for(unsigned picid=0; picid < piclist.size(); picid++) {
+		fprintf(fp, "\twire\t[%d:0]\t%s;\n\tassign\t%s = {\n",
+			piclist[picid]->i_max-1,
+			piclist[picid]->i_name->c_str(),
+			piclist[picid]->i_name->c_str());
+		for(int iid=piclist[picid]->i_max-1; iid>=0; iid--) {
+			INTP	iip = piclist[picid]->getint(iid);
+			if ((iip == NULL)||(iip->i_wire == NULL)
+					||(iip->i_wire->size() == 0)) {
+				fprintf(fp, "\t\t1\'b0%s\n",
+					(iid != 0)?",":"");
+				continue;
+			} fprintf(fp, "\t\t%s%s\n",
+				iip->i_wire->c_str(),
+				(iid == 0)?"":",");
+		}
+		fprintf(fp, "\t};\n");
+	}
 
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
 	// MAPDHASH::iterator	kvpair, kvaccess, kvsearch;
-		MAPDHASH::iterator	kvalt, kvinsert, kvint;
+		MAPDHASH::iterator	kvalt, kvinsert, kvint, kvsub, kvwire;
 		bool			nomain, noaccess, noalt;
 
 		if (kvpair->second.m_typ != MAPT_MAP)
@@ -1757,8 +1858,7 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 			} else {
 				fprintf(fp, "`ifdef\t%s\n", kvaccess->second.u.m_s->c_str());
 				fputs(kvinsert->second.u.m_s->c_str(), fp);
-				if (!noalt)
-					fprintf(fp, "`else\t// %s\n", kvaccess->second.u.m_s->c_str());
+				fprintf(fp, "`else\t// %s\n", kvaccess->second.u.m_s->c_str());
 			}
 
 			if (!noalt) {
@@ -1789,22 +1889,34 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 				}
 			}
 
-			kvint    = findkey(*kvpair->second.u.m_m, strint);
+			kvint    = kvpair->second.u.m_m->find(KY_INT);
 			if ((kvint != kvpair->second.u.m_m->end())
-				&&(kvint->second.m_typ == MAPT_STRING)) {
-				char	*istr = strdup(kvint->second.u.m_s->c_str()),
-					*tok;
-
-				tok = strtok(istr, ", \t\n");
-				while(NULL != tok) {
-					fprintf(fp, "\tassign\t%s = 1\'b0;\n", tok);
-					tok = strtok(NULL, ", \t\n");
-				} free(istr);
+					&&(kvint->second.m_typ == MAPT_MAP)) {
+				MAPDHASH	*imap = kvint->second.u.m_m,
+						*smap;
+				for(kvsub=imap->begin(); kvsub != imap->end();
+						kvsub++) {
+					// p.INT.SUB
+					if (kvsub->second.m_typ != MAPT_MAP)
+						continue;
+					smap = kvsub->second.u.m_m;
+					kvwire = smap->find(KY_WIRE);
+					if (kvwire == smap->end())
+						continue;
+					if (kvwire->second.m_typ != MAPT_STRING)
+						continue;
+					fprintf(fp, "\tassign\t%s = 1\'b0;\t// %s.%s.%s.%s\n",
+						kvwire->second.u.m_s->c_str(),
+						kvpair->first.c_str(),
+						kvint->first.c_str(),
+						kvsub->first.c_str(),
+						kvwire->first.c_str());
+				}
 			}
 			fprintf(fp, "`endif\t// %s\n\n",
 				kvaccess->second.u.m_s->c_str());
 		}
-	}}
+	}
 
 	fprintf(fp, ""
 	"\t//\n"
@@ -1848,8 +1960,8 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 			}
 			fprintf(fp, ": sio_data <= %s_data;\n",
 				slist[i]->p_name->c_str());
-			fprintf(fp, ";\n");
-		} fprintf(fp, "\tdefault: sio_data <= 32\'h0;\n");
+		} fprintf(fp, "\t\tdefault: sio_data <= 32\'h0;\n");
+		fprintf(fp, "\tendcase\n\n");
 	} else
 		fprintf(fp, "\tinitial\tsio_data = 32\'h0;\n"
 			"\talways @(posedge i_clk)\n\t\tsio_data = 32\'h0;\n");
@@ -1872,10 +1984,10 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 			}
 			fprintf(fp, ": dio_data <= %s_data;\n",
 				dlist[i]->p_name->c_str());
-			fprintf(fp, ";\n");
-		} fprintf(fp, "\tdefault: dio_data <= 32\'h0;\n");
+		} fprintf(fp, "\t\tdefault: dio_data <= 32\'h0;\n\tendcase\n");
 	}
 	fprintf(fp, "\talways @(*)\n"
+		"\tbegin\n"
 		"\t\tcasez({ %s })\n", acklist.c_str());
 	for(unsigned i=0; i<nacks; i++) {
 		fprintf(fp, "\t\t\t%d\'b", nacks);
@@ -1988,6 +2100,8 @@ int	main(int argc, char **argv) {
 	cvtint(master, KYREGS_N);
 	cvtint(master, KY_ID);
 	reeval(master);
+
+	// mapdump(master);
 
 	count_peripherals(master);
 	build_plist(master);

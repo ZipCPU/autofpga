@@ -64,10 +64,10 @@
 @MAIN.INSERT=
 	wire[31:0]	mdio_debug;
 	enetctrl #(2)
-		mdio(i_clk, i_rst, wb_cyc, (wb_stb)&&(mdio_sel), wb_we,
+		mdio(i_clk, i_reset, wb_cyc, (wb_stb)&&(mdio_sel), wb_we,
 				wb_addr[4:0], wb_data[15:0],
 			mdio_ack, mdio_stall, mdio_data,
-			o_mdclk, o_mdio, i_mdio, o_mdwe);;
+			o_mdclk, o_mdio, i_mdio, o_mdwe, mdio_debug);
 @MAIN.ALT=
 	assign	o_mdclk = 1'b1;
 	assign	o_mdio  = 1'b1;

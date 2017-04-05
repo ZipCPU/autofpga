@@ -40,7 +40,7 @@ PROGRAMS := autofpga demo
 OBJDIR:= obj-pc
 CXX:= g++
 SED:= sed
-CFLAGS:= -std=c++11 -g -Og -Wall
+CFLAGS:= -std=c++11 -g -Wall
 SOURCES := autofpga.cpp parser.cpp kveval.cpp keys.cpp mapdhash.cpp ast.cpp \
 	expr.tab.cpp lex.yy.cpp
 POSSHDRS:= $(subst .c,.h,$(subst .cpp,.h,$(SOURCES)))
@@ -69,7 +69,8 @@ autofpga: $(OBJECTS)
 
 VSRCS := bkram.txt enet.txt flash.txt gps.txt icape.txt mdio.txt wbuart.txt \
 	sdspi.txt wbmouse.txt wboled.txt clkcounter.txt gpio.txt pwrcount.txt \
-	version.txt buserr.txt zipmaster.txt pic.txt
+	version.txt buserr.txt zipmaster.txt pic.txt rtcgps.txt clock.txt \
+	hdmi.txt
 
 .PHONY: demo
 demo: autofpga $(VSRCS)

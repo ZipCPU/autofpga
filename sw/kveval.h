@@ -41,5 +41,6 @@
 
 #include "mapdhash.h"
 
+extern	void	resolve(MAPDHASH &info);
 extern	void	reeval(MAPDHASH &info);
 #endif
