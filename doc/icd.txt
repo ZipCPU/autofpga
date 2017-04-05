@@ -1,0 +1,133 @@
+AutoFPGA does all of its work based upon KEY/VALUE pairs.  
+
+AutoFPGA document lines starting with @ specify a key.  Lines starting with a
+@$ specify an integer valued expression.  The key is given by the string
+between the @ (or @$) and the ='s (minus any white space at the end, white
+space at the beginning is not allowed).  KEYs are case sensitive.  By
+convention, KEYs are in all caps, although keys with lower case letters are
+allowed.  For discussion, the @ will be placed back in front of the key to
+identify the item as a key.
+
+Comments.  Lines beginning with either two hash marks, ##, or a hash followed
+by a space, as in "# ", are comment lines.  Other lines beginning with "#" are
+not comments, neither do lines containing "#" in any location other than the
+first location contain comments.
+
+KEYs are by convention all capitals.  They are also hierarchical.  Hence,
+a key BDEFS.IONAME references the BDEFS set of key-value pairs, with the keyname
+IONAME within that set.
+
+Every device or master *must* contain a @PREFIX key.  This key will be used as a
+unique string to identify the device.  As parsing takes place, all of the keys
+for a given device will be placed into a key-value set prefixed by the
+@PREFIX key.  Hence, for a device with name @PREFIX=uart, a definition such as
+@NADDR=4 creates a key named @uart.NADDR and gives it the value 4.  The key
+@THIS references the first key-value map file above it having a @PREFIX type. 
+Hence, @THIS.BASE might reference @uart.BASE, the base address of the UART
+device.
+
+Keys may be defined prior to the first @PREFIX key.  These are global keys,
+and are not given any @PREFIX in front of them prior to being inserted into the
+master key-value mapping.
+
+Key definitions beginning with @$ are integer expressions that will be evaluated
+before use.
+
+Further, strings may reference other parts of the key-value mapping by placing
+a @$ in front of a key name.  This value will then be replaced by the value
+once that value is known.  Expressions may also be used when assigning to
+things such as @$KEY, as in ...
+@$KEY.EXPR=(1<<20)
+@KEY.FORMAT=0x%08x
+@KEY.VAL will be created with the calculated value
+@KEY.STR will be created with the value formated as desired into a string
+Once this expression has a value, a new key will be created, KEY.VAL, having
+the integer value of this expression.  This value may be referenced via the
+base @KEY.  Further, this value will be substituted wherever @$KEY exists
+within any other VALUE's.  Which value it gets, either the number or the
+string, is dependent upon the context and how it is referenced.
+
+Peripheral devices *must* also contain a @PTYPE key.  This key can have one of
+the following values:
+	SINGLE	A peripheral with no internal address decoding, but
+		whose output value (@PREFIX_data) is valid on any given clock.
+		These peripherals are not allowed to stall the bus.
+		These peripherals will be collected together.
+	DOUBLE	A peripheral with internal address decoding, but no delays.
+		Hence, the data value for this peripheral will always be valid
+		one clock after the select line goes high.
+		These peripherals are not allowed to stall the bus.
+		These peripherals will also be collected together.
+	MEMORY	A peripheral including information that needs to be placed into
+		a linker script.  Examples of MEMORY can be block RAM's,
+		SDRAM, or even FLASH.  MEMORY that fits the criteria for DOUBLE
+		is also best given the MEMORY attribute instead.
+	OTHER	Any peripheral that doesn't match the above.
+
+
+Other tags include
+NADDR	The number of uniquely addressable registers/ports this device has
+/*
+	Future: BUSTYPE, for now the default will be WB-B4/pipeline.
+	Future values may include WB/classic, or perhaps even AXI and AXI-lite.
+*/
+
+TOP.PORTLIST
+	This string gets added into the toplevel( portlist ) declaration,
+	allowing each peripheral to control external wires.  If not specified,
+	this is given by MAIN.PORTLIST.
+
+TOP.IODECL
+	This string includes the declarations for the portlist above, such as
+	output wire o_value.  If not specified, this is given by MAIN.IODECL.
+
+TOP.DEFNS
+	Defines variables in toplevel.v
+TOP.MAIN
+	This string gets added into the main module instantiation, between
+	the ( parentheses ).
+TOP.INSERT
+	Some peripherals need some cleanup.  Hence, after instantiating main,
+	these need to do some logic.  Any variables needed here need to have
+	been declared in TOP.DEFNS.
+
+MAIN.PARAM
+MAIN.PORTLIST
+	Same as TOP.PORTLIST, only as applied to the main.v file
+MAIN.IODECL
+	Same as TOP.IODECL, only as applied to the main.v file
+MAIN.DEFNS
+MAIN.INSERT
+MAIN.ALT
+
+BASE	(Created and used internally)
+MASK	(Created and used internally)
+AWID
+
+REGS.NOTE
+REGS.N
+REGS.0...?
+REGS.INSERT.H
+vs ...
+REGS.NOTE
+REGS.<name>.ADDR
+REGS.<name>.UNAME(s)
+REGS.<name>.DESC(ription for LaTeX)
+
+
+BDEF.DEFN
+BDEF.IONAME
+BDEF.IOTYPE
+BDEF.OSDEF
+BDEF.OSVAL
+// defaults to static volatile @THIS.BDEF.IOTYPE *const @THIS.BDEF.IONAME = &((@THIS.BDEF.IOTYPE *)@THIS.BASE);
+(deprecated) IONAME
+(deprecated) CSTRUCT (now BDEF.DEFN)
+
+LDSCRIPT.PTR	(Name to be used within the linker script)
+LDSCRIPT.PSTR	(Permission string for the linker script)
+LDSCRIPT.DEF	(Any definitions to be added to the linker script)
+
+PIC.BUS		The name of a parameter to hold all of the interrupt wires
+PIC.MAX		The maximum number of interrutps this one can have
+PIC.ASSIGNED	Interrupts previously assigned
