@@ -91,17 +91,32 @@
 	// (more) non-bus wire--one to use to select if we are interacting
 	// with the ZipCPU or not.
 	wire	wbu_zip_sel;
+	wire	[0:0]	wbubus_dbg;
+`ifndef	INCLUDE_ZIPCPU
+	wire		zip_dbg_ack, zip_dbg_stall;
+	wire	[31:0]	zip_dbg_data;
+`endif
 @MAIN.INSERT=
 `ifndef	INCLUDE_ZIPCPU
-	assign	wbu_zip_sel = 1'b0;
+	assign	wbu_zip_sel   = 1'b0;
+	assign	zip_dbg_ack   = 1'b0;
+	assign	zip_dbg_stall = 1'b0;
+	assign	zip_dbg_data  = 0;
 `endif
+`ifndef	BUSPIC_ACCESS
+	wire	w_bus_int;
+	assign	w_bus_int = 1'b0;
+`endif
+	wire	[31:0]	wbu_tmp_addr;
 	wbubus	genbus(i_clk, i_host_rx_stb, i_host_rx_data,
-			wbu_cyc, wbu_stb, wbu_we, wbu_addr, wbu_data,
+			wbu_cyc, wbu_stb, wbu_we, wbu_tmp_addr, wbu_data,
 			(wbu_zip_sel)?zip_dbg_ack:wbu_ack,
 			(wbu_zip_sel)?zip_dbg_stall:wbu_stall,
 				(wbu_zip_sel)?1'b0:wbu_err,
 				(wbu_zip_sel)?zip_dbg_data:wbu_idata,
-			o_bus_int,
-			o_host_tx_stb, o_host_tx_data, i_host_tx_busy);
+			w_bus_int,
+			o_host_tx_stb, o_host_tx_data, i_host_tx_busy,
+			wbubus_dbg[0]);
 	assign	wbu_sel = 4'hf;
+	assign	wbu_addr = wbu_tmp_addr[(@$BUS_ADDRESS_WIDTH-1):0];
 #

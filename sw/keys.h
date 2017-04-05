@@ -90,6 +90,7 @@ extern const	STRING	KYTOP_INSERT;
 // Main definitions
 extern const	STRING	KYMAIN_PORTLIST;
 extern const	STRING	KYMAIN_IODECL;
+extern const	STRING	KYMAIN_PARAM;
 extern const	STRING	KYMAIN_DEFNS;
 extern const	STRING	KYMAIN_INSERT;
 extern const	STRING	KYMAIN_ALT;

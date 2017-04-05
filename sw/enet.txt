@@ -87,6 +87,9 @@
 	input			i_net_tx_clk;
 	output	wire		o_net_tx_en;
 	output	wire	[3:0]	o_net_txd;
+@MAIN.DEFNS=
+	//
+	wire	[31:0]	netp_debug;
 @MAIN.INSERT=
 	enetpackets	#(12)
 		netctrl(i_clk, i_reset, wb_cyc,(wb_stb)&&((netp_sel)||(netb_sel)),
@@ -96,7 +99,7 @@
 			i_net_rx_clk, i_net_col, i_net_crs, i_net_dv, i_net_rxd,
 				i_net_rxerr,
 			i_net_tx_clk, o_net_tx_en, o_net_txd,
-			netrx_int, nettx_int);
+			netrx_int, nettx_int, netp_debug);
 @REGS.N=8
 @REGS.0= 0 R_NET_RXCMD	RXCMD,NETRX
 @REGS.1= 1 R_NET_TXCMD	TXCMD,NETTX

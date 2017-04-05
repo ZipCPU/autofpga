@@ -37,24 +37,19 @@
 ##
 @PREFIX=buspic
 @NADDR=1
+@ACCESS=BUSPIC_ACCESS
 @PTYPE=SINGLE
 @PIC.BUS= bus_int_vector
 @PIC.MAX= 15
-@INT.BUS.WIRE= o_bus_int
+@INT.BUS.WIRE= w_bus_int
 @INT.BUS.PIC=  syspic
 @INT.BUS.ID=   6
 @MAIN.INSERT=
 	//
 	// The BUS Interrupt controller
 	//
-	icontrol #(15)	buspic(i_clk, 1'b0,
-		(w_wb_stb)&&(w_wb_addr==5'h1),
-			i_wb_data, pic_data,
-		{ zip_int, oled_int, sdcard_int,
-			gpsrx_int, scop_int, flash_int, gpio_int,
-			auxtx_int, auxrx_int, nettx_int, netrx_int,
-			rtc_int, pps_int, sw_int, btn_int },
-			o_bus_int);
+	icontrol #(15)	buspic(i_clk, 1'b0, (wb_stb)&&(buspic_sel),
+			wb_data, buspic_data, bus_int_vector, w_bus_int);
 @MAIN.ALT=
 @REGS.N=1
 @REGS.0= 0 R_PIC PIC

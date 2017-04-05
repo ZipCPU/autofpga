@@ -41,8 +41,7 @@
 @PTYPE=	SINGLE
 @SINGLE.INPUTS=	ck_pps i_hdmi_in_clk
 @MAIN.INSERT=
-	clkcounter clkhmdiin(i_clk, ck_pps, i_hdmi_in_clk,
- 			clkhdmiin_data);
+	clkcounter clkhmdiin(i_clk, ck_pps, i_hdmi_in_clk, clkhdmiin_data);
 @REGS.NOTE = // HDMI-IN Clock Counter (measures clock speed)
 @REGS.N = 1
 @REGS.0 = 0 R_HDMI_INCLK	 HCLKIN

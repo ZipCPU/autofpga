@@ -53,24 +53,26 @@
 	//
 	// A 32-bit address indicating where teh ZipCPU should start running
 	// from
-	localparam	RESET_ADDRESS = 32\'h01000000;
+	localparam	RESET_ADDRESS = 32'h01000000;
 	//
 	// The number of valid bits on the bus
 	localparam	ZIP_ADDRESS_WIDTH = 30;	// Zip-CPU address width
 	//
 	// Number of ZipCPU interrupts
-	localparam	ZIP_INTS = 14;
+	localparam	ZIP_INTS = 16;
 	//
-	// ZIP_STARTS_HALTED
+	// ZIP_START_HALTED
 	//
 	// A boolean, indicating whether or not the ZipCPU be halted on startup?
-	localparam	ZIP_STARTS_HALTED=1'b0;
+	localparam	ZIP_START_HALTED=1'b1;
 @MAIN.DEFNS=
-	// And for the debug scope (if supported)
+	// ZipSystem/ZipCPU connection definitions
+	// All we define here is a set of scope wires
 	wire	[31:0]	zip_debug;
 	wire		zip_trigger;
-	assign	zip_trigger = zip_debug[0];
-	localparam	ZIP_INTS=@$syspic.PIC.MAX+@$altpic.PIC.MAX;
+	wire		zip_dbg_ack, zip_dbg_stall;
+	wire	[31:0]	zip_dbg_data;
+	wire	[15:0] zip_int_vector;
 @MAIN.INSERT=
 	//
 	//
@@ -83,9 +85,8 @@
 `endif
 	wire	zip_reset;
 	assign	zip_reset = 1'b0;
-	wire	[29:0] zip_int_vector;
-	assign	zip_int_vector = { altpic[14:8], syspic[14:6] };
-	zipsystem #(RESET_ADDRESS,29,10,ZIP_START_HALTED,ZIP_INTS)
+	assign	zip_int_vector = { alt_int_vector[14:8], sys_int_vector[14:6] };
+	zipsystem #(RESET_ADDRESS,ZIP_ADDRESS_WIDTH,10,ZIP_START_HALTED,ZIP_INTS)
 		swic(i_clk, zip_reset,
 			// Zippys wishbone interface
 			zip_cyc, zip_stb, zip_we, zip_addr, zip_data, zip_sel,
@@ -96,6 +97,7 @@
 			((wbu_stb)&&(wbu_zip_sel)),wbu_we, wbu_addr[0],
 			wbu_data, zip_dbg_ack, zip_dbg_stall, zip_dbg_data,
 			zip_debug);
+	assign	zip_trigger = zip_debug[0];
 #
 #
 #

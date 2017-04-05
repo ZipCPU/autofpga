@@ -66,6 +66,7 @@
 `define	FLASH_ACCESS
 `define	ETHERNET_ACCESS
 `define	BLKRAM_ACCESS
+`define	BUSPIC_ACCESS
 `define	GPSUART_ACCESS
 `define	CFG_ACCESS
 `define	NETCTRL_ACCESS
@@ -109,11 +110,31 @@ module	main(i_clk, i_reset,
 		i_host_rx_stb, i_host_rx_data,
 		o_host_tx_stb, o_host_tx_data, i_host_tx_busy);
 //
-////////////////////////////////////////
-/// PARAMETER SUPPORT BELONGS HERE
-/// (it hasn't been written yet)
-////////////////////////////////////////
+// Any parameter definitions
 //
+// These are drawn from anything with a MAIN.PARAM definition.
+// As they aren't connected to the toplevel at all, it would
+// be best to use localparam over parameter, but here we don't
+// check
+	//
+	//
+	// Variables/definitions needed by the ZipCPU BUS master
+	//
+	//
+	// A 32-bit address indicating where teh ZipCPU should start running
+	// from
+	localparam	RESET_ADDRESS = 32'h01000000;
+	//
+	// The number of valid bits on the bus
+	localparam	ZIP_ADDRESS_WIDTH = 30;	// Zip-CPU address width
+	//
+	// Number of ZipCPU interrupts
+	localparam	ZIP_INTS = 16;
+	//
+	// ZIP_START_HALTED
+	//
+	// A boolean, indicating whether or not the ZipCPU be halted on startup?
+	localparam	ZIP_START_HALTED=1'b1;
 //
 // The next step is to declare all of the various ports that were just
 // listed above.  
@@ -169,7 +190,8 @@ module	main(i_clk, i_reset,
 	// Declaring wishbone master bus data
 	//
 	wire		wb_cyc, wb_stb, wb_we, wb_stall, wb_ack, wb_err;
-	wire	[31:0]	wb_data, wb_addr;
+	wire	[(30-1):0]	wb_addr;
+	wire	[31:0]	wb_data;
 	reg	[31:0]	wb_idata;
 	wire	[3:0]	wb_sel;
 	wire	sio_sel, dio_sel;
@@ -178,24 +200,6 @@ module	main(i_clk, i_reset,
 	reg	[31:0]	sio_data, dio_data;
 
 
-	// And for the debug scope (if supported)
-	wire	[31:0]	zip_debug;
-	wire		zip_trigger;
-	assign	zip_trigger = zip_debug[0];
-	localparam	ZIP_INTS=15+15;
-	// HDMI input ports
-	input	i_hdmi_in_clk;
-	// HDMI input ports
-	input	i_hdmi_out_clk;
-	// Definitions for the WB-UART converter.  We really only need one
-	// (more) non-bus wire--one to use to select if we are interacting
-	// with the ZipCPU or not.
-	wire	wbu_zip_sel;
-	// Bus arbiter's lines
-	wire		dwb_cyc, dwb_stb, dwb_we, dwb_ack, dwb_stall, dwb_err;
-	wire	[(30-1):0]	dwb_addr;
-	wire	[31:0]	dwb_odata, dwb_idata;
-	wire	[3:0]	dwb_sel;
 
 
 	//
@@ -217,7 +221,7 @@ module	main(i_clk, i_reset,
 	wire	flash_interrupt;	// flash.INT.FLASH.WIRE
 	wire	nettx_int;	// netp.INT.NETTX.WIRE
 	wire	netrx_int;	// netp.INT.NETRX.WIRE
-	wire	o_bus_int;	// buspic.INT.BUS.WIRE
+	wire	w_bus_int;	// buspic.INT.BUS.WIRE
 	wire	gpsutxf_int;	// gpsu.INT.GPSTXF.WIRE
 	wire	gpsurxf_int;	// gpsu.INT.GPSRXF.WIRE
 	wire	gpsutx_int;	// gpsu.INT.GPSTX.WIRE
@@ -231,15 +235,22 @@ module	main(i_clk, i_reset,
 	// given under the @MAIN.DEFNS key, for those components with
 	// an MTYPE flag.
 	//
-	// And for the debug scope (if supported)
+	// ZipSystem/ZipCPU connection definitions
+	// All we define here is a set of scope wires
 	wire	[31:0]	zip_debug;
 	wire		zip_trigger;
-	assign	zip_trigger = zip_debug[0];
-	localparam	ZIP_INTS=15+15;
+	wire		zip_dbg_ack, zip_dbg_stall;
+	wire	[31:0]	zip_dbg_data;
+	wire	[15:0] zip_int_vector;
 	// Definitions for the WB-UART converter.  We really only need one
 	// (more) non-bus wire--one to use to select if we are interacting
 	// with the ZipCPU or not.
 	wire	wbu_zip_sel;
+	wire	[0:0]	wbubus_dbg;
+`ifndef	INCLUDE_ZIPCPU
+	wire		zip_dbg_ack, zip_dbg_stall;
+	wire	[31:0]	zip_dbg_data;
+`endif
 
 
 	//
@@ -263,6 +274,8 @@ module	main(i_clk, i_reset,
 	wire	[63:0]	gps_now, gps_err, gps_step;
 	wire	[1:0]	gps_dbg_tick;
 `include "builddate.v"
+	//
+	wire	[31:0]	netp_debug;
 
 
 	//
@@ -289,7 +302,10 @@ module	main(i_clk, i_reset,
 	// These declarations come from the various components having
 	// PIC and PIC.MAX keys.
 	//
-	wire	[15:0]	buspic_int_vec;	wire	[15:0]	syspic_int_vec;	wire	[15:0]	altpic_int_vec;
+	wire	[14:0]	bus_int_vector;
+	wire	[14:0]	sys_int_vector;
+	wire	[14:0]	alt_int_vector;
+
 	// Declare those signals necessary to build the bus, and detect
 	// bus errors upon it.
 	//
@@ -304,12 +320,12 @@ module	main(i_clk, i_reset,
 	// tag, and the names are prefixed by whatever is in the @PREFIX tag.
 	//
 
-	wire		zip_cyc, zip_stb, zip_ack, zip_stall, zip_err;
+	wire		zip_cyc, zip_stb, zip_we, zip_ack, zip_stall, zip_err;
 	wire	[(30-1):0]	zip_addr;
 	wire	[31:0]	zip_data, zip_idata;
 	wire	[3:0]	zip_sel;
 
-	wire		wbu_cyc, wbu_stb, wbu_ack, wbu_stall, wbu_err;
+	wire		wbu_cyc, wbu_stb, wbu_we, wbu_ack, wbu_stall, wbu_err;
 	wire	[(30-1):0]	wbu_addr;
 	wire	[31:0]	wbu_data, wbu_idata;
 	wire	[3:0]	wbu_sel;
@@ -418,7 +434,7 @@ module	main(i_clk, i_reset,
 	assign	  mdio_sel = (wb_addr[29: 5] == 25'b0000_0000_0000_0000_0000_0111_0);
 	assign	  netb_sel = (wb_addr[29:12] == 18'b0000_0000_0000_0000_01);
 	assign	   mem_sel = (wb_addr[29:17] == 13'b0000_0000_0000_1);
-	assign	 flash_sel = (wb_addr[29:24] ==  6'b0000_01);
+	assign	 flash_sel = (wb_addr[29:22] ==  8'b0000_0001_);
 	assign	none_sel = (wb_stb)&&({ flash_sel, mem_sel, netb_sel, mdio_sel, cfg_sel, flctl_sel, dio_sel, sio_sel} == 0);
 	//
 	// many_sel
@@ -433,39 +449,56 @@ module	main(i_clk, i_reset,
 	// decoding logic.  Thus, any device with a sel_ line will be
 	// tested here.
 	//
+`ifdef	VERILATOR
+
 	always @(*)
-	begin
-		many_sel <= (wb_stb);
 		case({flash_sel, mem_sel, netb_sel, mdio_sel, cfg_sel, flctl_sel, dio_sel, sio_sel})
-			22'h0: many_sel <= 1'b0;
-			22'b10000000: many_sel <= 1'b0;
-			22'b01000000: many_sel <= 1'b0;
-			22'b00100000: many_sel <= 1'b0;
-			22'b00010000: many_sel <= 1'b0;
-			22'b00001000: many_sel <= 1'b0;
-			22'b00000100: many_sel <= 1'b0;
-			22'b00000010: many_sel <= 1'b0;
-			22'b00000001: many_sel <= 1'b0;
+			8'h0: many_sel = 1'b0;
+			8'b10000000: many_sel = 1'b0;
+			8'b01000000: many_sel = 1'b0;
+			8'b00100000: many_sel = 1'b0;
+			8'b00010000: many_sel = 1'b0;
+			8'b00001000: many_sel = 1'b0;
+			8'b00000100: many_sel = 1'b0;
+			8'b00000010: many_sel = 1'b0;
+			8'b00000001: many_sel = 1'b0;
+			default: many_sel = (wb_stb);
 		endcase
-	end
-//
-// many_ack
-//
-// It is also a violation of the bus protocol to produce multiply
-// acks at once and on the same clock.  In that case, the bus
-// can't decide which result to return.  Worse, if someone is waiting
-// for a return value, that value will never come since another ack
-// masked it.
-//
-// The other error that isn't tested for here, no would I necessarily
-// know how to test for it, is when peripherals return values out of
-// order.  Instead, I propose keeping that from happening by
-// guaranteeing, in software, that two peripherals are not accessed
-// immediately one after the other.
-//
+
+`else	// VERILATOR
+
+	always @(*)
+		case({flash_sel, mem_sel, netb_sel, mdio_sel, cfg_sel, flctl_sel, dio_sel, sio_sel})
+			8'h0: many_sel <= 1'b0;
+			8'b10000000: many_sel <= 1'b0;
+			8'b01000000: many_sel <= 1'b0;
+			8'b00100000: many_sel <= 1'b0;
+			8'b00010000: many_sel <= 1'b0;
+			8'b00001000: many_sel <= 1'b0;
+			8'b00000100: many_sel <= 1'b0;
+			8'b00000010: many_sel <= 1'b0;
+			8'b00000001: many_sel <= 1'b0;
+			default: many_sel <= (wb_stb);
+		endcase
+
+`endif	// VERILATOR
+
+	//
+	// many_ack
+	//
+	// It is also a violation of the bus protocol to produce multiply
+	// acks at once and on the same clock.  In that case, the bus
+	// can't decide which result to return.  Worse, if someone is waiting
+	// for a return value, that value will never come since another ack
+	// masked it.
+	//
+	// The other error that isn't tested for here, no would I necessarily
+	// know how to test for it, is when peripherals return values out of
+	// order.  Instead, I propose keeping that from happening by
+	// guaranteeing, in software, that two peripherals are not accessed
+	// immediately one after the other.
+	//
 	always @(posedge i_clk)
-	begin
-		many_ack <= (wb_cyc);
 		case({flash_ack, mem_ack, netb_ack, mdio_ack, cfg_ack, flctl_ack, dio_ack, sio_ack})
 			8'h0: many_ack <= 1'b0;
 			8'b10000000: many_ack <= 1'b0;
@@ -476,8 +509,8 @@ module	main(i_clk, i_reset,
 			8'b00000100: many_ack <= 1'b0;
 			8'b00000010: many_ack <= 1'b0;
 			8'b00000001: many_ack <= 1'b0;
+		default: many_ack <= (wb_cyc);
 		endcase
-	end
 	//
 	// wb_ack
 	//
@@ -491,7 +524,7 @@ module	main(i_clk, i_reset,
 	// ahead of any other device acks.
 	//
 	always @(posedge i_clk)
-		sio_ack <= (wb_sel)&&(sio_sel);
+		sio_ack <= (wb_stb)&&(sio_sel);
 	always @(posedge i_clk)
 		pre_dio_ack[1:0] <= { pre_dio_ack[0], (wb_stb)&&(dio_sel) };
 	always @(posedge i_clk)
@@ -554,7 +587,7 @@ module	main(i_clk, i_reset,
 
 	always @(posedge i_clk)
 		if (wb_err)
-			r_bus_err <= wb_addr;
+			r_bus_err <= { wb_addr, 2'b00 };
 
 	//Now we turn to defining all of the parts and pieces of what
 	// each of the various peripherals does, and what logic it needs.
@@ -571,7 +604,7 @@ module	main(i_clk, i_reset,
 	//
 	// Declare the interrupt busses
 	//
-	assign	buspic_int_vec = {
+	assign	bus_int_vector = {
 		1'b0,
 		1'b0,
 		1'b0,
@@ -588,7 +621,7 @@ module	main(i_clk, i_reset,
 		sdcard_int,
 		mous_interrupt
 	};
-	assign	syspic_int_vec = {
+	assign	sys_int_vector = {
 		uartrxf_int,
 		oled_int,
 		mous_interrupt,
@@ -597,7 +630,7 @@ module	main(i_clk, i_reset,
 		nettx_int,
 		uarttxf_int,
 		netrx_int,
-		o_bus_int,
+		w_bus_int,
 		1'b0,
 		1'b0,
 		1'b0,
@@ -605,7 +638,7 @@ module	main(i_clk, i_reset,
 		1'b0,
 		1'b0
 	};
-	assign	altpic_int_vec = {
+	assign	alt_int_vector = {
 		rtc_int,
 		uarttx_int,
 		uartrx_int,
@@ -641,8 +674,7 @@ module	main(i_clk, i_reset,
 	assign	rtc_int = 1'b0;	// rtc.INT.RTC.WIRE
 `endif	// RTC_ACCESS
 
-	clkcounter clkhmdiin(i_clk, ck_pps, i_hdmi_in_clk,
- 			clkhdmiin_data);
+	clkcounter clkhmdiin(i_clk, ck_pps, i_hdmi_in_clk, clkhdmiin_data);
 `ifdef	GPS_CLOCK
 	gpsclock_tb ppstb(i_clk, ck_pps, tb_pps,
 			(wb_stb)&&(gtb_sel), wb_we, wb_addr[2:0], wb_data,
@@ -694,9 +726,8 @@ module	main(i_clk, i_reset,
 `endif
 	wire	zip_reset;
 	assign	zip_reset = 1'b0;
-	wire	[29:0] zip_int_vector;
-	assign	zip_int_vector = { altpic[14:8], syspic[14:6] };
-	zipsystem #(RESET_ADDRESS,29,10,ZIP_START_HALTED,ZIP_INTS)
+	assign	zip_int_vector = { alt_int_vector[14:8], sys_int_vector[14:6] };
+	zipsystem #(RESET_ADDRESS,ZIP_ADDRESS_WIDTH,10,ZIP_START_HALTED,ZIP_INTS)
 		swic(i_clk, zip_reset,
 			// Zippys wishbone interface
 			zip_cyc, zip_stb, zip_we, zip_addr, zip_data, zip_sel,
@@ -707,6 +738,7 @@ module	main(i_clk, i_reset,
 			((wbu_stb)&&(wbu_zip_sel)),wbu_we, wbu_addr[0],
 			wbu_data, zip_dbg_ack, zip_dbg_stall, zip_dbg_data,
 			zip_debug);
+	assign	zip_trigger = zip_debug[0];
 `else	// INCLUDE_ZIPCPU
 
 	assign	zip_cyc = 1'b0;
@@ -867,7 +899,7 @@ module	main(i_clk, i_reset,
 	wbqspiflash #(24)
 		flashmem(i_clk,
 			(wb_cyc), (wb_stb)&&(flash_sel), (wb_stb)&&(flctl_sel),wb_we,
-			wb_addr[23:0], wb_data,
+			wb_addr[(24-3):0], wb_data,
 			flash_ack, flash_stall, flash_data,
 			o_qspi_sck, o_qspi_cs_n, o_qspi_mod, o_qspi_dat, i_qspi_dat,
 			flash_interrupt);
@@ -897,7 +929,7 @@ module	main(i_clk, i_reset,
 			i_net_rx_clk, i_net_col, i_net_crs, i_net_dv, i_net_rxd,
 				i_net_rxerr,
 			i_net_tx_clk, o_net_tx_en, o_net_txd,
-			netrx_int, nettx_int);
+			netrx_int, nettx_int, netp_debug);
 `else	// ETHERNET_ACCESS
 
 	reg	r_netp_ack;
@@ -916,7 +948,7 @@ module	main(i_clk, i_reset,
 	memdev #(.LGMEMSZ(19), .EXTRACLOCK(0))
 		blkram(i_clk,
 			(wb_cyc), (wb_stb)&&(mem_sel), wb_we,
-				wb_addr[(19-2):0], wb_data, wb_sel,
+				wb_addr[(19-3):0], wb_data, wb_sel,
 				mem_ack, mem_stall, mem_data);
 `else	// BLKRAM_ACCESS
 
@@ -950,17 +982,25 @@ module	main(i_clk, i_reset,
 
 `endif
 
+`ifdef	BUSPIC_ACCESS
 	//
 	// The BUS Interrupt controller
 	//
-	icontrol #(15)	buspic(i_clk, 1'b0,
-		(w_wb_stb)&&(w_wb_addr==5'h1),
-			i_wb_data, pic_data,
-		{ zip_int, oled_int, sdcard_int,
-			gpsrx_int, scop_int, flash_int, gpio_int,
-			auxtx_int, auxrx_int, nettx_int, netrx_int,
-			rtc_int, pps_int, sw_int, btn_int },
-			o_bus_int);
+	icontrol #(15)	buspic(i_clk, 1'b0, (wb_stb)&&(buspic_sel),
+			wb_data, buspic_data, bus_int_vector, w_bus_int);
+`else	// BUSPIC_ACCESS
+
+	reg	r_buspic_ack;
+	always @(posedge i_clk)
+		r_buspic_ack <= (wb_stb)&&(buspic_sel);
+
+	assign	buspic_ack   = r_buspic_ack;
+	assign	buspic_stall = 1'b0;
+	assign	buspic_data  = 32'h0;
+
+	assign	w_bus_int = 1'b0;	// buspic.INT.BUS.WIRE
+`endif	// BUSPIC_ACCESS
+
 `ifdef	GPSUART_ACCESS
 	wbuart #(31'h000028b0) gpsuart(i_clk, 1'b0,
 		wb_stb, (wb_stb)&&(gpsu_sel), wb_we, wb_addr[1:0], wb_data,
@@ -1041,17 +1081,27 @@ module	main(i_clk, i_reset,
 		pwrcount_data[31:0] <= pwrcount_data[31:0] + 1'b1;
 `ifdef	WBUBUS_MASTER
 `ifndef	INCLUDE_ZIPCPU
-	assign	wbu_zip_sel = 1'b0;
+	assign	wbu_zip_sel   = 1'b0;
+	assign	zip_dbg_ack   = 1'b0;
+	assign	zip_dbg_stall = 1'b0;
+	assign	zip_dbg_data  = 0;
 `endif
+`ifndef	BUSPIC_ACCESS
+	wire	w_bus_int;
+	assign	w_bus_int = 1'b0;
+`endif
+	wire	[31:0]	wbu_tmp_addr;
 	wbubus	genbus(i_clk, i_host_rx_stb, i_host_rx_data,
-			wbu_cyc, wbu_stb, wbu_we, wbu_addr, wbu_data,
+			wbu_cyc, wbu_stb, wbu_we, wbu_tmp_addr, wbu_data,
 			(wbu_zip_sel)?zip_dbg_ack:wbu_ack,
 			(wbu_zip_sel)?zip_dbg_stall:wbu_stall,
 				(wbu_zip_sel)?1'b0:wbu_err,
 				(wbu_zip_sel)?zip_dbg_data:wbu_idata,
-			o_bus_int,
-			o_host_tx_stb, o_host_tx_data, i_host_tx_busy);
+			w_bus_int,
+			o_host_tx_stb, o_host_tx_data, i_host_tx_busy,
+			wbubus_dbg[0]);
 	assign	wbu_sel = 4'hf;
+	assign	wbu_addr = wbu_tmp_addr[(30-1):0];
 `else	// WBUBUS_MASTER
 
 	assign	wbu_cyc = 1'b0;
@@ -1154,6 +1204,25 @@ module	main(i_clk, i_reset,
 		 9'b000000001: dio_data <= netp_data;
 		default: dio_data <= 32'h0;
 	endcase
+`ifdef	VERILATOR
+
+	always @(*)
+	begin
+		casez({ flash_ack, mem_ack, netb_ack, mdio_ack, cfg_ack, flctl_ack, dio_ack, sio_ack })
+			8'b1???????: wb_idata = flctl_data;
+			8'b01??????: wb_idata = cfg_data;
+			8'b001?????: wb_idata = mdio_data;
+			8'b0001????: wb_idata = netb_data;
+			8'b00001???: wb_idata = mem_data;
+			8'b000001??: wb_idata = flash_data;
+			8'b0000001?: wb_idata = dio_data;
+			8'b00000001: wb_idata = sio_data;
+			default: wb_idata = 32'h0;
+		endcase
+	end
+
+`else	// VERILATOR
+
 	always @(*)
 	begin
 		casez({ flash_ack, mem_ack, netb_ack, mdio_ack, cfg_ack, flctl_ack, dio_ack, sio_ack })
@@ -1164,9 +1233,11 @@ module	main(i_clk, i_reset,
 			8'b00001???: wb_idata <= mem_data;
 			8'b000001??: wb_idata <= flash_data;
 			8'b0000001?: wb_idata <= dio_data;
-			8'b00000001: wb_idata <= dio_data;
+			8'b00000001: wb_idata <= sio_data;
+			default: wb_idata <= 32'h0;
 		endcase
 	end
+`endif	// VERILATOR
 
 
 endmodule; // main.v

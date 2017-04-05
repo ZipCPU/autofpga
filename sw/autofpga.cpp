@@ -690,7 +690,7 @@ printf("Examining: @%s.%s.%s\n",
 				if (NULL==(picname=getstring(
 					*kvline->second.u.m_m, KYPIC))) {
 						fprintf(stderr,
-						"ERR: No bus defined for INT_%s\n",
+						"WARNING: No bus defined for INT_%s\nThis interrupt will not be connected.\n",
 						kvpair->first.c_str());
 					continue;
 				}
@@ -1290,7 +1290,7 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 	MAPDHASH::iterator	kvpair, kvaccess, kvsearch;
 	STRING	str = "ACCESS", astr, sellist, acklist, siosel_str, diosel_str;
 	int		first;
-	unsigned	np, nsel = 0, nacks = 0, baw;
+	unsigned	nsel = 0, nacks = 0, baw;
 
 	legal_notice(master, fp, fname);
 	baw = get_address_width(master);
@@ -1360,11 +1360,17 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 		fprintf(fp, "%s", tmps.c_str());
 	} fprintf(fp, ");\n");
 
-	fprintf(fp, "//\n"
-"////////////////////////////////////////\n"
-"/// PARAMETER SUPPORT BELONGS HERE\n"
-"/// (it hasn\'t been written yet)\n"
-"////////////////////////////////////////\n//\n");
+	fprintf(fp, "//\n" "// Any parameter definitions\n//\n"
+		"// These are drawn from anything with a MAIN.PARAM definition.\n"
+		"// As they aren\'t connected to the toplevel at all, it would\n"
+		"// be best to use localparam over parameter, but here we don\'t\n"
+		"// check\n");
+	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
+		STRINGP	strp = getstring(kvpair->second, KYMAIN_PARAM);
+		if (!strp)
+			continue;
+		fprintf(fp, "%s", strp->c_str());
+	}
 
 	fprintf(fp, "//\n"
 "// The next step is to declare all of the various ports that were just\n"
@@ -1394,7 +1400,8 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 	fprintf(fp, "\n\n");
 	fprintf(fp, "\t//\n\t// Declaring wishbone master bus data\n\t//\n");
 	fprintf(fp, "\twire\t\twb_cyc, wb_stb, wb_we, wb_stall, wb_ack, wb_err;\n");
-	fprintf(fp, "\twire\t[31:0]\twb_data, wb_addr;\n");
+	fprintf(fp, "\twire\t[(%d-1):0]\twb_addr;\n", baw);
+	fprintf(fp, "\twire\t[31:0]\twb_data;\n");
 	fprintf(fp, "\treg\t[31:0]\twb_idata;\n");
 	fprintf(fp, "\twire\t[3:0]\twb_sel;\n");
 	if ((slist.size()>0)&&(dlist.size()>0)) {
@@ -1413,19 +1420,6 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 		fprintf(fp, "\treg\t[31:0]\tdio_data;\n");
 	}
 	fprintf(fp, "\n\n");
-
-	// Bus master declarations
-	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
-		STRINGP	defnstr;
-		if (kvpair->second.m_typ != MAPT_MAP)
-			continue;
-		if (isperipheral(kvpair->second))
-			continue;
-		defnstr = getstring(*kvpair->second.u.m_m, KYMAIN_DEFNS);
-		if (defnstr)
-			fprintf(fp, "%s", defnstr->c_str());
-	}
-
 
 	fprintf(fp,
 	"\n\n"
@@ -1524,13 +1518,26 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 	"\t// These declarations come from the various components having\n"
 	"\t// PIC and PIC.MAX keys.\n\t//\n");
 	for(unsigned picid=0; picid < piclist.size(); picid++) {
-		STRINGP	defnstr;
+		STRINGP	defnstr, vecstr;
+		MAPDHASH *picmap;
+
 		if (piclist[picid]->i_max <= 0)
 			continue;
-		defnstr = piclist[picid]->i_name;
-		if (defnstr)
-			fprintf(fp, "\twire\t[%d:0]\t%s_int_vec;",
-				piclist[picid]->i_max, defnstr->c_str());
+		picmap = getmap(master, *piclist[picid]->i_name);
+		if (!picmap)
+			continue;
+		vecstr = getstring(*picmap, KYPIC_BUS);
+		if (vecstr) {
+			fprintf(fp, "\twire\t[%d:0]\t%s;\n",
+					piclist[picid]->i_max-1,
+					vecstr->c_str());
+		} else {
+			defnstr = piclist[picid]->i_name;
+			if (defnstr)
+				fprintf(fp, "\twire\t[%d:0]\t%s_int_vec;\n",
+					piclist[picid]->i_max,
+					defnstr->c_str());
+		}
 	}
 
 	// Declare wishbone lines
@@ -1556,8 +1563,8 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 		STRINGP	strp = getstring(*kvpair->second.u.m_m, KYPREFIX);
 		const char	*pfx = strp->c_str();
 
-		fprintf(fp, "\twire\t\t%s_cyc, %s_stb, %s_ack, %s_stall, %s_err;\n",
-			pfx, pfx, pfx, pfx, pfx);
+		fprintf(fp, "\twire\t\t%s_cyc, %s_stb, %s_we, %s_ack, %s_stall, %s_err;\n",
+			pfx, pfx, pfx, pfx, pfx, pfx);
 		fprintf(fp, "\twire\t[(%d-1):0]\t%s_addr;\n", baw, pfx);
 		fprintf(fp, "\twire\t[31:0]\t%s_data, %s_idata;\n", pfx, pfx);
 		fprintf(fp, "\twire\t[3:0]\t%s_sel;\n", pfx);
@@ -1594,7 +1601,6 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 	"\t// NADDR (number of addresses required) tag\n"
 	"\t//\n");
 	fprintf(fp, "\n");
-	np = count_peripherals(master);
 	// Coallate all of the single selects into one wire
 	if (slist.size() > 0) {
 		unsigned	snaddr = 0, sbase = slist[0]->p_base;
@@ -1736,15 +1742,38 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 	"\t// decoding logic.  Thus, any device with a sel_ line will be\n"
 	"\t// tested here.\n"
 	"\t//\n");
-	fprintf(fp, "\talways @(*)\n\tbegin\n\t\tmany_sel <= (wb_stb);\n");
+	fprintf(fp, "`ifdef\tVERILATOR\n\n");
+
+	fprintf(fp, "\talways @(*)\n");
 	fprintf(fp, "\t\tcase({%s})\n", sellist.c_str());
-	fprintf(fp, "\t\t\t%d\'h0: many_sel <= 1\'b0;\n", np);
+	fprintf(fp, "\t\t\t%d\'h0: many_sel = 1\'b0;\n", nsel);
 	for(unsigned i=0; i<nsel; i++) {
-		fprintf(fp, "\t\t\t%d\'b", np);
+		fprintf(fp, "\t\t\t%d\'b", nsel);
+		for(unsigned j=0; j<nsel; j++)
+			fprintf(fp, (i==j)?"1":"0");
+		fprintf(fp, ": many_sel = 1\'b0;\n");
+	}
+	fprintf(fp, "\t\t\tdefault: many_sel = (wb_stb);\n");
+	fprintf(fp, "\t\tendcase\n");
+
+	fprintf(fp, "\n`else\t// VERILATOR\n\n");
+
+	fprintf(fp, "\talways @(*)\n");
+	fprintf(fp, "\t\tcase({%s})\n", sellist.c_str());
+	fprintf(fp, "\t\t\t%d\'h0: many_sel <= 1\'b0;\n", nsel);
+	for(unsigned i=0; i<nsel; i++) {
+		fprintf(fp, "\t\t\t%d\'b", nsel);
 		for(unsigned j=0; j<nsel; j++)
 			fprintf(fp, (i==j)?"1":"0");
 		fprintf(fp, ": many_sel <= 1\'b0;\n");
-	} fprintf(fp, "\t\tendcase\n\tend\n");
+	}
+	fprintf(fp, "\t\t\tdefault: many_sel <= (wb_stb);\n");
+	fprintf(fp, "\t\tendcase\n");
+
+	fprintf(fp, "\n`endif\t// VERILATOR\n\n");
+
+
+
 
 	// Build a list of ACK signals
 	acklist = ""; nacks = 0;
@@ -1769,23 +1798,23 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 	}
 
 	fprintf(fp, ""
-	"//\n"
-	"// many_ack\n"
-	"//\n"
-	"// It is also a violation of the bus protocol to produce multiply\n"
-	"// acks at once and on the same clock.  In that case, the bus\n"
-	"// can\'t decide which result to return.  Worse, if someone is waiting\n"
-	"// for a return value, that value will never come since another ack\n"
-	"// masked it.\n"
-	"//\n"
-	"// The other error that isn\'t tested for here, no would I necessarily\n"
-	"// know how to test for it, is when peripherals return values out of\n"
-	"// order.  Instead, I propose keeping that from happening by\n"
-	"// guaranteeing, in software, that two peripherals are not accessed\n"
-	"// immediately one after the other.\n"
-	"//\n");
+	"\t//\n"
+	"\t// many_ack\n"
+	"\t//\n"
+	"\t// It is also a violation of the bus protocol to produce multiply\n"
+	"\t// acks at once and on the same clock.  In that case, the bus\n"
+	"\t// can\'t decide which result to return.  Worse, if someone is waiting\n"
+	"\t// for a return value, that value will never come since another ack\n"
+	"\t// masked it.\n"
+	"\t//\n"
+	"\t// The other error that isn\'t tested for here, no would I necessarily\n"
+	"\t// know how to test for it, is when peripherals return values out of\n"
+	"\t// order.  Instead, I propose keeping that from happening by\n"
+	"\t// guaranteeing, in software, that two peripherals are not accessed\n"
+	"\t// immediately one after the other.\n"
+	"\t//\n");
 	{
-		fprintf(fp, "\talways @(posedge i_clk)\n\tbegin\n\t\tmany_ack <= (wb_cyc);\n");
+		fprintf(fp, "\talways @(posedge i_clk)\n");
 		fprintf(fp, "\t\tcase({%s})\n", acklist.c_str());
 		fprintf(fp, "\t\t\t%d\'h0: many_ack <= 1\'b0;\n", nacks);
 		for(unsigned i=0; i<nacks; i++) {
@@ -1793,7 +1822,9 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 			for(unsigned j=0; j<nacks; j++)
 				fprintf(fp, (i==j)?"1":"0");
 			fprintf(fp, ": many_ack <= 1\'b0;\n");
-		} fprintf(fp, "\t\tendcase\n\tend\n");
+		}
+		fprintf(fp, "\t\tdefault: many_ack <= (wb_cyc);\n");
+		fprintf(fp, "\t\tendcase\n");
 	}
 
 	fprintf(fp, ""
@@ -1810,7 +1841,7 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 	"\t// ahead of any other device acks.\n"
 	"\t//\n");
 	if (slist.size() > 0)
-		fprintf(fp, "\talways @(posedge i_clk)\n\t\tsio_ack <= (wb_sel)&&(sio_sel);\n");
+		fprintf(fp, "\talways @(posedge i_clk)\n\t\tsio_ack <= (wb_stb)&&(sio_sel);\n");
 	if (dlist.size() > 0) {
 		fprintf(fp, "\talways @(posedge i_clk)\n\t\tpre_dio_ack[1:0] <= { pre_dio_ack[0], (wb_stb)&&(dio_sel) };\n");
 		fprintf(fp, "\talways @(posedge i_clk)\n\t\tdio_ack <= pre_dio_ack[1];\n");
@@ -1882,7 +1913,14 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 	"\tassign	wb_err = ((wb_stb)&&(none_sel || many_sel))\n"
 				"\t\t\t\t|| ((wb_cyc)&&(many_ack));\n\n");
 
-	fprintf(fp, "\talways @(posedge i_clk)\n\t\tif (wb_err)\n\t\t\tr_bus_err <= wb_addr;\n\n");
+	if (baw < 30) {
+		fprintf(fp, "\talways @(posedge i_clk)\n\t\tif (wb_err)\n\t\t\tr_bus_err <= { {(%d){1\'b0}}, wb_addr, 2\'b00 };\n\n", 30-baw);
+	} else if (baw == 30) {
+		fprintf(fp, "\talways @(posedge i_clk)\n\t\tif (wb_err)\n\t\t\tr_bus_err <= { wb_addr, 2\'b00 };\n\n");
+	} else if (baw == 31)
+		fprintf(fp, "\talways @(posedge i_clk)\n\t\tif (wb_err)\n\t\t\tr_bus_err <= { wb_addr, 1\'b0 };\n\n");
+	else
+		fprintf(fp, "\talways @(posedge i_clk)\n\t\tif (wb_err)\n\t\t\tr_bus_err <= wb_addr;\n\n");
 
 	fprintf(fp, "\t//Now we turn to defining all of the parts and pieces of what\n"
 	"\t// each of the various peripherals does, and what logic it needs.\n"
@@ -1899,8 +1937,25 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 
 	fprintf(fp, "\t//\n\t// Declare the interrupt busses\n\t//\n");
 	for(unsigned picid=0; picid < piclist.size(); picid++) {
-		fprintf(fp, "\tassign\t%s_int_vec = {\n",
-			piclist[picid]->i_name->c_str());
+		STRINGP	defnstr, vecstr;
+		MAPDHASH *picmap;
+
+		if (piclist[picid]->i_max <= 0)
+			continue;
+		picmap = getmap(master, *piclist[picid]->i_name);
+		if (!picmap)
+			continue;
+		vecstr = getstring(*picmap, KYPIC_BUS);
+		if (vecstr) {
+			fprintf(fp, "\tassign\t%s = {\n",
+					vecstr->c_str());
+		} else {
+			defnstr = piclist[picid]->i_name;
+			if (defnstr)
+				fprintf(fp, "\tassign\t%s_int_vec = {\n",
+					defnstr->c_str());
+		}
+
 		for(int iid=piclist[picid]->i_max-1; iid>=0; iid--) {
 			INTP	iip = piclist[picid]->getint(iid);
 			if ((iip == NULL)||(iip->i_wire == NULL)
@@ -2088,6 +2143,27 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 				dlist[i]->p_name->c_str());
 		} fprintf(fp, "\t\tdefault: dio_data <= 32\'h0;\n\tendcase\n");
 	}
+
+	fprintf(fp, "`ifdef\tVERILATOR\n\n");
+	fprintf(fp, "\talways @(*)\n"
+		"\tbegin\n"
+		"\t\tcasez({ %s })\n", acklist.c_str());
+	for(unsigned i=0; i<nacks; i++) {
+		fprintf(fp, "\t\t\t%d\'b", nacks);
+		for(unsigned j=0; j<nacks; j++)
+			fprintf(fp, (i==j)?"1":(i>j)?"0":"?");
+		if (i < plist.size())
+			fprintf(fp, ": wb_idata = %s_data;\n",
+				plist[i]->p_name->c_str());
+		else if ((dlist.size() > 0)&&(i == plist.size()))
+			fprintf(fp, ": wb_idata = dio_data;\n");
+		else if (slist.size() > 0)
+			fprintf(fp, ": wb_idata = sio_data;\n");
+		else	fprintf(fp, ": wb_idata = 32\'h00;\n");
+	}
+	fprintf(fp, "\t\t\tdefault: wb_idata = 32\'h0;\n");
+	fprintf(fp, "\t\tendcase\n\tend\n");
+	fprintf(fp, "\n`else\t// VERILATOR\n\n");
 	fprintf(fp, "\talways @(*)\n"
 		"\tbegin\n"
 		"\t\tcasez({ %s })\n", acklist.c_str());
@@ -2098,12 +2174,16 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 		if (i < plist.size())
 			fprintf(fp, ": wb_idata <= %s_data;\n",
 				plist[i]->p_name->c_str());
-		else if (dlist.size() > 0)
+		else if ((dlist.size() > 0)&&(i == plist.size()))
 			fprintf(fp, ": wb_idata <= dio_data;\n");
 		else if (slist.size() > 0)
 			fprintf(fp, ": wb_idata <= sio_data;\n");
 		else	fprintf(fp, ": wb_idata <= 32\'h00;\n");
-	} fprintf(fp, "\t\tendcase\n\tend\n");
+	}
+	fprintf(fp, "\t\t\tdefault: wb_idata <= 32\'h0;\n");
+	fprintf(fp, "\t\tendcase\n\tend\n");
+	fprintf(fp, "`endif\t// VERILATOR\n");
+
 	fprintf(fp, "\n\nendmodule; // main.v\n");
 
 }

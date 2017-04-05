@@ -36,7 +36,9 @@
 ##
 ##
 @PREFIX= flash
-@NADDR= 0x1000000
+@$LGFLASHSZ.EXPR=24
+@LGFLASHSZ.FORMAT=%d
+@$NADDR=(1<<(@$THIS.LGFLASHSZ-2))
 @ACCESS= FLASH_ACCESS
 @PTYPE=  MEMORY
 @INT.FLASH.WIRE= flash_interrupt
@@ -136,10 +138,10 @@
 	input	wire	[3:0]	i_qspi_dat;
 	output	wire	[1:0]	o_qspi_mod;
 @MAIN.INSERT=
-	wbqspiflash #(24)
+	wbqspiflash #(@$THIS.LGFLASHSZ)
 		flashmem(i_clk,
 			(wb_cyc), (wb_stb)&&(flash_sel), (wb_stb)&&(flctl_sel),wb_we,
-			wb_addr[23:0], wb_data,
+			wb_addr[(@$THIS.LGFLASHSZ-3):0], wb_data,
 			flash_ack, flash_stall, flash_data,
 			o_qspi_sck, o_qspi_cs_n, o_qspi_mod, o_qspi_dat, i_qspi_dat,
 			flash_interrupt);

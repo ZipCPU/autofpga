@@ -82,6 +82,7 @@ extern	MAPDHASH::iterator	findkey(MAPDHASH &mp, const STRING &sky);
 extern	MAPDHASH *getmap(MAPDHASH &mp, const STRING &ky);
 extern	STRINGP	getstring(MAPDHASH &mp);
 extern	STRINGP	getstring(MAPDHASH &mp, const STRING &sky);
+extern	STRINGP	getstring(MAPT &m, const STRING &sky);
 extern	bool	getvalue(MAPDHASH &mp, int &value);
 extern	bool	getvalue(MAPDHASH &mp, const STRING &sky, int &value);
 extern	void	setvalue(MAPDHASH &mp, const STRING &sky, int value);

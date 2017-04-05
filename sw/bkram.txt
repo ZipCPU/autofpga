@@ -45,7 +45,7 @@
 	memdev #(.LGMEMSZ(@$THIS.LGMEMSZ), .EXTRACLOCK(0))
 		blkram(i_clk,
 			(wb_cyc), (wb_stb)&&(mem_sel), wb_we,
-				wb_addr[(@$THIS.LGMEMSZ-2):0], wb_data, wb_sel,
+				wb_addr[(@$THIS.LGMEMSZ-3):0], wb_data, wb_sel,
 				mem_ack, mem_stall, mem_data);
 @REGS.N=1
 @REGS.0= 0 BKRAM RAM

@@ -345,6 +345,12 @@ STRINGP getstring(MAPDHASH &master, const STRING &ky) {
 	return r->second.u.m_s;
 }
 
+STRINGP getstring(MAPT &m, const STRING &ky) {
+	if (m.m_typ != MAPT_MAP)
+		return NULL;
+	return getstring(*m.u.m_m, ky);
+}
+
 bool getvalue(MAPDHASH &map, int &value) {
 	MAPDHASH::iterator	kvpair;
 
