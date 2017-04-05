@@ -47,7 +47,7 @@
 
 const	REGNAME	raw_bregs[] = {
 	{ R_QSPI_EREG   ,	"QSPIE"     	},
-	{ R_QSPI_SREG   ,	"QSPIC"     	},
+	{ R_QSPI_CREG   ,	"QSPIC"     	},
 	{ R_QSPI_SREG   ,	"QSPIS"     	},
 	{ R_QSPI_IDREG  ,	"QSPII"     	},
 	{ R_CFG_CRC     ,	"FPGACRC"   	},
@@ -97,6 +97,8 @@ const	REGNAME	raw_bregs[] = {
 #define	RAW_NREGS	(sizeof(raw_bregs)/sizeof(bregs[0]))
 
 const	REGNAME	*bregs = raw_bregs;
+const	int	NREGS = RAW_NREGS;
+
 unsigned	addrdecode(const char *v) {
 	if (isalpha(v[0])) {
 		for(int i=0; i<NREGS; i++)

@@ -45,7 +45,7 @@
 
 // FLASH erase/program configuration registers
 #define	R_QSPI_EREG   	0x00000600	// wbregs names: QSPIE
-#define	R_QSPI_SREG   	0x00000604	// wbregs names: QSPIC
+#define	R_QSPI_CREG   	0x00000604	// wbregs names: QSPIC
 #define	R_QSPI_SREG   	0x00000608	// wbregs names: QSPIS
 #define	R_QSPI_IDREG  	0x0000060c	// wbregs names: QSPII
 // FPGA CONFIG REGISTERS: 0x4e0-0x4ff

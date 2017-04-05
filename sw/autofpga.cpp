@@ -1042,6 +1042,8 @@ void	build_regdefs_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 	fprintf(fp, "\n};\n\n");
 	fprintf(fp, "#define\tRAW_NREGS\t(sizeof(raw_bregs)/sizeof(bregs[0]))\n\n");
 	fprintf(fp, "const\tREGNAME\t*bregs = raw_bregs;\n");
+	fprintf(fp, "const\tint\tNREGS = RAW_NREGS;\n"
+		"\n");
 
 	fputs(""
 "unsigned	addrdecode(const char *v) {\n"
