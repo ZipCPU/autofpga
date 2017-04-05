@@ -1586,7 +1586,7 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 			fprintf(fp, "\tassign\t%6s_sel = ", pfx);
 			lowbit = dlist[i]->p_awid-2;
 			fprintf(fp, "(dio_sel)&&(wb_addr[%2d:%2d] == %2d\'b",
-				baw-1, dnbits-1, dnbits-lowbit);
+				dnbits-1, lowbit, dnbits-lowbit);
 			for(int j=0; j<dnbits-lowbit; j++) {
 				int bit = (dnbits-1)-j;
 				fprintf(fp, ((dlist[i]->p_base>>(bit+2))&1)?"1":"0");
