@@ -1,0 +1,91 @@
+################################################################################
+##
+## Filename: 	dlyarbiter.txt
+##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+##
+## Purpose:	
+##
+## Creator:	Dan Gisselquist, Ph.D.
+##		Gisselquist Technology, LLC
+##
+################################################################################
+##
+## Copyright (C) 2017, Gisselquist Technology, LLC
+##
+## This program is free software (firmware): you can redistribute it and/or
+## modify it under the terms of  the GNU General Public License as published
+## by the Free Software Foundation, either version 3 of the License, or (at
+## your option) any later version.
+##
+## This program is distributed in the hope that it will be useful, but WITHOUT
+## ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY or
+## FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+## for more details.
+##
+## You should have received a copy of the GNU General Public License along
+## with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
+## target there if the PDF file isn't present.)  If not, see
+## <http://www.gnu.org/licenses/> for a copy.
+##
+## License:	GPL, v3, as defined and found on www.gnu.org,
+##		http://www.gnu.org/licenses/gpl.html
+##
+##
+################################################################################
+##
+##
+@PREFIX=dwb
+@MAIN.DEFNS=
+	// Bus arbiter's lines
+	wire		dwb_cyc, dwb_stb, dwb_we, dwb_ack, dwb_stall, dwb_err;
+	wire	[(@$BUS_ADDRESS_WIDTH-1):0]	dwb_addr;
+	wire	[31:0]	dwb_odata, dwb_idata;
+	wire	[3:0]	dwb_sel;
+@MAIN.INSERT=
+	//
+	//
+	// And an arbiter to decide who gets access to the bus
+	//
+	//
+	wbpriarbiter #(32,@$BUS_ADDRESS_WIDTH)	bus_arbiter(i_clk,
+		// The Zip CPU bus master --- gets the priority slot
+		zip_cyc, zip_stb, zip_we, zip_addr, zip_data, zip_sel,
+			zip_ack, zip_stall, zip_err,
+		// The UART interface master
+		(wbu_cyc)&&(!wbu_zip_sel), (wbu_stb)&&(!wbu_zip_sel), wbu_we,
+			wbu_addr[(@$BUS_ADDRESS_WIDTH-1):0], wbu_data, wbu_sel,
+			wbu_ack, wbu_stall, wbu_err,
+		// Common bus returns
+		dwb_cyc, dwb_stb, dwb_we, dwb_addr, dwb_odata, dwb_sel,
+			dwb_ack, dwb_stall, dwb_err);
+
+	// And because the ZipCPU and the Arbiter can create an unacceptable
+	// delay, we often fail timing.  So, we add in a delay cycle
+`ifdef	WBUBUS_MASTER
+`ifdef	ZIPCPU_MASTER
+`define	BUS_DELAY_NEEDED
+`endif
+`endif
+`ifdef	BUS_DELAY_NEEDED
+	busdelay #(@$BUS_ADDRESS_WIDTH)	dwb_delay(i_clk,
+		dwb_cyc, dwb_stb, dwb_we, dwb_addr, dwb_odata, dwb_sel,
+			dwb_ack, dwb_stall, dwb_idata, dwb_err,
+		wb_cyc, wb_stb, wb_we, wb_addr, wb_odata, wb_sel,
+			wb_ack, wb_stall, wb_idata, wb_err);
+`else
+	// If one of the two, the ZipCPU or the WBUBUS, isn't here, then we
+	// don't need the bus delay, and we can go directly from the bus driver
+	// to the bus itself
+	//
+	assign	wb_cyc    = dwb_cyc;
+	assign	wb_stb    = dwb_stb;
+	assign	wb_we     = dwb_we;
+	assign	wb_addr   = dwb_addr;
+	assign	wb_data   = dwb_odata;
+	assign	wb_sel    = dwb_sel;
+	assign	dwb_ack   = wb_ack;
+	assign	dwb_stall = wb_stall;
+	assign	dwb_err   = wb_err;
+	assign	dwb_idata = wb_idata;
+`endif

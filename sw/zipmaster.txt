@@ -41,8 +41,10 @@
 @PREFIX=zip
 @ACCESS=INCLUDE_ZIPCPU
 @MTYPE=CPU
-@SCOPE.TRIGGER=zip_debug[31]
+@SCOPE.TRIGGER=zip_trigger
 @SCOPE.DATA=zip_debug
+@INT.ZIP.WIRE=zip_cpu_int
+@INT.ZIP.BUS=buspic
 @MAIN.PARAM=
 	//
 	//
@@ -64,11 +66,6 @@
 	// A boolean, indicating whether or not the ZipCPU be halted on startup?
 	localparam	ZIP_STARTS_HALTED=1'b0;
 @MAIN.DEFNS=
-	wire		zip_cyc, zip_stb, zip_we, zip_cpu_int;
-	wire	[29:0]	zip_addr, zip_data;
-	wire	[3:0]	zip_sel;
-	// and then coming from devices
-	wire		zip_ack, zip_stall, zip_err;
 	// And for the debug scope (if supported)
 	wire	[31:0]	zip_debug;
 	wire		zip_trigger;

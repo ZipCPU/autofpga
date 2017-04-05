@@ -50,6 +50,7 @@ extern const	STRING	KYBUS_ADDRESS_WIDTH;
 extern const	STRING	KYPREFIX;
 extern const	STRING	KYACCESS;
 extern const	STRING	KYPTYPE;
+extern const	STRING	KYMTYPE;
 //
 extern const	STRING	KYBASE;
 extern const	STRING	KYMASK;
@@ -69,6 +70,7 @@ extern const	STRING	KYNP;
 extern const	STRING	KYNPIC;
 extern const	STRING	KYNPSINGLE;
 extern const	STRING	KYNPDOUBLE;
+extern const	STRING	KYNPMEMORY;
 extern const	STRING	KYNSCOPES;
 // Regs definition(s)
 extern const	STRING	KYREGS_N;

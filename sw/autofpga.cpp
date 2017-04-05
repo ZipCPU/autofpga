@@ -198,12 +198,26 @@ unsigned	nextlg(unsigned vl) {
 	return r;
 }
 
+bool	isbusmaster(MAPDHASH &phash) {
+	// printf("Checking if this hash is that of a peripheral\n");
+	// mapdump(phash);
+	// printf("Was this a peripheral?\n");
+
+	return (phash.end() != phash.find(KYMTYPE));
+}
+
+bool	isbusmaster(MAPT &pmap) {
+	if (pmap.m_typ != MAPT_MAP)
+		return false;
+	return isbusmaster(*pmap.u.m_m);
+}
+
 bool	isperipheral(MAPDHASH &phash) {
 	// printf("Checking if this hash is that of a peripheral\n");
 	// mapdump(phash);
 	// printf("Was this a peripheral?\n");
 
-	return (phash.end() != phash.find("PTYPE"));
+	return (phash.end() != phash.find(KYPTYPE));
 }
 
 bool	isperipheral(MAPT &pmap) {
@@ -223,17 +237,17 @@ bool	ispic(MAPT &pmap) {
 }
 
 bool	hasscope(MAPDHASH &phash) {
-	return (phash.end() != phash.find("SCOPE"));
+	return (phash.end() != phash.find(KYSCOPE));
 }
 
 bool	ismemory(MAPDHASH &phash) {
 	MAPDHASH::iterator	kvpair;
-	kvpair = phash.find("PTYPE");
+	kvpair = phash.find(KYPTYPE);
 	if (phash.end() == kvpair)
 		return false;
 	if (MAPT_STRING != kvpair->second.m_typ)
 		return false;
-	if (STRING("MEMORY")!= *kvpair->second.u.m_s)
+	if (STRING(KYMEMORY)!= *kvpair->second.u.m_s)
 		return false;
 	return true;
 }
@@ -249,6 +263,9 @@ int	get_address_width(MAPDHASH &info) {
 		elm.m_typ = MAPT_INT;
 		elm.u.m_v = DEFAULT_BUS_ADDRESS_WIDTH;
 		info.insert(KEYVALUE(bawstr, elm));
+
+		reeval(info);
+
 		return DEFAULT_BUS_ADDRESS_WIDTH;
 	} else {
 		assert(kvpair->second.m_typ == MAPT_INT);
@@ -258,7 +275,7 @@ int	get_address_width(MAPDHASH &info) {
 
 int count_peripherals(MAPDHASH &info) {
 	MAPDHASH::iterator	kvpair, kvptype;
-	kvpair = info.find("NP");
+	kvpair = info.find(KYNP);
 	if ((kvpair != info.end())&&((*kvpair).second.m_typ == MAPT_INT)) {
 		return (*kvpair).second.u.m_v;
 	}
@@ -269,7 +286,7 @@ int count_peripherals(MAPDHASH &info) {
 			count++;
 
 			// Let see what type of peripheral this is
-			kvptype = kvpair->second.u.m_m->find("PTYPE");
+			kvptype = kvpair->second.u.m_m->find(KYPTYPE);
 			if (kvptype == kvpair->second.u.m_m->end())
 				continue;
 			if (kvptype->second.m_typ != MAPT_STRING)
@@ -286,14 +303,14 @@ int count_peripherals(MAPDHASH &info) {
 	MAPT	elm;
 	elm.m_typ = MAPT_INT;
 	elm.u.m_v = count;
-	info.insert(KEYVALUE(STRING("NP"), elm));
+	info.insert(KEYVALUE(KYNP, elm));
 
 	elm.u.m_v = np_single;
-	info.insert(KEYVALUE(STRING("NPSINGLE"), elm));
+	info.insert(KEYVALUE(KYNPSINGLE, elm));
 	elm.u.m_v = np_double;
-	info.insert(KEYVALUE(STRING("NPDOUBLE"), elm));
+	info.insert(KEYVALUE(KYNPDOUBLE, elm));
 	elm.u.m_v = np_memory;
-	info.insert(KEYVALUE(STRING("NPMEMORY"), elm));
+	info.insert(KEYVALUE(KYNPMEMORY, elm));
 
 	return count;
 }
@@ -302,7 +319,7 @@ int count_pics(MAPDHASH &info) {
 	MAPDHASH::iterator	kvpair, kvpic;
 	int	npics=0;
 
-	kvpair = info.find("NPIC");
+	kvpair = info.find(KYNPIC);
 	if ((kvpair != info.end())&&((*kvpair).second.m_typ == MAPT_INT)) {
 		return (*kvpair).second.u.m_v;
 	}
@@ -310,7 +327,7 @@ int count_pics(MAPDHASH &info) {
 	for(kvpair = info.begin(); kvpair != info.end(); kvpair++) {
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
-		kvpic = kvpair->second.u.m_m->find("PIC");
+		kvpic = kvpair->second.u.m_m->find(KYPIC);
 		if (kvpic != kvpair->second.u.m_m->end())
 			npics++;
 	}
@@ -318,14 +335,14 @@ int count_pics(MAPDHASH &info) {
 	MAPT	elm;
 	elm.m_typ = MAPT_INT;
 	elm.u.m_v = npics;
-	info.insert(KEYVALUE(STRING("NPIC"), elm));
+	info.insert(KEYVALUE(KYNPIC, elm));
 
 	return npics;
 }
 
 int count_scopes(MAPDHASH &info) {
 	MAPDHASH::iterator	kvpair;
-	kvpair = info.find("NSCOPES");
+	kvpair = info.find(KYNSCOPES);
 	if ((kvpair != info.end())&&((*kvpair).second.m_typ == MAPT_INT)) {
 		return (*kvpair).second.u.m_v;
 	}
@@ -430,7 +447,7 @@ void	build_plist(MAPDHASH &info) {
 			MAPDHASH::iterator kvnaddr, kvname, kvptype;
 			MAPDHASH	*phash = kvpair->second.u.m_m;
 
-			kvnaddr = phash->find(STRING("NADDR"));
+			kvnaddr = phash->find(KYNADDR);
 			if (kvnaddr != phash->end()) {
 				PERIPHP p = new PERIPH;
 				p->p_base = 0;
@@ -439,20 +456,20 @@ void	build_plist(MAPDHASH &info) {
 				p->p_phash = phash;
 				p->p_name  = NULL;
 
-				kvname = phash->find(STRING("PREFIX"));
+				kvname = phash->find(KYPREFIX);
 				assert(kvname != phash->end());
 				assert(kvname->second.m_typ == MAPT_STRING);
 				if (kvname != phash->end())
 					p->p_name = kvname->second.u.m_s;
 
-				kvptype = phash->find("PTYPE");
+				kvptype = phash->find(KYPTYPE);
 				if ((kvptype != phash->end())
 					&&(kvptype->second.m_typ == MAPT_STRING)) {
-					if (STRING("SINGLE")== *kvptype->second.u.m_s) {
+					if (KYSINGLE== *kvptype->second.u.m_s) {
 						slist.push_back(p);
-					} else if (STRING("DOUBLE")== *kvptype->second.u.m_s) {
+					} else if (KYDOUBLE== *kvptype->second.u.m_s) {
 						dlist.push_back(p);
-					} else if (STRING("MEMORY")== *kvptype->second.u.m_s) {
+					} else if (KYMEMORY== *kvptype->second.u.m_s) {
 						mlist.push_back(p);
 						plist.push_back(p);
 					} else
@@ -732,7 +749,7 @@ void	build_regdefs_h(  MAPDHASH &master, FILE *fp, STRING &fname) {
 		MAPDHASH::iterator	kvp;
 
 		nregs = 0;
-		kvp = findkey(*plist[i]->p_phash,str=STRING("REGS.N"));
+		kvp = findkey(*plist[i]->p_phash,KYREGS_N);
 		if (kvp == plist[i]->p_phash->end()) {
 			printf("REGS.N not found in %s\n", plist[i]->p_name->c_str());
 			continue;
@@ -779,10 +796,10 @@ void	build_regdefs_h(  MAPDHASH &master, FILE *fp, STRING &fname) {
 		MAPDHASH::iterator	kvp;
 
 		nregs = 0;
-		kvp = findkey(*plist[i]->p_phash,str=STRING("REGS.NOTE"));
+		kvp = findkey(*plist[i]->p_phash,KYREGS_NOTE);
 		if ((kvp != plist[i]->p_phash->end())&&(kvp->second.m_typ == MAPT_STRING))
 			fprintf(fp, "%s\n", kvp->second.u.m_s->c_str());
-		kvp = findkey(*plist[i]->p_phash,str=STRING("REGS.N"));
+		kvp = findkey(*plist[i]->p_phash,KYREGS_N);
 		if (kvp == plist[i]->p_phash->end()) {
 			printf("REGS.N not found in %s\n", plist[i]->p_name->c_str());
 			continue;
@@ -907,7 +924,7 @@ void	build_regdefs_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 		MAPDHASH::iterator	kvp;
 
 		nregs = 0;
-		kvp = findkey(*plist[i]->p_phash,str=STRING("REGS.N"));
+		kvp = findkey(*plist[i]->p_phash,KYREGS_N);
 		if (kvp == plist[i]->p_phash->end()) {
 			printf("REGS.N not found in %s\n", plist[i]->p_name->c_str());
 			continue;
@@ -959,7 +976,7 @@ void	build_regdefs_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 		MAPDHASH::iterator	kvp;
 
 		nregs = 0;
-		kvp = findkey(*plist[i]->p_phash,str=STRING("REGS.N"));
+		kvp = findkey(*plist[i]->p_phash,KYREGS_N);
 		if (kvp == plist[i]->p_phash->end()) {
 			printf("REGS.N not found in %s\n", plist[i]->p_name->c_str());
 			continue;
@@ -1446,21 +1463,74 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 	}
 
 
+	// Declare bus-master data
+	fprintf(fp,
+	"\n\n"
+	"\t//\n\t// Declaring Bus-Master data, internal wires and registers\n\t//\n"
+	"\t// These declarations come from the various components values\n"
+	"\t// given under the @MAIN.DEFNS key, for those components with\n"
+	"\t// an MTYPE flag.\n\t//\n");
+	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
+		STRINGP	defnstr;
+		if (!isbusmaster(kvpair->second))
+			continue;
+		defnstr = getstring(*kvpair->second.u.m_m, KYMAIN_DEFNS);
+		if (defnstr)
+			fprintf(fp, "%s", defnstr->c_str());
+	}
+
 	// Declare peripheral data
 	fprintf(fp,
 	"\n\n"
 	"\t//\n\t// Declaring Peripheral data, internal wires and registers\n\t//\n"
 	"\t// These declarations come from the various components values\n"
-	"\t// given under the @MAIN.DEFNS key.\n\t//\n");
+	"\t// given under the @MAIN.DEFNS key, for those components with a\n"
+	"\t// PTYPE key but no MTYPE key.\n\t//\n");
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
 		STRINGP	defnstr;
-		if (kvpair->second.m_typ != MAPT_MAP)
+		if (isbusmaster(kvpair->second))
 			continue;
 		if (!isperipheral(kvpair->second))
 			continue;
 		defnstr = getstring(*kvpair->second.u.m_m, KYMAIN_DEFNS);
 		if (defnstr)
 			fprintf(fp, "%s", defnstr->c_str());
+	}
+
+	// Declare other data
+	fprintf(fp,
+	"\n\n"
+	"\t//\n\t// Declaring other data, internal wires and registers\n\t//\n"
+	"\t// These declarations come from the various components values\n"
+	"\t// given under the @MAIN.DEFNS key, but which have neither PTYPE\n"
+	"\t// nor MTYPE keys.\n\t//\n");
+	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
+		STRINGP	defnstr;
+		if (isbusmaster(kvpair->second))
+			continue;
+		if (isperipheral(kvpair->second))
+			continue;
+		if (kvpair->second.m_typ != MAPT_MAP)
+			continue;
+		defnstr = getstring(*kvpair->second.u.m_m, KYMAIN_DEFNS);
+		if (defnstr)
+			fprintf(fp, "%s", defnstr->c_str());
+	}
+
+	// Declare interrupt vector wires.
+	fprintf(fp,
+	"\n\n"
+	"\t//\n\t// Declaring interrupt vector wires\n\t//\n"
+	"\t// These declarations come from the various components having\n"
+	"\t// PIC and PIC.MAX keys.\n\t//\n");
+	for(unsigned picid=0; picid < piclist.size(); picid++) {
+		STRINGP	defnstr;
+		if (piclist[picid]->i_max <= 0)
+			continue;
+		defnstr = piclist[picid]->i_name;
+		if (defnstr)
+			fprintf(fp, "\twire\t[%d:0]\t%s_int_vec;",
+				piclist[picid]->i_max, defnstr->c_str());
 	}
 
 	// Declare wishbone lines
@@ -1471,6 +1541,29 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 	"\twire\tnone_sel;\n"
 	"\treg\tmany_sel, many_ack;\n"
 	"\treg\t[31:0]\tr_bus_err;\n");
+	fprintf(fp, "\n"
+	"\t//\n"
+	"\t// Wishbone master wire declarations\n"
+	"\t//\n"
+	"\t// These are given for every configuration file with an @MTYPE\n"
+	"\t// tag, and the names are prefixed by whatever is in the @PREFIX tag.\n"
+	"\t//\n"
+	"\n");
+	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
+		if (!isbusmaster(kvpair->second))
+			continue;
+
+		STRINGP	strp = getstring(*kvpair->second.u.m_m, KYPREFIX);
+		const char	*pfx = strp->c_str();
+
+		fprintf(fp, "\twire\t\t%s_cyc, %s_stb, %s_ack, %s_stall, %s_err;\n",
+			pfx, pfx, pfx, pfx, pfx);
+		fprintf(fp, "\twire\t[(%d-1):0]\t%s_addr;\n", baw, pfx);
+		fprintf(fp, "\twire\t[31:0]\t%s_data, %s_idata;\n", pfx, pfx);
+		fprintf(fp, "\twire\t[3:0]\t%s_sel;\n", pfx);
+		fprintf(fp, "\n");
+	}
+
 	fprintf(fp, "\n"
 	"\t//\n"
 	"\t// Wishbone slave wire declarations\n"
@@ -1585,7 +1678,7 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 
 			fprintf(fp, "\tassign\t%6s_sel = ", pfx);
 			lowbit = dlist[i]->p_awid-2;
-			fprintf(fp, "(dio_sel)&&(wb_addr[%2d:%2d] == %2d\'b",
+			fprintf(fp, "(dio_sel)&&(wb_addr[%d:%d] == %2d\'b",
 				dnbits-1, lowbit, dnbits-lowbit);
 			for(int j=0; j<dnbits-lowbit; j++) {
 				int bit = (dnbits-1)-j;
@@ -1806,9 +1899,7 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 
 	fprintf(fp, "\t//\n\t// Declare the interrupt busses\n\t//\n");
 	for(unsigned picid=0; picid < piclist.size(); picid++) {
-		fprintf(fp, "\twire\t[%d:0]\t%s;\n\tassign\t%s = {\n",
-			piclist[picid]->i_max-1,
-			piclist[picid]->i_name->c_str(),
+		fprintf(fp, "\tassign\t%s_int_vec = {\n",
 			piclist[picid]->i_name->c_str());
 		for(int iid=piclist[picid]->i_max-1; iid>=0; iid--) {
 			INTP	iip = piclist[picid]->getint(iid);
@@ -1864,31 +1955,42 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 			if (!noalt) {
 				fputs(kvalt->second.u.m_s->c_str(), fp);
 			}
-			if (isperipheral(*kvpair->second.u.m_m)) {
-				MAPDHASH::iterator	kvname;
-				STRING		namestr = "PREFIX";
-				kvname = findkey(*kvpair->second.u.m_m, namestr);
-				if ((kvname == kvpair->second.u.m_m->end())
-					||(kvname->second.m_typ != MAPT_STRING)) {
-				} else {
-					STRINGP	nm = kvname->second.u.m_s;
+
+			if (isbusmaster(kvpair->second)) {
+				STRINGP	pfx = getstring(*kvpair->second.u.m_m,
+							KYPREFIX);
+				if (pfx) {
 					fprintf(fp, "\n");
-					fprintf(fp, "\treg\tr_%s_ack;\n", nm->c_str());
-					fprintf(fp, "\talways @(posedge i_clk)\n\t\tr_%s_ack <= (wb_stb)&&(%s_sel);\n",
-						nm->c_str(),
-						nm->c_str());
-					fprintf(fp, "\n");
-					fprintf(fp, "\tassign\t%s_ack   = r_%s_ack;\n",
-						nm->c_str(),
-						nm->c_str());
-					fprintf(fp, "\tassign\t%s_stall = 1\'b0;\n",
-						nm->c_str());
-					fprintf(fp, "\tassign\t%s_data  = 32\'h0;\n",
-						nm->c_str());
+					fprintf(fp, "\tassign\t%s_cyc = 1\'b0;\n", pfx->c_str());
+					fprintf(fp, "\tassign\t%s_stb = 1\'b0;\n", pfx->c_str());
+					fprintf(fp, "\tassign\t%s_we  = 1\'b0;\n", pfx->c_str());
+					fprintf(fp, "\tassign\t%s_sel = 4\'b0000;\n", pfx->c_str());
+					fprintf(fp, "\tassign\t%s_addr = 0;\n", pfx->c_str());
+					fprintf(fp, "\tassign\t%s_data = 0;\n", pfx->c_str());
 					fprintf(fp, "\n");
 				}
 			}
 
+			if (isperipheral(*kvpair->second.u.m_m)) {
+				STRINGP	pfx = getstring(*kvpair->second.u.m_m,
+							KYPREFIX);
+				if (pfx) {
+					fprintf(fp, "\n");
+					fprintf(fp, "\treg\tr_%s_ack;\n", pfx->c_str());
+					fprintf(fp, "\talways @(posedge i_clk)\n\t\tr_%s_ack <= (wb_stb)&&(%s_sel);\n",
+						pfx->c_str(),
+						pfx->c_str());
+					fprintf(fp, "\n");
+					fprintf(fp, "\tassign\t%s_ack   = r_%s_ack;\n",
+						pfx->c_str(),
+						pfx->c_str());
+					fprintf(fp, "\tassign\t%s_stall = 1\'b0;\n",
+						pfx->c_str());
+					fprintf(fp, "\tassign\t%s_data  = 32\'h0;\n",
+						pfx->c_str());
+					fprintf(fp, "\n");
+				}
+			}
 			kvint    = kvpair->second.u.m_m->find(KY_INT);
 			if ((kvint != kvpair->second.u.m_m->end())
 					&&(kvint->second.m_typ == MAPT_MAP)) {
