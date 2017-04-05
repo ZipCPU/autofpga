@@ -71,7 +71,7 @@ typedef	struct MAPT_S {
 
 typedef	std::pair<STRING,MAPT>	KEYVALUE;
 
-extern	STRING *trim(STRING &s);
+extern	STRING *trim(const STRING &s);
 extern	bool	splitkey(const STRING &ky, STRING &mkey, STRING &subky);
 extern	void	addtomap(MAPDHASH &fm, const STRING ky, STRING vl);
 extern	void	mapdump(MAPDHASH &fm);

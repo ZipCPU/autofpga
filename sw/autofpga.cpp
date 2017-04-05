@@ -67,6 +67,7 @@ public:
 	STRINGP		i_name;
 	STRINGP		i_wire;
 	unsigned	i_id;
+	MAPDHASH	*i_hash;
 	INTINFO(void) { i_name = NULL; i_wire = NULL; i_id = 0; }
 	INTINFO(STRINGP nm, STRINGP wr, unsigned id)
 		: i_name(nm), i_wire(wr), i_id(id) {}
@@ -106,6 +107,7 @@ public:
 		ip->i_name = iname;
 		ip->i_wire = getstring(psrc, KY_WIRE);
 		ip->i_id   = i_max;
+		ip->i_hash = &psrc;
 		i_nallocated++;
 	} void add(unsigned id, MAPDHASH &psrc, STRINGP iname) {
 		if (!iname) {
@@ -131,6 +133,7 @@ public:
 		ip->i_name = iname;
 		ip->i_wire = getstring(psrc, KY_WIRE);
 		ip->i_id   = id;
+		ip->i_hash = &psrc;
 		i_nassigned++;
 		i_nallocated++;
 	} void assignids(void) {
@@ -171,6 +174,14 @@ public:
 		} 
 		if (i_max < i_ilist.size()) {
 			fprintf(stderr, "WARNING: Too many interrupts assigned to PIC %s\n", i_name->c_str());
+		}
+
+		// Write the interrupt assignments back into the map
+		for(unsigned iid=0; iid<i_ilist.size(); iid++) {
+			if (i_ilist[iid]->i_id <= i_max) {
+				STRING	ky = (*i_name) + ".ID";
+				setvalue(*i_ilist[iid]->i_hash, ky, i_ilist[iid]->i_id);
+			}
 		}
 	}
 
@@ -726,6 +737,8 @@ printf("Examining: @%s.%s.%s\n",
 	// Now, let's assign everything that doesn't yet have any definitions
 	for(unsigned picid=0; picid<piclist.size(); picid++)
 		piclist[picid]->assignids();
+	reeval(master);
+	mapdump(master);
 }
 
 void	assign_scopes(    MAPDHASH &master) {

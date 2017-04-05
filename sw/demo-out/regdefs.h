@@ -108,6 +108,10 @@
 #define	SUBSECTOROF(A)	((A) & (-1<<12))
 #define	PAGEOF(A)	((A) & (-1<<8))
 
+
+#define	ISPIF_EN	0x80040004
+#define	ISPIF_DIS	0x00040004
+#define	ISPIF_CLR	0x00000004
 // End of definitions from REGS.INSERT.H
 
 

@@ -45,7 +45,7 @@
 #include "ast.h"
 #include "kveval.h"
 
-STRING	*trim(STRING &s) {
+STRING	*trim(const STRING &s) {
 	const char	*a, *b;
 	STRINGP		strp;
 	a = s.c_str();
@@ -420,10 +420,45 @@ void	setvalue(MAPDHASH &master, const STRING &ky, int value) {
 
 	kvpair = findkey(master, ky);
 	if (kvpair == master.end()) {
+		STRING	mkey, subky;
+		STRINGP	trimmed;
+
+		trimmed = trim(ky);
+		if ((*trimmed)[0] == '@') {
+			STRINGP	tmp = new STRING(trimmed->substr(1,trimmed->size()));
+			delete trimmed;
+			trimmed = tmp;
+		} if ((*trimmed)[0] == '$') {
+			STRINGP	tmp = new STRING(trimmed->substr(1,trimmed->size()));
+			delete trimmed;
+			trimmed = tmp;
+		}
+
+		if (splitkey(*trimmed, mkey, subky)) {
+			MAPT	subfm;
+			MAPDHASH::iterator	subloc = master.find(mkey);
+			delete	trimmed;
+			if (subloc == master.end()) {
+				// Create a map to hold our value
+				subfm.m_typ = MAPT_MAP;
+				subfm.u.m_m = new MAPDHASH;
+				master.insert(KEYVALUE(mkey, subfm ) );
+			} else {
+				// The map exists, let's reference it
+				subfm = (*subloc).second;
+				if (subfm.m_typ != MAPT_MAP) {
+					fprintf(stderr, "MAP[%s] isnt a map\n", mkey.c_str());
+					return;
+				}
+			} setvalue(*subfm.u.m_m, subky, value);
+			return;
+		}
+
 		MAPT	elm;
 		elm.m_typ = MAPT_INT;
 		elm.u.m_v = value;
-		master.insert(KEYVALUE(ky, elm));
+		master.insert(KEYVALUE(*trimmed, elm ) );
+		delete	trimmed;
 	} else if (kvpair->second.m_typ == MAPT_MAP) {
 		MAPDHASH *subhash = kvpair->second.u.m_m;
 		kvsub = subhash->find(KYVAL);

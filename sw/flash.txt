@@ -43,6 +43,12 @@
 @PTYPE=  MEMORY
 @INT.FLASH.WIRE= flash_interrupt
 @INT.FLASH.PIC= buspic
+@$ISPIF_EN.EXPR=@$THIS.ISPIF_DIS|0x80000000
+@ISPIF_EN.FORMAT=0x%08x
+@$ISPIF_DIS.EXPR=(@$THIS.ISPIF_CLR)|((@$THIS.ISPIF_CLR)<<16)
+@ISPIF_DIS.FORMAT=0x%08x
+@$ISPIF_CLR.EXPR=(1<<(@$THIS.INT.FLASH.buspic.ID))
+@ISPIF_CLR.FORMAT=0x%08x
 @TOP.PORTLIST=
 		// Top level Quad-SPI I/O ports
 		o_qspi_cs_n, io_qspi_dat
@@ -159,6 +165,11 @@
 @LDSCRIPT.PSTR	rx
 @LDSCRIPT.PTR	flash
 @LDSCRIPT.DEF	_flash=ORIGIN(flash);
+@REGS.INSERT.H
+
+#define	ISPIF_EN	@$THIS.ISPIF_EN
+#define	ISPIF_DIS	@$THIS.ISPIF_DIS
+#define	ISPIF_CLR	@$THIS.ISPIF_CLR
 #
 # Now, the control interface
 @PREFIX= flctl

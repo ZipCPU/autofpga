@@ -241,6 +241,12 @@ typedef struct ENETMDIO_S {
 
 
 
+
+#define	ISPIF_EN	0x80040004
+#define	ISPIF_DIS	0x00040004
+#define	ISPIF_CLR	0x00000004
+
+
 #define	_BOARD_HAS_RTCLIGHT
 static volatile RTCLIGHT *const _rtc = &((RTCLIGHT *)1344);
 

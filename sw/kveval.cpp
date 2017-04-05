@@ -242,10 +242,10 @@ void	resolve(MAPDHASH &exmap) {
 	}
 
 	if ((kvval != exmap.end())&&(kvval->second.m_typ == MAPT_INT)) {
-		strp = genstr((kvfmt != exmap.end())
-				? *kvfmt->second.u.m_s
-				: STRING(""),
-			kvval->second.u.m_v);
+		if((kvfmt != exmap.end())&&(kvfmt->second.m_typ == MAPT_STRING))
+			strp = genstr(*kvfmt->second.u.m_s,kvval->second.u.m_v);
+		else
+			strp = genstr(STRING(""),kvval->second.u.m_v);
 		MAPT	elm;
 		elm.m_typ = MAPT_STRING;
 		elm.u.m_s = strp;
