@@ -104,11 +104,11 @@ also depend upon the master clock rate.
 This project is currently in its bare infancy.  Some success has been
 demonstrated to date in building a bus.  This success may be seen in the 
 original [initial demo](blob/master/sw/demo.txt), as well as in the updated and
-[subsequent demo](tree/master/sw/demo-out/).
+[subsequent demo](../..tree/master/sw/demo-out/).
 
-As of 20170405, the [main.v](blob/master/sw/demo-out/main.v),
-[regdef.h](blob/master/sw/demo-out/main.v),
-and [regdefs.cpp](blob/master/sw/demo-out/main.v) files now pass an
+As of 20170405, the [main.v](sw/demo-out/main.v),
+[regdef.h](ster/sw/demo-out/main.v),
+and [regdefs.cpp](ster/sw/demo-out/main.v) files now pass an
 initial scrub by 
 [Verilator](https://www.veripool.org/wiki/verilator)
 and [GCC](https://gcc.gnu.org), so I anticipate running
@@ -121,12 +121,12 @@ In detail:
 - Simple bus components ... just work.  (Not tested yet, though)
 - Components with logic in the toplevel file appear to work.  (Since Verilator doesn't simulate this, it make take another round or two to find out what's missing there.)
 - Although it shouldn't have any problems integrating memory components and cores, I have yet to try integrating any [SDRAM](https://github.com/ZipCPU/xulalx25soc/blob/master/rtl/wbsdram.v) or [DDR3 SDRAM](http://opencores.org/project,wbddr3) components.
-- Only one PC host to wishbone busmaster component has been integrated.  Driving the design from either JTAG or Digilent's DEPP interface would require a simple modification to this.
+- Only one [PC host to wishbone busmaster](sw/wbubus.txt) component has been integrated.  Driving the design from either JTAG or Digilent's DEPP interface would require a simple modification to this.
 - Addresses get assigned in three groups, and processed in three groups: components having only one address, components having more addresses but only a single clock delay, and all other components and memories
-- Interrupts, get assigned to any requested bus, and then posted
-- A simple mathematical expression evaluator exists, allowing simple math expressions and print formats.  This makes it possible to set a global clock frequency value, and to then set baud rates clock dividers from it.
+- Interrupts get assigned to a named controller, and then C++ header files can be updated to reflect that
+- A simple mathematical expression evaluator exists, allowing simple math expressions and print formats.  This makes it possible to set a global clock frequency value, and to then set baud rates and other clock dividers from it.
 - Automatically assigning, connecting, and building [wishbone scopes](https://github.com/ZipCPU/wbscope) just ... isn't there yet
-- The auto builder does nothing to create the master simulation file, or any RTL based Makefiles.
+- The auto builder does nothing to create the master C++ Verilator simulation file, or any RTL based Makefiles.
 - While device selection via bus decoding is built, it isn't optimized yet.  I'll probably return to this only when the bus decoding logic isn't fast enough, and that'll require it (nearly) running on actual hardware.
 - It doesn't build any linker script components ... yet.
 - The LaTeX specification table building isn't there ... yet.
@@ -135,16 +135,16 @@ In detail:
 
 Component files now exist for many of the components I've been using regularly.
 These include: 
-a [Flash](blob/master/sw/flash.txt),
-[block RAM](blob/master/sw/bkram.txt),
-a [UART console](blob/master/sw/wbuart.txt),
-a very simple [GPIO controller](blob/master/sw/gpio.txt),
-[RMII ethernet controller](blob/master/sw/enet.txt),
-[MDIO ethernet control interface](blob/master/sw/mdio.txt),
-a [GPS UART and PPS-driven internal clock](blob/master/sw/gps.txt), 
-a [Real-Time (GPS driven) Clock](blob/master/sw/rtcgps.txt),
-a [PS/2 Mouse](blob/master/sw/wbmouse.txt),
-an [OLEDRGB component](blob/master/sw/wboled.txt),
+a [Flash](sw/flash.txt),
+[block RAM](sw/bkram.txt),
+a [UART console](sw/wbuart.txt),
+a very simple [GPIO controller](sw/gpio.txt),
+[RMII ethernet controller](sw/enet.txt),
+[MDIO ethernet control interface](sw/mdio.txt),
+a [GPS UART and PPS-driven internal clock](sw/gps.txt), 
+a [Real-Time (GPS driven) Clock](sw/rtcgps.txt),
+a [PS/2 Mouse](sw/wbmouse.txt),
+an [OLEDRGB component](sw/wboled.txt),
 and more.
 Many of these component cores exist and have their own repositories elsewhere.
 For example, the wishbone UART core may be found
