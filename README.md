@@ -103,12 +103,12 @@ also depend upon the master clock rate.
 
 This project is currently in its bare infancy.  Some success has been
 demonstrated to date in building a bus.  This success may be seen in the 
-original [initial demo](blob/master/sw/demo.txt), as well as in the updated and
-[subsequent demo](../..tree/master/sw/demo-out/).
+original [initial demo](sw/demo.txt), as well as in the updated and
+[subsequent demo](../../tree/master/sw/demo-out/).
 
 As of 20170405, the [main.v](sw/demo-out/main.v),
-[regdef.h](ster/sw/demo-out/main.v),
-and [regdefs.cpp](ster/sw/demo-out/main.v) files now pass an
+[regdef.h](sw/demo-out/regdefs.h),
+and [regdefs.cpp](sw/demo-out/regdefs.cpp) files now pass an
 initial scrub by 
 [Verilator](https://www.veripool.org/wiki/verilator)
 and [GCC](https://gcc.gnu.org), so I anticipate running
