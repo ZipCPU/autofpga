@@ -55,12 +55,12 @@ The goal of AutoFPGA is to be able to run it with a list of peripheral
 definition files, given on the command line, and to thus be able to generate
 (or update?) the various board definition files discussed above:
 
-- sw/rtl/toplevel.v
-- sw/rtl/main.v
+- sw/rtl/toplevel.v (Done, not tested)
+- sw/rtl/main.v	 (Done, passes Verilator build test)
 - sw/rtl/scopelist.v
-- sw/host/regdefs.h
-- sw/host/regdefs.cpp
-- sw/zlib/board.h
+- sw/host/regdefs.h (Done, builds with g++)
+- sw/host/regdefs.cpp (Done, builds with g++)
+- sw/zlib/board.h (Done, not tested)
 - sw/zlib/board.ld
 - doc/src/(component name).tex
 
@@ -107,7 +107,7 @@ original [initial demo](sw/demo.txt), as well as in the updated and
 [subsequent demo](../../tree/master/sw/demo-out/).
 
 As of 20170405, the [main.v](sw/demo-out/main.v),
-[regdef.h](sw/demo-out/regdefs.h),
+[regdefs.h](sw/demo-out/regdefs.h),
 and [regdefs.cpp](sw/demo-out/regdefs.cpp) files now pass an
 initial scrub by 
 [Verilator](https://www.veripool.org/wiki/verilator)
