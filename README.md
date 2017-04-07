@@ -127,7 +127,7 @@ In detail:
 - A simple mathematical expression evaluator exists, allowing simple math expressions and print formats.  This makes it possible to set a global clock frequency value, and to then set baud rates and other clock dividers from it.
 - Automatically assigning, connecting, and building [wishbone scopes](https://github.com/ZipCPU/wbscope) just ... isn't there yet
 - The auto builder does nothing to create the master C++ Verilator simulation file, or any RTL based Makefiles.
-- While device selection via bus decoding is built, it isn't optimized yet.  I'll probably return to this only when the bus decoding logic isn't fast enough, and that'll require it (nearly) running on actual hardware.
+- Optimized bus decoding--at least to one level.  I may need to return to this if the bus decoding logic isn't fast enough, but that'll require it (nearly) running on actual hardware.
 - It doesn't build any linker script components ... yet.
 - The LaTeX specification table building isn't there ... yet.
 

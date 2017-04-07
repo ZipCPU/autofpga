@@ -216,7 +216,8 @@ STRINGP	genstr(STRING fmt, int val) {
 	} else {
 		printf("No format\n");
 		sprintf(buf, "%d", val);
-	} printf("New string is %s\n", buf);
+	}
+
 	r = new STRING(buf);
 	delete[] buf;
 	return r;

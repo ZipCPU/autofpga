@@ -281,10 +281,10 @@ static volatile unsigned *const _buspic = &((unsigned *)1028);
 static volatile @$THIS.IOTYPE *const _gpsu = &((@$THIS.IOTYPE *)1296);
 
 #define	_BOARD_HAS_ICAPTETWO
-static volatile unsigned *const _icape = &((unsigned *)1664);
+static volatile unsigned *const _icape = &((unsigned *)2176);
 
 #define	_BOARD_HAS_NETMDIO
-static volatile ENETMDIO *const _mdio = &((ENETMDIO *)1792);
+static volatile ENETMDIO *const _mdio = &((ENETMDIO *)2304);
 
 //
 // Interrupt assignments (3 PICs)

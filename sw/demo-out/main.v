@@ -411,31 +411,47 @@ module	main(i_clk, i_reset,
 	// NADDR (number of addresses required) tag
 	//
 
-	assign	      buserr_sel = (sio_sel)&&(wb_addr[2:0] ==  3'b0_00);
-	assign	      buspic_sel = (sio_sel)&&(wb_addr[2:0] ==  3'b0_01);
-	assign	   clkhdmiin_sel = (sio_sel)&&(wb_addr[2:0] ==  3'b0_10);
-	assign	  clkhdmiout_sel = (sio_sel)&&(wb_addr[2:0] ==  3'b0_11);
-	assign	        gpio_sel = (sio_sel)&&(wb_addr[2:0] ==  3'b1_00);
-	assign	    pwrcount_sel = (sio_sel)&&(wb_addr[2:0] ==  3'b1_01);
-	assign	     version_sel = (sio_sel)&&(wb_addr[2:0] ==  3'b1_10);
-	assign	   gck_sel = (dio_sel)&&(wb_addr[5:2] ==  4'b0000_);
-	assign	  gpsu_sel = (dio_sel)&&(wb_addr[5:2] ==  4'b0001_);
-	assign	  mous_sel = (dio_sel)&&(wb_addr[5:2] ==  4'b0010_);
-	assign	  oled_sel = (dio_sel)&&(wb_addr[5:2] ==  4'b0011_);
-	assign	   rtc_sel = (dio_sel)&&(wb_addr[5:2] ==  4'b0100_);
-	assign	sdcard_sel = (dio_sel)&&(wb_addr[5:2] ==  4'b0101_);
-	assign	  uart_sel = (dio_sel)&&(wb_addr[5:2] ==  4'b0110_);
-	assign	   gtb_sel = (dio_sel)&&(wb_addr[5:3] ==  3'b100);
-	assign	  netp_sel = (dio_sel)&&(wb_addr[5:3] ==  3'b101);
-	assign	   sio_sel = (wb_addr[29: 3] == 27'b0000_0000_0000_0000_0000_0100_000);
-	assign	   dio_sel = (wb_addr[29: 6] == 24'b0000_0000_0000_0000_0000_0101_);
-	assign	 flctl_sel = (wb_addr[29: 2] == 28'b0000_0000_0000_0000_0000_0110_0000_);
-	assign	   cfg_sel = (wb_addr[29: 5] == 25'b0000_0000_0000_0000_0000_0110_1);
-	assign	  mdio_sel = (wb_addr[29: 5] == 25'b0000_0000_0000_0000_0000_0111_0);
-	assign	  netb_sel = (wb_addr[29:12] == 18'b0000_0000_0000_0000_01);
-	assign	   mem_sel = (wb_addr[29:17] == 13'b0000_0000_0000_1);
-	assign	 flash_sel = (wb_addr[29:22] ==  8'b0000_0001_);
-	assign	none_sel = (wb_stb)&&({ flash_sel, mem_sel, netb_sel, mdio_sel, cfg_sel, flctl_sel, dio_sel, sio_sel} == 0);
+	wire	[2:0]	sio_skip; // bits 0000001c, sbaw=3
+	assign	sio_skip = {
+			wb_addr[ 2: 0]
+		};
+	assign	      buserr_sel = (sio_sel)&&(sio_skip[ 2: 0] ==  3'b000_);
+	assign	      buspic_sel = (sio_sel)&&(sio_skip[ 2: 0] ==  3'b001_);
+	assign	   clkhdmiin_sel = (sio_sel)&&(sio_skip[ 2: 0] ==  3'b010_);
+	assign	  clkhdmiout_sel = (sio_sel)&&(sio_skip[ 2: 0] ==  3'b011_);
+	assign	        gpio_sel = (sio_sel)&&(sio_skip[ 2: 0] ==  3'b100_);
+	assign	    pwrcount_sel = (sio_sel)&&(sio_skip[ 2: 0] ==  3'b101_);
+	assign	     version_sel = (sio_sel)&&(sio_skip[ 2: 0] ==  3'b110_);
+	wire	[3:0]	dio_skip; // bits 000000f0, sbaw=6
+	assign	dio_skip = {
+			wb_addr[ 5: 2]
+		};
+	assign	         gck_sel = (dio_sel)&&(dio_skip[ 3: 0] ==  4'b0000_);
+	assign	        gpsu_sel = (dio_sel)&&(dio_skip[ 3: 0] ==  4'b0001_);
+	assign	        mous_sel = (dio_sel)&&(dio_skip[ 3: 0] ==  4'b0010_);
+	assign	        oled_sel = (dio_sel)&&(dio_skip[ 3: 0] ==  4'b0011_);
+	assign	         rtc_sel = (dio_sel)&&(dio_skip[ 3: 0] ==  4'b0100_);
+	assign	      sdcard_sel = (dio_sel)&&(dio_skip[ 3: 0] ==  4'b0101_);
+	assign	        uart_sel = (dio_sel)&&(dio_skip[ 3: 0] ==  4'b0110_);
+	assign	         gtb_sel = (dio_sel)&&(dio_skip[ 3: 1] ==  3'b100);
+	assign	        netp_sel = (dio_sel)&&(dio_skip[ 3: 1] ==  3'b101);
+	wire	[6:0]	wb_skip; // bits 01084d80, sbaw=23
+	assign	wb_skip = {
+			wb_addr[22],
+			wb_addr[17],
+			wb_addr[12],
+			wb_addr[ 9: 8],
+			wb_addr[ 6: 5]
+		};
+	assign	       flctl_sel = ( wb_skip[ 6: 0] ==  7'b000_1000_);
+	assign	         cfg_sel = ( wb_skip[ 6: 0] ==  7'b000_1001_);
+	assign	        mdio_sel = ( wb_skip[ 6: 0] ==  7'b000_1010_);
+	assign	        netb_sel = ( wb_skip[ 6: 4] ==  3'b001_);
+	assign	         mem_sel = ( wb_skip[ 6: 5] ==  2'b01);
+	assign	       flash_sel = ( wb_skip[ 6: 6] ==  1'b1);
+	assign	         dio_sel = ( wb_skip[ 6: 2] ==  5'b000_01);
+	assign	         sio_sel = ( wb_skip[ 6: 0] ==  7'b000_0100_);
+	assign	none_sel = (wb_stb)&&({ sio_sel, dio_sel, flash_sel, mem_sel, netb_sel, mdio_sel, cfg_sel, flctl_sel} == 0);
 	//
 	// many_sel
 	//
@@ -452,7 +468,7 @@ module	main(i_clk, i_reset,
 `ifdef	VERILATOR
 
 	always @(*)
-		case({flash_sel, mem_sel, netb_sel, mdio_sel, cfg_sel, flctl_sel, dio_sel, sio_sel})
+		case({sio_sel, dio_sel, flash_sel, mem_sel, netb_sel, mdio_sel, cfg_sel, flctl_sel})
 			8'h0: many_sel = 1'b0;
 			8'b10000000: many_sel = 1'b0;
 			8'b01000000: many_sel = 1'b0;
@@ -468,7 +484,7 @@ module	main(i_clk, i_reset,
 `else	// VERILATOR
 
 	always @(*)
-		case({flash_sel, mem_sel, netb_sel, mdio_sel, cfg_sel, flctl_sel, dio_sel, sio_sel})
+		case({sio_sel, dio_sel, flash_sel, mem_sel, netb_sel, mdio_sel, cfg_sel, flctl_sel})
 			8'h0: many_sel <= 1'b0;
 			8'b10000000: many_sel <= 1'b0;
 			8'b01000000: many_sel <= 1'b0;
@@ -499,16 +515,18 @@ module	main(i_clk, i_reset,
 	// immediately one after the other.
 	//
 	always @(posedge i_clk)
-		case({flash_ack, mem_ack, netb_ack, mdio_ack, cfg_ack, flctl_ack, dio_ack, sio_ack})
-			8'h0: many_ack <= 1'b0;
-			8'b10000000: many_ack <= 1'b0;
-			8'b01000000: many_ack <= 1'b0;
-			8'b00100000: many_ack <= 1'b0;
-			8'b00010000: many_ack <= 1'b0;
-			8'b00001000: many_ack <= 1'b0;
-			8'b00000100: many_ack <= 1'b0;
-			8'b00000010: many_ack <= 1'b0;
-			8'b00000001: many_ack <= 1'b0;
+		case({sio_ack, dio_ack, flash_ack, mem_ack, netb_ack, mdio_ack, cfg_ack, flctl_ack, dio_ack, sio_ack})
+			10'h0: many_ack <= 1'b0;
+			10'b1000000000: many_ack <= 1'b0;
+			10'b0100000000: many_ack <= 1'b0;
+			10'b0010000000: many_ack <= 1'b0;
+			10'b0001000000: many_ack <= 1'b0;
+			10'b0000100000: many_ack <= 1'b0;
+			10'b0000010000: many_ack <= 1'b0;
+			10'b0000001000: many_ack <= 1'b0;
+			10'b0000000100: many_ack <= 1'b0;
+			10'b0000000010: many_ack <= 1'b0;
+			10'b0000000001: many_ack <= 1'b0;
 		default: many_ack <= (wb_cyc);
 		endcase
 	//
@@ -529,7 +547,7 @@ module	main(i_clk, i_reset,
 		pre_dio_ack[1:0] <= { pre_dio_ack[0], (wb_stb)&&(dio_sel) };
 	always @(posedge i_clk)
 		dio_ack <= pre_dio_ack[1];
-	assign	wb_ack = (wb_cyc)&&(|{flash_ack, mem_ack, netb_ack, mdio_ack, cfg_ack, flctl_ack, dio_ack, sio_ack});
+	assign	wb_ack = (wb_cyc)&&(|{sio_ack, dio_ack, flash_ack, mem_ack, netb_ack, mdio_ack, cfg_ack, flctl_ack, dio_ack, sio_ack});
 
 
 	//
@@ -550,7 +568,9 @@ module	main(i_clk, i_reset,
 		||(wb_stb)&&(  mdio_sel)&&(  mdio_stall)
 		||(wb_stb)&&(  netb_sel)&&(  netb_stall)
 		||(wb_stb)&&(   mem_sel)&&(   mem_stall)
-		||(wb_stb)&&( flash_sel)&&( flash_stall);
+		||(wb_stb)&&( flash_sel)&&( flash_stall)
+		||(wb_stb)&&(   dio_sel)&&(   dio_stall)
+		||(wb_stb)&&(   sio_sel)&&(   sio_stall);
 
 
 	//
@@ -1208,15 +1228,17 @@ module	main(i_clk, i_reset,
 
 	always @(*)
 	begin
-		casez({ flash_ack, mem_ack, netb_ack, mdio_ack, cfg_ack, flctl_ack, dio_ack, sio_ack })
-			8'b1???????: wb_idata = flctl_data;
-			8'b01??????: wb_idata = cfg_data;
-			8'b001?????: wb_idata = mdio_data;
-			8'b0001????: wb_idata = netb_data;
-			8'b00001???: wb_idata = mem_data;
-			8'b000001??: wb_idata = flash_data;
-			8'b0000001?: wb_idata = dio_data;
-			8'b00000001: wb_idata = sio_data;
+		casez({ sio_ack, dio_ack, flash_ack, mem_ack, netb_ack, mdio_ack, cfg_ack, flctl_ack, dio_ack, sio_ack })
+			10'b1?????????: wb_idata = flctl_data;
+			10'b01????????: wb_idata = cfg_data;
+			10'b001???????: wb_idata = mdio_data;
+			10'b0001??????: wb_idata = netb_data;
+			10'b00001?????: wb_idata = mem_data;
+			10'b000001????: wb_idata = flash_data;
+			10'b0000001???: wb_idata = dio_data;
+			10'b00000001??: wb_idata = sio_data;
+			10'b000000001?: wb_idata = dio_data;
+			10'b0000000001: wb_idata = sio_data;
 			default: wb_idata = 32'h0;
 		endcase
 	end
@@ -1225,15 +1247,17 @@ module	main(i_clk, i_reset,
 
 	always @(*)
 	begin
-		casez({ flash_ack, mem_ack, netb_ack, mdio_ack, cfg_ack, flctl_ack, dio_ack, sio_ack })
-			8'b1???????: wb_idata <= flctl_data;
-			8'b01??????: wb_idata <= cfg_data;
-			8'b001?????: wb_idata <= mdio_data;
-			8'b0001????: wb_idata <= netb_data;
-			8'b00001???: wb_idata <= mem_data;
-			8'b000001??: wb_idata <= flash_data;
-			8'b0000001?: wb_idata <= dio_data;
-			8'b00000001: wb_idata <= sio_data;
+		casez({ sio_ack, dio_ack, flash_ack, mem_ack, netb_ack, mdio_ack, cfg_ack, flctl_ack, dio_ack, sio_ack })
+			10'b1?????????: wb_idata <= flctl_data;
+			10'b01????????: wb_idata <= cfg_data;
+			10'b001???????: wb_idata <= mdio_data;
+			10'b0001??????: wb_idata <= netb_data;
+			10'b00001?????: wb_idata <= mem_data;
+			10'b000001????: wb_idata <= flash_data;
+			10'b0000001???: wb_idata <= dio_data;
+			10'b00000001??: wb_idata <= sio_data;
+			10'b000000001?: wb_idata <= dio_data;
+			10'b0000000001: wb_idata <= sio_data;
 			default: wb_idata <= 32'h0;
 		endcase
 	end

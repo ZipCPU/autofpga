@@ -46,6 +46,12 @@ extern const	STRING	KYLEGAL;
 extern const	STRING	KYCMDLINE;
 extern const	STRING	KYSUBD;
 extern const	STRING	KYBUS_ADDRESS_WIDTH;
+extern const	STRING	KYSKIPADDR;
+//
+extern const	STRING	KYSIO;
+extern const	STRING	KYDIO;
+extern const	STRING	KYSIO_SEL;
+extern const	STRING	KYDIO_SEL;
 //
 extern const	STRING	KYPREFIX;
 extern const	STRING	KYACCESS;
@@ -55,6 +61,11 @@ extern const	STRING	KYMTYPE;
 extern const	STRING	KYBASE;
 extern const	STRING	KYMASK;
 extern const	STRING	KYNADDR;
+// extern const	STRING	KYSKIPADDR;	// Already defined for top level
+extern const	STRING	KYSKIPMASK;
+extern const	STRING	KYSKIPNBITS;
+extern const	STRING	KYSKIPAWID;
+extern const	STRING	KYSKIPDEFN;
 //
 extern const	STRING	KYEXPR;
 extern const	STRING	KYVAL;
