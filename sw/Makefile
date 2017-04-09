@@ -67,10 +67,12 @@ autofpga: $(OBJECTS)
 	echo $(OBJECTS)
 	$(CXX) $(CFLAGS) $(OBJECTS) -o $@
 
-VSRCS := bkram.txt enet.txt flash.txt gps.txt icape.txt mdio.txt wbuart.txt \
-	sdspi.txt wbmouse.txt wboled.txt clkcounter.txt gpio.txt pwrcount.txt \
-	version.txt buserr.txt zipmaster.txt pic.txt rtcgps.txt clock.txt \
-	hdmi.txt wbubus.txt dlyarbiter.txt
+VSRCS := clock.txt bkram.txt flash.txt zipmaster.txt wbubus.txt dlyarbiter.txt \
+	gps.txt icape.txt mdio.txt spio.txt wboledbw.txt rtcdate.txt	\
+	hdmi.txt clkcounter.txt gpio.txt pwrcount.txt			\
+	version.txt buserr.txt pic.txt rtcgps.txt wbmouse.txt
+# Unused:
+#	enet.txt sdspi.txt wbuart.txt
 
 .PHONY: demo
 demo: autofpga $(VSRCS)

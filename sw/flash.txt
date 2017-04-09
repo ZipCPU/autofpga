@@ -55,15 +55,14 @@
 @TOP.IODECL=
 	// Quad SPI flash
 	output	wire		o_qspi_cs_n;
-	inout	[3:0]		io_qspi_dat;
+	inout	wire	[3:0]	io_qspi_dat;
 @TOP.DEFNS=
 	wire		w_qspi_sck, w_qspi_cs_n;
 	wire	[1:0]	qspi_bmod;
 	wire	[3:0]	qspi_dat;
-	wire	[3:0]	i_qspi_dat;
 @TOP.MAIN=
 		// Quad SPI flash
-		w_qspi_cs_n, w_qspi_sck, qspi_dat, i_qspi_dat, qspi_bmod
+		w_qspi_cs_n, w_qspi_sck, qspi_dat, io_qspi_dat, qspi_bmod
 @TOP.INSERT=
 	//
 	//
@@ -76,6 +75,7 @@
 	//	11	Quad SPI mode coming from the device (read mode)
 	assign io_qspi_dat = (~qspi_bmod[1])?({2'b11,1'bz,qspi_dat[0]})
 				:((qspi_bmod[0])?(4'bzzzz):(qspi_dat[3:0]));
+	assign	o_qspi_cs_n = w_qspi_cs_n;
 
 	// The following primitive is necessary in many designs order to gain
 	// access to the o_qspi_sck pin.  It's not necessary on the Arty,
@@ -117,7 +117,7 @@
 	.PACK(1'b0),
 	// USRCLKO, 1-bit input: User CCLK input -- This is why I am using this
 	// module at all.
-	.USRCCLKO(qspi_sck),
+	.USRCCLKO(w_qspi_sck),
 	// USRCCLKTS, 1'b input: User CCLK 3-state enable input
 	//	An active high here places the clock into a high impedence
 	//	state.  Since we wish to use the clock as an active output
@@ -178,6 +178,12 @@
 # This cannot be a DOUBLE peripheral type, since our response may take more than
 # two clock cycles.
 @PTYPE= OTHER
+@MAIN.INSERT=
+	// The Flash control interface result comes back together with the
+	// flash interface itself.  Hence, we always return zero here.
+	assign	flctl_ack   = 1'b0;
+	assign	flctl_stall = 1'b0;
+	assign	flctl_data  = 0;
 @REGS.NOTE= // FLASH erase/program configuration registers
 @REGS.N= 4
 @REGS.0= 0 R_QSPI_EREG QSPIE

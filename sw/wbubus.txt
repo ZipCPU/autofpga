@@ -39,15 +39,15 @@
 @PREFIX=wbu
 @ACCESS=WBUBUS_MASTER
 @MTYPE=HOST
+@$BAUDRATE=1000000
+@$SETUP.EXPR=@$CLKFREQHZ / @$THIS.BAUDRATE
+@SETUP.FORMAT=24'h%x
 @TOP.PORTLIST=
-@BAUDRATE=1000000
-@$SETUP.EXPR=@$CLKFREQHZ / @$BAUDRATE
-@SETUP.FORMAT=31'h%x
-@TOP.PORTLIST=
-	i_host_uart_rx, o_host_uart_tx
-@TOP.IODECLS=
-	// UART to Host Interface
-	input			i_host_uart_rx;
+		// UART/host to wishbone interface
+		i_host_uart_rx, o_host_uart_tx
+@TOP.IODECL=
+	// UART/host to wishbone interface
+	input	wire		i_host_uart_rx;
 	output	wire		o_host_uart_tx;
 @TOP.DEFNS=
 	//
@@ -55,11 +55,7 @@
 	// UART interface
 	//
 	//
-	// localparam	BUSUART = 31'h50000051;	// ~1MBaud, 7 bits, no flwctrl
-	localparam	BUSUART = @$THIS.SETUP;	// @$BAUDRATE baud
-	wire	[30:0]	bus_uart_setup;
-	assign		bus_uart_setup = BUSUART;
-
+	localparam [23:0] BUSUART = @$THIS.SETUP;	// @$THIS.BAUDRATE baud
 	wire	[7:0]	rx_data, tx_data;
 	wire		rx_break, rx_parity_err, rx_frame_err, rx_stb;
 	wire		tx_stb, tx_busy;
@@ -67,11 +63,10 @@
 	wire	w_ck_uart, w_uart_tx;
 @TOP.INSERT=
 	// The Host USB interface, to be used by the WB-UART bus
-	rxuart	#(BUSUART) rcv(s_clk, s_reset, bus_uart_setup, i_uart_rx,
-				rx_stb, rx_data, rx_break,
-				rx_parity_err, rx_frame_err, w_ck_uart);
-	txuart	#(BUSUART) txv(s_clk, s_reset, bus_uart_setup, 1'b0,
-				tx_stb, tx_data, 1'b1, o_uart_tx, tx_busy);
+	rxuartlite	#(BUSUART) rcv(s_clk, i_host_uart_rx,
+				rx_stb, rx_data);
+	txuartlite	#(BUSUART) txv(s_clk,
+				tx_stb, tx_data, o_host_uart_tx, tx_busy);
 
 @TOP.MAIN=
 		// External USB-UART bus control
@@ -81,23 +76,25 @@
 		i_host_rx_stb, i_host_rx_data,
 		o_host_tx_stb, o_host_tx_data, i_host_tx_busy
 @MAIN.IODECL=
-	input			i_host_rx_stb;
-	input		[7:0]	i_host_rx_data;
+	input	wire		i_host_rx_stb;
+	input	wire	[7:0]	i_host_rx_data;
 	output	wire		o_host_tx_stb;
 	output	wire	[7:0]	o_host_tx_data;
-	input			i_host_tx_busy;
+	input	wire		i_host_tx_busy;
 @MAIN.DEFNS=
 	// Definitions for the WB-UART converter.  We really only need one
 	// (more) non-bus wire--one to use to select if we are interacting
 	// with the ZipCPU or not.
-	wire	wbu_zip_sel;
+	wire		wbu_zip_sel;
 	wire	[0:0]	wbubus_dbg;
 `ifndef	INCLUDE_ZIPCPU
 	wire		zip_dbg_ack, zip_dbg_stall;
 	wire	[31:0]	zip_dbg_data;
 `endif
 @MAIN.INSERT=
-`ifndef	INCLUDE_ZIPCPU
+`ifdef	INCLUDE_ZIPCPU
+	assign	wbu_zip_sel   = wbu_addr[@$BUS_ADDRESS_WIDTH-1];
+`else
 	assign	wbu_zip_sel   = 1'b0;
 	assign	zip_dbg_ack   = 1'b0;
 	assign	zip_dbg_stall = 1'b0;

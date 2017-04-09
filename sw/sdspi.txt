@@ -54,10 +54,10 @@
 @TOP.IODECL=
 	// SD Card
 	output	wire		o_sd_sck;
-	inout			io_sd_cmd;
-	inout		[3:0]	io_sd;
-	input			i_sd_cs;
-	input			i_sd_wp;
+	inout	wire		io_sd_cmd;
+	inout	wire	[3:0]	io_sd;
+	input	wire		i_sd_cs;
+	input	wire		i_sd_wp;
 @TOP.DEFNS=
 	wire		w_sd_cmd;
 	wire	[3:0]	w_sd_data;
@@ -82,9 +82,9 @@
 	// SD-Card declarations
 	output	wire		o_sd_sck, o_sd_cmd;
 	output	wire	[3:0]	o_sd_data;
-	input			i_sd_cmd;
-	input		[3:0]	i_sd_data;
-	input			i_sd_detect;
+	input	wire		i_sd_cmd;
+	input	wire	[3:0]	i_sd_data;
+	input	wire		i_sd_detect;
 @MAIN.INSERT=
 	wire[31:0]	sd_debug;
 	// SPI mapping

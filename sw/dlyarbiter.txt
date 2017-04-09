@@ -88,4 +88,5 @@
 	assign	dwb_stall = wb_stall;
 	assign	dwb_err   = wb_err;
 	assign	dwb_idata = wb_idata;
+	assign	wbu_idata = wb_idata;
 `endif

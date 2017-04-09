@@ -45,9 +45,8 @@
 	//
 	// The Calendar DATE
 	//
-	wire	date_ack, date_stall;
 	rtcdate	thedate(i_clk, rtc_ppd,
-		(w_wb_stb)&&(date_sel), wb_data, wb_we,
+		(wb_stb)&&(date_sel), wb_we, wb_data,
 			date_ack, date_stall, date_data);
 @REGS.N=1
 @REGS.0= 0 R_DATE RTCDATE DATE

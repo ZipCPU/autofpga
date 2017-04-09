@@ -51,7 +51,7 @@
 		i_gps_pps
 @MAIN.IODECL=
 	//The GPS Clock
-	input			i_gps_pps;
+	input	wire		i_gps_pps;
 	localparam [31:0] GPSCLOCK_DEFAULT_STEP = @$THIS.GPS_STEP;
 @MAIN.DEFNS=
 	wire	gps_pps, ck_pps, gps_led, gps_locked, gps_tracking;
@@ -131,7 +131,7 @@ typedef	struct	GPSTB_S	{
 #
 @PREFIX=gpsu
 @NADDR=4
-@PTYPE=DOUBLE
+@PTYPE=OTHER
 @$BAUDRATE=9600
 @$UARTSETUP.EXPR=@$CLKFREQHZ/@$THIS.BAUDRATE
 @UARTSETUP.FORMAT=31'h%08x
@@ -148,23 +148,24 @@ typedef	struct	GPSTB_S	{
 		// The GPS-UART
 		i_gps_rx, o_gps_tx
 @MAIN.IODECL=
-	input			i_gps_rx;
+	input	wire		i_gps_rx;
 	output	wire		o_gps_tx;
 @MAIN.INSERT=
+	wire	w_gps_rts_n_ignored;
 	wbuart #(@$THIS.UARTSETUP) gpsuart(i_clk, 1'b0,
 		wb_stb, (wb_stb)&&(gpsu_sel), wb_we, wb_addr[1:0], wb_data,
 			gpsu_ack, gpsu_stall, gpsu_data,
-		i_aux_rx, o_aux_tx, i_aux_cts_n, o_aux_rts_n,
+		i_gps_rx, o_gps_tx, 1'b0, w_gps_rts_n_ignored,
 		gpsurx_int, gpsutx_int, gpsurxf_int, gpsutxf_int);
 @MAIN.ALT=
 	assign	o_gps_tx = 1'b1;
 
 @REGS.NOTE= // GPS UART registers, similar to WBUART
 @REGS.N=4
-@REGS.0= 0 R_UART_SETUP  GPSSETUP
-@REGS.1= 1 R_UART_FIFO   GPSFIFO
-@REGS.2= 2 R_UART_UARTRX GPSRX
-@REGS.3= 3 R_UART_UARTTX GPSTX
+@REGS.0= 0 R_GPSU_SETUP  GPSSETUP
+@REGS.1= 1 R_GPSU_FIFO   GPSFIFO
+@REGS.2= 2 R_GPSU_UARTRX GPSRX
+@REGS.3= 3 R_GPSU_UARTTX GPSTX
 @BDEF.DEFN=
 #ifndef	WBUART_H
 #define	WBUART_H

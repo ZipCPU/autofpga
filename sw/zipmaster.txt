@@ -45,6 +45,19 @@
 @SCOPE.DATA=zip_debug
 @INT.ZIP.WIRE=zip_cpu_int
 @INT.ZIP.BUS=buspic
+@TOP.PORTLIST=
+		// A reset wire for the ZipCPU
+		i_cpu_resetn
+@TOP.IODECL=
+	// A reset wire for the ZipCPU
+	input	wire		i_cpu_resetn;
+@TOP.MAIN=
+		// Reset wire for the ZipCPU
+		(!i_cpu_resetn)
+@MAIN.PORTLIST=
+		i_cpu_reset
+@MAIN.IODECL=
+	input	wire		i_cpu_reset;
 @MAIN.PARAM=
 	//
 	//
@@ -83,11 +96,9 @@
 	wire	wbu_zip_sel;
 	assign	wbu_zip_sel = 1'b0;
 `endif
-	wire	zip_reset;
-	assign	zip_reset = 1'b0;
 	assign	zip_int_vector = { alt_int_vector[14:8], sys_int_vector[14:6] };
 	zipsystem #(RESET_ADDRESS,ZIP_ADDRESS_WIDTH,10,ZIP_START_HALTED,ZIP_INTS)
-		swic(i_clk, zip_reset,
+		swic(i_clk, i_cpu_reset,
 			// Zippys wishbone interface
 			zip_cyc, zip_stb, zip_we, zip_addr, zip_data, zip_sel,
 					zip_ack, zip_stall, dwb_idata, zip_err,

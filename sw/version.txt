@@ -42,5 +42,13 @@
 `include "builddate.v"
 @MAIN.INSERT=
 	assign	version_data = `DATESTAMP;
+	assign	version_ack = 1'b0;
+	assign	version_stall = 1'b0;
 @REGS.N=1
 @REGS.0= 0 R_VERSION VERSION
+# @REGS.INSERT.H=
+# @BDEF.DEFNS=
+@BDEF.IONAME=io_version
+@BDEF.IOTYPE=unsigned
+@BDEF.OSDEF=_BOARD_HAS_VERSION_ID
+@BDEF.IOTYPE=static volatile @$THIS.BDEF.IOTYPE *const _version = &((@$THIS.BDEF.IOTYPE *)@$THIS.BASE);

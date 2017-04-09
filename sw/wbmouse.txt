@@ -45,21 +45,21 @@
 @INT.MOUSE.PIC= buspic syspic
 @TOP.PORTLIST=
 		// The PS/2 Mouse
-		io_ps_clk, io_ps_data
+		io_ps2_clk, io_ps2_data
 @TOP.IODECL=
-	inout	io_ps_clk, io_ps_data;
-@TOP.MAIN=
-		// The PS/2 Mouse
-		io_ps2, w_ps2
+	inout	wire	io_ps2_clk, io_ps2_data;
 @TOP.DEFNS=
 	wire	[1:0]	w_ps2;
+@TOP.MAIN=
+		// The PS/2 Mouse
+		{ io_ps2_clk, io_ps2_data }, w_ps2
 @TOP.INSERT=
 	// WB-Mouse
 	//
 	// Adjustments necessary to turn the PS/2 logic to pull-up logic,
 	// with a high impedence state if not used.
-	assign	io_ps_clk  = (w_ps2[1])? 1'bz:1'b0;
-	assign	io_ps_data = (w_ps2[0])? 1'bz:1'b0;
+	assign	io_ps2_clk  = (w_ps2[1])? 1'bz:1'b0;
+	assign	io_ps2_data = (w_ps2[0])? 1'bz:1'b0;
 @MAIN.PORTLIST=
 		// The PS/2 Mouse
 		i_ps2, o_ps2

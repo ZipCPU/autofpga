@@ -49,6 +49,7 @@
 #include "keys.h"
 #include "kveval.h"
 
+const bool	DELAY_ACK = true;
 
 
 
@@ -56,7 +57,14 @@ typedef	struct PERIPH_S {
 	unsigned	p_base;		// In octets
 	unsigned	p_naddr;	// In words, given in file
 	unsigned	p_awid;		// Log_2 (octets)
-	unsigned	p_mask;		// Words
+	unsigned	p_mask;		// Words.  Bit is true if relevant for address selection
+	//
+	unsigned	p_skipaddr;
+	unsigned	p_skipmask;
+	unsigned	p_sadrmask;
+	unsigned	p_skipnbits;
+	//
+	unsigned	p_sbaw;
 	STRINGP		p_name;
 	MAPDHASH	*p_phash;
 } PERIPH, *PERIPHP;
@@ -480,13 +488,22 @@ int	addto_plist(PLIST &plist, MAPDHASH *phash) {
 	return plist.size()-1;
 }
 
-void	buildskip_plist(PLIST &plist) {
+/*
+ * build_skiplist
+ *
+ * Prior to any address decoding, we can build a skip list.  This collects
+ * all of the relevant bits necessary for peripheral address decoding among
+ * all of the peripherals within the list.  The result is that address decoding
+ * can take place with fewer bits that need to be checked.  The other result,
+ * though, is that a peripheral may have many locations in the memory space.
+ */
+void	buildskip_plist(PLIST &plist, unsigned nulladdr) {
 	// Adjust the mask to find only those bits that are needed
 	unsigned	masteraddr = 0;
-	unsigned	adrmask = 0xffffffff;
-
-for(unsigned i=0; i< plist.size(); i++)
-printf("ADRESSES = %08x\n", plist[i]->p_base);
+	unsigned	adrmask = 0xffffffff,
+			nullmsk = (nulladdr)?(-1<<(nextlg(nulladdr)-2)):0,
+			setbits = 0,
+			disbits = 0;
 
 	// Find all the bits that our address decoder depends upon here.
 	//
@@ -515,26 +532,49 @@ printf("ADRESSES = %08x\n", plist[i]->p_base);
 					break;
 				}
 			}
-		} if (!onebit)
+		}
+		if (bset)
+			setbits |= bmsk;
+		if (!onebit) {
+			disbits |= bmsk;
 			continue;
+		}
+		// If its not part of anyone's mask, ... don't use it
+		//
+		// Not appropriate.  What if one peripheral requires 11 bit
+		// decoding, but no one else does?  i.e. one peripheral has a
+		// 4 word address space, but all others have an 8 word or more
+		// address space?
+		// if (!bset)
+			// continue;
 
-		// The adrmask is a mask of bits that can be removed.
+		if (bmsk & nullmsk) {
+			if ((bset)&&(bvl != 0))
+				continue;
+		}
+
+		// The adrmask is a mask of bits necessary for selection
 		adrmask &= (~bmsk);
 		// The masteraddr is a mask of what the bits are that are
 		// to be set.
 		masteraddr|= bvl;
 	}
 
-adrmask<<=2; // Convert the result from to octets
-printf("ADRMASK = %08x (%2d bits)\n", adrmask, popc(adrmask));
+	// { // Just do a double check here, for consistency
+
+	adrmask<<=2; // Convert the result from to octets
+	printf("ADRMASK = %08x (%2d bits)\n", adrmask, popc(adrmask));
+	// printf("MASTRAD = %08x\n", masteraddr);
+	// printf("DISBITS = %08x\n", disbits);
+	// printf("SETBITS = %08x\n", setbits);
 
 	// adrmask in octets
 	int sbaw = popc(adrmask);
 	for(unsigned i=0; i<plist.size(); i++) {
+		// Do this work in octet space
 		unsigned skipaddr = 0, skipmask = 0, skipnbits = 0,
 			pmsk = plist[i]->p_mask<<2; // Mask in octets
-		printf("// Skip-start: %08x/%08x (%08x,%2d)\n",
-			plist[i]->p_base, pmsk, adrmask, sbaw);
+		PERIPHP	p = plist[i];
 		for(int bit=31; bit>= 0; bit--) {
 			unsigned	bmsk = (1<<bit);
 			if (bmsk & adrmask) {
@@ -542,21 +582,47 @@ printf("ADRMASK = %08x (%2d bits)\n", adrmask, popc(adrmask));
 				skipmask = (skipmask<<1)|((pmsk&bmsk)?1:0);
 				if (bmsk & pmsk)
 					skipnbits ++;
-				if (plist[i]->p_base & bmsk)	// Octets
+				if (p->p_base & bmsk)	// Octets
 					skipaddr |= 1;
 			}
 		}
+
+		p->p_skipaddr = skipaddr;
+		p->p_skipmask = skipmask;
+		p->p_sadrmask = adrmask;
+		p->p_skipnbits= sbaw;
+		//
 		setvalue(*plist[i]->p_phash, KYSKIPADDR,  skipaddr);
 		setvalue(*plist[i]->p_phash, KYSKIPMASK,  skipmask);
 		setvalue(*plist[i]->p_phash, KYSKIPDEFN,  adrmask);
 		setvalue(*plist[i]->p_phash, KYSKIPNBITS, skipnbits);
 		setvalue(*plist[i]->p_phash, KYSKIPAWID,  sbaw);
+		// printf("// %08x %08x \n", p->p_base, pmsk);
 		printf("// skip-assigning %12s_... to %08x & %08x, %2d, [%08x]AWID=%d\n",
 			plist[i]->p_name->c_str(), skipaddr, skipmask,
 			skipnbits, adrmask, sbaw);
 	}
+
+	/* Just to be sure, let's test that this works ... */
+	for(unsigned i=0; i<plist.size(); i++) {
+		// printf("%2d: %2s\n", i, plist[i]->p_name->c_str());
+		assert((plist[i]->p_skipaddr & (~plist[i]->p_skipmask))==0);
+	}
+	for(unsigned a=0; a<(1u<<sbaw); a++) {
+		int nps = 0;
+		for(unsigned i=0; i<plist.size(); i++) {
+			if ((a&plist[i]->p_skipmask)==plist[i]->p_skipaddr)
+				nps++;
+		} assert(nps < 2);
+	}
 }
 
+/*
+ * build_plist
+ *
+ * Collect our peripherals into one of four lists.  This allows us to have
+ * ordered access through the peripherals later.
+ */
 void	build_plist(MAPDHASH &info) {
 	MAPDHASH::iterator	kvpair;
 
@@ -643,6 +709,7 @@ void assign_addresses(MAPDHASH &info, unsigned first_address = 0x400) {
 		elm.m_typ = MAPT_INT;
 		elm.u.m_v = (1<<(nextlg(naddr)));
 		sio_hash->insert(KEYVALUE(KYNADDR, elm));
+		setvalue(*sio_hash, KYREGS_N, 0);
 	}
 
 	// Assign double-peripheral bus addresses
@@ -675,7 +742,8 @@ printf("// start address for d = %08x\n", start_address);
 			setvalue(*dlist[i]->p_phash, KYMASK, dlist[i]->p_mask);
 		}
 
-		start_address = (start_address+dnaddr*4-1)&(~(dnaddr*4-1));
+		start_address = (start_address+dnaddr);
+printf("// Start address after d = %08x (dn = %08x)\n", start_address, dnaddr);
 
 		// Build an DIO peripheral
 		MAPT		elm;
@@ -689,6 +757,7 @@ printf("// start address for d = %08x\n", start_address);
 printf("Setting DNADDR to %08x\n", dnaddr);
 		elm.u.m_v = dnaddr;
 		dio_hash->insert(KEYVALUE(KYNADDR, elm));
+		setvalue(*dio_hash, KYREGS_N, 0);
 	}
 
 	// Assign bus addresses to the more generic peripherals
@@ -790,7 +859,7 @@ printf("Setting DNADDR to %08x\n", dnaddr);
 		printf("DIO.NADDR = %08x\n", v);
 		plist[dio_id]->p_awid  = nextlg(plist[dio_id]->p_naddr);
 		printf("DIO.AWID  = %08x\n", plist[dio_id]->p_awid);
-		plist[dio_id]->p_mask = (-1<<(plist[dio_id]->p_awid));
+		plist[dio_id]->p_mask = (-1<<(plist[dio_id]->p_awid-2));
 		dmask = plist[dio_id]->p_mask;
 		printf("DIO.MASK  = %08x\n", dmask);
 		setvalue(*dio_hash, KYBASE, plist[dio_id]->p_base);
@@ -813,9 +882,9 @@ printf("Setting DNADDR to %08x\n", dnaddr);
 	// Let's build a minimal address for this component
 	printf("SMASK = %08x\n", smask);
 	printf("DMASK = %08x\n", dmask);
-	buildskip_plist(slist);
-	buildskip_plist(dlist);
-	buildskip_plist(plist);
+	buildskip_plist(slist, 0);
+	buildskip_plist(dlist, 0);
+	buildskip_plist(plist, 0x400);
 }
 
 
@@ -924,34 +993,16 @@ void	assign_scopes(    MAPDHASH &master) {
 #endif
 }
 
-void	build_regdefs_h(  MAPDHASH &master, FILE *fp, STRING &fname) {
-	MAPDHASH::iterator	kvpair, kvaccess;
-	int	nregs;
-	STRING	str;
-
-	legal_notice(master, fp, fname);
-
-	fprintf(fp, "#ifndef\tREGDEFS_H\n");
-	fprintf(fp, "#define\tREGDEFS_H\n");
-	fprintf(fp, "\n\n");
-
+int	get_longest_defname(PLIST &plist) {
 	unsigned	longest_defname = 0;
+	STRING		str;
+
 	for(unsigned i=0; i<plist.size(); i++) {
 		MAPDHASH::iterator	kvp;
+		int	nregs = 0;
 
-		nregs = 0;
-		kvp = findkey(*plist[i]->p_phash,KYREGS_N);
-		if (kvp == plist[i]->p_phash->end()) {
-			printf("%s not found in %s\n", KYREGS_N.c_str(),
-				plist[i]->p_name->c_str());
+		if (!getvalue(*plist[i]->p_phash, KYREGS_N, nregs))
 			continue;
-		} if (kvp->second.m_typ == MAPT_INT) {
-			nregs = kvp->second.u.m_v;
-		} else if (kvp->second.m_typ == MAPT_STRING) {
-			nregs = strtoul(kvp->second.u.m_s->c_str(), NULL, 0);
-		} else {
-			printf("%s is NOT AN INTEGER\n", KYREGS_N.c_str());
-		}
 
 		for(int j=0; j<nregs; j++) {
 			char	nstr[32];
@@ -984,10 +1035,16 @@ void	build_regdefs_h(  MAPDHASH &master, FILE *fp, STRING &fname) {
 		}
 	}
 
+	return longest_defname;
+}
+
+void write_regdefs(FILE *fp, PLIST &plist, unsigned longest_defname) {
+	STRING	str;
+
 	for(unsigned i=0; i<plist.size(); i++) {
 		MAPDHASH::iterator	kvp;
+		int	nregs = 0;
 
-		nregs = 0;
 		kvp = findkey(*plist[i]->p_phash,KYREGS_NOTE);
 		if ((kvp != plist[i]->p_phash->end())&&(kvp->second.m_typ == MAPT_STRING))
 			fprintf(fp, "%s\n", kvp->second.u.m_s->c_str());
@@ -1044,6 +1101,30 @@ void	build_regdefs_h(  MAPDHASH &master, FILE *fp, STRING &fname) {
 		}
 	}
 	fprintf(fp, "\n\n");
+}
+
+void	build_regdefs_h(  MAPDHASH &master, FILE *fp, STRING &fname) {
+	MAPDHASH::iterator	kvpair, kvaccess;
+	STRING	str;
+
+	legal_notice(master, fp, fname);
+
+	fprintf(fp, "#ifndef\tREGDEFS_H\n");
+	fprintf(fp, "#define\tREGDEFS_H\n");
+	fprintf(fp, "\n\n");
+
+	unsigned	longest_defname = 0, ldef = 0;
+
+	longest_defname = get_longest_defname(slist);
+	ldef = get_longest_defname(dlist);
+	longest_defname = (ldef > longest_defname) ? ldef : longest_defname;
+	ldef = get_longest_defname(plist);
+	longest_defname = (ldef > longest_defname) ? ldef : longest_defname;
+
+	write_regdefs(fp, slist, longest_defname);
+	write_regdefs(fp, dlist, longest_defname);
+	write_regdefs(fp, plist, longest_defname);
+
 
 	fprintf(fp, "// Definitions for the bus masters\n");
 	str = STRING("REGS.INSERT.H");
@@ -1095,38 +1176,16 @@ void	build_regdefs_h(  MAPDHASH &master, FILE *fp, STRING &fname) {
 	fprintf(fp, "#endif\t// REGDEFS_H\n");
 }
 
-void	build_regdefs_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
-	int	nregs;
+unsigned	get_longest_uname(PLIST &plist) {
+	unsigned	longest_uname = 0;
 	STRING	str;
 
-	legal_notice(master, fp, fname);
-
-	fprintf(fp, "#include <stdio.h>\n");
-	fprintf(fp, "#include <stdlib.h>\n");
-	fprintf(fp, "#include <strings.h>\n");
-	fprintf(fp, "#include <ctype.h>\n");
-	fprintf(fp, "#include \"regdefs.h\"\n\n");
-	fprintf(fp, "const\tREGNAME\traw_bregs[] = {\n");
-
-	// First, find out how long our longest definition name is.
-	// This will help to allow us to line things up later.
-	unsigned	longest_defname = 0;
-	unsigned	longest_uname = 0;
 	for(unsigned i=0; i<plist.size(); i++) {
 		MAPDHASH::iterator	kvp;
 
-		nregs = 0;
-		kvp = findkey(*plist[i]->p_phash,KYREGS_N);
-		if (kvp == plist[i]->p_phash->end()) {
-			printf("REGS.N not found in %s\n", plist[i]->p_name->c_str());
+		int nregs = 0;
+		if (!getvalue(*plist[i]->p_phash, KYREGS_N, nregs))
 			continue;
-		} if (kvp->second.m_typ == MAPT_INT) {
-			nregs = kvp->second.u.m_v;
-		} else if (kvp->second.m_typ == MAPT_STRING) {
-			nregs = strtoul(kvp->second.u.m_s->c_str(), NULL, 0);
-		} else {
-			printf("NOT AN INTEGER\n");
-		}
 
 		for(int j=0; j<nregs; j++) {
 			char	nstr[32];
@@ -1143,7 +1202,7 @@ void	build_regdefs_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 
 			STRING	scpy = *kvp->second.u.m_s;
 
-			char	*nxtp, *rname, *rv;
+			char	*nxtp, *rv;
 
 			// 1. Read the number
 			strtoul(scpy.c_str(), &nxtp, 0);
@@ -1151,10 +1210,8 @@ void	build_regdefs_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 				continue;
 			}
 
-			// 2. Get the C name
-			rname = strtok(nxtp, " \t\n,");
-			if (strlen(rname) > longest_defname)
-				longest_defname = strlen(rname);
+			// 2. Get (and ignore) the C definition name
+			strtok(nxtp, " \t\n,");
 
 			while(NULL != (rv = strtok(NULL, " \t\n,"))) {
 				if (strlen(rv) > longest_uname)
@@ -1163,22 +1220,20 @@ void	build_regdefs_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 		}
 	}
 
+	return longest_uname;
+}
+
+
+void write_regnames(FILE *fp, PLIST &plist,
+		unsigned longest_defname, unsigned longest_uname) {
+	STRING	str;
 	int	first = 1;
 	for(unsigned i=0; i<plist.size(); i++) {
 		MAPDHASH::iterator	kvp;
 
-		nregs = 0;
-		kvp = findkey(*plist[i]->p_phash,KYREGS_N);
-		if (kvp == plist[i]->p_phash->end()) {
-			printf("REGS.N not found in %s\n", plist[i]->p_name->c_str());
+		int nregs = 0;
+		if (!getvalue(*plist[i]->p_phash, KYREGS_N, nregs))
 			continue;
-		} if (kvp->second.m_typ == MAPT_INT) {
-			nregs = kvp->second.u.m_v;
-		} else if (kvp->second.m_typ == MAPT_STRING) {
-			nregs = strtoul(kvp->second.u.m_s->c_str(), NULL, 0);
-		} else {
-			printf("NOT AN INTEGER\n");
-		}
 
 		for(int j=0; j<nregs; j++) {
 			char	nstr[32];
@@ -1217,6 +1272,51 @@ void	build_regdefs_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 			}
 		}
 	}
+
+}
+
+
+void	build_regdefs_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
+	STRING	str;
+
+	legal_notice(master, fp, fname);
+
+	fprintf(fp, "#include <stdio.h>\n");
+	fprintf(fp, "#include <stdlib.h>\n");
+	fprintf(fp, "#include <strings.h>\n");
+	fprintf(fp, "#include <ctype.h>\n");
+	fprintf(fp, "#include \"regdefs.h\"\n\n");
+	fprintf(fp, "const\tREGNAME\traw_bregs[] = {\n");
+
+	// First, find out how long our longest definition name is.
+	// This will help to allow us to line things up later.
+	unsigned	longest_defname = 0, ldef = 0;
+	unsigned	longest_uname = 0;
+
+	// Find the length of the longest register name
+	longest_defname = get_longest_defname(slist);
+	ldef = get_longest_defname(dlist);
+	longest_defname = (ldef > longest_defname) ? ldef : longest_defname;
+	ldef = get_longest_defname(plist);
+	longest_defname = (ldef > longest_defname) ? ldef : longest_defname;
+
+	// Find the length of the longest user name string
+	longest_uname = get_longest_uname(slist);
+	ldef = get_longest_uname(dlist);
+	longest_uname = (ldef > longest_defname) ? ldef : longest_uname;
+	ldef = get_longest_uname(plist);
+	longest_uname = (ldef > longest_defname) ? ldef : longest_uname;
+
+
+	if (slist.size() > 0) {
+		write_regnames(fp, slist, longest_defname, longest_uname);
+		if ((dlist.size() > 0)||(plist.size() > 0))
+			fprintf(fp, ",\n");
+	} if (dlist.size() > 0) {
+		write_regnames(fp, dlist, longest_defname, longest_uname);
+		if (plist.size() > 0)
+			fprintf(fp, ",\n");
+	} write_regnames(fp, plist, longest_defname, longest_uname);
 
 	fprintf(fp, "\n};\n\n");
 	fprintf(fp, "#define\tRAW_NREGS\t(sizeof(raw_bregs)/sizeof(bregs[0]))\n\n");
@@ -1352,28 +1452,30 @@ void	build_toplevel_v( MAPDHASH &master, FILE *fp, STRING &fname) {
 	"// so the @TOP.PORTLIST key may be left undefined.\n"
 	"//\n");
 	fprintf(fp, "module\ttoplevel(i_clk,\n");
-	str = "TOP.PORTLIST";
-	astr = "MAIN.PORTLIST";
 	first = 1;
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
-		kvsearch = findkey(*kvpair->second.u.m_m, str);
+		STRINGP	strp;
 
-		// If there's no TOP.PORTLIST, check for a MAIN.PORTLIST
-		if ((kvsearch == kvpair->second.u.m_m->end())
-				||(kvsearch->second.m_typ != MAPT_STRING))
-			kvsearch = findkey(*kvpair->second.u.m_m, astr);
-		if ((kvsearch == kvpair->second.u.m_m->end())
-				||(kvsearch->second.m_typ != MAPT_STRING))
+		strp = getstring(*kvpair->second.u.m_m, KYTOP_PORTLIST);
+		if (!strp)
+			strp = getstring(*kvpair->second.u.m_m, KYMAIN_PORTLIST);
+		if (!strp)
 			continue;
-		
+
+		STRING	tmps(*strp);
+		STRING::iterator si;
+		for(si=tmps.end()-1; si>=tmps.begin(); si--)
+			if (isspace(*si))
+				*si = '\0';
+			else
+				break;
+		if (tmps.size() == 0)
+			continue;
 		if (!first)
 			fprintf(fp, ",\n");
 		first=0;
-		STRING	tmps(*kvsearch->second.u.m_s);
-		while(isspace(*tmps.rbegin()))
-			*tmps.rbegin() = '\0';
 		fprintf(fp, "%s", tmps.c_str());
 	} fprintf(fp, ");\n");
 
@@ -1388,17 +1490,14 @@ void	build_toplevel_v( MAPDHASH &master, FILE *fp, STRING &fname) {
 	"\t// the @MAIN.IODECL key should be sufficient, so the @TOP.IODECL\n"
 	"\t// key may be left undefined.\n"
 	"\t//\n");
-	fprintf(fp, "\tinput\t\t\ti_clk;\n");
-	str = "TOP.IODECL";
-	astr = "MAIN.IODECL";
+	fprintf(fp, "\tinput\twire\t\ti_clk;\n");
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
-		kvsearch = findkey(*kvpair->second.u.m_m, str);
 
-		STRINGP strp = getstring(master, str);
+		STRINGP strp = getstring(*kvpair->second.u.m_m, KYTOP_IODECL);
 		if (!strp)
-			strp = getstring(master, astr);
+			strp = getstring(*kvpair->second.u.m_m, KYMAIN_IODECL);
 		if (strp)
 			fprintf(fp, "%s", strp->c_str());
 	}
@@ -1411,11 +1510,10 @@ void	build_toplevel_v( MAPDHASH &master, FILE *fp, STRING &fname) {
 	"\t// These declarations just copy data from the @TOP.DEFNS key\n"
 	"\t// within the component data files.\n"
 	"\t//\n");
-	str = "TOP.DEFNS";
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
-		STRINGP	strp = getstring(master, str);
+		STRINGP	strp = getstring(*kvpair->second.u.m_m, KYTOP_DEFNS);
 		if (strp)
 			fprintf(fp, "%s", strp->c_str());
 	}
@@ -1436,18 +1534,15 @@ void	build_toplevel_v( MAPDHASH &master, FILE *fp, STRING &fname) {
 	"\t// component descriptions come from the keys @TOP.MAIN (if it\n"
 	"\t// exists), or @MAIN.PORTLIST if it does not.\n"
 	"\t//\n");
-	fprintf(fp, "\n\tmain(s_clk, s_reset,\n");
-	str = "TOP.MAIN";
-	astr = "MAIN.PORTLIST";
+	fprintf(fp, "\n\tmain\tthedesign(s_clk, s_reset,\n");
 	first = 1;
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
-		kvsearch = findkey(*kvpair->second.u.m_m, str);
 
-		STRINGP strp = getstring(master, str);
+		STRINGP strp = getstring(*kvpair->second.u.m_m, KYTOP_MAIN);
 		if (!strp)
-			strp = getstring(master, astr);
+			strp = getstring(*kvpair->second.u.m_m, KYMAIN_PORTLIST);
 		if (!strp)
 			continue;
 
@@ -1466,17 +1561,16 @@ void	build_toplevel_v( MAPDHASH &master, FILE *fp, STRING &fname) {
 	"\t// that special logic that couldnt fit in main.  This logic is\n"
 	"\t// given by the @TOP.INSERT tag in our data files.\n"
 	"\t//\n\n\n");
-	str = "TOP.INSERT";
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
-		STRINGP strp = getstring(master, str);
+		STRINGP strp = getstring(*kvpair->second.u.m_m, KYTOP_INSERT);
 		if (!strp)
 			continue;
 		fprintf(fp, "%s\n", strp->c_str());
 	}
 
-	fprintf(fp, "\n\nendmodule; // end of toplevel.v module definition\n");
+	fprintf(fp, "\n\nendmodule // end of toplevel.v module definition\n");
 
 }
 
@@ -1650,7 +1744,7 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 //	same order.
 //
 	// External declarations (input/output) for our various ports
-	fprintf(fp, "\tinput\t\t\ti_clk, i_reset;\n");
+	fprintf(fp, "\tinput\twire\t\ti_clk, i_reset;\n");
 	str = "MAIN.IODECL";
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
 		STRINGP	strp;
@@ -1664,26 +1758,29 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 	// Declare Bus master data
 	fprintf(fp, "\n\n");
 	fprintf(fp, "\t//\n\t// Declaring wishbone master bus data\n\t//\n");
-	fprintf(fp, "\twire\t\twb_cyc, wb_stb, wb_we, wb_stall, wb_ack, wb_err;\n");
+	fprintf(fp, "\twire\t\twb_cyc, wb_stb, wb_we, wb_stall, wb_err;\n");
+	if (DELAY_ACK) {
+		fprintf(fp, "\treg\twb_ack;\t// ACKs delayed by extra clock\n");
+	} else {
+		fprintf(fp, "\twire\twb_ack;\n");
+	}
 	fprintf(fp, "\twire\t[(%d-1):0]\twb_addr;\n", baw);
 	fprintf(fp, "\twire\t[31:0]\twb_data;\n");
 	fprintf(fp, "\treg\t[31:0]\twb_idata;\n");
 	fprintf(fp, "\twire\t[3:0]\twb_sel;\n");
-	if ((slist.size()>0)&&(dlist.size()>0)) {
-		fprintf(fp, "\twire\tsio_sel, dio_sel;\n");
-		fprintf(fp, "\treg\tsio_ack, dio_ack;\n");
-		fprintf(fp, "\treg\t[1:0]\tpre_dio_ack;\n");
-		fprintf(fp, "\treg\t[31:0]\tsio_data, dio_data;\n");
-	} else if (slist.size()>0) {
-		fprintf(fp, "\twire\tsio_sel;\n");
+	if (slist.size()>0) {
+		fprintf(fp, "\twire\tsio_sel, sio_stall;\n");
 		fprintf(fp, "\treg\tsio_ack;\n");
 		fprintf(fp, "\treg\t[31:0]\tsio_data;\n");
-	} else if (dlist.size()>0) {
-		fprintf(fp, "\twire\tdio_sel;\n");
+	}
+	if (dlist.size()>0) {
+		fprintf(fp, "\twire\tdio_sel, dio_stall;\n");
 		fprintf(fp, "\treg\tdio_ack;\n");
-		fprintf(fp, "\treg\t[1:0]\tpre_dio_ack;\n");
+		fprintf(fp, "\treg\t\tpre_dio_ack;\n");
 		fprintf(fp, "\treg\t[31:0]\tdio_data;\n");
 	}
+
+
 	fprintf(fp, "\n\n");
 
 	fprintf(fp,
@@ -1934,15 +2031,6 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 
 	// Build a list of ACK signals
 	acklist = ""; nacks = 0;
-	if (slist.size()>0) {
-		acklist = "sio_ack"; nacks++;
-		if (dlist.size() > 0) {
-			acklist = "dio_ack, " + acklist; nacks++;
-		}
-	} else if (dlist.size() > 0) {
-		acklist = "dio_ack"; nacks++;
-	}
-
 	if (plist.size() > 0) {
 		if (nacks > 0)
 			acklist = (*plist[0]->p_name) + "_ack, " + acklist;
@@ -2000,14 +2088,20 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 	if (slist.size() > 0)
 		fprintf(fp, "\talways @(posedge i_clk)\n\t\tsio_ack <= (wb_stb)&&(sio_sel);\n");
 	if (dlist.size() > 0) {
-		fprintf(fp, "\talways @(posedge i_clk)\n\t\tpre_dio_ack[1:0] <= { pre_dio_ack[0], (wb_stb)&&(dio_sel) };\n");
-		fprintf(fp, "\talways @(posedge i_clk)\n\t\tdio_ack <= pre_dio_ack[1];\n");
+		fprintf(fp, "\talways @(posedge i_clk)\n\t\tpre_dio_ack <= (wb_stb)&&(dio_sel);\n");
+		fprintf(fp, "\talways @(posedge i_clk)\n\t\tdio_ack <= pre_dio_ack;\n");
 	}
-	if (acklist.size() > 0) {
-		fprintf(fp, "\tassign\twb_ack = (wb_cyc)&&(|{%s});\n\n\n",
-			acklist.c_str());
-	} else
-		fprintf(fp, "\tassign\twb_ack = 1\'b0;\n\n\n");
+
+	if (DELAY_ACK) {
+		fprintf(fp, "\talways @(posedge i_clk)\n\t\twb_ack <= "
+			"(wb_cyc)&&(|{%s});\n\n\n", acklist.c_str());
+	} else {
+		if (acklist.size() > 0) {
+			fprintf(fp, "\tassign\twb_ack = (wb_cyc)&&(|{%s});\n\n\n",
+				acklist.c_str());
+		} else
+			fprintf(fp, "\tassign\twb_ack = 1\'b0;\n\n\n");
+	}
 
 
 	// Define the stall line
@@ -2026,6 +2120,10 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 	"\t// here for simplicity.\n"
 	"\t//\n");
 
+		if (slist.size() > 0)
+			fprintf(fp, "\tassign\tsio_stall = 1\'b0;\n");
+		if (dlist.size() > 0)
+			fprintf(fp, "\tassign\tdio_stall = 1\'b0;\n");
 		fprintf(fp, "\tassign\twb_stall = \n"
 			"\t\t  (wb_stb)&&(%6s_sel)&&(%6s_stall)",
 			plist[0]->p_name->c_str(), plist[0]->p_name->c_str());
@@ -2301,47 +2399,56 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 		} fprintf(fp, "\t\tdefault: dio_data <= 32\'h0;\n\tendcase\n");
 	}
 
-	fprintf(fp, "`ifdef\tVERILATOR\n\n");
-	fprintf(fp, "\talways @(*)\n"
-		"\tbegin\n"
-		"\t\tcasez({ %s })\n", acklist.c_str());
-	for(unsigned i=0; i<nacks; i++) {
-		fprintf(fp, "\t\t\t%d\'b", nacks);
-		for(unsigned j=0; j<nacks; j++)
-			fprintf(fp, (i==j)?"1":(i>j)?"0":"?");
-		if (i < plist.size())
-			fprintf(fp, ": wb_idata = %s_data;\n",
-				plist[i]->p_name->c_str());
-		else if ((dlist.size() > 0)&&(i == plist.size()))
-			fprintf(fp, ": wb_idata = dio_data;\n");
-		else if (slist.size() > 0)
-			fprintf(fp, ": wb_idata = sio_data;\n");
-		else	fprintf(fp, ": wb_idata = 32\'h00;\n");
+	if (DELAY_ACK) {
+		fprintf(fp, "\talways @(posedge i_clk)\n"
+			"\tbegin\n"
+			"\t\tcasez({ %s })\n", acklist.c_str());
+		for(unsigned i=0; i<plist.size(); i++) {
+			fprintf(fp, "\t\t\t%d\'b", nacks);
+			for(unsigned j=0; j<nacks; j++)
+				fprintf(fp, (i==j)?"1":(i>j)?"0":"?");
+			if (i < plist.size())
+				fprintf(fp, ": wb_idata <= %s_data;\n",
+					plist[plist.size()-1-i]->p_name->c_str());
+			else	fprintf(fp, ": wb_idata <= 32\'h00;\n");
+		}
+		fprintf(fp, "\t\t\tdefault: wb_idata <= 32\'h0;\n");
+		fprintf(fp, "\t\tendcase\n\tend\n");
+	} else {
+		fprintf(fp, "`ifdef\tVERILATOR\n\n");
+		fprintf(fp, "\talways @(*)\n"
+			"\tbegin\n"
+			"\t\tcasez({ %s })\n", acklist.c_str());
+		for(unsigned i=0; i<plist.size(); i++) {
+			fprintf(fp, "\t\t\t%d\'b", nacks);
+				for(unsigned j=0; j<nacks; j++)
+				fprintf(fp, (i==j)?"1":(i>j)?"0":"?");
+			if (i < plist.size())
+				fprintf(fp, ": wb_idata = %s_data;\n",
+					plist[plist.size()-1-i]->p_name->c_str());
+			else	fprintf(fp, ": wb_idata = 32\'h00;\n");
+		}
+		fprintf(fp, "\t\t\tdefault: wb_idata = 32\'h0;\n");
+		fprintf(fp, "\t\tendcase\n\tend\n");
+		fprintf(fp, "\n`else\t// VERILATOR\n\n");
+		fprintf(fp, "\talways @(*)\n"
+			"\tbegin\n"
+			"\t\tcasez({ %s })\n", acklist.c_str());
+		for(unsigned i=0; i<plist.size(); i++) {
+			fprintf(fp, "\t\t\t%d\'b", nacks);
+			for(unsigned j=0; j<nacks; j++)
+				fprintf(fp, (i==j)?"1":(i>j)?"0":"?");
+			if (i < plist.size())
+				fprintf(fp, ": wb_idata <= %s_data;\n",
+					plist[plist.size()-1-i]->p_name->c_str());
+			else	fprintf(fp, ": wb_idata <= 32\'h00;\n");
+		}
+		fprintf(fp, "\t\t\tdefault: wb_idata <= 32\'h0;\n");
+		fprintf(fp, "\t\tendcase\n\tend\n");
+		fprintf(fp, "`endif\t// VERILATOR\n");
 	}
-	fprintf(fp, "\t\t\tdefault: wb_idata = 32\'h0;\n");
-	fprintf(fp, "\t\tendcase\n\tend\n");
-	fprintf(fp, "\n`else\t// VERILATOR\n\n");
-	fprintf(fp, "\talways @(*)\n"
-		"\tbegin\n"
-		"\t\tcasez({ %s })\n", acklist.c_str());
-	for(unsigned i=0; i<nacks; i++) {
-		fprintf(fp, "\t\t\t%d\'b", nacks);
-		for(unsigned j=0; j<nacks; j++)
-			fprintf(fp, (i==j)?"1":(i>j)?"0":"?");
-		if (i < plist.size())
-			fprintf(fp, ": wb_idata <= %s_data;\n",
-				plist[i]->p_name->c_str());
-		else if ((dlist.size() > 0)&&(i == plist.size()))
-			fprintf(fp, ": wb_idata <= dio_data;\n");
-		else if (slist.size() > 0)
-			fprintf(fp, ": wb_idata <= sio_data;\n");
-		else	fprintf(fp, ": wb_idata <= 32\'h00;\n");
-	}
-	fprintf(fp, "\t\t\tdefault: wb_idata <= 32\'h0;\n");
-	fprintf(fp, "\t\tendcase\n\tend\n");
-	fprintf(fp, "`endif\t// VERILATOR\n");
 
-	fprintf(fp, "\n\nendmodule; // main.v\n");
+	fprintf(fp, "\n\nendmodule // main.v\n");
 
 }
 
@@ -2440,13 +2547,13 @@ int	main(int argc, char **argv) {
 	cvtint(master, KY_ID);
 	reeval(master);
 
-	// mapdump(master);
-
 	count_peripherals(master);
 	build_plist(master);
 	assign_interrupts(master);
 	assign_scopes(    master);
 	assign_addresses( master);
+
+	// mapdump(master);
 
 	str = subd->c_str(); str += "/regdefs.h";
 	fp = fopen(str.c_str(), "w");

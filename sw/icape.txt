@@ -40,6 +40,8 @@
 @NADDR=32
 @ACCESS=CFG_ACCESS
 @PTYPE=OTHER
+@MAIN.IODECL=
+	localparam	ICAPE_LGDIV=3;
 @MAIN.INSERT=
 	wire[31:0]	cfg_debug;
 `ifdef	VERILATOR

@@ -38,12 +38,15 @@
 @PREFIX=pwrcount
 @NADDR=1
 @PTYPE=SINGLE
+@MAIN.DEFNS=
+	reg	[31:0]	r_pwrcount_data;
 @MAIN.INSERT=
-	initial	pwrcount_data = 32'h0;
+	initial	r_pwrcount_data = 32'h0;
 	always @(posedge i_clk)
-	if (pwrcount_data[31])
-		pwrcount_data[30:0] <= pwrcount_data[30:0] + 1'b1;
+	if (r_pwrcount_data[31])
+		r_pwrcount_data[30:0] <= r_pwrcount_data[30:0] + 1'b1;
 	else
-		pwrcount_data[31:0] <= pwrcount_data[31:0] + 1'b1;
+		r_pwrcount_data[31:0] <= r_pwrcount_data[31:0] + 1'b1;
+	assign	pwrcount_data = r_pwrcount_data;
 @REGS.N=1
 @REGS.0= 0 PWCOUNT PWRCOUNT

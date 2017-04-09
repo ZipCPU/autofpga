@@ -81,12 +81,12 @@
 @MAIN.IODECL=
 	// Ethernet control
 	output	wire		o_net_reset_n;
-	input			i_net_rx_clk, i_net_col, i_net_crs, i_net_dv;
-	input		[3:0]	i_net_rxd;
-	input			i_net_rxerr;
-	input			i_net_tx_clk;
+	input	wire		i_net_rx_clk, i_net_col, i_net_crs, i_net_dv;
+	input	wire	[7:0]	i_net_rxd;
+	input	wire		i_net_rxerr;
+	input	wire		i_net_tx_clk;
 	output	wire		o_net_tx_en;
-	output	wire	[3:0]	o_net_txd;
+	output	wire	[7:0]	o_net_txd;
 @MAIN.DEFNS=
 	//
 	wire	[31:0]	netp_debug;

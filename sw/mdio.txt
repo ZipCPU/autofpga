@@ -46,8 +46,7 @@
 		o_eth_mdclk, io_eth_mdio
 @TOP.IODECL=
 	// Ethernet control (MDIO)
-	output	wire		o_mdclk, o_mdio, o_mdwe;
-	input			i_mdio;
+	output	wire		o_eth_mdclk, io_eth_mdio;
 @TOP.DEFNS=
 	wire	w_mdio, w_mdwe;
 @TOP.MAIN=
@@ -60,7 +59,7 @@
 @MAIN.IODECL=
 	// Ethernet control (MDIO)
 	output	wire		o_mdclk, o_mdio, o_mdwe;
-	input			i_mdio;
+	input	wire		i_mdio;
 @MAIN.INSERT=
 	wire[31:0]	mdio_debug;
 	enetctrl #(2)

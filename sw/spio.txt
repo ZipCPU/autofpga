@@ -1,10 +1,11 @@
 ################################################################################
 ##
-## Filename: 	rtcgps.txt
+## Filename: 	spio.txt
 ##
 ## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 ##
-## Purpose:	
+## Purpose:	To describe how to interact with the special purpose device
+##		controller (spio) for the Nexys Video Board (SW, BTN, LEDs)
 ##
 ## Creator:	Dan Gisselquist, Ph.D.
 ##		Gisselquist Technology, LLC
@@ -35,42 +36,40 @@
 ################################################################################
 ##
 ##
-@PREFIX=rtc
-@NADDR=4
-@PTYPE=DOUBLE
-@ACCESS=RTC_ACCESS
-@$CLKSTEP.EXPR=((1<<48)/@$CLKFREQHZ)
-@CLKSTEP.FORMAT=32'h%08x
-@INT.RTC.WIRE=rtc_int
-@INT.RTC.PIC=altpic
+@PREFIX=spio
+@NADDR=1
+@PTYPE=SINGLE
+@ACCESS=SPIO_ACCESS
+@INT.SPIO.WIRE=spio_int
+@INT.SPIO.PIC=buspic
+@MAIN.PORTLIST=
+		// SPIO interface
+		i_sw, i_btnc, i_btnd, i_btnl, i_btnr, i_btnu, o_led
+@MAIN.IODECL=
+	// SPIO interface
+	input	wire	[7:0]	i_sw;
+	input	wire		i_btnc, i_btnd, i_btnl, i_btnr, i_btnu;
+	output	wire	[7:0]	o_led;
 @MAIN.DEFNS=
-	// Definitions in support of the GPS driven RTC
-	wire	rtc_ppd, rtc_pps;
-	reg	r_rtc_ack;
+	wire	[4:0]	w_btn;
 @MAIN.INSERT=
-	rtcgps	#(@$THIS.CLKSTEP) thertc(i_clk,
-		wb_cyc, (wb_stb)&&(rtc_sel), wb_we, wb_addr[1:0], wb_data,
-		rtc_data, rtc_int, rtc_ppd,
-		gps_tracking, ck_pps, gps_step[47:16], rtc_pps);
-	initial	r_rtc_ack = 1'b0;
-	always @(posedge i_clk)
-		r_rtc_ack <= (wb_stb)&&(rtc_sel);
-	assign	rtc_ack = r_rtc_ack;
+	assign	w_btn = { i_btnc, i_btnd, i_btnl, i_btnr, i_btnu };
+	spio #(.NBTN(5), .NLEDS(8)) thespio(i_clk,
+		wb_cyc, (wb_stb)&&(spio_sel), wb_we, wb_data, wb_sel,
+			spio_ack, spio_stall, spio_data,
+		i_sw, w_btn, o_led, spio_int);
 @MAIN.ALT=
-	assign	rtc_pps = 1'b0;
-@REGS.NOTE= // RTC clock registers
-@REGS.N=4
-@REGS.0= 0 R_CLOCK	CLOCK TIMER
-@REGS.1= 1 R_TIMER	TIMER
-@REGS.2= 2 R_STOPWATCH	STOPWATCH
-@REGS.3= 3 R_CKALARM	ALARM CKALARM
+	assign	w_btn    = h0;
+	assign	o_led_cs_n    = 8'h0;
+@REGS.N=1
+@REGS.0= 0 R_SPIO		SPIO
 @BDEF.DEFN=
-typedef	struct	RTCLIGHT_S	{
-	unsigned	r_clock, r_stopwatch, r_timer, r_alarm;
-} RTCLIGHT;
-@BDEF.IONAME=io_rtc
-@BDEF.IOTYPE=RTCLIGHT
-@BDEF.OSDEF=_BOARD_HAS_RTCLIGHT
-@BDEF.OSVAL=static volatile @$THIS.BDEF.IOTYPE *const _rtc = &((@$THIS.BDEF.IOTYPE *)@$THIS.BASE);
-#
-#
+#define	SPIO_BTNC	0x01000
+#define	SPIO_BTND	0x00800
+#define	SPIO_BTNL	0x00400
+#define	SPIO_BTNR	0x00200
+#define	SPIO_BTNU	0x00100
+@BDEF.IONAME=io_spio
+@BDEF.IOTYPE=unsigned
+@BDEF.OSDEF= _BOARD_HAS_SPIO
+@BDEF.OSVAL= static volatile @$THIS.BDEF.IOTYPE *const _spio = &((@$THIS.BDEF.IOTYPE *)@$THIS.BASE);
