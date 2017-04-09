@@ -101,24 +101,21 @@ also depend upon the master clock rate.
 
 # Status
 
-This project is currently in its bare infancy.  Some success has been
-demonstrated to date in building a bus.  This success may be seen in the 
-original [initial demo](sw/demo.txt), as well as in the updated and
-[subsequent demo](../../tree/master/sw/demo-out/).
+This project has moved from its bare infancy to an initial demo that not
+only builds for a Nexys Video board, but ... several peripherals are now
+known to work using this approach.  You can see the code this program
+generates in the [demo directory](sw/demo-out/).
 
-As of 20170405, the [main.v](sw/demo-out/main.v),
+As of 20170408, the [main.v](sw/demo-out/main.v),
 [regdefs.h](sw/demo-out/regdefs.h),
-and [regdefs.cpp](sw/demo-out/regdefs.cpp) files now pass an
-initial scrub by 
-[Verilator](https://www.veripool.org/wiki/verilator)
-and [GCC](https://gcc.gnu.org), so I anticipate running
-things via [Verilator](https://www.veripool.org/wiki/verilator)
-and [wbregs](https://github.com/ZipCPU/openarty/blob/master/sw/host/wbregs.cpp)
-soon to verify that the bus still works --- after having torn it apart
-and put it back together via this routine.
+and [regdefs.cpp](sw/demo-out/regdefs.cpp) files now pass not only an initial
+scrub by [Verilator](https://www.veripool.org/wiki/verilator)
+and [GCC](https://gcc.gnu.org), but also via Vivado.  Initial
+[Verilator](https://www.veripool.org/wiki/verilator) simulations are working,
+as the whole appears to be working in hardware as well!
 
 In detail:
-- Simple bus components ... just work.  (Not tested yet, though)
+- Simple bus components ... just work.
 - Components with logic in the toplevel file appear to work.  (Since Verilator doesn't simulate this, it make take another round or two to find out what's missing there.)
 - Although it shouldn't have any problems integrating memory components and cores, I have yet to try integrating any [SDRAM](https://github.com/ZipCPU/xulalx25soc/blob/master/rtl/wbsdram.v) or [DDR3 SDRAM](http://opencores.org/project,wbddr3) components.
 - Only one [PC host to wishbone busmaster](sw/wbubus.txt) component has been integrated.  Driving the design from either JTAG or Digilent's DEPP interface would require a simple modification to this.
@@ -144,7 +141,7 @@ a very simple [GPIO controller](sw/gpio.txt),
 a [GPS UART and PPS-driven internal clock](sw/gps.txt), 
 a [Real-Time (GPS driven) Clock](sw/rtcgps.txt),
 a [PS/2 Mouse](sw/wbmouse.txt),
-an [OLEDRGB component](sw/wboled.txt),
+an [OLED component](sw/wboledbw.txt),
 and more.
 Many of these component cores exist and have their own repositories elsewhere.
 For example, the wishbone UART core may be found
