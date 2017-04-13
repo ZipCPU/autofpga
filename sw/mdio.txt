@@ -48,7 +48,8 @@
 	// Ethernet control (MDIO)
 	output	wire		o_eth_mdclk, io_eth_mdio;
 @TOP.DEFNS=
-	wire	w_mdio, w_mdwe;
+	// Ethernet control (MDIO)
+	wire		w_mdio, w_mdwe;
 @TOP.MAIN=
 		o_eth_mdclk, w_mdio, w_mdwe, io_eth_mdio
 @TOP.INSERT=

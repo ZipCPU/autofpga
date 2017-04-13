@@ -1,10 +1,11 @@
 ################################################################################
 ##
-## Filename: 	clock.txt
+## Filename: 	wbpmic.txt
 ##
 ## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 ##
-## Purpose:	
+## Purpose:	To describe the interface of a very simple ADC (PModMIC3) for
+##		autogen to work with.
 ##
 ## Creator:	Dan Gisselquist, Ph.D.
 ##		Gisselquist Technology, LLC
@@ -35,12 +36,47 @@
 ################################################################################
 ##
 ##
-@$CLKFREQHZ=100000000
-@PREFIX=clk
-@TOP.DEFNS=
-	wire		s_clk, s_reset;
-@TOP.INSERT=
-	assign	s_clk = i_clk;
-	assign	s_reset = 1'b0; // This design requires local, not global resets
-@REGS.INSERT.H=
-#define	CLKFREQHZ	@$THIS.CLKFREQHZ
+@PREFIX=pmic
+@NADDR=	2
+@PTYPE=	OTHER
+@ACCESS= CONSOLE_ACCESS
+@$SAMPLERATE=48000
+@$CLKSPERSAMPLE.EXPR=@$CLKFREQHZ/@$THIS.SAMPLERATE
+@UARTSETUP.FORMAT=20'h%08x
+@INT.MIC.WIRE=pmic_int
+@INT.MIC.PIC=altpic
+@MAIN.PORTLIST=
+		// The UART console
+		o_mic_csn, o_mic_sck, i_mic_din
+@MAIN.IODECL=
+	output	wire		o_mic_csn, o_mic_sck;
+	input	wire		i_mic_din;
+@MAIN.INSERT=
+	wbmic #(.DEFAULT_RELOAD(@$THIS.CLKSPERSAMPLE))
+ 		microphone(i_clk, 1'b0,
+ 			wb_cyc, (wb_stb)&&(pmic_sel), wb_we,
+				wb_addr[0], wb_data,
+ 			pmic_ack, pmic_stall, pmic_data,
+			o_mic_csn, o_mic_sck, i_mic_din, pmic_int);
+@MAIN.ALT=
+	assign	o_mic_csn    = 1'b1;
+	assign	o_mic_sck    = 1'b1;
+@REGS.NOTE = // WB-Microphone registers
+@REGS.N = 2
+@REGS.0 = 0 R_MIC_DATA		 MICD
+@REGS.1 = 1 R_MIC_CTRL		 MICC
+@BDEF.DEFN =
+#define WBMIC_ENABLE	0
+#define WBMIC_DISABLE	(1<<20)
+#define WBMIC_NONEMPTY	0
+#define WBMIC_HALFINT	(1<<22)
+#define WBMIC_RESET	(1<<24)
+
+typedef struct  WBMIC_S {
+	unsigned	m_data;
+	unsigned	m_setup;
+} WBMIC;
+@BDEF.IONAME= io_wbmic
+@BDEF.IOTYPE= WBMIC
+@BDEF.OSDEF=	_BOARD_HAS_WBMIC
+@BDEF.OSVAL=static volatile WBMIC *const _wbmic = &((WBUART *)@$THIS.BASE);

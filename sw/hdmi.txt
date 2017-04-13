@@ -45,20 +45,21 @@
 @TOP.DEFNS=
 	wire	w_hdmi_in_clk, w_hdmi_in_clk_no_buf;
 @TOP.MAIN=
-	// HDMI input clock
-	w_hdmi_in_clk
+		// HDMI input clock
+		w_hdmi_in_clk
 @TOP.INSERT=
 	IBUFDS	hdmi_in_clk_ibuf(.I(i_hdmi_in_clk_p),
 			.IB(i_hdmi_in_clk_n), .O(w_hdmi_in_clk_no_buf));
 	BUFG	hdmi_in_clk_bufg(.I(w_hdmi_in_clk_no_buf), .O(w_hdmi_in_clk));
 @TOP.MAIN=
+		// HDMI input ports
 		w_hdmi_in_clk
 @MAIN.PORTLIST=
 		// HDMI input ports
 		i_hdmi_in_clk
 @MAIN.IODECL=
 	// HDMI input ports
-	input	wire	i_hdmi_in_clk;
+	input	wire		i_hdmi_in_clk;
 #
 #
 @PREFIX=hdmiout
@@ -71,16 +72,17 @@
 @TOP.DEFNS=
 	wire		w_hdmi_out_clk;
 @TOP.MAIN=
+		// HDMI output ports
 		w_hdmi_out_clk
 @TOP.INSERT=
 	assign	w_hdmi_out_clk = w_hdmi_in_clk;
 	xoddrb	hdmi_out_genclk(w_hdmi_out_clk, { 1'b1, 1'b0 },
 			{ o_hdmi_out_clk_p, o_hdmi_out_clk_n });
 @MAIN.PORTLIST=
-		// HDMI input ports
+		// HDMI output ports
 		i_hdmi_out_clk
 @MAIN.DEFNS=
-	// HDMI input ports
+	// HDMI output ports
 	input	wire	i_hdmi_out_clk;
 #
 #
@@ -100,7 +102,7 @@
 	// HDMI command I2C wires, to support the EDID protocol
 	// These are used to determine if the bus wires are to be set to zero
 	// or not
-	wire	w_hdmi_in_scl, w_hdmi_in_sda;
+	wire		w_hdmi_in_scl, w_hdmi_in_sda;
 @TOP.MAIN=
 	io_hdmi_in_scl, io_hdmi_in_sda, w_hdmi_in_scl, w_hdmi_in_sda
 @TOP.INSERT=
@@ -117,19 +119,59 @@
 	// HDMI input EDID I2C ports
 	input	wire		i_hdmi_in_scl, i_hdmi_in_sda;
 	output	wire		o_hdmi_in_scl, o_hdmi_in_sda;
+@MAIN.DEFNS=
+	wire	[31:0]	edid_dbg;
 @MAIN.INSERT=
-	wbi2cslave	the_input_edid(i_clk, 1'b0,
+	wbi2cslave	#(	.INITIAL_MEMA("edid_a.hex"),
+				.INITIAL_MEMB("edid_b.hex"),
+				.INITIAL_MEMC("edid_c.hex"),
+				.INITIAL_MEMD("edid_d.hex")
+				) the_input_edid(i_clk, 1'b0,
 		wb_cyc, (wb_stb)&&(edin_sel), wb_we, wb_addr[4:0], wb_data,
 			wb_sel, edin_ack, edin_stall, edin_data,
-		i_hdmi_in_scl, i_hdmi_in_sda, o_hdmi_in_scl, o_hdmi_in_sda);
+		i_hdmi_in_scl, i_hdmi_in_sda, o_hdmi_in_scl, o_hdmi_in_sda,
+		edid_dbg);
 @MAIN.ALT=
 	assign	o_hdmi_in_scl = 1'b1;
 	assign	o_hdmi_in_sda = 1'b1;
 @REGS.NOTE=// HDMI EDID for the input HDMI port
-@REGS.N=0
+@REGS.N=1
 @REGS.0= 0 R_EDID_IN EDIN
 @BDEFS.DEFN=
 @BDEFS.IONAME=io_edin[32]
 @BDEFS.IOTYPE=unsigned
 @BDEFS.OSDEF=_BOARD_HAS_HDMI_IN_EDID
 @BDEFS.OSVAL=static volatile @$THIS.BDEF.IOTYPE *const _edin = $((unsigned *)@$THIS.BASE);
+#
+#
+#
+@PREFIX=reflect
+@TOP.PORTLIST=
+	i_hdmi_rx_p, i_hdmi_rx_n,
+	o_hdmi_tx_p, o_hdmi_tx_n
+@TOP.IODECL=
+	input	[2:0]	i_hdmi_rx_p, i_hdmi_rx_n;
+	output	[2:0]	o_hdmi_tx_p, o_hdmi_tx_n;
+@TOP.INSERT=
+	wire	[2:0]	w_hdmi_v;
+	IBUFDS	ihdmir(.I(i_hdmi_rx_p[0]), .IB(i_hdmi_rx_n[0]),.O(w_hdmi_v[0]));
+	IBUFDS	ihdmig(.I(i_hdmi_rx_p[1]), .IB(i_hdmi_rx_n[1]),.O(w_hdmi_v[1]));
+	IBUFDS	ihdmib(.I(i_hdmi_rx_p[2]), .IB(i_hdmi_rx_n[2]),.O(w_hdmi_v[2]));
+
+	OBUFDS	ohdmir(.I(w_hdmi_v[0]), .O(o_hdmi_tx_p[0]),.OB(o_hdmi_tx_n[0]));
+	OBUFDS	ohdmig(.I(w_hdmi_v[1]), .O(o_hdmi_tx_p[1]),.OB(o_hdmi_tx_n[1]));
+	OBUFDS	ohdmib(.I(w_hdmi_v[2]), .O(o_hdmi_tx_p[2]),.OB(o_hdmi_tx_n[2]));
+@PREFIX=scop_edid
+@PTYPE=DOUBLE
+@NADDR=2
+@INT.SCOPE.WIRE=scop_edid_int
+@INT.SCOPE.PIC=buspic
+@MAIN.INSERT=
+	wbscopc	theicscop(i_clk, 1'b1, edid_dbg[31], edid_dbg[30:0],
+			i_clk, wb_cyc, (wb_stb)&&(scop_edid_sel), wb_we, wb_addr[0], wb_data,
+			scop_edid_ack, scop_edid_stall, scop_edid_data,
+			scop_edid_int);
+@REGS.NOTE=// EDID/I2C Debug Scope
+@REGS.N=2
+@REGS.0= 0 R_EDID_SCOPC	ESCOPC ESCOPE
+@REGS.1= 1 R_EDID_SCOPD	ESCOPD

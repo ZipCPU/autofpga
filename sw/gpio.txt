@@ -63,6 +63,8 @@
 	output	wire	o_sd_reset;
 	input	wire	i_gps_3df;
 @TOP.DEFNS=
+	// GPIO declarations.  The two wire busses are just virtual lists of
+	// input (or output) ports.
 	wire	[14:0]	i_gpio, o_gpio;
 @TOP.MAIN=
 	// GPIO wires
