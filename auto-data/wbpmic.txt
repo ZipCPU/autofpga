@@ -46,7 +46,7 @@
 @INT.MIC.WIRE=pmic_int
 @INT.MIC.PIC=altpic
 @MAIN.PORTLIST=
-		// The UART console
+		// The PMic3 microphone wires
 		o_mic_csn, o_mic_sck, i_mic_din
 @MAIN.IODECL=
 	output	wire		o_mic_csn, o_mic_sck;
