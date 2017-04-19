@@ -1,0 +1,49 @@
+#
+@LEGAL=../auto-data/legalgen.txt
+#
+# @KEYS.TRIMLIST is a list of all string keys that need to be trimmed (have
+# spaces removed from either side) before being used
+@KEYS.TRIMLIST= PREFIX ACCESS PTYPE NADDR FORMAT BDEF.IOTYPE WIRE
+# @KEYS.INTLIST is a list of all things that need to be converted to integers
+@KEYS.INTLIST= BUS_ADDRESS_WIDTH NADDR NPIC NSCOPES PIC.MAX REGS.N ID
+@REGS.INSERT.H=
+typedef	struct {
+	unsigned	m_addr;
+	const char	*m_name;
+} REGNAME;
+
+extern	const	REGNAME	*bregs;
+extern	const	int	NREGS;
+// #define	NREGS	(sizeof(bregs)/sizeof(bregs[0]))
+
+extern	unsigned	addrdecode(const char *v);
+extern	const	char *addrname(const unsigned v);
+@REGDEFS.CPP.INCLUDE=
+#include <stdio.h>
+#include <stdlib.h>
+#include <strings.h>
+#include <ctype.h>
+@REGDEFS.CPP.INSERT=
+#define	RAW_NREGS	(sizeof(raw_bregs)/sizeof(bregs[0]))
+
+const	REGNAME		*bregs = raw_bregs;
+const	int	NREGS = RAW_NREGS;
+
+unsigned	addrdecode(const char *v) {
+	if (isalpha(v[0])) {
+		for(int i=0; i<NREGS; i++)
+			if (strcasecmp(v, bregs[i].m_name)==0)
+				return bregs[i].m_addr;
+		fprintf(stderr, "Unknown register: %s\n", v);
+		exit(-2);
+	} else
+		return strtoul(v, NULL, 0);
+}
+
+const	char *addrname(const unsigned v) {
+	for(int i=0; i<NREGS; i++)
+		if (bregs[i].m_addr == v)
+			return bregs[i].m_name;
+	return NULL;
+}
+
