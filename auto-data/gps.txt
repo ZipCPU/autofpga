@@ -49,10 +49,11 @@
 @MAIN.PORTLIST=
 		// The GPS 1PPS signal port
 		i_gps_pps
+@MAIN.PARAM=
+	localparam [31:0] GPSCLOCK_DEFAULT_STEP = @$THIS.GPS_STEP;
 @MAIN.IODECL=
 	//The GPS Clock
 	input	wire		i_gps_pps;
-	localparam [31:0] GPSCLOCK_DEFAULT_STEP = @$THIS.GPS_STEP;
 @MAIN.DEFNS=
 	wire	gps_pps, ck_pps, gps_led, gps_locked, gps_tracking;
 	wire	[63:0]	gps_now, gps_err, gps_step;
