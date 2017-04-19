@@ -104,11 +104,11 @@ also depend upon the master clock rate.
 This project has moved from its bare infancy to an initial demo that not
 only builds for a Nexys Video board, but ... several peripherals are now
 known to work using this approach.  You can see the code this program
-generates in the [demo directory](sw/demo-out/).
+generates in the [demo directory](demo-out/).
 
-As of 20170408, the [main.v](sw/demo-out/main.v),
-[regdefs.h](sw/demo-out/regdefs.h),
-and [regdefs.cpp](sw/demo-out/regdefs.cpp) files now pass not only an initial
+As of 20170408, the [main.v](demo-out/main.v),
+[regdefs.h](demo-out/regdefs.h),
+and [regdefs.cpp](demo-out/regdefs.cpp) files now pass not only an initial
 scrub by [Verilator](https://www.veripool.org/wiki/verilator)
 and [GCC](https://gcc.gnu.org), but also via Vivado.  Initial
 [Verilator](https://www.veripool.org/wiki/verilator) simulations are working,
@@ -118,11 +118,11 @@ In detail:
 - Simple bus components ... just work.
 - Components with logic in the toplevel file appear to work.  (Since Verilator doesn't simulate this, it make take another round or two to find out what's missing there.)
 - Although it shouldn't have any problems integrating memory components and cores, I have yet to try integrating any [SDRAM](https://github.com/ZipCPU/xulalx25soc/blob/master/rtl/wbsdram.v) or [DDR3 SDRAM](http://opencores.org/project,wbddr3) components.
-- Only one [PC host to wishbone busmaster](sw/wbubus.txt) component has been integrated.  Driving the design from either JTAG or Digilent's DEPP interface would require a simple modification to this.
+- Only one [PC host to wishbone busmaster](auto-data/wbubus.txt) component has been integrated.  Driving the design from either JTAG or Digilent's DEPP interface would require a simple modification to this.
 - Addresses get assigned in three groups, and processed in three groups: components having only one address, components having more addresses but only a single clock delay, and all other components and memories
 - Interrupts get assigned to a named controller, and then C++ header files can be updated to reflect that
 - A simple mathematical expression evaluator exists, allowing simple math expressions and print formats.  This makes it possible to set a global clock frequency value, and to then set baud rates and other clock dividers from it.
-- Automatically assigning, connecting, and building [wishbone scopes](https://github.com/ZipCPU/wbscope) just ... isn't there yet
+- Automatically assigning, connecting, and building [wishbone scopes](https://github.com/ZipCPU/wbscope) just ... isn't there yet.  Perhaps it doesn't need to be.
 - The auto builder does nothing to create the master C++ Verilator simulation file, or any RTL based Makefiles.
 - Optimized bus decoding--at least to one level.  I may need to return to this if the bus decoding logic isn't fast enough, but that'll require it (nearly) running on actual hardware.
 - It doesn't build any linker script components ... yet.
@@ -132,16 +132,16 @@ In detail:
 
 Component files now exist for many of the components I've been using regularly.
 These include: 
-a [Flash](sw/flash.txt),
-[block RAM](sw/bkram.txt),
-a [UART console](sw/wbuart.txt),
-a very simple [GPIO controller](sw/gpio.txt),
-[RMII ethernet controller](sw/enet.txt),
-[MDIO ethernet control interface](sw/mdio.txt),
-a [GPS UART and PPS-driven internal clock](sw/gps.txt), 
-a [Real-Time (GPS driven) Clock](sw/rtcgps.txt),
-a [PS/2 Mouse](sw/wbmouse.txt),
-an [OLED component](sw/wboledbw.txt),
+a [Flash](auto-data/flash.txt),
+[block RAM](auto-data/bkram.txt),
+a [UART console](auto-data/wbuart.txt),
+a very simple [GPIO controller](auto-data/gpio.txt),
+[RMII ethernet controller](auto-data/enet.txt),
+[MDIO ethernet control interface](auto-data/mdio.txt),
+a [GPS UART and PPS-driven internal clock](auto-data/gps.txt), 
+a [Real-Time (GPS driven) Clock](auto-data/rtcgps.txt),
+a [PS/2 Mouse](auto-data/wbmouse.txt),
+an [OLED component](auto-data/wboledbw.txt),
 and more.
 Many of these component cores exist and have their own repositories elsewhere.
 For example, the wishbone UART core may be found
@@ -161,5 +161,5 @@ can be purchased from Gisselquist Technology, LLC.
 
 Likewise, please contact us should you wish to guide, direct, or otherwise
 fund the development of this project.  You can contact me at my user name,
-dgisselq, at ieee.org.
+dgisselq, at the wonderful ieee.org host.
 
