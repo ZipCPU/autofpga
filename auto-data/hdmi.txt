@@ -37,29 +37,87 @@
 ##
 @PREFIX=hdmiin
 @TOP.PORTLIST=
-		// HDMI input clock
-		i_hdmi_in_clk_n, i_hdmi_in_clk_p
+		// HDMI input clock, and then data
+		i_hdmi_in_clk_n, i_hdmi_in_clk_p,
+		i_hdmi_in_p, i_hdmi_in_n
 @TOP.IODECL=
 	// HDMI input clock
 	input	wire	i_hdmi_in_clk_n, i_hdmi_in_clk_p;
+	input	[2:0]	i_hdmi_in_p, i_hdmi_in_n;
 @TOP.DEFNS=
-	wire	w_hdmi_in_clk, w_hdmi_in_clk_no_buf;
+	wire		w_hdmi_in_logic_clk, w_hdmi_in_hsclk,
+			w_hdmi_in_clk_no_buf;
+	wire	[1:0]	w_hdmi_in_hsclk_pn;
+	wire	[9:0]	w_hdmi_in_red, w_hdmi_in_green, w_hdmi_in_blue;
 @TOP.MAIN=
 		// HDMI input clock
-		w_hdmi_in_clk
+		w_hdmi_in_logic_clk, w_hdmi_in_red, w_hdmi_in_green, w_hdmi_in_blue
 @TOP.INSERT=
-	IBUFDS	hdmi_in_clk_ibuf(.I(i_hdmi_in_clk_p),
-			.IB(i_hdmi_in_clk_n), .O(w_hdmi_in_clk_no_buf));
-	BUFG	hdmi_in_clk_bufg(.I(w_hdmi_in_clk_no_buf), .O(w_hdmi_in_clk));
-@TOP.MAIN=
-		// HDMI input ports
-		w_hdmi_in_clk
+	IBUFDS	hdmi_in_clk_ibuf(
+			.I(i_hdmi_in_clk_p), .IB(i_hdmi_in_clk_n),
+			.O(w_hdmi_in_clk_no_buf));
+
+	xhdmiiclk xhclkin(s_clk, w_hdmi_in_clk_no_buf, o_hdmi_in_txen,
+			w_hdmi_in_hsclk_pn, w_hdmi_in_logic_clk);
+
+	assign	w_hdmi_in_hsclk = w_hdmi_in_hsclk_pn[1]; // P
+
+	xhdmiin	xhin_r(w_hdmi_in_logic_clk, w_hdmi_in_hsclk_pn, o_hdmi_in_txen,
+		{ i_hdmi_in_p[0], i_hdmi_in_n[0] }, w_hdmi_in_blue);
+	xhdmiin	xhin_g(w_hdmi_in_logic_clk, w_hdmi_in_hsclk_pn, o_hdmi_in_txen,
+		{ i_hdmi_in_p[1], i_hdmi_in_n[1] }, w_hdmi_in_green);
+	xhdmiin	xhin_b(w_hdmi_in_logic_clk, w_hdmi_in_hsclk_pn, o_hdmi_in_txen,
+		{ i_hdmi_in_p[2], i_hdmi_in_n[2] }, w_hdmi_in_red);
+	
 @MAIN.PORTLIST=
 		// HDMI input ports
-		i_hdmi_in_clk
+		i_hdmi_in_clk, i_hdmi_in_r, i_hdmi_in_g, i_hdmi_in_b
 @MAIN.IODECL=
 	// HDMI input ports
 	input	wire		i_hdmi_in_clk;
+	input	wire	[9:0]	i_hdmi_in_r, i_hdmi_in_g, i_hdmi_in_b;
+#
+#
+#
+@PREFIX=hinh
+@NADDR=4
+@PTYPE=DOUBLE
+@MAIN.INSERT=
+	hdmihist inhist(i_clk, i_hdmi_in_clk, ck_pps,
+			i_hdmi_in_r, i_hdmi_in_b, i_hdmi_in_g,
+		(wb_cyc), (wb_stb)&&(hinh_sel), (wb_we), wb_addr[1:0], wb_data,
+			hinh_ack, hinh_stall, hinh_data);
+@REGS.N=4
+@REGS.NOTE=// Histogram of HDMI input words
+@REGS.0= 0 R_HINH_CTRL	HINHISTC HINHC
+@REGS.1= 1 R_HINH_RED	HINHISTR HINHR
+@REGS.2= 2 R_HINH_GREEN	HINHISTG HINHG
+@REGS.3= 3 R_HINH_BLUE	HINHISTB HINHB
+#
+#
+#
+@PREFIX=scope_hdmiin
+@PTYPE=DOUBLE
+@NADDR=2
+@INT.HINSCOPE.WIRE=	scop_hdmiin_int
+@INT.HINSCOPE.PIC=	buspic
+@MAIN.DEFNS=
+	wire	[31:0]	hdmi_in_data;
+@MAIN.INSERT=
+	assign	hdmi_in_data = { 2'b0, i_hdmi_in_r, i_hdmi_in_b, i_hdmi_in_g };
+
+	wbscope #(.LGMEM(5'h10), .SYNCHRONOUS(0)
+		) copyhdmiin(i_hdmi_in_clk, 1'b1, 1'b1, hdmi_in_data,
+		i_clk, wb_cyc, (wb_stb)&&(scope_hdmiin_sel), wb_we, wb_addr[0],
+				wb_data,
+			scope_hdmiin_ack, scope_hdmiin_stall,
+			scope_hdmiin_data,
+		scop_hdmiin_int);
+@REGS.N=2
+@REGS.NOTE=// Scope outputs, for the hdmi input values
+@REGS.0= 0 R_SCOP_HDMIIN_CTRL HINSCOPC HINSCOPE
+@REGS.1= 1 R_SCOP_HDMIIN_DATA HINSCOPD
+#
 #
 #
 @PREFIX=hdmiout
@@ -75,7 +133,7 @@
 		// HDMI output ports
 		w_hdmi_out_clk
 @TOP.INSERT=
-	assign	w_hdmi_out_clk = w_hdmi_in_clk;
+	assign	w_hdmi_out_clk = w_hdmi_in_logic_clk;
 	xoddrb	hdmi_out_genclk(w_hdmi_out_clk, { 1'b1, 1'b0 },
 			{ o_hdmi_out_clk_p, o_hdmi_out_clk_n });
 @MAIN.PORTLIST=
@@ -87,7 +145,7 @@
 #
 #
 #
-# The EDID I2C port for the HDMI input
+# The EDID I2C port for the HDMI sink (in) port
 @PREFIX=edin
 @NADDR=32
 @PTYPE=DOUBLE
@@ -122,11 +180,8 @@
 @MAIN.DEFNS=
 	wire	[31:0]	edid_dbg;
 @MAIN.INSERT=
-	wbi2cslave	#(	.INITIAL_MEMA("edid_a.hex"),
-				.INITIAL_MEMB("edid_b.hex"),
-				.INITIAL_MEMC("edid_c.hex"),
-				.INITIAL_MEMD("edid_d.hex")
-				) the_input_edid(i_clk, 1'b0,
+	wbi2cslave	#( .INITIAL_MEMA("edid.hex"), .READ_ONLY(1'b1))
+	    the_input_edid(i_clk, 1'b0,
 		wb_cyc, (wb_stb)&&(edin_sel), wb_we, wb_addr[4:0], wb_data,
 			wb_sel, edin_ack, edin_stall, edin_data,
 		i_hdmi_in_scl, i_hdmi_in_sda, o_hdmi_in_scl, o_hdmi_in_sda,
@@ -144,23 +199,90 @@
 @BDEFS.OSVAL=static volatile @$THIS.BDEF.IOTYPE *const _edin = $((unsigned *)@$THIS.BASE);
 #
 #
+# The EDID I2C port for the HDMI source (out) port
+@PREFIX=edout
+@NADDR=64
+@PTYPE=DOUBLE
+@INT.EDID.WIRE=	edid_out_int
+@INT.EDID.PIC=	syspic
+@ACCESS=HDMI_OUT_EDID_ACCESS
+@TOP.PORTLIST=
+		// HDMI output EDID I2C ports
+		io_hdmi_out_scl, io_hdmi_out_sda
+@TOP.IODECL=
+	// HDMI output EDID I2C ports
+	inout	wire	io_hdmi_out_scl, io_hdmi_out_sda;
+@TOP.DEFNS=
+	// HDMI command I2C wires, to support the EDID protocol
+	// These are used to determine if the bus wires are to be set to zero
+	// or not
+	wire		w_hdmi_out_scl, w_hdmi_out_sda;
+@TOP.MAIN=
+	io_hdmi_out_scl, io_hdmi_out_sda, w_hdmi_out_scl, w_hdmi_out_sda
+@TOP.INSERT=
+	// The EDID I2C port for the HDMI source port
+	//
+	// We need to make certain we only force the pin to a zero (drain)
+	// when trying to do so.  Otherwise we let it float (back) high.
+	assign	io_hdmi_out_scl = (w_hdmi_out_scl) ? 1'bz : 1'b0;
+	assign	io_hdmi_out_sda = (w_hdmi_out_sda) ? 1'bz : 1'b0;
+@MAIN.PORTLIST=
+		// HDMI out (source) EDID I2C ports
+		i_hdmi_out_scl, i_hdmi_out_sda, o_hdmi_out_scl, o_hdmi_out_sda
+@MAIN.IODECL=
+	// HDMI input EDID I2C ports
+	input	wire		i_hdmi_out_scl, i_hdmi_out_sda;
+	output	wire		o_hdmi_out_scl, o_hdmi_out_sda;
+@MAIN.DEFNS=
+	wire	[31:0]	edido_dbg;
+@MAIN.INSERT=
+	wbi2cmaster	#( .INITIAL_MEMA("edid.hex"), .READ_ONLY(1'b1))
+	    the_output_edid(i_clk, 1'b0,
+		wb_cyc, (wb_stb)&&(edin_sel), wb_we, wb_addr[4:0], wb_data,
+			wb_sel, edout_ack, edout_stall, edout_data,
+		i_hdmi_out_scl, i_hdmi_out_sda, o_hdmi_out_scl, o_hdmi_out_sda,
+		edid_out_int,
+		edido_dbg);
+@MAIN.ALT=
+	assign	o_hdmi_out_scl = 1'b1;
+	assign	o_hdmi_out_sda = 1'b1;
+@REGS.NOTE=// HDMI EDID for the output (source) HDMI port
+@REGS.N=3
+@REGS.0=  0 R_EDID_CMD EDCMD
+@REGS.1=  1 R_EDID_SPD EDSPD
+@REGS.2= 32 R_EDID_OUT EDOUT
+@BDEFS.DEFN=
+
+typedef	struct	EDID_SRC_S {
+	unsigned	o_cmd;
+	unsigned	o_spd;
+	unsigned	o_ignored[32-2];
+	unsigned	o_data[32];
+} EDID_SRC;
+
+@BDEFS.IONAME=io_edout
+@BDEFS.IOTYPE=EDID_SRC
+@BDEFS.OSDEF=_BOARD_HAS_HDMI_SRC_EDID
+@BDEFS.OSVAL=static volatile @$THIS.BDEF.IOTYPE *const _edout = $((unsigned *)@$THIS.BASE);
+#
+#
 #
 @PREFIX=reflect
 @TOP.PORTLIST=
-	i_hdmi_rx_p, i_hdmi_rx_n,
-	o_hdmi_tx_p, o_hdmi_tx_n
+	o_hdmi_out_p, o_hdmi_out_n
 @TOP.IODECL=
-	input	[2:0]	i_hdmi_rx_p, i_hdmi_rx_n;
-	output	[2:0]	o_hdmi_tx_p, o_hdmi_tx_n;
+	output	[2:0]	o_hdmi_out_p, o_hdmi_out_n;
 @TOP.INSERT=
-	wire	[2:0]	w_hdmi_v;
-	IBUFDS	ihdmir(.I(i_hdmi_rx_p[0]), .IB(i_hdmi_rx_n[0]),.O(w_hdmi_v[0]));
-	IBUFDS	ihdmig(.I(i_hdmi_rx_p[1]), .IB(i_hdmi_rx_n[1]),.O(w_hdmi_v[1]));
-	IBUFDS	ihdmib(.I(i_hdmi_rx_p[2]), .IB(i_hdmi_rx_n[2]),.O(w_hdmi_v[2]));
+	xhdmiout ohdmir(w_hdmi_in_logic_clk, w_hdmi_in_hsclk, w_hdmi_out_en,
+			w_hdmi_in_red,
+			{ o_hdmi_out_p[0], o_hdmi_out_n[0] });
+	xhdmiout ohdmig(w_hdmi_in_logic_clk, w_hdmi_in_hsclk, w_hdmi_out_en,
+			w_hdmi_in_green,
+			{ o_hdmi_out_p[1], o_hdmi_out_n[1] });
+	xhdmiout ohdmib(w_hdmi_in_logic_clk, w_hdmi_in_hsclk, w_hdmi_out_en,
+			w_hdmi_in_blue,
+			{ o_hdmi_out_p[2], o_hdmi_out_n[2] });
 
-	OBUFDS	ohdmir(.I(w_hdmi_v[0]), .O(o_hdmi_tx_p[0]),.OB(o_hdmi_tx_n[0]));
-	OBUFDS	ohdmig(.I(w_hdmi_v[1]), .O(o_hdmi_tx_p[1]),.OB(o_hdmi_tx_n[1]));
-	OBUFDS	ohdmib(.I(w_hdmi_v[2]), .O(o_hdmi_tx_p[2]),.OB(o_hdmi_tx_n[2]));
 @PREFIX=scop_edid
 @PTYPE=DOUBLE
 @NADDR=2
