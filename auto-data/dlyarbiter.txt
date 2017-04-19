@@ -63,7 +63,7 @@
 	// And because the ZipCPU and the Arbiter can create an unacceptable
 	// delay, we often fail timing.  So, we add in a delay cycle
 `ifdef	WBUBUS_MASTER
-`ifdef	ZIPCPU_MASTER
+`ifdef	INCLUDE_ZIPCPU
 `define	BUS_DELAY_NEEDED
 `endif
 `endif
@@ -71,7 +71,7 @@
 	busdelay #(@$BUS_ADDRESS_WIDTH)	dwb_delay(i_clk,
 		dwb_cyc, dwb_stb, dwb_we, dwb_addr, dwb_odata, dwb_sel,
 			dwb_ack, dwb_stall, dwb_idata, dwb_err,
-		wb_cyc, wb_stb, wb_we, wb_addr, wb_odata, wb_sel,
+		wb_cyc, wb_stb, wb_we, wb_addr, wb_data, wb_sel,
 			wb_ack, wb_stall, wb_idata, wb_err);
 `else
 	// If one of the two, the ZipCPU or the WBUBUS, isn't here, then we
@@ -88,5 +88,5 @@
 	assign	dwb_stall = wb_stall;
 	assign	dwb_err   = wb_err;
 	assign	dwb_idata = wb_idata;
-	assign	wbu_idata = wb_idata;
 `endif
+	assign	wbu_idata = wb_idata;
