@@ -302,7 +302,7 @@ module	main(i_clk, i_reset,
 	input	wire	i_hdmi_out_clk;
 	// Bus arbiter's lines
 	wire		dwb_cyc, dwb_stb, dwb_we, dwb_ack, dwb_stall, dwb_err;
-	wire	[(@$BUS_ADDRESS_WIDTH-1):0]	dwb_addr;
+	wire	[(30-1):0]	dwb_addr;
 	wire	[31:0]	dwb_odata, dwb_idata;
 	wire	[3:0]	dwb_sel;
 
@@ -965,7 +965,7 @@ module	main(i_clk, i_reset,
 	assign	buserr_data = r_bus_err;
 `ifdef	WBUBUS_MASTER
 `ifdef	INCLUDE_ZIPCPU
-	assign	wbu_zip_sel   = wbu_addr[@$BUS_ADDRESS_WIDTH-1];
+	assign	wbu_zip_sel   = wbu_addr[30-1];
 `else
 	assign	wbu_zip_sel   = 1'b0;
 	assign	zip_dbg_ack   = 1'b0;
@@ -987,7 +987,7 @@ module	main(i_clk, i_reset,
 			o_host_tx_stb, o_host_tx_data, i_host_tx_busy,
 			wbubus_dbg[0]);
 	assign	wbu_sel = 4'hf;
-	assign	wbu_addr = wbu_tmp_addr[(@$BUS_ADDRESS_WIDTH-1):0];
+	assign	wbu_addr = wbu_tmp_addr[(30-1):0];
 `else	// WBUBUS_MASTER
 
 	assign	wbu_cyc = 1'b0;
@@ -1004,13 +1004,13 @@ module	main(i_clk, i_reset,
 	// And an arbiter to decide who gets access to the bus
 	//
 	//
-	wbpriarbiter #(32,@$BUS_ADDRESS_WIDTH)	bus_arbiter(i_clk,
+	wbpriarbiter #(32,30)	bus_arbiter(i_clk,
 		// The Zip CPU bus master --- gets the priority slot
 		zip_cyc, zip_stb, zip_we, zip_addr, zip_data, zip_sel,
 			zip_ack, zip_stall, zip_err,
 		// The UART interface master
 		(wbu_cyc)&&(!wbu_zip_sel), (wbu_stb)&&(!wbu_zip_sel), wbu_we,
-			wbu_addr[(@$BUS_ADDRESS_WIDTH-1):0], wbu_data, wbu_sel,
+			wbu_addr[(30-1):0], wbu_data, wbu_sel,
 			wbu_ack, wbu_stall, wbu_err,
 		// Common bus returns
 		dwb_cyc, dwb_stb, dwb_we, dwb_addr, dwb_odata, dwb_sel,
@@ -1024,7 +1024,7 @@ module	main(i_clk, i_reset,
 `endif
 `endif
 `ifdef	BUS_DELAY_NEEDED
-	busdelay #(@$BUS_ADDRESS_WIDTH)	dwb_delay(i_clk,
+	busdelay #(30)	dwb_delay(i_clk,
 		dwb_cyc, dwb_stb, dwb_we, dwb_addr, dwb_odata, dwb_sel,
 			dwb_ack, dwb_stall, dwb_idata, dwb_err,
 		wb_cyc, wb_stb, wb_we, wb_addr, wb_data, wb_sel,

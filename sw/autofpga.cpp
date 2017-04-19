@@ -400,6 +400,7 @@ int	get_address_width(MAPDHASH &info) {
 		return baw;
 
 	setvalue(info, KYBUS_ADDRESS_WIDTH, DEFAULT_BUS_ADDRESS_WIDTH);
+	reeval(info);
 	return DEFAULT_BUS_ADDRESS_WIDTH;
 }
 
