@@ -1,4 +1,5 @@
 autofpga
+runme.sh
 expr.tab.h
 expr.tab.cpp
 lex.yy.h

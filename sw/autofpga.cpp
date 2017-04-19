@@ -4,7 +4,26 @@
 //
 // Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 //
-// Purpose:	
+// Purpose:	This is the main/master program for the autofpga project.  All
+//		other components server this one.
+//
+//	The purpose of autofpga.cpp is to read a group of configuration files
+//	(.txt currently), and to generate code from those files to connect
+//	the various parts and pieces within them into a design.
+//
+//	Currently that design is dependent upon the Wishbone B4/Pipelined
+//	bus, but that's likely to change in the future.
+//
+//	Design files produced include:
+//
+//	toplevel.v
+//	main.v
+//	regdefs.h
+//	regdefs.cpp
+//	board.h		(Built, but ... not yet tested)
+//	* dev.tex	(Not yet included)
+//	* kernel device tree file
+//
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
@@ -44,15 +63,21 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <limits.h>
 
 #include "parser.h"
 #include "keys.h"
 #include "kveval.h"
 
+int	gbl_err = 0;
 const bool	DELAY_ACK = true;
 
 
-
+//
+// The PLIST, made of PERIPH(erals)
+//
+// A structure to contain information about lists of peripherals
+//
 typedef	struct PERIPH_S {
 	unsigned	p_base;		// In octets
 	unsigned	p_naddr;	// In words, given in file
@@ -70,6 +95,10 @@ typedef	struct PERIPH_S {
 } PERIPH, *PERIPHP;
 typedef	std::vector<PERIPHP>	PLIST;
 
+//
+// The ILIST, a list of interrupt lines within the design
+//
+//
 class INTINFO {
 public:
 	STRINGP		i_name;
@@ -88,11 +117,35 @@ typedef	INTINFO	INTID, *INTP;
 typedef	std::vector<INTP>	ILIST;
 
 
+//
+// The PICINFO structure, one that keeps track of all of the information used
+// by a given Programmable Interrupt Controller (PIC)
+//
+//
 class PICINFO {
 public:
-	STRINGP		i_name, i_bus;
-	unsigned	i_max, i_nassigned, i_nallocated;
+	STRINGP		i_name,	// The name of this PIC
+			// i_bus is the name of a vector, that is ... a series
+			// of wires, composed of the interrupts going to this
+			// controller
+			i_bus;
+	unsigned	i_max,	// Max # of interrupts this controller can handle
+			// i_nassigned is the number of interrupts that have 
+			// been given assignments (positions) to our interrupt
+			// vector
+			i_nassigned,
+			// i_nallocated references the number of interrupts that
+			// this controller knows about.  This is separate from
+			// the number of interrupts that have positions assigned
+			// to them
+			i_nallocated;
+	//
+	// The list of all interrupts this controller can handle
+	//
 	ILIST		i_ilist;
+	//
+	// The list of assigned interrupts
+	INTID		**i_alist;
 	PICINFO(MAPDHASH &pic) {
 		i_max = 0;
 		int	mx = 0;
@@ -100,42 +153,70 @@ public:
 		i_bus  = getstring(pic, KYPIC_BUS);
 		if (getvalue( pic, KYPIC_MAX, mx)) {
 			i_max = mx;
+			i_alist = new INTID *[mx];
+			for(int i=0; i<mx; i++)
+				i_alist[i] = NULL;
 		} else {
-			printf("ERR: Cannot find PIC.MAX within ...\n");
+			fprintf(stderr, "ERR: Cannot find PIC.MAX within ...\n");
+			gbl_err++;
 			mapdump(pic);
+			i_max = 0;
+			i_alist = NULL;
 		}
 		i_nassigned  = 0;
 		i_nallocated = 0;
-	} void add(MAPDHASH &psrc, STRINGP iname) {
+	}
+
+	// Add an interrupt with the given name, and hash source, to the table
+	void add(MAPDHASH &psrc, STRINGP iname) {
 		if ((!iname)||(i_nallocated >= i_max))
 			return;
 
 		INTP	ip = new INTID();
 		i_ilist.push_back(ip);
+
+		// Initialize the table entry with the name of this interrupt
 		ip->i_name = iname;
+		// The wire from the rest of the design to connect to this
+		// interrupt bus
 		ip->i_wire = getstring(psrc, KY_WIRE);
+		// We'll set the ID of this interrupt to MAX, to indicate that
+		// the interrupt has not been assigned yet
 		ip->i_id   = i_max;
 		ip->i_hash = &psrc;
 		i_nallocated++;
-	} void add(unsigned id, MAPDHASH &psrc, STRINGP iname) {
+	}
+
+	// This is identical to the add function above, save that we are adding
+	// an interrupt with a known position assignment within the controller.
+	void add(unsigned id, MAPDHASH &psrc, STRINGP iname) {
 		if (!iname) {
 			fprintf(stderr, "WARNING: No name given for interrupt\n");
 			return;
 		} else if (id >= i_max) {
 			fprintf(stderr, "ERR: Interrupt ID %d out of bounds [0..%d]\n",
 				id, i_max);
-		}
-		for(unsigned i=0; i<i_nallocated; i++) {
-			if (i_ilist[i]->i_id == id) {
-				fprintf(stderr, "ERR: %s and %s are both competing for the same %s.interrupt ID\n",
-					(i_ilist[i]->i_name)?
-						i_ilist[i]->i_name->c_str()
-						:"(NULL)",
-					iname->c_str(), i_name->c_str());
-				return;
-			}
+			gbl_err++;
+			return;
+		} else if (i_nassigned+1 > i_max) {
+			fprintf(stderr, "ERR: Too many interrupts assigned to %s\n", i_name->c_str());
+			fprintf(stderr, "ERR: Assignment of %s ignored\n", iname->c_str());
+			gbl_err++;
+			return;
 		}
 
+		// Check to see if any other interrupt already has this
+		// identifier, and write an error out if so.
+		if (i_alist[id]) {
+			fprintf(stderr, "ERR: %s and %s are both competing for the same interrupt ID, #%d\n",
+				i_alist[id]->i_name->c_str(),
+				iname->c_str(), id);
+			fprintf(stderr, "ERR: interrupt %s dropped\n", iname->c_str());
+			gbl_err++;
+			return;
+		}
+
+		// Otherwise, add the interrupt to our list
 		INTP	ip = new INTID();
 		i_ilist.push_back(ip);
 		ip->i_name = iname;
@@ -144,38 +225,31 @@ public:
 		ip->i_hash = &psrc;
 		i_nassigned++;
 		i_nallocated++;
-	} void assignids(void) {
+
+		i_alist[id] = ip;
+	}
+
+	// Let's look through our list of interrupts for unassigned interrupt
+	// values, and ... assign them
+	void assignids(void) {
 		for(unsigned iid=0; iid<i_max; iid++) {
+			if (i_alist[iid])
+				continue;
+			unsigned mx = (i_ilist.size());
+			unsigned	uid = mx;
 			for(unsigned jid=0; jid < i_ilist.size(); jid++) {
-				if (i_ilist[jid]->i_id == iid) {
-					if (jid != iid) {
-						INTP	ia, ib;
-						ia = i_ilist[jid];
-						ib = i_ilist[iid];
-						i_ilist[iid] = ia;
-						i_ilist[jid] = ib;
-						continue;
-					}
-				}
-			}
-		}
-		for(unsigned iid=0; iid<i_max; iid++) {
-			unsigned mx = (i_ilist.size() > i_max)?i_ilist.size():i_max;
-			unsigned	aid = mx, uid = mx;
-			for(unsigned jid=0; jid < i_ilist.size(); jid++) {
-				if (i_ilist[jid]->i_id == iid) {
-					aid = jid;
-					break;
-				} else if ((i_ilist[jid]->i_id >= i_max)
-						&&(uid >= i_max)) {
+				if (i_ilist[jid]->i_id >= i_max) {
 					uid = jid;
+					break;
 				}
 			}
 
-			if (aid < mx)
-				continue; /// Interrupt has an assignment
-			else if (uid < mx) {
+			if (uid < mx) {
+				// Assign this interrupt
+				// 1. Give it an interrupt ID
 				i_ilist[uid]->i_id = iid;
+				// 2. Place it in our numbered interrupt list
+				i_alist[iid] = i_ilist[uid];
 				i_nassigned++;
 			} else
 				continue; // All interrupts assigned
@@ -186,29 +260,42 @@ public:
 
 		// Write the interrupt assignments back into the map
 		for(unsigned iid=0; iid<i_ilist.size(); iid++) {
-			if (i_ilist[iid]->i_id <= i_max) {
+			if (i_ilist[iid]->i_id < i_max) {
 				STRING	ky = (*i_name) + ".ID";
 				setvalue(*i_ilist[iid]->i_hash, ky, i_ilist[iid]->i_id);
 			}
 		}
 	}
 
+	// Given an interrupt number associated with this PIC, lookup the 
+	// interrupt having that number, returning NULL on error or if not
+	// found.
 	INTP	getint(unsigned iid) {
-		for(unsigned i=0; i<i_ilist.size(); i++) {
-			if (i_ilist[i]->i_id == iid)
-				return i_ilist[i];
-		} return NULL;
+		if ((iid < i_max)&&(NULL != i_alist[iid]))
+			return i_alist[iid];
+		return NULL;
 	}
 };
 typedef	PICINFO	PICI, *PICP;
 typedef	std::vector<PICP>	PICLIST;
 
 
+
+
+//
+// Define some global variables, such as a couple different lists of various
+// peripheral sets
 PLIST	plist, slist, dlist, mlist;
+// A list of all of our interrupt controllers
 PICLIST	piclist;
 unsigned	unusedmsk;
 
 
+//
+// nextlg
+//
+// This is basically ceil(log_2(vl))
+//
 unsigned	nextlg(const unsigned vl) {
 	unsigned r;
 
@@ -217,6 +304,10 @@ unsigned	nextlg(const unsigned vl) {
 	return r;
 }
 
+//
+// popc
+//
+// Return the number of non-zero bits in a given value
 unsigned	popc(const unsigned vl) {
 	unsigned	r;
 	r = ((vl & 0xaaaaaa)>>1)+(vl & 0x55555555);
@@ -227,25 +318,30 @@ unsigned	popc(const unsigned vl) {
 	return r;
 }
 
+//
+// Is the given location within our hash a master?  Look it up.
+//
+// To be a bus master, it must have a @MTYPE field.
+//
 bool	isbusmaster(MAPDHASH &phash) {
-	// printf("Checking if this hash is that of a peripheral\n");
-	// mapdump(phash);
-	// printf("Was this a peripheral?\n");
-
 	return (phash.end() != phash.find(KYMTYPE));
 }
 
+//
+// Same thing, but when given a location within the tree, rather than a hash
+// value.
 bool	isbusmaster(MAPT &pmap) {
 	if (pmap.m_typ != MAPT_MAP)
 		return false;
 	return isbusmaster(*pmap.u.m_m);
 }
 
+//
+// Is the given hash a definition of a peripheral
+//
+// To be a peripheral, it must have a @PTYPE field.
+//
 bool	isperipheral(MAPDHASH &phash) {
-	// printf("Checking if this hash is that of a peripheral\n");
-	// mapdump(phash);
-	// printf("Was this a peripheral?\n");
-
 	return (phash.end() != phash.find(KYPTYPE));
 }
 
@@ -255,6 +351,11 @@ bool	isperipheral(MAPT &pmap) {
 	return isperipheral(*pmap.u.m_m);
 }
 
+//
+// Does the given hash define a programmable interrupt controller?
+//
+// If so, it must have a @PIC.MAX field identifying the maximum number of
+// interrupts that can be assigned to it.
 bool	ispic(MAPDHASH &phash) {
 	return (phash.end() != findkey(phash, KYPIC_MAX));
 }
@@ -265,43 +366,47 @@ bool	ispic(MAPT &pmap) {
 	return ispic(*pmap.u.m_m);
 }
 
+/*
 bool	hasscope(MAPDHASH &phash) {
 	return (phash.end() != phash.find(KYSCOPE));
 }
+*/
 
+// Does this reference a memory peripheral?
 bool	ismemory(MAPDHASH &phash) {
-	MAPDHASH::iterator	kvpair;
-	kvpair = phash.find(KYPTYPE);
-	if (phash.end() == kvpair)
+	STRINGP	strp;
+
+	strp = getstring(phash, KYPTYPE);
+	if (!strp)
 		return false;
-	if (MAPT_STRING != kvpair->second.m_typ)
-		return false;
-	if (STRING(KYMEMORY)!= *kvpair->second.u.m_s)
+	if (STRING(KYMEMORY)!= *strp)
 		return false;
 	return true;
 }
 
-int	get_address_width(MAPDHASH &info) {
-	MAPDHASH::iterator	kvpair;
-	STRING	bawstr = "BUS_ADDRESS_WIDTH";
-	const int DEFAULT_BUS_ADDRESS_WIDTH = 30;	// In log_2 octets
-
-	kvpair = info.find(bawstr);
-	if (kvpair == info.end()) {
-		MAPT	elm;
-		elm.m_typ = MAPT_INT;
-		elm.u.m_v = DEFAULT_BUS_ADDRESS_WIDTH;
-		info.insert(KEYVALUE(bawstr, elm));
-
-		reeval(info);
-
-		return DEFAULT_BUS_ADDRESS_WIDTH;
-	} else {
-		assert(kvpair->second.m_typ == MAPT_INT);
-		return kvpair->second.u.m_v;
-	}
+bool	ismemory(MAPT &pmap) {
+	if (pmap.m_typ != MAPT_MAP)
+		return false;
+	return ismemory(*pmap.u.m_m);
 }
 
+// Look up the number of bits in the address bus of the given hash
+int	get_address_width(MAPDHASH &info) {
+	MAPDHASH::iterator	kvpair;
+	const int DEFAULT_BUS_ADDRESS_WIDTH = 30;	// In log_2 octets
+	int	baw = DEFAULT_BUS_ADDRESS_WIDTH;
+
+	if (getvalue(info, KYBUS_ADDRESS_WIDTH, baw))
+		return baw;
+
+	setvalue(info, KYBUS_ADDRESS_WIDTH, DEFAULT_BUS_ADDRESS_WIDTH);
+	return DEFAULT_BUS_ADDRESS_WIDTH;
+}
+
+//
+// Count the number of peripherals that are children of this top level hash,
+// and count them by type as well.
+//
 int count_peripherals(MAPDHASH &info) {
 	MAPDHASH::iterator	kvpair, kvptype;
 	kvpair = info.find(KYNP);
@@ -311,47 +416,37 @@ int count_peripherals(MAPDHASH &info) {
 
 	unsigned	count = 0, np_single=0, np_double=0, np_memory=0;
 	for(kvpair = info.begin(); kvpair != info.end(); kvpair++) {
+		STRINGP	strp;
 		if (isperipheral(kvpair->second)) {
 			count++;
 
 			// Let see what type of peripheral this is
-			kvptype = kvpair->second.u.m_m->find(KYPTYPE);
-			if (kvptype == kvpair->second.u.m_m->end())
-				continue;
-			if (kvptype->second.m_typ != MAPT_STRING)
-				continue;
-			if (STRING("SINGLE")== *kvptype->second.u.m_s) {
+			strp = getstring(kvpair->second, KYPTYPE);
+			if (KYSINGLE == *strp) {
 				np_single++;
-			} else if (STRING("DOUBLE")== *kvptype->second.u.m_s) {
+			} else if (KYDOUBLE == *strp) {
 				np_double++;
-			} else if (STRING("MEMORY")== *kvptype->second.u.m_s)
+			} else if (KYMEMORY == *strp)
 				np_memory++;
 		}
 	}
 
-	MAPT	elm;
-	elm.m_typ = MAPT_INT;
-	elm.u.m_v = count;
-	info.insert(KEYVALUE(KYNP, elm));
-
-	elm.u.m_v = np_single;
-	info.insert(KEYVALUE(KYNPSINGLE, elm));
-	elm.u.m_v = np_double;
-	info.insert(KEYVALUE(KYNPDOUBLE, elm));
-	elm.u.m_v = np_memory;
-	info.insert(KEYVALUE(KYNPMEMORY, elm));
+	setvalue(info, KYNP, count);
+	setvalue(info, KYNPSINGLE, np_single);
+	setvalue(info, KYNPDOUBLE, np_double);
+	setvalue(info, KYNPMEMORY, np_memory);
 
 	return count;
 }
 
+// Return the number of interrupt controllers within this design.  If no such
+// field/tag exists, count the number and add it to the hash.
 int count_pics(MAPDHASH &info) {
 	MAPDHASH::iterator	kvpair, kvpic;
 	int	npics=0;
 
-	kvpair = info.find(KYNPIC);
-	if ((kvpair != info.end())&&((*kvpair).second.m_typ == MAPT_INT)) {
-		return (*kvpair).second.u.m_v;
-	}
+	if (getvalue(info, KYNPIC, npics))
+		return npics;
 
 	for(kvpair = info.begin(); kvpair != info.end(); kvpair++) {
 		if (kvpair->second.m_typ != MAPT_MAP)
@@ -361,14 +456,11 @@ int count_pics(MAPDHASH &info) {
 			npics++;
 	}
 
-	MAPT	elm;
-	elm.m_typ = MAPT_INT;
-	elm.u.m_v = npics;
-	info.insert(KEYVALUE(KYNPIC, elm));
-
+	setvalue(info, KYNPIC, npics);
 	return npics;
 }
 
+/*
 int count_scopes(MAPDHASH &info) {
 	MAPDHASH::iterator	kvpair;
 	kvpair = info.find(KYNSCOPES);
@@ -393,58 +485,78 @@ int count_scopes(MAPDHASH &info) {
 
 	return count;
 }
+*/
 
-void	legal_notice(MAPDHASH &info, FILE *fp, STRING &fname) {
+//
+// Place a legal notice at the top of every file.  The legal notice is given
+// to us as a filename, which we must then open and parse.
+//
+// We also do several substitutions here, given by the strings below.  This
+// allows us to mark all of our produced files with their names within them,
+// as well as marking the project that they are associated with.
+//
+void	legal_notice(MAPDHASH &info, FILE *fp, STRING &fname,
+			const char *comment = "//") {
 	char	line[512];
 	FILE	*lglfp;
 	STRING	str;
 
-	STRINGP	legal_fname = getstring(info, str = STRING("LEGAL"));
+	STRINGP	legal_fname = getstring(info, str = KYLEGAL);
 	if (!legal_fname) {
-		fprintf(stderr, "WARNING: NO COPYRIGHT NOTICE\n\nPlease be considerate and license this under the GPL\n");
-		fprintf(fp, "WARNING: NO COPYRIGHT NOTICE\n\nPlease be considerate and license this under the GPL\n");
+		fprintf(stderr, "WARNING: NO COPYRIGHT NOTICE\n\nPlease be considerate and license your project under the GPL\n");
+		fprintf(fp, "%s WARNING: NO COPYRIGHT NOTICE\n\n%s Please be considerate and license this under the GPL\n", comment, comment);
 		return;
 	}
 
 	lglfp = fopen(legal_fname->c_str(), "r");
 	if (!lglfp) {
-		fprintf(stderr, "WARNING: NO COPYRIGHT NOTICE\n\nPlease be considerate and license this project under the GPL\n");
-		fprintf(fp, "WARNING: NO COPYRIGHT NOTICE\n\nPlease be considerate and license this project under the GPL\n");
+		fprintf(stderr, "ERR: Cannot open copyright notice file, %s\n", legal_fname->c_str());
+		fprintf(fp, "%s WARNING: NO COPYRIGHT NOTICE\n\n"
+			"%s Please be considerate and license this project under the GPL\n", comment, comment);
 		perror("O/S Err:");
+		gbl_err++;
 		return;
 	}
 
 	while(fgets(line, sizeof(line), lglfp)) {
-		static const char	nonce[] = "// Filename:";
-		if (strncasecmp(line, nonce, strlen(nonce))==0)
-			break;
-		fputs(line, fp);
-	} if (!feof(lglfp)) {
-		// Must have just found the filename line
-		while((line[0])&&(isspace(line[strlen(line)-1])))
-			line[strlen(line)-1] = '\0';
-		fprintf(fp, "%s\t%s\n", line, fname.c_str());
-		while(fgets(line, sizeof(line), lglfp)) {
-			static const char	nonce[] = "// CmdLine:";
-			if (strncasecmp(line, nonce, strlen(nonce))==0)
-				break;
-			fputs(line, fp);
-		} if (!feof(lglfp)) {
-			// Must have just found the command line ... line
-			STRINGP	cmdline= getstring(info, str=STRING("CMDLINE"));
-			while((line[0])&&(isspace(line[strlen(line)-1])))
-				line[strlen(line)-1] = '\0';
-			if (cmdline)
-				fprintf(fp, "%s\t%s\n", line, cmdline->c_str());
+		static const char	kyfname[] = "// Filename:",
+					kyproject[] = "// Project:",
+					kycmdline[] = "// CmdLine:",
+					kycomment[] = "//";
+		if (strncasecmp(line, kyfname, strlen(kyfname))==0) {
+			fprintf(fp, "%s %s\t%s\n", comment, &kyfname[3],
+				fname.c_str());
+		} else if (strncasecmp(line, kyproject, strlen(kyproject))==0) {
+			STRINGP	strp;
+			if (NULL != (strp = getstring(info, KYPROJECT)))
+				fprintf(fp, "%s %s\t%s\n", comment,
+					&kyproject[3], strp->c_str());
 			else
-				fprintf(fp, "%s\t(No command line found)\n", line);
-			while(fgets(line, sizeof(line), lglfp))
 				fputs(line, fp);
-		}
-		
+		} else if (strncasecmp(line, kycmdline, strlen(kycmdline))==0){
+			STRINGP	strp = getstring(info, KYCMDLINE);
+			if (strp)
+				fprintf(fp, "%s %s\t%s\n", comment,
+					&kycmdline[3], strp->c_str());
+			else {
+				fprintf(fp, "%s\t(No command line data found)\n",
+					kycmdline);
+			}
+		} else if (strncmp(line, kycomment, strlen(kycomment))==0) {
+			fprintf(fp, "%s%s", comment, &line[strlen(kycomment)]);
+		} else
+			fputs(line, fp);
 	}
 }
 
+//
+// compare_naddr
+//
+// This is part of the peripheral sorting mechanism, whereby peripherals are
+// sorted by the numbers of addresses they use.  Peripherals using fewer
+// addresses are placed first, with peripherals using more addresses placed
+// later.
+//
 bool	compare_naddr(PERIPHP a, PERIPHP b) {
 	if (!a)
 		return (b)?false:true;
@@ -461,6 +573,8 @@ bool	compare_naddr(PERIPHP a, PERIPHP b) {
 		return true;
 }
 
+//
+// Add a peripheral to a given list of peripherals
 int	addto_plist(PLIST &plist, MAPDHASH *phash) {
 	STRINGP	pname;
 	int	naddr;
@@ -663,7 +777,13 @@ void	build_plist(MAPDHASH &info) {
 	std::sort(plist.begin(), plist.end(), compare_naddr);
 }
 
-
+//
+// assign_addresses
+//
+// Assign addresses to all of our peripherals, given a first address to start
+// from.  The first address helps to insure that the NULL address creates a
+// proper error (as it should).
+//
 void assign_addresses(MAPDHASH &info, unsigned first_address = 0x400) {
 	unsigned	start_address = first_address;
 	MAPDHASH::iterator	kvpair;
@@ -887,7 +1007,13 @@ printf("Setting DNADDR to %08x\n", dnaddr);
 	buildskip_plist(plist, 0x400);
 }
 
-
+//
+// assign_interrupts
+//
+// Find all the interrup controllers, and then find all the interrupts, and map
+// interrupts to controllers.  Individual interrupt wires may be mapped to
+// multiple interrupt controllers.
+//
 void	assign_interrupts(MAPDHASH &master) {
 	MAPDHASH::iterator	kvpair, kvint, kvline;
 	MAPDHASH	*submap, *intmap;
@@ -964,7 +1090,8 @@ void	assign_interrupts(MAPDHASH &master) {
 						if (*piclist[pid]->i_name == tok)
 							break;
 					if (pid >= piclist.size()) {
-						printf("ERR: PIC NOT FOUND: %s\n", tok);
+						fprintf(stderr, "ERR: PIC NOT FOUND: %s\n", tok);
+						gbl_err++;
 					} else if (getvalue(*kvline->second.u.m_m,
 							KY_ID,inum)) {
 						piclist[pid]->add((unsigned)inum,
@@ -1038,42 +1165,51 @@ int	get_longest_defname(PLIST &plist) {
 	return longest_defname;
 }
 
+//
+// write_regdefs
+//
+// This writes out the definitions of all the registers found within the plist
+// to the C++ header file given by fp.  It takes as a parameter the longest
+// name definition, which we use to try to line things up in a prettier fashion
+// than we could without it.
+//
 void write_regdefs(FILE *fp, PLIST &plist, unsigned longest_defname) {
 	STRING	str;
 
+	// Walk through this peripheral list one peripheral at a time
 	for(unsigned i=0; i<plist.size(); i++) {
 		MAPDHASH::iterator	kvp;
 		int	nregs = 0;
 
+		// If there is a note key for this peripheral, place it into
+		// the output without modifications.
 		kvp = findkey(*plist[i]->p_phash,KYREGS_NOTE);
 		if ((kvp != plist[i]->p_phash->end())&&(kvp->second.m_typ == MAPT_STRING))
 			fprintf(fp, "%s\n", kvp->second.u.m_s->c_str());
-		kvp = findkey(*plist[i]->p_phash,KYREGS_N);
-		if (kvp == plist[i]->p_phash->end()) {
-			printf("REGS.N not found in %s\n", plist[i]->p_name->c_str());
+
+
+		// Walk through each of the defined registers.  There will be
+		// @REGS.N registers defined.
+		if (!getvalue(*plist[i]->p_phash, KYREGS_N, nregs)) {
+			fprintf(stderr, "WARNING: REGS.N not found in %s\n", plist[i]->p_name->c_str());
 			continue;
-		} if (kvp->second.m_typ == MAPT_INT) {
-			nregs = kvp->second.u.m_v;
-		} else if (kvp->second.m_typ == MAPT_STRING) {
-			nregs = strtoul(kvp->second.u.m_s->c_str(), NULL, 0);
-		} else {
-			printf("NOT AN INTEGER\n");
 		}
 
+		// Now, walk through all of the register definitions
 		for(int j=0; j<nregs; j++) {
 			char	nstr[32];
+			STRINGP	strp;
+
+			// Look for a @REGS.%d tag, defining each of the named
+			// registers within this set.
 			sprintf(nstr, "%d", j);
-			kvp = findkey(*plist[i]->p_phash,str=STRING("REGS.")+nstr);
-			if (kvp == plist[i]->p_phash->end()) {
-				printf("%s not found\n", str.c_str());
-				continue;
-			}
-			if (kvp->second.m_typ != MAPT_STRING) {
-				printf("%s is not a string\n", str.c_str());
+			strp = getstring(*plist[i]->p_phash, str=STRING("REGS.")+nstr);
+			if (!strp) {
+				fprintf(stderr, "%s not found\n", str.c_str());
 				continue;
 			}
 
-			STRING	scpy = *kvp->second.u.m_s;
+			STRING	scpy = *strp;
 
 			char	*nxtp, *rname, *rv;
 
@@ -1103,9 +1239,17 @@ void write_regdefs(FILE *fp, PLIST &plist, unsigned longest_defname) {
 	fprintf(fp, "\n\n");
 }
 
+//
+// build_regdefs_h
+//
+//
+// This builds a regdefs.h file, a file that can be used on a host in order
+// to access our design.
+//
 void	build_regdefs_h(  MAPDHASH &master, FILE *fp, STRING &fname) {
 	MAPDHASH::iterator	kvpair, kvaccess;
 	STRING	str;
+	STRINGP	strp;
 
 	legal_notice(master, fp, fname);
 
@@ -1127,18 +1271,14 @@ void	build_regdefs_h(  MAPDHASH &master, FILE *fp, STRING &fname) {
 
 
 	fprintf(fp, "// Definitions for the bus masters\n");
-	str = STRING("REGS.INSERT.H");
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
 		if (isperipheral(kvpair->second))
 			continue;
-		kvaccess = findkey(*kvpair->second.u.m_m, str);
-		if (kvaccess == kvpair->second.u.m_m->end())
-			continue;
-		if (kvaccess->second.m_typ != MAPT_STRING)
-			continue;
-		fputs(kvaccess->second.u.m_s->c_str(), fp);
+		strp = getstring(kvpair->second, KYREGS_INSERT_H);
+		if (strp)
+			fputs(strp->c_str(), fp);
 	}
 
 	fprintf(fp, "// And then from the peripherals\n");
@@ -1147,38 +1287,33 @@ void	build_regdefs_h(  MAPDHASH &master, FILE *fp, STRING &fname) {
 			continue;
 		if (!isperipheral(kvpair->second))
 			continue;
-		kvaccess = findkey(*kvpair->second.u.m_m, str);
-		if (kvaccess == kvpair->second.u.m_m->end())
-			continue;
-		if (kvaccess->second.m_typ != MAPT_STRING)
-			continue;
-		fputs(kvaccess->second.u.m_s->c_str(), fp);
-	} fprintf(fp, "// End of definitions from REGS.INSERT.H\n");
+		strp = getstring(kvpair->second, KYREGS_INSERT_H);
+		if (strp)
+			fputs(strp->c_str(), fp);
+	}
+
+	fprintf(fp, "// And finally any master REGS.INSERT.H tags\n");
+	strp = getstring(master, KYREGS_INSERT_H);
+	if (strp)
+		fputs(strp->c_str(), fp);
+	fprintf(fp, "// End of definitions from REGS.INSERT.H\n");
 
 	fprintf(fp, "\n\n");
-
-
-	fprintf(fp, ""
-"typedef	struct {\n"
-	"\tunsigned	m_addr;\n"
-	"\tconst char	*m_name;\n"
-"} REGNAME;\n"
-"\n"
-"extern	const	REGNAME	*bregs;\n"
-"extern	const	int	NREGS;\n"
-"// #define	NREGS	(sizeof(bregs)/sizeof(bregs[0]))\n"
-"\n"
-"extern	unsigned	addrdecode(const char *v);\n"
-"extern	const	char *addrname(const unsigned v);\n"
-"\n");
-
 
 	fprintf(fp, "#endif\t// REGDEFS_H\n");
 }
 
+//
+// get_longest_uname
+//
+// This is very similar to the get longest defname (get length of the longest
+// variable definition name) above, save that this is applied to the user 
+// names within regdefs.cpp
+//
 unsigned	get_longest_uname(PLIST &plist) {
 	unsigned	longest_uname = 0;
 	STRING	str;
+	STRINGP	strp;
 
 	for(unsigned i=0; i<plist.size(); i++) {
 		MAPDHASH::iterator	kvp;
@@ -1190,17 +1325,9 @@ unsigned	get_longest_uname(PLIST &plist) {
 		for(int j=0; j<nregs; j++) {
 			char	nstr[32];
 			sprintf(nstr, "%d", j);
-			kvp = findkey(*plist[i]->p_phash,str=STRING("REGS.")+nstr);
-			if (kvp == plist[i]->p_phash->end()) {
-				printf("%s not found\n", str.c_str());
-				continue;
-			}
-			if (kvp->second.m_typ != MAPT_STRING) {
-				printf("%s is not a string\n", str.c_str());
-				continue;
-			}
-
-			STRING	scpy = *kvp->second.u.m_s;
+			strp = getstring(*plist[i]->p_phash, 
+						str=STRING("REGS.")+nstr);
+			STRING	scpy = *strp;
 
 			char	*nxtp, *rv;
 
@@ -1213,6 +1340,8 @@ unsigned	get_longest_uname(PLIST &plist) {
 			// 2. Get (and ignore) the C definition name
 			strtok(nxtp, " \t\n,");
 
+			// 3. Every token that follows will be a user (string)
+			// name.  Find the one of these with the longest length.
 			while(NULL != (rv = strtok(NULL, " \t\n,"))) {
 				if (strlen(rv) > longest_uname)
 					longest_uname = strlen(rv);
@@ -1223,32 +1352,27 @@ unsigned	get_longest_uname(PLIST &plist) {
 	return longest_uname;
 }
 
-
+//
+// write_regnames
+//
+// 
 void write_regnames(FILE *fp, PLIST &plist,
 		unsigned longest_defname, unsigned longest_uname) {
 	STRING	str;
+	STRINGP	strp;
 	int	first = 1;
-	for(unsigned i=0; i<plist.size(); i++) {
-		MAPDHASH::iterator	kvp;
 
+	for(unsigned i=0; i<plist.size(); i++) {
 		int nregs = 0;
+
 		if (!getvalue(*plist[i]->p_phash, KYREGS_N, nregs))
 			continue;
 
 		for(int j=0; j<nregs; j++) {
 			char	nstr[32];
 			sprintf(nstr, "%d", j);
-			kvp = findkey(*plist[i]->p_phash,str=STRING("REGS.")+nstr);
-			if (kvp == plist[i]->p_phash->end()) {
-				printf("%s not found\n", str.c_str());
-				continue;
-			}
-			if (kvp->second.m_typ != MAPT_STRING) {
-				printf("%s is not a string\n", str.c_str());
-				continue;
-			}
-
-			STRING	scpy = *kvp->second.u.m_s;
+			strp = getstring(*plist[i]->p_phash,str=STRING("REGS.")+nstr);
+			STRING	scpy = *strp;
 
 			char	*nxtp, *rname, *rv;
 
@@ -1261,7 +1385,7 @@ void write_regnames(FILE *fp, PLIST &plist,
 
 			// 2. Get the C name
 			rname = strtok(nxtp, " \t\n,");
-			// 3. Get the various user names
+			// 3. Get the various user names and ... define them
 			while(NULL != (rv = strtok(NULL, " \t\n,"))) {
 				if (!first)
 					fprintf(fp, ",\n");
@@ -1276,15 +1400,24 @@ void write_regnames(FILE *fp, PLIST &plist,
 }
 
 
+//
+// build_regdefs_cpp
+//
 void	build_regdefs_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
+	STRINGP	strp;
 	STRING	str;
 
 	legal_notice(master, fp, fname);
 
-	fprintf(fp, "#include <stdio.h>\n");
-	fprintf(fp, "#include <stdlib.h>\n");
-	fprintf(fp, "#include <strings.h>\n");
-	fprintf(fp, "#include <ctype.h>\n");
+	if (NULL != (strp = getstring(master, KYREGDEFS_CPP_INSERT))) {
+		fputs(strp->c_str(), fp);
+	} else {
+		fprintf(fp, "#include <stdio.h>\n");
+		fprintf(fp, "#include <stdlib.h>\n");
+		fprintf(fp, "#include <strings.h>\n");
+		fprintf(fp, "#include <ctype.h>\n");
+	}
+
 	fprintf(fp, "#include \"regdefs.h\"\n\n");
 	fprintf(fp, "const\tREGNAME\traw_bregs[] = {\n");
 
@@ -1319,30 +1452,33 @@ void	build_regdefs_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 	} write_regnames(fp, plist, longest_defname, longest_uname);
 
 	fprintf(fp, "\n};\n\n");
-	fprintf(fp, "#define\tRAW_NREGS\t(sizeof(raw_bregs)/sizeof(bregs[0]))\n\n");
-	fprintf(fp, "const\tREGNAME\t*bregs = raw_bregs;\n");
-	fprintf(fp, "const\tint\tNREGS = RAW_NREGS;\n"
-		"\n");
 
-	fputs(""
-"unsigned	addrdecode(const char *v) {\n"
-	"\tif (isalpha(v[0])) {\n"
-		"\t\tfor(int i=0; i<NREGS; i++)\n"
-			"\t\t\tif (strcasecmp(v, bregs[i].m_name)==0)\n"
-				"\t\t\t\treturn bregs[i].m_addr;\n"
-		"\t\tfprintf(stderr, \"Unknown register: %s\\n\", v);\n"
-		"\t\texit(-2);\n"
-	"\t} else\n"
-		"\t\treturn strtoul(v, NULL, 0); \n"
-"}\n"
-"\n"
-"const	char *addrname(const unsigned v) {\n"
-	"\tfor(int i=0; i<NREGS; i++)\n"
-		"\t\tif (bregs[i].m_addr == v)\n"
-			"\t\t\treturn bregs[i].m_name;\n"
-	"\treturn NULL;\n"
-"}\n", fp);
+	fprintf(fp, "// REGS.CPP.INSERT for any bus masters\n");
+	for(MAPDHASH::iterator kvpair=master.begin(); kvpair != master.end(); kvpair++) {
+		if (kvpair->second.m_typ != MAPT_MAP)
+			continue;
+		if (isperipheral(kvpair->second))
+			continue;
+		strp = getstring(kvpair->second, KYREGDEFS_CPP_INSERT);
+		if (strp)
+			fputs(strp->c_str(), fp);
+	}
 
+	fprintf(fp, "// And then from the peripherals\n");
+	for(MAPDHASH::iterator kvpair=master.begin(); kvpair != master.end(); kvpair++) {
+		if (kvpair->second.m_typ != MAPT_MAP)
+			continue;
+		if (!isperipheral(kvpair->second))
+			continue;
+		strp = getstring(kvpair->second, KYREGDEFS_CPP_INSERT);
+		if (strp)
+			fputs(strp->c_str(), fp);
+	}
+
+	fprintf(fp, "// And finally any master REGS.CPP.INSERT tags\n");
+	if (NULL != (strp = getstring(master, KYREGDEFS_CPP_INSERT))) {
+		fputs(strp->c_str(), fp);
+	}
 }
 
 void	build_board_h(    MAPDHASH &master, FILE *fp, STRING &fname) {
@@ -1350,43 +1486,49 @@ void	build_board_h(    MAPDHASH &master, FILE *fp, STRING &fname) {
 	STRING	str, astr;
 
 	legal_notice(master, fp, fname);
-	fprintf(fp, "#ifndef	BOARD_H\n#define\tBOARD_H\n\n\n");
+	fprintf(fp, "#ifndef	BOARD_H\n#define\tBOARD_H\n");
+	fprintf(fp, "\n");
+	fprintf(fp, "// And, so that we can know what is and isn\'t defined\n");
+	fprintf(fp, "// from within our main.v file, let\'s include:\n");
+	fprintf(fp, "#include \"design.h\"\n\n");
 
-	str = "BDEF.DEFN";
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
 		STRINGP	defns;
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
-		defns = getstring(*kvpair->second.u.m_m, str);
+		defns = getstring(*kvpair->second.u.m_m, KYBDEF_DEFN);
 		if (defns)
 			fprintf(fp, "%s\n\n", defns->c_str());
 	}
 
-	str = "REGS.INSERT.H";
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
 		STRINGP	defns;
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
-		defns = getstring(*kvpair->second.u.m_m, str);
+		defns = getstring(*kvpair->second.u.m_m, KYREGS_INSERT_H);
 		if (defns)
 			fprintf(fp, "%s\n\n", defns->c_str());
 	}
 
-	str = "BDEF.OSDEF";
-	astr = "BDEF.OSVAL";
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
-		STRINGP	osdef, osval;
+		STRINGP	osdef, osval, access;
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
-		osdef = getstring(*kvpair->second.u.m_m, str);
+		osdef = getstring(*kvpair->second.u.m_m, KYBDEF_OSDEF);
+		osval = getstring(*kvpair->second.u.m_m, KYBDEF_OSVAL);
+
+		if ((!osdef)&&(!osval))
+			continue;
+		access= getstring(kvpair->second, KYACCESS);
+
+		if (access)
+			fprintf(fp, "#ifdef\t%s\n", access->c_str());
 		if (osdef)
 			fprintf(fp, "#define\t%s\n", osdef->c_str());
-		osval = getstring(*kvpair->second.u.m_m, astr);
 		if (osval)
 			fputs(osval->c_str(), fp);
-		if ((osdef)||(osval)) {
-			fprintf(fp, "\n\n");
-		}
+		if (access)
+			fprintf(fp, "#endif\t// %s\n", access->c_str());
 	}
 
 	fprintf(fp, "//\n// Interrupt assignments (%ld PICs)\n//\n", piclist.size());
@@ -1429,6 +1571,9 @@ void	build_latex_tbls( MAPDHASH &master) {
 #endif
 }
 
+//
+// void	build_device_tree(MAPDHASH &master)
+//
 void	build_toplevel_v( MAPDHASH &master, FILE *fp, STRING &fname) {
 	MAPDHASH::iterator	kvpair, kvaccess, kvsearch;
 	STRING	str = "ACCESS", astr;
@@ -1802,6 +1947,10 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 				kvsub != kvint->second.u.m_m->end(); kvsub++) {
 			if (kvsub->second.m_typ != MAPT_MAP)
 				continue;
+
+
+			// Cant use getstring() here, 'cause we need the name of
+			// the wire below
 			kvwire = kvsub->second.u.m_m->find(KY_WIRE);
 			if (kvwire == kvsub->second.u.m_m->end())
 				continue;
@@ -2227,43 +2376,40 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
 	// MAPDHASH::iterator	kvpair, kvaccess, kvsearch;
-		MAPDHASH::iterator	kvalt, kvinsert, kvint, kvsub, kvwire;
+		MAPDHASH::iterator	kvint, kvsub, kvwire;
 		bool			nomain, noaccess, noalt;
+		STRINGP			insert, alt, access;
 
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
-		kvinsert = findkey(*kvpair->second.u.m_m, KYMAIN_INSERT);
-		kvaccess = findkey(*kvpair->second.u.m_m, KYACCESS);
-		kvalt    = findkey(*kvpair->second.u.m_m, KYMAIN_ALT);
+		insert = getstring(kvpair->second, KYMAIN_INSERT);
+		access = getstring(kvpair->second, KYACCESS);
+		alt    = getstring(kvpair->second, KYMAIN_ALT);
 
 		nomain   = false;
 		noaccess = false;
 		noalt    = false;
-		if ((kvinsert == kvpair->second.u.m_m->end())
-			||(kvinsert->second.m_typ != MAPT_STRING))
+		if (NULL == insert)
 			nomain = true;
-		if ((kvaccess == kvpair->second.u.m_m->end())
-			||(kvaccess->second.m_typ != MAPT_STRING))
+		if (NULL == access)
 			noaccess= true;
-		if ((kvalt    == kvpair->second.u.m_m->end())
-			||(kvalt->second.m_typ != MAPT_STRING))
+		if (NULL == alt)
 			noalt = true;
 
 		if (noaccess) {
 			if (!nomain)
-				fputs(kvinsert->second.u.m_s->c_str(), fp);
+				fputs(insert->c_str(), fp);
 		} else if ((!nomain)||(!noalt)) {
 			if (nomain) {
-				fprintf(fp, "`ifndef\t%s\n",
-					kvaccess->second.u.m_s->c_str());
+				fprintf(fp, "`ifndef\t%s\n", access->c_str());
 			} else {
-				fprintf(fp, "`ifdef\t%s\n", kvaccess->second.u.m_s->c_str());
-				fputs(kvinsert->second.u.m_s->c_str(), fp);
-				fprintf(fp, "`else\t// %s\n", kvaccess->second.u.m_s->c_str());
+				fprintf(fp, "`ifdef\t%s\n", access->c_str());
+				fputs(insert->c_str(), fp);
+				fprintf(fp, "`else\t// %s\n", access->c_str());
 			}
 
 			if (!noalt) {
-				fputs(kvalt->second.u.m_s->c_str(), fp);
+				fputs(alt->c_str(), fp);
 			}
 
 			if (isbusmaster(kvpair->second)) {
@@ -2281,7 +2427,7 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 				}
 			}
 
-			if (isperipheral(*kvpair->second.u.m_m)) {
+			if (isperipheral(kvpair->second)) {
 				STRINGP	pfx = getstring(*kvpair->second.u.m_m,
 							KYPREFIX);
 				if (pfx) {
@@ -2325,8 +2471,7 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 						kvwire->first.c_str());
 				}
 			}
-			fprintf(fp, "`endif\t// %s\n\n",
-				kvaccess->second.u.m_s->c_str());
+			fprintf(fp, "`endif\t// %s\n\n", access->c_str());
 		}
 	}
 
@@ -2452,26 +2597,57 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 
 }
 
+FILE	*open_in(MAPDHASH &info, const STRING &fname) {
+	static	const	char	delimiters[] = " \t\n:,";
+	STRINGP	path = getstring(info, KYPATH);
+	STRING	pathcpy;
+	char	*tok;
+	FILE	*fp;
+
+	if (path) {
+		pathcpy = *path;
+		tok =strtok((char *)pathcpy.c_str(), delimiters);
+		while(NULL != tok) {
+			char	*prepath = realpath(tok, NULL);
+			STRING	fpath = STRING(prepath) + "/" + fname;
+			free(prepath);
+			if (NULL != (fp = fopen(fpath.c_str(), "r"))) {
+				return fp;
+			}
+			tok = strtok(NULL, delimiters);
+		}
+	} return fopen(fname.c_str(), "r");
+}
+
 int	main(int argc, char **argv) {
 	int		argn, nhash = 0;
 	MAPDHASH	master;
 	FILE		*fp;
 	STRING		str;
 	STRING		cmdline;
+	const char	*subdir;
 
 	if (argc > 0) {
 		cmdline = STRING(argv[0]);
 		for(argn=0; argn<argc; argn++) {
 			cmdline = cmdline + " " + STRING(argv[argn]);
 		}
-		MAPT	elm;
-		elm.m_typ = MAPT_STRING;
-		elm.u.m_s = new STRING(cmdline);
-		master.insert(KEYVALUE(str = STRING("CMDLINE"), elm));
+
+		setstring(master, KYCMDLINE, new STRING(cmdline));
 	}
 
 	for(argn=1; argn<argc; argn++) {
-		if (0 == access(argv[argn], R_OK)) {
+		if (argv[argn][0] == '-') {
+			for(int j=1; ((j<2000)&&(argv[argn][j])); j++) {
+				switch(argv[argn][j]) {
+				case 'o': subdir = argv[++argn];
+					j+=5000;
+					break;
+				default:
+					fprintf(stderr, "Unknown argument, -%c\n", argv[argn][j]);
+				}
+			}
+		} else if (0 == access(argv[argn], R_OK)) {
 			MAPDHASH	*fhash;
 
 			fhash = parsefile(argv[argn]);
@@ -2491,12 +2667,16 @@ int	main(int argc, char **argv) {
 		printf("No files given, no files written\n");
 	}
 
-	STRINGP	subd = getstring(master, str=STRING("SUBDIR"));
+	STRINGP	subd;
+	if (subdir)
+		subd = new STRING(subdir);
+	else
+		subd = getstring(master, str=STRING("SUBDIR"));
 	if (subd == NULL)
 		// subd = new STRING("autofpga-out");
 		subd = new STRING("demo-out");
 	if ((*subd) == STRING("/")) {
-		fprintf(stderr, "SUBD = %s\n", subd->c_str());
+		fprintf(stderr, "OUTPUT SUBDIRECTORY = %s\n", subd->c_str());
 		fprintf(stderr, "Cowardly refusing to place output products into the root directory, '/'\n");
 		exit(EXIT_FAILURE);
 	} if ((*subd)[subd->size()-1] == '/')
@@ -2519,32 +2699,17 @@ int	main(int argc, char **argv) {
 		}
 	}
 
-	STRINGP	legal = getstring(master, str=STRING("LEGAL"));
+	STRINGP	legal = getstring(master, KYLEGAL);
 	if (legal == NULL) {
-		legal = getstring(master, str=STRING("COPYRIGHT"));
+		legal = getstring(master, KYCOPYRIGHT);
 		if (legal == NULL)
 			legal = new STRING("legalgen.txt");
-		MAPT	elm;
-		elm.m_typ = MAPT_STRING;
-		elm.u.m_s = legal;
-		master.insert(KEYVALUE(str=STRING("LEGAL"), elm));
+		setstring(master, KYLEGAL, legal);
 	}
-	
 
-	trimall(master, KYPREFIX);
-	trimall(master, KYACCESS);
-	trimall(master, KYPTYPE);
-	trimall(master, KYNADDR);
-	trimall(master, KYFORMAT);
-	trimall(master, KYBDEF_IOTYPE);
-	trimall(master, KY_WIRE);
-	cvtint(master, KYBUS_ADDRESS_WIDTH);
-	cvtint(master, KYNADDR);
-	cvtint(master, KYNPIC);
-	cvtint(master, KYNSCOPES);
-	cvtint(master, KYPIC_MAX);
-	cvtint(master, KYREGS_N);
-	cvtint(master, KY_ID);
+	trimbykeylist(master, KYKEYS_TRIMLIST);	
+	cvtintbykeylist(master, KYKEYS_INTLIST);
+
 	reeval(master);
 
 	count_peripherals(master);
@@ -2577,4 +2742,8 @@ int	main(int argc, char **argv) {
 	str = subd->c_str(); str += "/main.v";
 	fp = fopen(str.c_str(), "w");
 	if (fp) { build_main_v(  master, fp, str); fclose(fp); }
+
+	if (0 != gbl_err)
+		fprintf(stderr, "ERR: Errors present\n");
+	return gbl_err;
 }

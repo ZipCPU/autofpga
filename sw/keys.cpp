@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	keys.h
+// Filename: 	keys.cpp
 //
 // Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 //
@@ -38,10 +38,17 @@
 #include "keys.h"
 
 const	STRING	KYLEGAL=	"LEGAL";
+const	STRING	KYCOPYRIGHT=	"COPYRIGHT";	// Another name for LEGAL
 const	STRING	KYCMDLINE=	"CMDLINE";
 const	STRING	KYSUBD=		"SUBD";
+const	STRING	KYPATH=		"PATH";
 const	STRING	KYBUS_ADDRESS_WIDTH="BUS_ADDRESS_WIDTH";
 const	STRING	KYSKIPADDR	="SKIPADDR";
+// Other global keys
+const	STRING	KYREGDEFS_CPP_INSERT	="REGDEFS.CPP.INSERT";
+const	STRING	KYKEYS_TRIMLIST	="KEYS.TRIMLIST";
+const	STRING	KYKEYS_INTLIST	="KEYS.INTLIST";
+const	STRING	KYPROJECT	="PROJECT";
 //
 const	STRING	KYSIO=		"sio";
 const	STRING	KYDIO=		"dio";

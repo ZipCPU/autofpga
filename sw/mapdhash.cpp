@@ -221,6 +221,72 @@ void	trimall(MAPDHASH &mp, const STRING &sky) {
 	}
 }
 
+//
+// trimbykeylist
+//
+// Look for all map elements with the given keylist, and apply trimall to
+// all elements within their respective maps
+//
+void	trimbykeylist(MAPDHASH &mp, const STRING &kylist) {
+	STRINGP	strp;
+
+	if (NULL != (strp = getstring(mp, kylist))) {
+		static const char delimiters[] = " \t\n,";
+		STRING scpy = *strp;
+		char	*tok = strtok((char *)scpy.c_str(), delimiters);
+
+		while(NULL != tok) {
+			trimall(mp, STRING(tok));
+			tok = strtok(NULL, delimiters);
+		}
+	}
+
+	MAPDHASH::iterator	kvpair;
+	for(kvpair=mp.begin(); kvpair != mp.end(); kvpair++) {
+		if (kvpair->second.m_typ != MAPT_MAP)
+			continue;
+		trimbykeylist(kvpair->second, kylist);
+	}
+}
+
+void	trimbykeylist(MAPT &elm, const STRING &kylist) {
+	if (elm.m_typ == MAPT_MAP)
+		trimbykeylist(*elm.u.m_m, kylist);
+}
+
+//
+// cvtintbykeylist
+//
+// Very similar to trimbykeylist, save that in this case we use the keylist
+// to determine what to convert to integers.
+//
+void	cvtintbykeylist(MAPDHASH &mp, const STRING &kylist) {
+	STRINGP	strp;
+
+	if (NULL != (strp = getstring(mp, kylist))) {
+		static const char delimiters[] = " \t\n,";
+		STRING scpy = *strp;
+		char	*tok = strtok((char *)scpy.c_str(), delimiters);
+
+		while(NULL != tok) {
+			cvtint(mp, STRING(tok));
+			tok = strtok(NULL, delimiters);
+		}
+	}
+
+	MAPDHASH::iterator	kvpair;
+	for(kvpair=mp.begin(); kvpair != mp.end(); kvpair++) {
+		if (kvpair->second.m_typ != MAPT_MAP)
+			continue;
+		cvtintbykeylist(kvpair->second, kylist);
+	}
+}
+
+void	cvtintbykeylist(MAPT &elm, const STRING &kylist) {
+	if (elm.m_typ == MAPT_MAP)
+		cvtintbykeylist(*elm.u.m_m, kylist);
+}
+
 void	cvtint(MAPDHASH &mp, const STRING &sky) {
 	MAPDHASH::iterator	kvpair;
 	STRING	mkey, subky;
@@ -349,6 +415,59 @@ STRINGP getstring(MAPT &m, const STRING &ky) {
 	if (m.m_typ != MAPT_MAP)
 		return NULL;
 	return getstring(*m.u.m_m, ky);
+}
+
+void setstring(MAPDHASH &master, const STRING &ky, STRINGP strp) {
+	MAPDHASH::iterator	kvpair, kvsub;
+
+	kvpair = findkey(master, ky);
+	if (kvpair == master.end()) {
+		// The given key was not found in the hash
+		STRING	mkey, subky;
+
+		if (splitkey(ky, mkey, subky)) {
+			MAPT	subfm;
+			MAPDHASH::iterator	subloc = master.find(mkey);
+
+			if (subloc == master.end()) {
+				// Create a map to hold our value
+				subfm.m_typ = MAPT_MAP;
+				subfm.u.m_m = new MAPDHASH;
+				master.insert(KEYVALUE(mkey, subfm ) );
+			} else {
+				// The map exists, let's reference it
+				subfm = (*subloc).second;
+				if (subfm.m_typ != MAPT_MAP) {
+					fprintf(stderr, "ERR: MAP[%s] isnt a map\n", mkey.c_str());
+					return;
+				}
+			} setstring(*subfm.u.m_m, subky, strp);
+			return;
+		}
+
+		MAPT	elm;
+		elm.m_typ = MAPT_STRING;
+		elm.u.m_s = strp;
+		master.insert(KEYVALUE(ky, elm ) );
+	} else if (kvpair->second.m_typ == MAPT_MAP) {
+		MAPDHASH *subhash = kvpair->second.u.m_m;
+		kvsub = subhash->find(KYSTR);
+		if (kvsub == subhash->end()) {
+			MAPT	elm;
+			elm.m_typ = MAPT_STRING;
+			elm.u.m_s = strp;
+			kvsub->second.u.m_m->insert(KEYVALUE(KYVAL, elm));
+		} else {
+			kvsub->second.m_typ = MAPT_STRING;
+			kvsub->second.u.m_s = strp;
+		}
+	} else if (kvpair->second.m_typ == MAPT_STRING) {
+		kvpair->second.u.m_s = strp;
+	}
+}
+
+void	setstring(MAPT &m, const STRING &ky, STRINGP strp) {
+	setstring(*m.u.m_m, ky, strp);
 }
 
 bool getvalue(MAPDHASH &map, int &value) {

@@ -43,10 +43,17 @@
 
 //
 extern const	STRING	KYLEGAL;
+extern const	STRING	KYCOPYRIGHT;
 extern const	STRING	KYCMDLINE;
+extern const	STRING	KYPATH;
 extern const	STRING	KYSUBD;
 extern const	STRING	KYBUS_ADDRESS_WIDTH;
 extern const	STRING	KYSKIPADDR;
+// Other global keys
+extern const	STRING	KYREGDEFS_CPP_INSERT;
+extern const	STRING	KYKEYS_TRIMLIST;
+extern const	STRING	KYKEYS_INTLIST;
+extern const	STRING	KYPROJECT;
 //
 extern const	STRING	KYSIO;
 extern const	STRING	KYDIO;

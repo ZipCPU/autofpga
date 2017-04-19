@@ -67,23 +67,31 @@ autofpga: $(OBJECTS)
 	echo $(OBJECTS)
 	$(CXX) $(CFLAGS) $(OBJECTS) -o $@
 
-VSRCS := clock.txt bkram.txt flash.txt zipmaster.txt wbubus.txt dlyarbiter.txt \
+VSRCS := global.txt clock.txt bkram.txt flash.txt zipmaster.txt wbubus.txt dlyarbiter.txt \
 	gps.txt icape.txt mdio.txt spio.txt wboledbw.txt rtcdate.txt	\
 	hdmi.txt clkcounter.txt gpio.txt pwrcount.txt wbpmic.txt	\
 	version.txt buserr.txt pic.txt rtcgps.txt wbmouse.txt
+VDIR := ../auto-data
+VDATA := $(addprefix $(VDIR)/,$(VSRCS))
 # Unused:
 #	enet.txt sdspi.txt wbuart.txt
 
 .PHONY: demo
-demo: autofpga $(VSRCS)
-	./autofpga $(VSRCS) 
+demo: runme.sh
+	bash runme.sh
+
+runme.sh: autofpga $(VDATA)
+	echo "#!/bin/bash" > $@
+	echo >> $@
+	echo >> $@
+	echo ./autofpga -o ../demo-out $(VDATA)  >> $@
 
 define	mk-objdir
 	@bash -c "if [ ! -e $(OBJDIR) ]; then mkdir -p $(OBJDIR); fi"
 endef
 
 define	build-depends
-	@echo "Buidling dependency file"
+	@echo "Building dependency file"
 	$(CXX) $(CFLAGS) -MM $(SOURCES) > $(OBJDIR)/xdep.txt
 	$(SED) -e 's/^.*.o: /$(OBJDIR)\/&/' < $(OBJDIR)/xdep.txt > $(OBJDIR)/depends.txt
 endef
