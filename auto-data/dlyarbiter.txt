@@ -89,4 +89,5 @@
 	assign	dwb_err   = wb_err;
 	assign	dwb_idata = wb_idata;
 `endif
-	assign	wbu_idata = wb_idata;
+	assign	wbu_idata = dwb_idata;
+	assign	zip_idata = dwb_idata;
