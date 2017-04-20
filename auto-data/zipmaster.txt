@@ -101,7 +101,7 @@
 		swic(i_clk, i_cpu_reset,
 			// Zippys wishbone interface
 			zip_cyc, zip_stb, zip_we, zip_addr, zip_data, zip_sel,
-					zip_ack, zip_stall, dwb_idata, zip_err,
+					zip_ack, zip_stall, zip_idata, zip_err,
 			zip_int_vector, zip_cpu_int,
 			// Debug wishbone interface
 			((wbu_cyc)&&(wbu_zip_sel)),
