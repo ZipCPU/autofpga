@@ -165,7 +165,7 @@
 @LDSCRIPT.PSTR	rx
 @LDSCRIPT.PTR	flash
 @LDSCRIPT.DEF	_flash=ORIGIN(flash);
-@REGS.INSERT.H
+@REGDEFS.INSERT.H=
 
 #define	ISPIF_EN	@$THIS.ISPIF_EN
 #define	ISPIF_DIS	@$THIS.ISPIF_DIS
@@ -194,7 +194,7 @@
 typedef struct FLASHCTL_S {
 	unsigned	f_ereg, f_config, f_status, f_id;
 } FLASHCTL;
-@REGS.INSERT.H=
+@REGDEFS.INSERT.H=
 #define	SZPAGEB		256
 #define	PGLENB		256
 #define	SZPAGEW		64

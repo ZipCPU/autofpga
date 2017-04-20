@@ -50,6 +50,7 @@ extern const	STRING	KYSUBD;
 extern const	STRING	KYBUS_ADDRESS_WIDTH;
 extern const	STRING	KYSKIPADDR;
 // Other global keys
+extern const	STRING	KYREGDEFS_CPP_INCLUDE;
 extern const	STRING	KYREGDEFS_CPP_INSERT;
 extern const	STRING	KYKEYS_TRIMLIST;
 extern const	STRING	KYKEYS_INTLIST;
@@ -93,7 +94,7 @@ extern const	STRING	KYNSCOPES;
 // Regs definition(s)
 extern const	STRING	KYREGS_N;
 extern const	STRING	KYREGS_NOTE;
-extern const	STRING	KYREGS_INSERT_H;
+extern const	STRING	KYREGDEFS_INSERT_H;
 // Board definitions for C/C++
 extern const	STRING	KYBDEF_DEFN;
 extern const	STRING	KYBDEF_IOTYPE;

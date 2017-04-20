@@ -6,7 +6,7 @@
 @KEYS.TRIMLIST= PREFIX ACCESS PTYPE NADDR FORMAT BDEF.IOTYPE WIRE
 # @KEYS.INTLIST is a list of all things that need to be converted to integers
 @KEYS.INTLIST= BUS_ADDRESS_WIDTH NADDR NPIC NSCOPES PIC.MAX REGS.N ID
-@REGS.INSERT.H=
+@REGDEFS.INSERT.H=
 typedef	struct {
 	unsigned	m_addr;
 	const char	*m_name;
