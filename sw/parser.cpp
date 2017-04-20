@@ -158,8 +158,12 @@ MAPDHASH	*parsefile(FILE *fp) {
 		}
 
 		delete ln;
-	} if ((key.length()>0)&&(devm)) {
-		addtomap(*devm, key, value);
+	} if (key.length()>0) {
+		if (devm) {
+			addtomap(*devm, key, value);
+		} else {
+			addtomap(*fm, key, value);
+		}
 	}
 
 	return fm;
