@@ -10,7 +10,7 @@
 @$RESET_ADDRESS.EXPR=@$flash.BASE+(@$flash.NADDR)
 @$RESET_ADDRESS.FORMAT=32'h%08x
 @LD.DEFNS=_top_of_stack = ORIGIN(mem) + LENGTH(mem) - 4;
-@REGDEFS.INSERT.H=
+@REGDEFS.H.INSERT=
 typedef	struct {
 	unsigned	m_addr;
 	const char	*m_name;

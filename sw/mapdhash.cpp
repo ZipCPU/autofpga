@@ -208,8 +208,9 @@ void	trimkey(MAPDHASH &mp, const STRING &sky) {
 
 	if (splitkey(sky, mkey, subky)) {
 		if (mp.end() != (kvpair=mp.find(mkey))) {
-			if (kvpair->second.m_typ == MAPT_MAP)
+			if (kvpair->second.m_typ == MAPT_MAP) {
 				trimkey(*kvpair->second.u.m_m, subky);
+			}
 		}
 	} else for(kvpair = mp.begin(); kvpair != mp.end(); kvpair++) {
 		if ((*kvpair).second.m_typ == MAPT_STRING) {
@@ -240,7 +241,6 @@ void	trimall(MAPDHASH &mp, const STRING &sky) {
 				// Hence we now force this to be an absolute
 				// reference
 				trimkey(*kvpair->second.u.m_m, subky);
-				return;
 			}
 		}
 	} for(kvpair = mp.begin(); kvpair != mp.end(); kvpair++) {
@@ -274,13 +274,6 @@ void	trimbykeylist(MAPDHASH &mp, const STRING &kylist) {
 			trimall(mp, STRING(tok));
 			tok = strtok(NULL, delimiters);
 		}
-	}
-
-	MAPDHASH::iterator	kvpair;
-	for(kvpair=mp.begin(); kvpair != mp.end(); kvpair++) {
-		if (kvpair->second.m_typ != MAPT_MAP)
-			continue;
-		trimbykeylist(kvpair->second, kylist);
 	}
 }
 

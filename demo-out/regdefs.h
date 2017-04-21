@@ -43,6 +43,18 @@
 #define	REGDEFS_H
 
 
+//
+// The @REGDEFS.H.INCLUDE tag
+//
+// @REGDEFS.H.INCLUDE for masters
+// @REGDEFS.H.INCLUDE for peripherals
+// And finally any master REGDEFS.H.INCLUDE tags
+// End of definitions from REGDEFS.H.INCLUDE
+
+
+//
+// Register address definitions, from @REGS.#d
+//
 #define	R_BUSERR          	0x00000400	// 00000400, wbregs names: BUSERR
 #define	R_PIC             	0x00000404	// 00000404, wbregs names: PIC
 // HDMI-IN Clock Counter (measures clock speed)
@@ -161,9 +173,21 @@
 #define	FLASHMEM          	0x01000000	// 01000000, wbregs names: FLASH
 
 
-// Definitions for the bus masters
+//
+// The @REGDEFS.H.DEFNS tag
+//
+// @REGDEFS.H.DEFNS for masters
 #define	CLKFREQHZ	100000000
-// And then from the peripherals
+// @REGDEFS.H.DEFNS for peripherals
+#define	BKMEMBASE	1048576
+#define	BKMEMLEN	(1048576+1048576)
+// @REGDEFS.H.DEFNS at the top level
+// End of definitions from REGDEFS.H.DEFNS
+//
+// The @REGDEFS.H.INSERT tag
+//
+// @REGDEFS.H.INSERT for masters
+// @REGDEFS.H.INSERT for peripherals
 #define	SZPAGEB		256
 #define	PGLENB		256
 #define	SZPAGEW		64
@@ -180,7 +204,7 @@
 #define	ISPIF_EN	0x80010001
 #define	ISPIF_DIS	0x00010001
 #define	ISPIF_CLR	0x00000001
-// And finally any master REGDEFS.INSERT.H tags
+// @REGDEFS.H.INSERT from the top level
 typedef	struct {
 	unsigned	m_addr;
 	const char	*m_name;
@@ -192,7 +216,7 @@ extern	const	int	NREGS;
 
 extern	unsigned	addrdecode(const char *v);
 extern	const	char *addrname(const unsigned v);
-// End of definitions from REGDEFS.INSERT.H
+// End of definitions from REGDEFS.H.INSERT
 
 
 #endif	// REGDEFS_H

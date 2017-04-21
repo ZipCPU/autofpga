@@ -42,5 +42,5 @@
 @TOP.INSERT=
 	assign	s_clk = i_clk;
 	assign	s_reset = 1'b0; // This design requires local, not global resets
-@REGDEFS.INSERT.H=
+@REGDEFS.H.DEFNS=
 #define	CLKFREQHZ	@$CLKFREQHZ

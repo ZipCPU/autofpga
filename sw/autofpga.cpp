@@ -1274,6 +1274,40 @@ void	build_regdefs_h(  MAPDHASH &master, FILE *fp, STRING &fname) {
 	fprintf(fp, "#define\tREGDEFS_H\n");
 	fprintf(fp, "\n\n");
 
+	fprintf(fp, "//\n");
+	fprintf(fp, "// The @REGDEFS.H.INCLUDE tag\n");
+	fprintf(fp, "//\n");
+	fprintf(fp, "// @REGDEFS.H.INCLUDE for masters\n");
+	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
+		if (kvpair->second.m_typ != MAPT_MAP)
+			continue;
+		if (isperipheral(kvpair->second))
+			continue;
+		strp = getstring(kvpair->second, KYREGDEFS_H_INCLUDE);
+		if (strp)
+			fputs(strp->c_str(), fp);
+	}
+
+	fprintf(fp, "// @REGDEFS.H.INCLUDE for peripherals\n");
+	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
+		if (kvpair->second.m_typ != MAPT_MAP)
+			continue;
+		if (!isperipheral(kvpair->second))
+			continue;
+		strp = getstring(kvpair->second, KYREGDEFS_H_INCLUDE);
+		if (strp)
+			fputs(strp->c_str(), fp);
+	}
+
+	fprintf(fp, "// And finally any master REGDEFS.H.INCLUDE tags\n");
+	strp = getstring(master, KYREGDEFS_H_INCLUDE);
+	if (strp)
+		fputs(strp->c_str(), fp);
+	fprintf(fp, "// End of definitions from REGDEFS.H.INCLUDE\n\n\n");
+
+
+	fprintf(fp, "//\n// Register address definitions, from @REGS.#d\n//\n");
+
 	unsigned	longest_defname = 0, ldef = 0;
 
 	longest_defname = get_longest_defname(slist);
@@ -1287,33 +1321,69 @@ void	build_regdefs_h(  MAPDHASH &master, FILE *fp, STRING &fname) {
 	write_regdefs(fp, plist, longest_defname);
 
 
-	fprintf(fp, "// Definitions for the bus masters\n");
+	fprintf(fp, "//\n");
+	fprintf(fp, "// The @REGDEFS.H.DEFNS tag\n");
+	fprintf(fp, "//\n");
+	fprintf(fp, "// @REGDEFS.H.DEFNS for masters\n");
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
 		if (isperipheral(kvpair->second))
 			continue;
-		strp = getstring(kvpair->second, KYREGDEFS_INSERT_H);
+		strp = getstring(kvpair->second, KYREGDEFS_H_DEFNS);
 		if (strp)
 			fputs(strp->c_str(), fp);
 	}
 
-	fprintf(fp, "// And then from the peripherals\n");
+	fprintf(fp, "// @REGDEFS.H.DEFNS for peripherals\n");
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
 		if (!isperipheral(kvpair->second))
 			continue;
-		strp = getstring(kvpair->second, KYREGDEFS_INSERT_H);
+		strp = getstring(kvpair->second, KYREGDEFS_H_DEFNS);
 		if (strp)
 			fputs(strp->c_str(), fp);
 	}
 
-	fprintf(fp, "// And finally any master REGDEFS.INSERT.H tags\n");
-	strp = getstring(master, KYREGDEFS_INSERT_H);
+	fprintf(fp, "// @REGDEFS.H.DEFNS at the top level\n");
+	strp = getstring(master, KYREGDEFS_H_DEFNS);
 	if (strp)
 		fputs(strp->c_str(), fp);
-	fprintf(fp, "// End of definitions from REGDEFS.INSERT.H\n");
+	fprintf(fp, "// End of definitions from REGDEFS.H.DEFNS\n");
+
+
+
+	fprintf(fp, "//\n");
+	fprintf(fp, "// The @REGDEFS.H.INSERT tag\n");
+	fprintf(fp, "//\n");
+	fprintf(fp, "// @REGDEFS.H.INSERT for masters\n");
+	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
+		if (kvpair->second.m_typ != MAPT_MAP)
+			continue;
+		if (isperipheral(kvpair->second))
+			continue;
+		strp = getstring(kvpair->second, KYREGDEFS_H_INSERT);
+		if (strp)
+			fputs(strp->c_str(), fp);
+	}
+
+	fprintf(fp, "// @REGDEFS.H.INSERT for peripherals\n");
+	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
+		if (kvpair->second.m_typ != MAPT_MAP)
+			continue;
+		if (!isperipheral(kvpair->second))
+			continue;
+		strp = getstring(kvpair->second, KYREGDEFS_H_INSERT);
+		if (strp)
+			fputs(strp->c_str(), fp);
+	}
+
+	fprintf(fp, "// @REGDEFS.H.INSERT from the top level\n");
+	strp = getstring(master, KYREGDEFS_H_INSERT);
+	if (strp)
+		fputs(strp->c_str(), fp);
+	fprintf(fp, "// End of definitions from REGDEFS.H.INSERT\n");
 
 	fprintf(fp, "\n\n");
 
@@ -1533,7 +1603,7 @@ void	build_board_h(    MAPDHASH &master, FILE *fp, STRING &fname) {
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
-		defns = getstring(*kvpair->second.u.m_m, KYREGDEFS_INSERT_H);
+		defns = getstring(*kvpair->second.u.m_m, KYREGDEFS_H_INSERT);
 		if (defns)
 			fprintf(fp, "%s\n\n", defns->c_str());
 	}

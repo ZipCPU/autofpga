@@ -57,9 +57,12 @@
 #endif
 #endif // INCLUDE_ZIPCPU
 
+
+
 typedef	struct	RTCLIGHT_S	{
 	unsigned	r_clock, r_stopwatch, r_timer, r_alarm;
 } RTCLIGHT;
+
 
 #define WBMIC_ENABLE	0
 #define WBMIC_DISABLE	(1<<20)
@@ -72,9 +75,11 @@ typedef struct  WBMIC_S {
 	unsigned	m_setup;
 } WBMIC;
 
+
 typedef	struct	GPSTRACKER_S	{
 	unsigned	g_alpha, g_beta, g_gamma, g_step;
 } GPSTRACKER;
+
 
 // Definitions to interact with the OLED device
 #define	OLED_LOGICEN		0x0010001
@@ -91,6 +96,8 @@ typedef	struct	GPSTRACKER_S	{
 typedef	struct OLEDBW_S {
 	unsigned	o_ctrl, o_a, o_b, o_data;
 } OLEDBW;
+
+
 
 #ifndef	WBUART_H
 #define	WBUART_H
@@ -122,10 +129,12 @@ typedef struct  WBUART_S {
 } WBUART;
 #endif
 
+
 typedef	struct	GPSTB_S	{
 	unsigned	tb_maxcount, tb_jump;
 	unsigned long	tb_err, tb_count, tb_step;
 } GPSTB;
+
 
 // Offsets for the ICAPE2 interface
 #define	CFG_CRC		0
@@ -148,6 +157,7 @@ typedef	struct	GPSTB_S	{
 #define	CFG_BOOTSTS	22
 #define	CFG_CTL1	24
 #define	CFG_BSPI	31
+
 
 //
 // The Ethernet MDIO interface
@@ -176,16 +186,20 @@ typedef struct ENETMDIO_S {
 	unsigned	e_v[32];
 } ENETMDIO;
 
+
+
 #define	SPIO_BTNC	0x01000
 #define	SPIO_BTND	0x00800
 #define	SPIO_BTNL	0x00400
 #define	SPIO_BTNR	0x00200
 #define	SPIO_BTNU	0x00100
 
+
 // Mouse definitions
 typedef struct  WBMOUSE_S {
 	unsigned	m_bus, m_raw, m_screen, m_size;
 } WBMOUSE;
+
 
 #define	SZPAGEB		256
 #define	PGLENB		256
@@ -205,9 +219,6 @@ typedef struct  WBMOUSE_S {
 #define	ISPIF_EN	0x80010001
 #define	ISPIF_DIS	0x00010001
 #define	ISPIF_CLR	0x00000001
-
-
-#define	CLKFREQHZ	100000000
 
 
 #ifdef	RTC_ACCESS

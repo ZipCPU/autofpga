@@ -95,7 +95,9 @@ extern const	STRING	KYNSCOPES;
 // Regs definition(s)
 extern const	STRING	KYREGS_N;
 extern const	STRING	KYREGS_NOTE;
-extern const	STRING	KYREGDEFS_INSERT_H;
+extern const	STRING	KYREGDEFS_H_INCLUDE;
+extern const	STRING	KYREGDEFS_H_DEFNS;
+extern const	STRING	KYREGDEFS_H_INSERT;
 // Board definitions for C/C++
 extern const	STRING	KYBDEF_INCLUDE;
 extern const	STRING	KYBDEF_DEFN;

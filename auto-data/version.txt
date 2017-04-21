@@ -46,8 +46,6 @@
 	assign	version_stall = 1'b0;
 @REGS.N=1
 @REGS.0= 0 R_VERSION VERSION
-# @REGDEFS.INSERT.H=
-# @BDEF.DEFNS=
 @BDEF.IONAME=io_version
 @BDEF.IOTYPE=unsigned
 @BDEF.OSDEF=_BOARD_HAS_VERSION_ID
