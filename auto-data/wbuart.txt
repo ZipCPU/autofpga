@@ -122,9 +122,9 @@
 #define UART_TX_BREAK           0x0200
 
 typedef struct  WBUART_S {
-	unsigned\t_setup;
-	unsigned\t_fifo;
-	unsigned\t_rx, u_tx;
+	unsigned	u_setup;
+	unsigned	u_fifo;
+	unsigned	u_rx, u_tx;
 } WBUART;
 
 #endif
