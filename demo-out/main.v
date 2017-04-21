@@ -56,13 +56,13 @@
 `define	WBUBUS_MASTER
 // And then for the peripherals
 `define	RTC_ACCESS
-`define	CONSOLE_ACCESS
+`define	MICROPHONE_ACCESS
 `define	GPIO_ACCESS
 `define	GPS_CLOCK
+`define	OLEDBW_ACCESS
 `define	FLASH_ACCESS
-`define	FLASH_ACCESS
-`define	OLEDRGB_ACCESS
 `define	BLKRAM_ACCESS
+`define	FLASH_ACCESS
 `define	BUSPIC_ACCESS
 `define	GPSUART_ACCESS
 `define	RTCDATE_ACCESS
@@ -87,14 +87,14 @@ module	main(i_clk, i_reset,
 		i_gpio, o_gpio,
 		// The GPS 1PPS signal port
 		i_gps_pps,
-		// The QSPI Flash
-		o_qspi_cs_n, o_qspi_sck, o_qspi_dat, i_qspi_dat, o_qspi_mod,
 		// OLED control interface (roughly SPI)
 		o_oled_sck, o_oled_mosi, o_oled_dcn,
 		o_oled_reset_n, o_oled_panel_en, o_oled_logic_en,
-		i_cpu_reset,
+		// The QSPI Flash
+		o_qspi_cs_n, o_qspi_sck, o_qspi_dat, i_qspi_dat, o_qspi_mod,
 		// HDMI output ports
 		i_hdmi_out_clk,
+		i_cpu_reset,
 		// Command and Control port
 		i_host_rx_stb, i_host_rx_data,
 		o_host_tx_stb, o_host_tx_data, i_host_tx_busy,
@@ -127,7 +127,7 @@ module	main(i_clk, i_reset,
 	//
 	// A 32-bit address indicating where teh ZipCPU should start running
 	// from
-	localparam	RESET_ADDRESS = 32'h01000000;
+	localparam	RESET_ADDRESS = 20971520;
 	//
 	// The number of valid bits on the bus
 	localparam	ZIP_ADDRESS_WIDTH = 30;	// Zip-CPU address width
@@ -152,15 +152,15 @@ module	main(i_clk, i_reset,
 	input	wire		i_mic_din;
 	//The GPS Clock
 	input	wire		i_gps_pps;
+	// OLEDBW interface
+	output	wire		o_oled_sck, o_oled_mosi,
+				o_oled_dcn, o_oled_reset_n, o_oled_panel_en,
+				o_oled_logic_en;
 	// The QSPI flash
 	output	wire		o_qspi_cs_n, o_qspi_sck;
 	output	wire	[3:0]	o_qspi_dat;
 	input	wire	[3:0]	i_qspi_dat;
 	output	wire	[1:0]	o_qspi_mod;
-	// OLEDRGB interface
-	output	wire		o_oled_sck, o_oled_mosi,
-				o_oled_dcn, o_oled_reset_n, o_oled_panel_en,
-				o_oled_logic_en;
 	input	wire		i_cpu_reset;
 	input	wire		i_host_rx_stb;
 	input	wire	[7:0]	i_host_rx_data;
@@ -219,8 +219,8 @@ module	main(i_clk, i_reset,
 	wire	rtc_int;	// rtc.INT.RTC.WIRE
 	wire	pmic_int;	// pmic.INT.MIC.WIRE
 	wire	gpio_int;	// gpio.INT.GPIO.WIRE
-	wire	flash_interrupt;	// flash.INT.FLASH.WIRE
 	wire	oled_int;	// oled.INT.OLED.WIRE
+	wire	flash_interrupt;	// flash.INT.FLASH.WIRE
 	wire	zip_cpu_int;	// zip.INT.ZIP.WIRE
 	wire	w_bus_int;	// buspic.INT.BUS.WIRE
 	wire	gpsutxf_int;	// gpsu.INT.GPSTXF.WIRE
@@ -276,12 +276,12 @@ module	main(i_clk, i_reset,
 	output	wire	[(NGPO-1):0]	o_gpio;
 	reg	r_clkhdmiin_ack;
 	reg	r_clkhdmiout_ack;
-	reg	[31:0]	r_pwrcount_data;
+	reg	r_sysclk_ack;
 	wire	gps_pps, ck_pps, gps_led, gps_locked, gps_tracking;
 	wire	[63:0]	gps_now, gps_err, gps_step;
 	wire	[1:0]	gps_dbg_tick;
+	reg	[31:0]	r_pwrcount_data;
 	wire	tb_pps;
-	reg	r_sysclk_ack;
 	wire	[4:0]	w_btn;
 	wire	[31:0]	edido_dbg;
 	// scrn_mouse is a 32-bit field containing 16-bits of x-position and
@@ -367,23 +367,26 @@ module	main(i_clk, i_reset,
 	wire	clkhdmiout_ack, clkhdmiout_stall, clkhdmiout_sel;
 	wire	[31:0]	clkhdmiout_data;
 
-	wire	pwrcount_ack, pwrcount_stall, pwrcount_sel;
-	wire	[31:0]	pwrcount_data;
+	wire	sysclk_ack, sysclk_stall, sysclk_sel;
+	wire	[31:0]	sysclk_data;
 
 	wire	gck_ack, gck_stall, gck_sel;
 	wire	[31:0]	gck_data;
 
-	wire	flash_ack, flash_stall, flash_sel;
-	wire	[31:0]	flash_data;
+	wire	oled_ack, oled_stall, oled_sel;
+	wire	[31:0]	oled_data;
 
 	wire	flctl_ack, flctl_stall, flctl_sel;
 	wire	[31:0]	flctl_data;
 
-	wire	oled_ack, oled_stall, oled_sel;
-	wire	[31:0]	oled_data;
+	wire	pwrcount_ack, pwrcount_stall, pwrcount_sel;
+	wire	[31:0]	pwrcount_data;
 
 	wire	mem_ack, mem_stall, mem_sel;
 	wire	[31:0]	mem_data;
+
+	wire	flash_ack, flash_stall, flash_sel;
+	wire	[31:0]	flash_data;
 
 	wire	hinh_ack, hinh_stall, hinh_sel;
 	wire	[31:0]	hinh_data;
@@ -408,9 +411,6 @@ module	main(i_clk, i_reset,
 
 	wire	mdio_ack, mdio_stall, mdio_sel;
 	wire	[31:0]	mdio_data;
-
-	wire	sysclk_ack, sysclk_stall, sysclk_sel;
-	wire	[31:0]	sysclk_data;
 
 	wire	spio_ack, spio_stall, spio_sel;
 	wire	[31:0]	spio_data;
@@ -736,14 +736,14 @@ module	main(i_clk, i_reset,
 	assign	version_data = `DATESTAMP;
 	assign	version_ack = 1'b0;
 	assign	version_stall = 1'b0;
-`ifdef	CONSOLE_ACCESS
+`ifdef	MICROPHONE_ACCESS
 	wbmic #(.DEFAULT_RELOAD(2083))
  		microphone(i_clk, 1'b0,
  			wb_cyc, (wb_stb)&&(pmic_sel), wb_we,
 				wb_addr[0], wb_data,
  			pmic_ack, pmic_stall, pmic_data,
 			o_mic_csn, o_mic_sck, i_mic_din, pmic_int);
-`else	// CONSOLE_ACCESS
+`else	// MICROPHONE_ACCESS
 	assign	o_mic_csn    = 1'b1;
 	assign	o_mic_sck    = 1'b1;
 
@@ -756,7 +756,7 @@ module	main(i_clk, i_reset,
 	assign	pmic_data  = 32'h0;
 
 	assign	pmic_int = 1'b0;	// pmic.INT.MIC.WIRE
-`endif	// CONSOLE_ACCESS
+`endif	// MICROPHONE_ACCESS
 
 `ifdef	GPIO_ACCESS
 	//
@@ -794,13 +794,11 @@ module	main(i_clk, i_reset,
 		r_clkhdmiout_ack <= (wb_stb)&&(clkhdmiout_sel);
 	assign	clkhdmiout_ack   = r_clkhdmiout_ack;
 	assign	clkhdmiout_stall = 1'b0;
-	initial	r_pwrcount_data = 32'h0;
+	clkcounter sysclkctr(i_clk, ck_pps, i_clk, sysclk_data);
 	always @(posedge i_clk)
-	if (r_pwrcount_data[31])
-		r_pwrcount_data[30:0] <= r_pwrcount_data[30:0] + 1'b1;
-	else
-		r_pwrcount_data[31:0] <= r_pwrcount_data[31:0] + 1'b1;
-	assign	pwrcount_data = r_pwrcount_data;
+		r_sysclk_ack <= (wb_stb)&&(sysclk_sel);
+	assign	sysclk_ack   = r_sysclk_ack;
+	assign	sysclk_stall = 1'b0;
 `ifdef	GPS_CLOCK
 	wire	[1:0]	ck_dbg;
 
@@ -834,6 +832,77 @@ module	main(i_clk, i_reset,
 
 `endif	// GPS_CLOCK
 
+`ifdef	OLEDBW_ACCESS
+	wboledbw #(.CBITS(4)) oledctrl(i_clk,
+		(wb_cyc), (wb_stb)&&(oled_sel), wb_we,
+				wb_addr[1:0], wb_data,
+			oled_ack, oled_stall, oled_data,
+		o_oled_sck, o_oled_mosi, o_oled_dcn,
+		{ o_oled_reset_n, o_oled_panel_en, o_oled_logic_en },
+		oled_int);
+`else	// OLEDBW_ACCESS
+	assign	o_oled_sck     = 1'b1;
+	assign	o_oled_mosi    = 1'b1;
+	assign	o_oled_dcn     = 1'b1;
+	assign	o_oled_reset_n = 1'b0;
+	assign	o_oled_panel_en= 1'b0;
+	assign	o_oled_logic_en= 1'b0;
+
+
+	reg	r_oled_ack;
+	always @(posedge i_clk)
+		r_oled_ack <= (wb_stb)&&(oled_sel);
+
+	assign	oled_ack   = r_oled_ack;
+	assign	oled_stall = 1'b0;
+	assign	oled_data  = 32'h0;
+
+	assign	oled_int = 1'b0;	// oled.INT.OLED.WIRE
+`endif	// OLEDBW_ACCESS
+
+`ifdef	FLASH_ACCESS
+	// The Flash control interface result comes back together with the
+	// flash interface itself.  Hence, we always return zero here.
+	assign	flctl_ack   = 1'b0;
+	assign	flctl_stall = 1'b0;
+	assign	flctl_data  = 0;
+`else	// FLASH_ACCESS
+
+	reg	r_flctl_ack;
+	always @(posedge i_clk)
+		r_flctl_ack <= (wb_stb)&&(flctl_sel);
+
+	assign	flctl_ack   = r_flctl_ack;
+	assign	flctl_stall = 1'b0;
+	assign	flctl_data  = 32'h0;
+
+`endif	// FLASH_ACCESS
+
+	initial	r_pwrcount_data = 32'h0;
+	always @(posedge i_clk)
+	if (r_pwrcount_data[31])
+		r_pwrcount_data[30:0] <= r_pwrcount_data[30:0] + 1'b1;
+	else
+		r_pwrcount_data[31:0] <= r_pwrcount_data[31:0] + 1'b1;
+	assign	pwrcount_data = r_pwrcount_data;
+`ifdef	BLKRAM_ACCESS
+	memdev #(.LGMEMSZ(20), .EXTRACLOCK(1))
+		blkram(i_clk,
+			(wb_cyc), (wb_stb)&&(mem_sel), wb_we,
+				wb_addr[(20-3):0], wb_data, wb_sel,
+				mem_ack, mem_stall, mem_data);
+`else	// BLKRAM_ACCESS
+
+	reg	r_mem_ack;
+	always @(posedge i_clk)
+		r_mem_ack <= (wb_stb)&&(mem_sel);
+
+	assign	mem_ack   = r_mem_ack;
+	assign	mem_stall = 1'b0;
+	assign	mem_data  = 32'h0;
+
+`endif	// BLKRAM_ACCESS
+
 `ifdef	FLASH_ACCESS
 	wbqspiflash #(24)
 		flashmem(i_clk,
@@ -859,70 +928,6 @@ module	main(i_clk, i_reset,
 	assign	flash_interrupt = 1'b0;	// flash.INT.FLASH.WIRE
 `endif	// FLASH_ACCESS
 
-`ifdef	FLASH_ACCESS
-	// The Flash control interface result comes back together with the
-	// flash interface itself.  Hence, we always return zero here.
-	assign	flctl_ack   = 1'b0;
-	assign	flctl_stall = 1'b0;
-	assign	flctl_data  = 0;
-`else	// FLASH_ACCESS
-
-	reg	r_flctl_ack;
-	always @(posedge i_clk)
-		r_flctl_ack <= (wb_stb)&&(flctl_sel);
-
-	assign	flctl_ack   = r_flctl_ack;
-	assign	flctl_stall = 1'b0;
-	assign	flctl_data  = 32'h0;
-
-`endif	// FLASH_ACCESS
-
-`ifdef	OLEDRGB_ACCESS
-	wboledbw #(.CBITS(4)) oledctrl(i_clk,
-		(wb_cyc), (wb_stb)&&(oled_sel), wb_we,
-				wb_addr[1:0], wb_data,
-			oled_ack, oled_stall, oled_data,
-		o_oled_sck, o_oled_mosi, o_oled_dcn,
-		{ o_oled_reset_n, o_oled_panel_en, o_oled_logic_en },
-		oled_int);
-`else	// OLEDRGB_ACCESS
-	assign	o_oled_sck     = 1'b1;
-	assign	o_oled_mosi    = 1'b1;
-	assign	o_oled_dcn     = 1'b1;
-	assign	o_oled_reset_n = 1'b0;
-	assign	o_oled_panel_en= 1'b0;
-	assign	o_oled_logic_en= 1'b0;
-
-
-	reg	r_oled_ack;
-	always @(posedge i_clk)
-		r_oled_ack <= (wb_stb)&&(oled_sel);
-
-	assign	oled_ack   = r_oled_ack;
-	assign	oled_stall = 1'b0;
-	assign	oled_data  = 32'h0;
-
-	assign	oled_int = 1'b0;	// oled.INT.OLED.WIRE
-`endif	// OLEDRGB_ACCESS
-
-`ifdef	BLKRAM_ACCESS
-	memdev #(.LGMEMSZ(20), .EXTRACLOCK(1))
-		blkram(i_clk,
-			(wb_cyc), (wb_stb)&&(mem_sel), wb_we,
-				wb_addr[(20-3):0], wb_data, wb_sel,
-				mem_ack, mem_stall, mem_data);
-`else	// BLKRAM_ACCESS
-
-	reg	r_mem_ack;
-	always @(posedge i_clk)
-		r_mem_ack <= (wb_stb)&&(mem_sel);
-
-	assign	mem_ack   = r_mem_ack;
-	assign	mem_stall = 1'b0;
-	assign	mem_data  = 32'h0;
-
-`endif	// BLKRAM_ACCESS
-
 `ifdef	INCLUDE_ZIPCPU
 	//
 	//
@@ -938,7 +943,7 @@ module	main(i_clk, i_reset,
 		swic(i_clk, i_cpu_reset,
 			// Zippys wishbone interface
 			zip_cyc, zip_stb, zip_we, zip_addr, zip_data, zip_sel,
-					zip_ack, zip_stall, dwb_idata, zip_err,
+					zip_ack, zip_stall, zip_idata, zip_err,
 			zip_int_vector, zip_cpu_int,
 			// Debug wishbone interface
 			((wbu_cyc)&&(wbu_zip_sel)),
@@ -1045,7 +1050,8 @@ module	main(i_clk, i_reset,
 	assign	dwb_err   = wb_err;
 	assign	dwb_idata = wb_idata;
 `endif
-	assign	wbu_idata = wb_idata;
+	assign	wbu_idata = dwb_idata;
+	assign	zip_idata = dwb_idata;
 `ifdef	BUSPIC_ACCESS
 	//
 	// The BUS Interrupt controller
@@ -1171,11 +1177,6 @@ module	main(i_clk, i_reset,
 
 `endif	// NETCTRL_ACCESS
 
-	clkcounter sysclkctr(i_clk, ck_pps, i_clk, sysclk_data);
-	always @(posedge i_clk)
-		r_sysclk_ack <= (wb_stb)&&(sysclk_sel);
-	assign	sysclk_ack   = r_sysclk_ack;
-	assign	sysclk_stall = 1'b0;
 `ifdef	SPIO_ACCESS
 	assign	w_btn = { i_btnc, i_btnd, i_btnl, i_btnr, i_btnu };
 	spio #(.NBTN(5), .NLEDS(8)) thespio(i_clk,
@@ -1197,14 +1198,16 @@ module	main(i_clk, i_reset,
 	assign	spio_int = 1'b0;	// spio.INT.SPIO.WIRE
 `endif	// SPIO_ACCESS
 
-	wbscopc	theicscop(i_clk, 1'b1, edid_dbg[31], edid_dbg[30:0],
+	wbscopc	theicscop(i_clk, 1'b1, ((edid_dbg[31])||(edido_dbg[31])),
+			{ edid_dbg[30:8],
+				edido_dbg[3:0],
+				edid_dbg[3:0] },
 			i_clk, wb_cyc, (wb_stb)&&(scop_edid_sel), wb_we, wb_addr[0], wb_data,
 			scop_edid_ack, scop_edid_stall, scop_edid_data,
 			scop_edid_int);
 `ifdef	HDMI_OUT_EDID_ACCESS
-	wbi2cmaster	#( .INITIAL_MEMA("edid.hex"), .READ_ONLY(1'b1))
-	    the_output_edid(i_clk, 1'b0,
-		wb_cyc, (wb_stb)&&(edin_sel), wb_we, wb_addr[4:0], wb_data,
+	wbi2cmaster	#(.READ_ONLY(1'b1)) the_output_edid(i_clk, 1'b0,
+		wb_cyc, (wb_stb)&&(edout_sel), wb_we, wb_addr[5:0], wb_data,
 			wb_sel, edout_ack, edout_stall, edout_data,
 		i_hdmi_out_scl, i_hdmi_out_sda, o_hdmi_out_scl, o_hdmi_out_sda,
 		edid_out_int,
@@ -1247,7 +1250,7 @@ module	main(i_clk, i_reset,
 `endif	// MOUSE_ACCESS
 
 `ifdef	HDMI_IN_EDID_ACCESS
-	wbi2cslave	#( .INITIAL_MEMA("edid.hex"), .READ_ONLY(1'b1))
+	wbi2cslave	#( .INITIAL_MEM("edid.hex"), .I2C_READ_ONLY(1'b1))
 	    the_input_edid(i_clk, 1'b0,
 		wb_cyc, (wb_stb)&&(edin_sel), wb_we, wb_addr[4:0], wb_data,
 			wb_sel, edin_ack, edin_stall, edin_data,

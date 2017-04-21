@@ -162,12 +162,8 @@
 
 
 // Definitions for the bus masters
-#define	CLKFREQHZ	@$THIS.CLKFREQHZ
+#define	CLKFREQHZ	100000000
 // And then from the peripherals
-
-#define	ISPIF_EN	0x80010001
-#define	ISPIF_DIS	0x00010001
-#define	ISPIF_CLR	0x00000001
 #define	SZPAGEB		256
 #define	PGLENB		256
 #define	SZPAGEW		64
@@ -180,7 +176,11 @@
 #define	SUBSECTOROF(A)	((A) & (-1<<12))
 #define	PAGEOF(A)	((A) & (-1<<8))
 
-// And finally any master REGS.INSERT.H tags
+
+#define	ISPIF_EN	0x80010001
+#define	ISPIF_DIS	0x00010001
+#define	ISPIF_CLR	0x00000001
+// And finally any master REGDEFS.INSERT.H tags
 typedef	struct {
 	unsigned	m_addr;
 	const char	*m_name;
@@ -192,7 +192,7 @@ extern	const	int	NREGS;
 
 extern	unsigned	addrdecode(const char *v);
 extern	const	char *addrname(const unsigned v);
-// End of definitions from REGS.INSERT.H
+// End of definitions from REGDEFS.INSERT.H
 
 
 #endif	// REGDEFS_H

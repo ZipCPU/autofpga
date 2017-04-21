@@ -44,12 +44,22 @@
 
 // And, so that we can know what is and isn't defined
 // from within our main.v file, let's include:
-#include "design.h"
+#include <design.h>
+
+#include <design.h>
+#include <cpudefs.h>
+#ifdef	INCLUDE_ZIPCPU
+#ifdef INCLUDE_DMA_CONTROLLER
+#define	_HAVE_ZIPSYS_DMA
+#endif
+#ifdef INCLUDE_ACCOUNTING_COUNTERS
+#define	_HAVE_ZIPSYS_PERFORMANCE_COUNTERS
+#endif
+#endif // INCLUDE_ZIPCPU
 
 typedef	struct	RTCLIGHT_S	{
 	unsigned	r_clock, r_stopwatch, r_timer, r_alarm;
 } RTCLIGHT;
-
 
 #define WBMIC_ENABLE	0
 #define WBMIC_DISABLE	(1<<20)
@@ -62,11 +72,9 @@ typedef struct  WBMIC_S {
 	unsigned	m_setup;
 } WBMIC;
 
-
 typedef	struct	GPSTRACKER_S	{
 	unsigned	g_alpha, g_beta, g_gamma, g_step;
 } GPSTRACKER;
-
 
 // Definitions to interact with the OLED device
 #define	OLED_LOGICEN		0x0010001
@@ -83,8 +91,6 @@ typedef	struct	GPSTRACKER_S	{
 typedef	struct OLEDBW_S {
 	unsigned	o_ctrl, o_a, o_b, o_data;
 } OLEDBW;
-
-
 
 #ifndef	WBUART_H
 #define	WBUART_H
@@ -116,12 +122,10 @@ typedef struct  WBUART_S {
 } WBUART;
 #endif
 
-
 typedef	struct	GPSTB_S	{
-	unsigned	tb_maxcount; tb_jump;
+	unsigned	tb_maxcount, tb_jump;
 	unsigned long	tb_err, tb_count, tb_step;
 } GPSTB;
-
 
 // Offsets for the ICAPE2 interface
 #define	CFG_CRC		0
@@ -144,7 +148,6 @@ typedef	struct	GPSTB_S	{
 #define	CFG_BOOTSTS	22
 #define	CFG_CTL1	24
 #define	CFG_BSPI	31
-
 
 //
 // The Ethernet MDIO interface
@@ -173,26 +176,16 @@ typedef struct ENETMDIO_S {
 	unsigned	e_v[32];
 } ENETMDIO;
 
-
-
 #define	SPIO_BTNC	0x01000
 #define	SPIO_BTND	0x00800
 #define	SPIO_BTNL	0x00400
 #define	SPIO_BTNR	0x00200
 #define	SPIO_BTNU	0x00100
 
-
 // Mouse definitions
 typedef struct  WBMOUSE_S {
 	unsigned	m_bus, m_raw, m_screen, m_size;
 } WBMOUSE;
-
-
-
-#define	ISPIF_EN	0x80010001
-#define	ISPIF_DIS	0x00010001
-#define	ISPIF_CLR	0x00000001
-
 
 #define	SZPAGEB		256
 #define	PGLENB		256
@@ -208,50 +201,70 @@ typedef struct  WBMOUSE_S {
 
 
 
-#define	CLKFREQHZ	@$THIS.CLKFREQHZ
+
+#define	ISPIF_EN	0x80010001
+#define	ISPIF_DIS	0x00010001
+#define	ISPIF_CLR	0x00000001
+
+
+#define	CLKFREQHZ	100000000
 
 
 #ifdef	RTC_ACCESS
 #define	_BOARD_HAS_RTCLIGHT
-static volatile RTCLIGHT *const _rtc = &((RTCLIGHT *)1616);#endif	// RTC_ACCESS
+static volatile RTCLIGHT *const _rtc = ((RTCLIGHT *)1616);
+#endif	// RTC_ACCESS
 #define	_BOARD_HAS_VERSION_ID
-#ifdef	CONSOLE_ACCESS
+#ifdef	MICROPHONE_ACCESS
 #define	_BOARD_HAS_WBMIC
-static volatile WBMIC *const _wbmic = &((WBUART *)2048);#endif	// CONSOLE_ACCESS
+static volatile WBMIC *const _wbmic = ((WBMIC *)2048);
+#endif	// MICROPHONE_ACCESS
 #ifdef	GPIO_ACCESS
 #define	_BOARD_HAS_GPIO
-static volatile unsigned *const _gpio = &((unsigned *)1044);#endif	// GPIO_ACCESS
-#ifdef	FLASH_ACCESS
-#define	_BOARD_HASH_FLASH
-extern int _flash[1];#endif	// FLASH_ACCESS
-#ifdef	OLEDRGB_ACCESS
+static volatile unsigned *const _gpio = ((unsigned *)1044);
+#endif	// GPIO_ACCESS
+#ifdef	OLEDBW_ACCESS
 #define	_BOARD_HAS_OLEDBW
-static volatile OLEDRGB *const _oledbw = &((OLEDRGB *)1600);#endif	// OLEDRGB_ACCESS
+static volatile OLEDBW *const _oledbw = ((OLEDBW *)1600);
+#endif	// OLEDBW_ACCESS
 #ifdef	BLKRAM_ACCESS
 #define	_BOARD_HAS_BLKRAM
-extern int	_blkram[1];#endif	// BLKRAM_ACCESS
+extern int	_blkram[1];
+#endif	// BLKRAM_ACCESS
+#ifdef	FLASH_ACCESS
+#define	_BOARD_HASH_FLASH
+extern int _flash[1];
+#endif	// FLASH_ACCESS
 #define	_BOARD_HAS_BUSERR
-static volatile unsigned *const _buserr = &((unsigned *)1024);#ifdef	BUSPIC_ACCESS
+static volatile unsigned *const _buserr = ((unsigned *)1024);
+#ifdef	BUSPIC_ACCESS
 #define	_BOARD_HAS_BUSPIC
-static volatile unsigned *const _buspic = &((unsigned *)1028);#endif	// BUSPIC_ACCESS
+static volatile unsigned *const _buspic = ((unsigned *)1028);
+#endif	// BUSPIC_ACCESS
 #ifdef	GPSUART_ACCESS
 #define	_BOARD_HAS_GPS_UART
-static volatile @$THIS.IOTYPE *const _gpsu = &((@$THIS.IOTYPE *)2080);#endif	// GPSUART_ACCESS
+static volatile WBUART *const _gpsu = ((WBUART *)2080);
+#endif	// GPSUART_ACCESS
 #ifdef	RTCDATE_ACCESS
 #define	_BOARD_HAS_RTCDATE
-static volatile *const _date = &((BOARD *)PERIPHERAL_ADDR)->io_single.i_rtcdate;#endif	// RTCDATE_ACCESS
+static volatile unsigned *const _date = ((unsigned *)1040);
+#endif	// RTCDATE_ACCESS
 #ifdef	CFG_ACCESS
 #define	_BOARD_HAS_ICAPTETWO
-static volatile unsigned *const _icape = &((unsigned *)2176);#endif	// CFG_ACCESS
+static volatile unsigned *const _icape = ((unsigned *)2176);
+#endif	// CFG_ACCESS
 #ifdef	NETCTRL_ACCESS
 #define	_BOARD_HAS_NETMDIO
-static volatile ENETMDIO *const _mdio = &((ENETMDIO *)2304);#endif	// NETCTRL_ACCESS
+static volatile ENETMDIO *const _mdio = ((ENETMDIO *)2304);
+#endif	// NETCTRL_ACCESS
 #ifdef	SPIO_ACCESS
 #define	_BOARD_HAS_SPIO
-static volatile unsigned *const _spio = &((unsigned *)1052);#endif	// SPIO_ACCESS
+static volatile unsigned *const _spio = ((unsigned *)1052);
+#endif	// SPIO_ACCESS
 #ifdef	MOUSE_ACCESS
 #define	_BOARD_HAS_WBMOUSE
-static volatile WBMOUSE *const _mouse = &((WBMOUSE *)1584);#endif	// MOUSE_ACCESS
+static volatile WBMOUSE *const _mouse = ((WBMOUSE *)1584);
+#endif	// MOUSE_ACCESS
 //
 // Interrupt assignments (3 PICs)
 //

@@ -63,18 +63,18 @@ module	toplevel(i_clk,
 		i_hdmi_out_hpd, // Hotplug detect
 		o_sd_reset, i_sd_cd,
 		i_gps_3df,
-	o_hdmi_out_p, o_hdmi_out_n,
 		// The GPS 1PPS signal port
 		i_gps_pps,
-		// Top level Quad-SPI I/O ports
-		o_qspi_cs_n, io_qspi_dat,
 		// OLED control interface (roughly SPI)
 		o_oled_sck, o_oled_mosi, o_oled_dcn,
 		o_oled_reset_n, o_oled_panel_en, o_oled_logic_en,
-		// A reset wire for the ZipCPU
-		i_cpu_resetn,
+	o_hdmi_out_p, o_hdmi_out_n,
+		// Top level Quad-SPI I/O ports
+		o_qspi_cs_n, io_qspi_dat,
 		// HDMI output clock
 		o_hdmi_out_clk_n, o_hdmi_out_clk_p,
+		// A reset wire for the ZipCPU
+		i_cpu_resetn,
 		// UART/host to wishbone interface
 		i_host_uart_rx, o_host_uart_tx,
 		// The GPS-UART
@@ -114,20 +114,20 @@ module	toplevel(i_clk,
 	input	wire	i_sd_cd;
 	output	wire	o_sd_reset;
 	input	wire	i_gps_3df;
-	output	[2:0]	o_hdmi_out_p, o_hdmi_out_n;
 	//The GPS Clock
 	input	wire		i_gps_pps;
-	// Quad SPI flash
-	output	wire		o_qspi_cs_n;
-	inout	wire	[3:0]	io_qspi_dat;
-	// OLEDRGB interface
+	// OLEDBW interface
 	output	wire		o_oled_sck, o_oled_mosi,
 				o_oled_dcn, o_oled_reset_n, o_oled_panel_en,
 				o_oled_logic_en;
-	// A reset wire for the ZipCPU
-	input	wire		i_cpu_resetn;
+	output	[2:0]	o_hdmi_out_p, o_hdmi_out_n;
+	// Quad SPI flash
+	output	wire		o_qspi_cs_n;
+	inout	wire	[3:0]	io_qspi_dat;
 	// HDMI input clock
 	output	wire	o_hdmi_out_clk_n, o_hdmi_out_clk_p;
+	// A reset wire for the ZipCPU
+	input	wire		i_cpu_resetn;
 	// UART/host to wishbone interface
 	input	wire		i_host_uart_rx;
 	output	wire		o_host_uart_tx;
@@ -214,15 +214,15 @@ module	toplevel(i_clk,
 		i_gpio, o_gpio,
 		// The GPS 1PPS signal port
 		i_gps_pps,
-		// Quad SPI flash
-		w_qspi_cs_n, w_qspi_sck, qspi_dat, io_qspi_dat, qspi_bmod,
 		// OLED control interface (roughly SPI)
 		o_oled_sck, o_oled_mosi, o_oled_dcn,
 		o_oled_reset_n, o_oled_panel_en, o_oled_logic_en,
-		// Reset wire for the ZipCPU
-		(!i_cpu_resetn),
+		// Quad SPI flash
+		w_qspi_cs_n, w_qspi_sck, qspi_dat, io_qspi_dat, qspi_bmod,
 		// HDMI output ports
 		w_hdmi_out_clk,
+		// Reset wire for the ZipCPU
+		(!i_cpu_resetn),
 		// External USB-UART bus control
 		rx_stb, rx_data, tx_stb, tx_data, tx_busy,
 		// The GPS-UART

@@ -497,6 +497,7 @@ int count_scopes(MAPDHASH &info) {
 // as well as marking the project that they are associated with.
 //
 void	legal_notice(MAPDHASH &info, FILE *fp, STRING &fname,
+			const char *cline = NULL,
 			const char *comment = "//") {
 	char	line[512];
 	FILE	*lglfp;
@@ -523,7 +524,8 @@ void	legal_notice(MAPDHASH &info, FILE *fp, STRING &fname,
 		static const char	kyfname[] = "// Filename:",
 					kyproject[] = "// Project:",
 					kycmdline[] = "// CmdLine:",
-					kycomment[] = "//";
+					kycomment[] = "//",
+					kycline[] = "///////////////////////////////////////////////////////////////////////";
 		if (strncasecmp(line, kyfname, strlen(kyfname))==0) {
 			fprintf(fp, "%s %s\t%s\n", comment, &kyfname[3],
 				fname.c_str());
@@ -543,6 +545,8 @@ void	legal_notice(MAPDHASH &info, FILE *fp, STRING &fname,
 				fprintf(fp, "%s\t(No command line data found)\n",
 					kycmdline);
 			}
+		}else if((cline)&&(strncmp(line, kycline, strlen(kycline))==0)){
+			fprintf(fp, "%s\n", cline);
 		} else if (strncmp(line, kycomment, strlen(kycomment))==0) {
 			fprintf(fp, "%s%s", comment, &line[strlen(kycomment)]);
 		} else
@@ -574,6 +578,14 @@ bool	compare_naddr(PERIPHP a, PERIPHP b) {
 		return true;
 }
 
+bool	compare_address(PERIPHP a, PERIPHP b) {
+	if (!a)
+		return (b)?false:true;
+	else if (!b)
+		return true;
+	return (a->p_base < b->p_base);
+}
+
 //
 // Add a peripheral to a given list of peripherals
 int	addto_plist(PLIST &plist, MAPDHASH *phash) {
@@ -599,6 +611,10 @@ int	addto_plist(PLIST &plist, MAPDHASH *phash) {
 	p->p_phash = phash;
 	p->p_name  = pname;
 
+	plist.push_back(p);
+	return plist.size()-1;
+}
+int	addto_plist(PLIST &plist, PERIPHP p) {
 	plist.push_back(p);
 	return plist.size()-1;
 }
@@ -758,8 +774,8 @@ void	build_plist(MAPDHASH &info) {
 				else if (KYDOUBLE == *ptype)
 					addto_plist(dlist, phash);
 				else if (KYMEMORY == *ptype) {
-					addto_plist(mlist, phash);
 					addto_plist(plist, phash);
+					addto_plist(mlist, plist[plist.size()-1]);
 				} else
 					addto_plist(plist, phash);
 			} else
@@ -1277,7 +1293,7 @@ void	build_regdefs_h(  MAPDHASH &master, FILE *fp, STRING &fname) {
 			continue;
 		if (isperipheral(kvpair->second))
 			continue;
-		strp = getstring(kvpair->second, KYREGS_INSERT_H);
+		strp = getstring(kvpair->second, KYREGDEFS_INSERT_H);
 		if (strp)
 			fputs(strp->c_str(), fp);
 	}
@@ -1288,16 +1304,16 @@ void	build_regdefs_h(  MAPDHASH &master, FILE *fp, STRING &fname) {
 			continue;
 		if (!isperipheral(kvpair->second))
 			continue;
-		strp = getstring(kvpair->second, KYREGS_INSERT_H);
+		strp = getstring(kvpair->second, KYREGDEFS_INSERT_H);
 		if (strp)
 			fputs(strp->c_str(), fp);
 	}
 
-	fprintf(fp, "// And finally any master REGS.INSERT.H tags\n");
-	strp = getstring(master, KYREGS_INSERT_H);
+	fprintf(fp, "// And finally any master REGDEFS.INSERT.H tags\n");
+	strp = getstring(master, KYREGDEFS_INSERT_H);
 	if (strp)
 		fputs(strp->c_str(), fp);
-	fprintf(fp, "// End of definitions from REGS.INSERT.H\n");
+	fprintf(fp, "// End of definitions from REGDEFS.INSERT.H\n");
 
 	fprintf(fp, "\n\n");
 
@@ -1410,9 +1426,10 @@ void	build_regdefs_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 
 	legal_notice(master, fp, fname);
 
-	if (NULL != (strp = getstring(master, KYREGDEFS_CPP_INSERT))) {
+	if (NULL != (strp = getstring(master, KYREGDEFS_CPP_INCLUDE))) {
 		fputs(strp->c_str(), fp);
 	} else {
+		fprintf(fp, "// No default include list found\n");
 		fprintf(fp, "#include <stdio.h>\n");
 		fprintf(fp, "#include <stdlib.h>\n");
 		fprintf(fp, "#include <strings.h>\n");
@@ -1454,7 +1471,7 @@ void	build_regdefs_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 
 	fprintf(fp, "\n};\n\n");
 
-	fprintf(fp, "// REGS.CPP.INSERT for any bus masters\n");
+	fprintf(fp, "// REGSDEFS.CPP.INSERT for any bus masters\n");
 	for(MAPDHASH::iterator kvpair=master.begin(); kvpair != master.end(); kvpair++) {
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
@@ -1485,16 +1502,27 @@ void	build_regdefs_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 void	build_board_h(    MAPDHASH &master, FILE *fp, STRING &fname) {
 	MAPDHASH::iterator	kvpair;
 	STRING	str, astr;
+	STRINGP	defns;
 
 	legal_notice(master, fp, fname);
 	fprintf(fp, "#ifndef	BOARD_H\n#define\tBOARD_H\n");
 	fprintf(fp, "\n");
 	fprintf(fp, "// And, so that we can know what is and isn\'t defined\n");
 	fprintf(fp, "// from within our main.v file, let\'s include:\n");
-	fprintf(fp, "#include \"design.h\"\n\n");
+	fprintf(fp, "#include <design.h>\n\n");
+
+	defns = getstring(master, KYBDEF_INCLUDE);
+	if (defns)
+		fprintf(fp, "%s\n\n", defns->c_str());
+	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
+		if (kvpair->second.m_typ != MAPT_MAP)
+			continue;
+		defns = getstring(*kvpair->second.u.m_m, KYBDEF_INCLUDE);
+		if (defns)
+			fprintf(fp, "%s\n\n", defns->c_str());
+	}
 
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
-		STRINGP	defns;
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
 		defns = getstring(*kvpair->second.u.m_m, KYBDEF_DEFN);
@@ -1503,10 +1531,9 @@ void	build_board_h(    MAPDHASH &master, FILE *fp, STRING &fname) {
 	}
 
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
-		STRINGP	defns;
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
-		defns = getstring(*kvpair->second.u.m_m, KYREGS_INSERT_H);
+		defns = getstring(*kvpair->second.u.m_m, KYREGDEFS_INSERT_H);
 		if (defns)
 			fprintf(fp, "%s\n\n", defns->c_str());
 	}
@@ -1526,9 +1553,11 @@ void	build_board_h(    MAPDHASH &master, FILE *fp, STRING &fname) {
 			fprintf(fp, "#ifdef\t%s\n", access->c_str());
 		if (osdef)
 			fprintf(fp, "#define\t%s\n", osdef->c_str());
-		if (osval)
+		if (osval) {
 			fputs(osval->c_str(), fp);
-		if (access)
+			if (osval->c_str()[strlen(osval->c_str())-1] != '\n')
+				fputc('\n', fp);
+		} if (access)
 			fprintf(fp, "#endif\t// %s\n", access->c_str());
 	}
 
@@ -1551,12 +1580,140 @@ void	build_board_h(    MAPDHASH &master, FILE *fp, STRING &fname) {
 			free(buf);
 		}
 	}
+
+	defns = getstring(master, KYBDEF_INSERT);
+	if (defns)
+		fprintf(fp, "%s\n\n", defns->c_str());
+	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
+		if (kvpair->second.m_typ != MAPT_MAP)
+			continue;
+		defns = getstring(*kvpair->second.u.m_m, KYBDEF_INSERT);
+		if (defns)
+			fprintf(fp, "%s\n\n", defns->c_str());
+	}
+
 }
 
-void	build_board_ld(   MAPDHASH &master) {
-	// legal_notice(master, fp, fname);
-#ifdef	NEW_FILE_FORMAT
-#endif
+void	build_board_ld(   MAPDHASH &master, FILE *fp, STRING &fname) {
+	MAPDHASH::iterator	kvpair;
+	STRINGP	strp;
+	int		reset_address;
+	PERIPHP		fastmem = NULL, bigmem = NULL;
+
+	legal_notice(master, fp, fname, "/*******************************************************************************", "*"); 
+	fprintf(fp, "*/\n");
+
+	std::sort(mlist.begin(), mlist.end(), compare_naddr);
+
+	fprintf(fp, "ENTRY(_start)\n\n");
+
+	fprintf(fp, "MEMORY\n{\n");
+	for(unsigned i=0; i<mlist.size(); i++) {
+		STRINGP	name = getstring(*mlist[i]->p_phash, KYLD_NAME),
+			perm = getstring(*mlist[i]->p_phash, KYLD_PERM);
+
+		if (NULL == name)
+			name = mlist[i]->p_name;
+		fprintf(fp,"\t%8s(%2s) : ORIGIN = 0x%08x, LENGTH = 0x%08x\n",
+			name->c_str(), (perm)?(perm->c_str()):"r",
+			mlist[i]->p_base, (mlist[i]->p_naddr<<2));
+
+		// Find our bigest and fastest memories
+		if (tolower(perm->c_str()[0]) != 'w')
+			continue;
+		if (!bigmem)
+			bigmem = mlist[i];
+		else if ((bigmem)&&(mlist[i]->p_naddr > bigmem->p_naddr)) {
+			bigmem = mlist[i];
+		}
+	}
+	fprintf(fp, "}\n\n");
+
+	// Define pointers to these memories
+	for(unsigned i=0; i<mlist.size(); i++) {
+		STRINGP	name = getstring(*mlist[i]->p_phash, KYLD_NAME);
+		if (NULL == name)
+			name = mlist[i]->p_name;
+		
+		fprintf(fp, "_%-8s = ORIGIN(%s);\n",
+			name->c_str(), name->c_str());
+	}
+
+	if (NULL != (strp = getstring(master, KYLD_DEFNS)))
+		fprintf(fp, "%s\n", strp->c_str());
+	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
+		if (NULL != (strp = getstring(kvpair->second, KYLD_DEFNS)))
+			fprintf(fp, "%s\n", strp->c_str());
+	}
+
+	if (!getvalue(master, KYRESET_ADDRESS, reset_address)) {
+		bool	found = false;
+		for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
+			if (kvpair->second.m_typ != MAPT_MAP)
+				continue;
+			if (getvalue(*kvpair->second.u.m_m, KYRESET_ADDRESS, reset_address)) {
+				found = true;
+				break;
+			}
+		} if (!found) {
+			for(unsigned i=0; i<mlist.size(); i++) {
+				STRINGP	name = getstring(*mlist[i]->p_phash, KYLD_NAME);
+				if (NULL == name)
+					name = mlist[i]->p_name;
+				if (KYFLASH == *name) {
+					reset_address = mlist[i]->p_base;
+					found = true;
+					break;
+				}
+			}
+		} if (!found) {
+			reset_address = 0;
+			fprintf(stderr, "WARNING: RESET_ADDRESS NOT FOUND\n");
+		}
+	}
+
+	fprintf(fp, "SECTIONS\n{\n");
+	fprintf(fp, "\t.rocode 0x%08x : ALIGN(4) {\n"
+			"\t\t_boot_address = .;\n"
+			"\t\t*(.start) *(.boot)\n", reset_address);
+	fprintf(fp, "\t} > flash\n\t_kernel_image_start = . ;\n");
+	if ((fastmem)&&(fastmem != bigmem)) {
+		STRINGP	name = getstring(*fastmem->p_phash, KYLD_NAME);
+		if (!name)
+			name = fastmem->p_name;
+		fprintf(fp, "\t.fastcode : ALIGN_WITH_INPUT {\n"
+				"\t\t*(.kernel)\n"
+				"\t\t_kernel_image_end = . ;\n"
+				"\t\t*(.start) *(.boot)\n");
+		fprintf(fp, "\t} > %s AT>flash\n", name->c_str());
+	} else {
+		fprintf(fp, "\t_kernel_image_end = . ;\n");
+	}
+
+	if (bigmem) {
+		STRINGP	name = getstring(*bigmem->p_phash, KYLD_NAME);
+		if (!name)
+			name = bigmem->p_name;
+		fprintf(fp, "\t_ram_image_start = . ;\n");
+		fprintf(fp, "\t.ramcode : ALIGN_WITH_INPUT {\n");
+		if ((!fastmem)||(fastmem == bigmem))
+			fprintf(fp, "\t\t*(.kernel)\n");
+		fprintf(fp, ""
+			"\t\t*(.text.startup)\n"
+			"\t\t*(.text*)\n"
+			"\t\t*(.rodata*) *(.strings)\n"
+			"\t\t*(.data) *(COMMON)\n"
+		"\t\t}> %s AT> flash\n", bigmem->p_name->c_str());
+		fprintf(fp, "\t_ram_image_end = . ;\n"
+			"\t.bss : ALIGN_WITH_INPUT {\n"
+				"\t\t*(.bss)\n"
+				"\t\t_bss_image_end = . ;\n"
+				"\t\t} > %s\n",
+			bigmem->p_name->c_str());
+	}
+
+	fprintf(fp, "\t_top_of_heap = .;\n");
+	fprintf(fp, "}\n");
 }
 
 void	build_latex_tbls( MAPDHASH &master) {
@@ -2733,7 +2890,10 @@ int	main(int argc, char **argv) {
 	fp = fopen(str.c_str(), "w");
 	if (fp) { build_board_h(  master, fp, str); fclose(fp); }
 
-	build_board_ld(   master);
+	str = subd->c_str(); str += "/board.ld";
+	fp = fopen(str.c_str(), "w");
+	if (fp) { build_board_ld(  master, fp, str); fclose(fp); }
+
 	build_latex_tbls( master);
 
 	str = subd->c_str(); str += "/toplevel.v";

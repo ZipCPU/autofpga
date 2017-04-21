@@ -155,6 +155,29 @@ const	REGNAME	raw_bregs[] = {
 	{ FLASHMEM          ,	"FLASH"   	}
 };
 
-// REGS.CPP.INSERT for any bus masters
+// REGSDEFS.CPP.INSERT for any bus masters
 // And then from the peripherals
 // And finally any master REGS.CPP.INSERT tags
+#define	RAW_NREGS	(sizeof(raw_bregs)/sizeof(bregs[0]))
+
+const	REGNAME		*bregs = raw_bregs;
+const	int	NREGS = RAW_NREGS;
+
+unsigned	addrdecode(const char *v) {
+	if (isalpha(v[0])) {
+		for(int i=0; i<NREGS; i++)
+			if (strcasecmp(v, bregs[i].m_name)==0)
+				return bregs[i].m_addr;
+		fprintf(stderr, "Unknown register: %s\n", v);
+		exit(-2);
+	} else
+		return strtoul(v, NULL, 0);
+}
+
+const	char *addrname(const unsigned v) {
+	for(int i=0; i<NREGS; i++)
+		if (bregs[i].m_addr == v)
+			return bregs[i].m_name;
+	return NULL;
+}
+

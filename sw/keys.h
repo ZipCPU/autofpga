@@ -49,6 +49,7 @@ extern const	STRING	KYPATH;
 extern const	STRING	KYSUBD;
 extern const	STRING	KYBUS_ADDRESS_WIDTH;
 extern const	STRING	KYSKIPADDR;
+extern const	STRING	KYRESET_ADDRESS;
 // Other global keys
 extern const	STRING	KYREGDEFS_CPP_INCLUDE;
 extern const	STRING	KYREGDEFS_CPP_INSERT;
@@ -96,10 +97,12 @@ extern const	STRING	KYREGS_N;
 extern const	STRING	KYREGS_NOTE;
 extern const	STRING	KYREGDEFS_INSERT_H;
 // Board definitions for C/C++
+extern const	STRING	KYBDEF_INCLUDE;
 extern const	STRING	KYBDEF_DEFN;
 extern const	STRING	KYBDEF_IOTYPE;
 extern const	STRING	KYBDEF_OSDEF;
 extern const	STRING	KYBDEF_OSVAL;
+extern const	STRING	KYBDEF_INSERT;
 // Top definitions
 extern const	STRING	KYTOP_PORTLIST;
 extern const	STRING	KYTOP_IODECL;
@@ -113,6 +116,11 @@ extern const	STRING	KYMAIN_PARAM;
 extern const	STRING	KYMAIN_DEFNS;
 extern const	STRING	KYMAIN_INSERT;
 extern const	STRING	KYMAIN_ALT;
+// Definitions for the .ld file(s)
+extern const	STRING	KYLD_NAME;
+extern const	STRING	KYLD_PERM;
+extern const	STRING	KYLD_DEFNS;
+extern const	STRING	KYFLASH;
 // PIC definitions
 extern	const	STRING	KYPIC, KYPIC_BUS, KYPIC_MAX;
 // Interrupt definitions
