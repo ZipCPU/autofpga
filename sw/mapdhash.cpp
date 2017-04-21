@@ -196,27 +196,54 @@ void	mergemaps(MAPDHASH &master, MAPDHASH &sub) {
 	}
 }
 
-void	trimall(MAPDHASH &mp, const STRING &sky) {
+/*
+ * trimkey
+ *
+ * Given a key to a string within the current map level, trim all spaces from
+ * that key.  Do NOT recurse if the key is not found.
+ */
+void	trimkey(MAPDHASH &mp, const STRING &sky) {
 	MAPDHASH::iterator	kvpair, kvsecond;
 	STRING	mkey, subky;
 
 	if (splitkey(sky, mkey, subky)) {
 		if (mp.end() != (kvpair=mp.find(mkey))) {
 			if (kvpair->second.m_typ == MAPT_MAP)
-			   for(kvsecond = kvpair->second.u.m_m->begin();
-					kvsecond != kvpair->second.u.m_m->end();
-					kvsecond++) {
-				if (kvsecond->second.m_typ != MAPT_STRING)
-					continue;
-				STRINGP	tmps = kvsecond->second.u.m_s;
-				kvsecond->second.u.m_s = trim(*tmps);
-			}
-		} for(kvpair = mp.begin(); kvpair != mp.end(); kvpair++) {
-			if ((*kvpair).second.m_typ == MAPT_MAP) {
-				trimall(*(*kvpair).second.u.m_m, sky);
-			}
+				trimkey(*kvpair->second.u.m_m, subky);
 		}
 	} else for(kvpair = mp.begin(); kvpair != mp.end(); kvpair++) {
+		if ((*kvpair).second.m_typ == MAPT_STRING) {
+			if ((*kvpair).first == sky) {
+				STRINGP	tmps = (*kvpair).second.u.m_s;
+				(*kvpair).second.u.m_s = trim(*tmps);
+				delete tmps;
+			}
+		}
+	}
+}
+
+/*
+ * trimall
+ *
+ * Find all keys of  the given name, then find the strings they refer to, then
+ * trim any white space from those strings.
+ */
+void	trimall(MAPDHASH &mp, const STRING &sky) {
+	MAPDHASH::iterator	kvpair, kvsecond;
+	STRING	mkey, subky;
+
+	if (splitkey(sky, mkey, subky)) {
+		if (mp.end() != (kvpair=mp.find(mkey))) {
+			if (kvpair->second.m_typ == MAPT_MAP) {
+				// Cannot recurse further, else the key M.S
+				// would cause keys M.*.S to be trimmed as well.
+				// Hence we now force this to be an absolute
+				// reference
+				trimkey(*kvpair->second.u.m_m, subky);
+				return;
+			}
+		}
+	} for(kvpair = mp.begin(); kvpair != mp.end(); kvpair++) {
 		if ((*kvpair).second.m_typ == MAPT_MAP) {
 			trimall(*(*kvpair).second.u.m_m, sky);
 		} else if ((*kvpair).second.m_typ == MAPT_STRING) {
@@ -229,12 +256,12 @@ void	trimall(MAPDHASH &mp, const STRING &sky) {
 	}
 }
 
-//
-// trimbykeylist
-//
-// Look for all map elements with the given keylist, and apply trimall to
-// all elements within their respective maps
-//
+/*
+ * trimbykeylist
+ *
+ * Look for all map elements with the given keylist, and apply trimall to
+ * all elements within their respective maps
+ */
 void	trimbykeylist(MAPDHASH &mp, const STRING &kylist) {
 	STRINGP	strp;
 
@@ -262,12 +289,12 @@ void	trimbykeylist(MAPT &elm, const STRING &kylist) {
 		trimbykeylist(*elm.u.m_m, kylist);
 }
 
-//
-// cvtintbykeylist
-//
-// Very similar to trimbykeylist, save that in this case we use the keylist
-// to determine what to convert to integers.
-//
+/*
+ * cvtintbykeylist
+ *
+ * Very similar to trimbykeylist, save that in this case we use the keylist
+ * to determine what to convert to integers.
+ */
 void	cvtintbykeylist(MAPDHASH &mp, const STRING &kylist) {
 	STRINGP	strp;
 
