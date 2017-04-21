@@ -223,7 +223,8 @@ STRINGP	genstr(STRING fmt, int val) {
 	return r;
 }
 
-void	resolve(MAPDHASH &exmap) {
+// Return if anything changes
+bool	resolve(MAPDHASH &exmap) {
 	MAPDHASH::iterator	kvexpr, kvval, kvfmt, kvstr;
 	MAPT	elm;
 	STRINGP	strp;
@@ -235,11 +236,11 @@ void	resolve(MAPDHASH &exmap) {
 	kvstr  = exmap.find(KYSTR);
 
 	if (kvstr != exmap.end())
-		return;
+		return false;
 
 	if (kvexpr == exmap.end()) {
 		printf("No-Expr found\n");
-		return;
+		return false;
 	}
 
 	if ((kvval != exmap.end())&&(kvval->second.m_typ == MAPT_INT)) {
@@ -252,7 +253,7 @@ void	resolve(MAPDHASH &exmap) {
 		elm.u.m_s = strp;
 		exmap.insert(KEYVALUE(KYSTR, elm));
 
-		return;
+		return true;
 	}
 
 	if ((kvexpr != exmap.end())&&(kvexpr->second.m_typ == MAPT_STRING)) {
@@ -267,7 +268,7 @@ void	resolve(MAPDHASH &exmap) {
 		if (kvexpr->second.m_typ == MAPT_AST) {
 			ast = kvexpr->second.u.m_a;
 			if (!ast->isdefined()) {
-				return;
+				return false;
 			} kvexpr->second.m_typ = MAPT_INT;
 			kvexpr->second.u.m_v = ast->eval();
 			delete ast;
@@ -278,7 +279,10 @@ void	resolve(MAPDHASH &exmap) {
 		exmap.insert(KEYVALUE(KYVAL, elm));
 
 		resolve(exmap);
+		return true;
 	}
+
+	return false;
 }
 
 bool	substitute_any_results_sub(MAPDHASH &info, MAPDHASH *here,
@@ -302,8 +306,7 @@ bool	substitute_any_results_sub(MAPDHASH &info, MAPDHASH *here,
 			kvfmt  = subi->second.u.m_m->find(KYFORMAT);
 			if ((kvstr == subi->second.u.m_m->end())
 				&&(kvelm != subi->second.u.m_m->end())) {
-				resolve(*subi->second.u.m_m);
-				v = true;
+				v = resolve(*subi->second.u.m_m) || v;
 			}
 		} else if (subi->second.m_typ == MAPT_STRING) {
 			v = subresults_into(info, here, subi->second.u.m_s) ||v;
