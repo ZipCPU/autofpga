@@ -180,7 +180,9 @@
 #define	CLKFREQHZ	100000000
 // @REGDEFS.H.DEFNS for peripherals
 #define	BKMEMBASE	1048576
-#define	BKMEMLEN	(1048576+1048576)
+#define	BKMEMLEN	0x00100000
+#define	FLASHBASE	16777216
+#define	FLASHLEN	0x01000000
 // @REGDEFS.H.DEFNS at the top level
 // End of definitions from REGDEFS.H.DEFNS
 //

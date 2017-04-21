@@ -57,7 +57,6 @@ definition files, given on the command line, and to thus be able to generate
 
 - sw/rtl/toplevel.v (Done, not tested)
 - sw/rtl/main.v	 (Done, passes Verilator build test)
-- sw/rtl/scopelist.v
 - sw/host/regdefs.h (Done, builds with g++)
 - sw/host/regdefs.cpp (Done, builds with g++)
 - sw/zlib/board.h (Done, not tested)
@@ -66,7 +65,6 @@ definition files, given on the command line, and to thus be able to generate
 
 Specifically, the parser must determine:
 - If any of the peripherals used in this project need to be configured, and if so, what the configuration parameters are and how they need to be set.  For example, the UART baud rate and RTC and GPS clock steps both need to be set based upon the actual clock speed of the master clock.
-- If any of the peripherals have debugging wires associated with them which would need to be connected to a scope.  The AutoFPGA program should find all such peripherals, but yet still allow the user to decide which peripherals get scopes.  Even better, if by adjusting the regdefs.h file, a host program might be able to detect that its particular peripheral is not currently configured to one of the scopes.
 - If peripherals have or create interrupts, those need to be found and determined, and (even better) wired up.  To do this, the user may need to specify an interrupt file (for now), specyifying which are connected and how they are connected.
 - If the item it is parsing fits into one of the following classes of items:
 	* Full bus masters
@@ -116,16 +114,15 @@ as the whole appears to be working in hardware as well!
 
 In detail:
 - Simple bus components ... just work.
-- Components with logic in the toplevel file appear to work.  (Since Verilator doesn't simulate this, it make take another round or two to find out what's missing there.)
+- Components with logic in the toplevel file ... just work as well.
 - Although it shouldn't have any problems integrating memory components and cores, I have yet to try integrating any [SDRAM](https://github.com/ZipCPU/xulalx25soc/blob/master/rtl/wbsdram.v) or [DDR3 SDRAM](http://opencores.org/project,wbddr3) components.
 - Only one [PC host to wishbone busmaster](auto-data/wbubus.txt) component has been integrated.  Driving the design from either JTAG or Digilent's DEPP interface would require a simple modification to this.
 - Addresses get assigned in three groups, and processed in three groups: components having only one address, components having more addresses but only a single clock delay, and all other components and memories
 - Interrupts get assigned to a named controller, and then C++ header files can be updated to reflect that
 - A simple mathematical expression evaluator exists, allowing simple math expressions and print formats.  This makes it possible to set a global clock frequency value, and to then set baud rates and other clock dividers from it.
-- Automatically assigning, connecting, and building [wishbone scopes](https://github.com/ZipCPU/wbscope) just ... isn't there yet.  Perhaps it doesn't need to be.
-- The auto builder does nothing to create the master C++ Verilator simulation file, or any RTL based Makefiles.
-- Optimized bus decoding--at least to one level.  I may need to return to this if the bus decoding logic isn't fast enough, but that'll require it (nearly) running on actual hardware.
-- It doesn't build any linker script components ... yet.
+- The auto builder does nothing to create the master C++ Verilator simulation file, or any RTL based Makefiles---although updating it to provide some of these details wouldn't be very hard at all.
+- One type of address building is supported.  I'd like to be able to support others, but this is sufficient for my first project.
+- AutoFPGA now builds a [ZipCPU Linker Script](demo-out/board.ld) for the project
 - The LaTeX specification table building isn't there ... yet.
 
 # Sample component files
