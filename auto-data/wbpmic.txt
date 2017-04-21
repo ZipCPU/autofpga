@@ -44,7 +44,7 @@
 @$CLKSPERSAMPLE.EXPR=@$CLKFREQHZ/@$THIS.SAMPLERATE
 @UARTSETUP.FORMAT=20'h%08x
 @INT.MIC.WIRE=pmic_int
-@INT.MIC.PIC=altpic
+@INT.MIC.PIC=syspic
 @MAIN.PORTLIST=
 		// The PMic3 microphone wires
 		o_mic_csn, o_mic_sck, i_mic_din
