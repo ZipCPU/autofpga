@@ -125,7 +125,6 @@ MAPDHASH	*parsefile(FILE *fp) {
 				} if (devm)
 					addtomap(*devm, key, value);
 				else {
-					printf("Adding key %s = %s to top\n", key.c_str(), value.c_str());
 					addtomap(*fm, key, value);
 				}
 			}
