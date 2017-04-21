@@ -66,7 +66,7 @@
 	//
 	// A 32-bit address indicating where teh ZipCPU should start running
 	// from
-	localparam	RESET_ADDRESS = 32'h01000000;
+	localparam	RESET_ADDRESS = @$RESET_ADDRESS;
 	//
 	// The number of valid bits on the bus
 	localparam	ZIP_ADDRESS_WIDTH = 30;	// Zip-CPU address width
@@ -109,6 +109,18 @@
 			wbu_data, zip_dbg_ack, zip_dbg_stall, zip_dbg_data,
 			zip_debug);
 	assign	zip_trigger = zip_debug[0];
+@BDEF.INCLUDE=
+#include <design.h>
+#include <cpudefs.h>
+#ifdef	INCLUDE_ZIPCPU
+#ifdef INCLUDE_DMA_CONTROLLER
+#define	_HAVE_ZIPSYS_DMA
+#endif
+#ifdef INCLUDE_ACCOUNTING_COUNTERS
+#define	_HAVE_ZIPSYS_PERFORMANCE_COUNTERS
+#endif
+#endif // INCLUDE_ZIPCPU
+
 #
 #
 #
