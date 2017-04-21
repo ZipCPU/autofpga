@@ -8,7 +8,7 @@
 # @KEYS.INTLIST is a list of all things that need to be converted to integers
 @KEYS.INTLIST= BUS_ADDRESS_WIDTH NADDR NPIC NSCOPES PIC.MAX REGS.N ID
 @$RESET_ADDRESS.EXPR=@$flash.BASE+(@$flash.NADDR)
-@$RESET_ADDRESS.FORMAT=32'h%08x
+@RESET_ADDRESS.FORMAT=32'h%08x
 @LD.DEFNS=_top_of_stack = ORIGIN(mem) + LENGTH(mem) - 4;
 @REGDEFS.H.INSERT=
 typedef	struct {
