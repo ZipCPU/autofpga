@@ -180,7 +180,7 @@
 @MAIN.DEFNS=
 	wire	[31:0]	edid_dbg;
 @MAIN.INSERT=
-	wbi2cslave	#( .INITIAL_MEMA("edid.hex"), .READ_ONLY(1'b1))
+	wbi2cslave	#( .INITIAL_MEM("edid.hex"), .I2C_READ_ONLY(1'b1))
 	    the_input_edid(i_clk, 1'b0,
 		wb_cyc, (wb_stb)&&(edin_sel), wb_we, wb_addr[4:0], wb_data,
 			wb_sel, edin_ack, edin_stall, edin_data,
@@ -236,9 +236,8 @@
 @MAIN.DEFNS=
 	wire	[31:0]	edido_dbg;
 @MAIN.INSERT=
-	wbi2cmaster	#( .INITIAL_MEMA("edid.hex"), .READ_ONLY(1'b1))
-	    the_output_edid(i_clk, 1'b0,
-		wb_cyc, (wb_stb)&&(edin_sel), wb_we, wb_addr[4:0], wb_data,
+	wbi2cmaster	#(.READ_ONLY(1'b1)) the_output_edid(i_clk, 1'b0,
+		wb_cyc, (wb_stb)&&(edout_sel), wb_we, wb_addr[5:0], wb_data,
 			wb_sel, edout_ack, edout_stall, edout_data,
 		i_hdmi_out_scl, i_hdmi_out_sda, o_hdmi_out_scl, o_hdmi_out_sda,
 		edid_out_int,
@@ -289,7 +288,10 @@ typedef	struct	EDID_SRC_S {
 @INT.SCOPE.WIRE=scop_edid_int
 @INT.SCOPE.PIC=buspic
 @MAIN.INSERT=
-	wbscopc	theicscop(i_clk, 1'b1, edid_dbg[31], edid_dbg[30:0],
+	wbscopc	theicscop(i_clk, 1'b1, ((edid_dbg[31])||(edido_dbg[31])),
+			{ edid_dbg[30:8],
+				edido_dbg[3:0],
+				edid_dbg[3:0] },
 			i_clk, wb_cyc, (wb_stb)&&(scop_edid_sel), wb_we, wb_addr[0], wb_data,
 			scop_edid_ack, scop_edid_stall, scop_edid_data,
 			scop_edid_int);
