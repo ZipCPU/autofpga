@@ -2946,7 +2946,7 @@ int	main(int argc, char **argv) {
 	assign_scopes(    master);
 	assign_addresses( master);
 
-	// mapdump(master);
+	reeval(master);
 
 	str = subd->c_str(); str += "/regdefs.h";
 	fp = fopen(str.c_str(), "w");
