@@ -116,6 +116,8 @@ void	addtomap(MAPDHASH &fm, STRING ky, STRING vl) {
 	if (astnode) {
 		elm.m_typ = MAPT_AST;
 		elm.u.m_a = parse_ast(vl);
+		if (NULL == elm.u.m_a)
+			exit(EXIT_FAILURE);
 		if (elm.u.m_a->isdefined()) {
 			AST *ast = elm.u.m_a;
 			elm.m_typ = MAPT_INT;
@@ -195,15 +197,21 @@ void	mergemaps(MAPDHASH &master, MAPDHASH &sub) {
 }
 
 void	trimall(MAPDHASH &mp, const STRING &sky) {
-	MAPDHASH::iterator	kvpair;
+	MAPDHASH::iterator	kvpair, kvsecond;
 	STRING	mkey, subky;
 
 	if (splitkey(sky, mkey, subky)) {
 		if (mp.end() != (kvpair=mp.find(mkey))) {
-			if (kvpair->second.m_typ == MAPT_MAP) {
-				trimall(*kvpair->second.u.m_m, subky);
+			if (kvpair->second.m_typ == MAPT_MAP)
+			   for(kvsecond = kvpair->second.u.m_m->begin();
+					kvsecond != kvpair->second.u.m_m->end();
+					kvsecond++) {
+				if (kvsecond->second.m_typ != MAPT_STRING)
+					continue;
+				STRINGP	tmps = kvsecond->second.u.m_s;
+				kvsecond->second.u.m_s = trim(*tmps);
 			}
-		} else for(kvpair = mp.begin(); kvpair != mp.end(); kvpair++) {
+		} for(kvpair = mp.begin(); kvpair != mp.end(); kvpair++) {
 			if ((*kvpair).second.m_typ == MAPT_MAP) {
 				trimall(*(*kvpair).second.u.m_m, sky);
 			}
