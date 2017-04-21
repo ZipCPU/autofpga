@@ -56,4 +56,4 @@
 @BDEF.IONAME= i_pic
 @BDEF.IOTYPE= unsigned
 @BDEF.OSDEF= _BOARD_HAS_BUSPIC
-@BDEF.OSVAL= static volatile @$THIS.BDEF.IOTYPE *const _buspic = &((@$THIS.BDEF.IOTYPE *)@$THIS.BASE);
+@BDEF.OSVAL= static volatile @$THIS.BDEF.IOTYPE *const _buspic = ((@$THIS.BDEF.IOTYPE *)@$THIS.BASE);

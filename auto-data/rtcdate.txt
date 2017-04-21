@@ -53,4 +53,4 @@
 @BDEF.IONAME=	i_rtcdate
 @BDEF.IOTYPE=	unsigned
 @BDEF.OSDEF=	_BOARD_HAS_RTCDATE
-@BDEF.OSVAL=	static volatile *const _date = &((BOARD *)PERIPHERAL_ADDR)->io_single.i_rtcdate;
+@BDEF.OSVAL=	static volatile unsigned *const _date = ((@$THIS.BDEF.IOTYPE *)@$THIS.BASE);

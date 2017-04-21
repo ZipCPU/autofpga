@@ -127,4 +127,4 @@ typedef struct ENETMDIO_S {
 @BDEF.IOTYPE= ENETMDIO
 @BDEF.IONAME= io_netmdio
 @BDEF.OSDEF= _BOARD_HAS_NETMDIO
-@BDEF.OSVAL= static volatile @$THIS.BDEF.IOTYPE *const _mdio = &((@$THIS.BDEF.IOTYPE *)@$THIS.BASE);
+@BDEF.OSVAL= static volatile @$THIS.BDEF.IOTYPE *const _mdio = ((@$THIS.BDEF.IOTYPE *)@$THIS.BASE);

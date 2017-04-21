@@ -66,9 +66,10 @@
 	// GPIO declarations.  The two wire busses are just virtual lists of
 	// input (or output) ports.
 	wire	[14:0]	i_gpio, o_gpio;
+	wire		w_hdmi_out_en;
 @TOP.MAIN=
-	// GPIO wires
-	i_gpio, o_gpio
+		// GPIO wires
+		i_gpio, o_gpio
 @TOP.INSERT=
 	assign	i_gpio = { 10'h0, i_gps_3df, i_hdmi_out_hpd, i_sd_cd, io_hdmi_out_cec, io_hdmi_in_cec };
 	assign	io_hdmi_in_cec  = o_gpio[0] ? 1'bz : 1'b0;
@@ -76,6 +77,7 @@
 	assign	o_hdmi_in_txen  = o_gpio[2];
 	assign	o_sd_reset      = o_gpio[3];
 	assign	o_hdmi_in_hpa   = o_gpio[4];	// Hotplug assert
+	assign	w_hdmi_out_en   = o_gpio[5];
 @MAIN.PORTLIST=
 		// GPIO ports
 		i_gpio, o_gpio
@@ -110,7 +112,10 @@
 #define	GPIO_HDMI_IN_HPA	0x000000010
 #define	GPIO_HDMI_IN_HPA_SET	0x001000010
 #define	GPIO_HDMI_IN_HPA_CLR	0x001000000
+#define	GPIO_HDMI_OUT_EN	0x000000020
+#define	GPIO_HDMI_OUT_EN_SET	0x002000020
+#define	GPIO_HDMI_OUT_EN_CLR	0x002000000
 @BDEF.IONAME=	i_gpio
 @BDEF.IOTYPE=	unsigned
 @BDEF.OSDEF=	_BOARD_HAS_GPIO
-@BDEF.OSVAL=	static volatile @$THIS.BDEF.IOTYPE *const _gpio = &((@$THIS.BDEF.IOTYPE *)@$THIS.BASE);
+@BDEF.OSVAL=	static volatile @$THIS.BDEF.IOTYPE *const _gpio = ((@$THIS.BDEF.IOTYPE *)@$THIS.BASE);

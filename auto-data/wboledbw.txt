@@ -39,7 +39,7 @@
 @PREFIX=oled
 @NADDR=4
 @PTYPE=DOUBLE
-@ACCESS=OLEDRGB_ACCESS
+@ACCESS=OLEDBW_ACCESS
 @INT.OLED.WIRE=	oled_int
 @INT.OLED.PIC=syspic
 @MAIN.PORTLIST=
@@ -47,7 +47,7 @@
 		o_oled_sck, o_oled_mosi, o_oled_dcn,
 		o_oled_reset_n, o_oled_panel_en, o_oled_logic_en
 @MAIN.IODECL=
-	// OLEDRGB interface
+	// OLEDBW interface
 	output	wire		o_oled_sck, o_oled_mosi,
 				o_oled_dcn, o_oled_reset_n, o_oled_panel_en,
 				o_oled_logic_en;
@@ -90,6 +90,6 @@ typedef	struct OLEDBW_S {
 } OLEDBW;
 
 @BDEF.IONAME=io_oled
-@BDEF.IOTYPE=OLEDRGB
+@BDEF.IOTYPE=OLEDBW
 @BDEF.OSDEF= _BOARD_HAS_OLEDBW
-@BDEF.OSVAL= static volatile @$THIS.BDEF.IOTYPE *const _oledbw = &((@$THIS.BDEF.IOTYPE *)@$THIS.BASE);
+@BDEF.OSVAL= static volatile @$THIS.BDEF.IOTYPE *const _oledbw = ((@$THIS.BDEF.IOTYPE *)@$THIS.BASE);

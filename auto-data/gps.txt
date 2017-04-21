@@ -123,7 +123,7 @@ typedef	struct	GPSTRACKER_S	{
 @REGS.7=  7 R_GPSTB_STEPLO  STEPLO
 @BDEF.DEFN=
 typedef	struct	GPSTB_S	{
-	unsigned	tb_maxcount; tb_jump;
+	unsigned	tb_maxcount, tb_jump;
 	unsigned long	tb_err, tb_count, tb_step;
 } GPSTB;
 @BDEF.IONAME=io_gpstb
@@ -200,6 +200,6 @@ typedef struct  WBUART_S {
 @BDEF.IONAME=io_gpsu
 @BDEF.IOTYPE=WBUART
 @BDEF.OSDEF=_BOARD_HAS_GPS_UART
-@BDEF.OSVAL=static volatile @$THIS.IOTYPE *const _gpsu = &((@$THIS.IOTYPE *)@$THIS.BASE);
+@BDEF.OSVAL=static volatile @$THIS.BDEF.IOTYPE *const _gpsu = ((@$THIS.BDEF.IOTYPE *)@$THIS.BASE);
 #
 #
