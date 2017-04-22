@@ -178,6 +178,8 @@
 //
 // @REGDEFS.H.DEFNS for masters
 #define	CLKFREQHZ	100000000
+#define	R_ZIPCTRL	0x20000000
+#define	R_ZIPDATA	0x20000004
 // @REGDEFS.H.DEFNS for peripherals
 #define	BKMEMBASE	1048576
 #define	BKMEMLEN	0x00100000
@@ -189,7 +191,30 @@
 // The @REGDEFS.H.INSERT tag
 //
 // @REGDEFS.H.INSERT for masters
+
+#define	CPU_GO		0x0000
+#define	CPU_RESET	0x0040
+#define	CPU_INT		0x0080
+#define	CPU_STEP	0x0100
+#define	CPU_STALL	0x0200
+#define	CPU_HALT	0x0400
+#define	CPU_CLRCACHE	0x0800
+#define	CPU_sR0		0x0000
+#define	CPU_sSP		0x000d
+#define	CPU_sCC		0x000e
+#define	CPU_sPC		0x000f
+#define	CPU_uR0		0x0010
+#define	CPU_uSP		0x001d
+#define	CPU_uCC		0x001e
+#define	CPU_uPC		0x001f
+
+
 // @REGDEFS.H.INSERT for peripherals
+// Flash control constants
+#define	ERASEFLAG	0x80000000
+#define	DISABLEWP	0x10000000
+#define	ENABLEWP	0x00000000
+
 #define	SZPAGEB		256
 #define	PGLENB		256
 #define	SZPAGEW		64
@@ -203,6 +228,7 @@
 #define	PAGEOF(A)	((A) & (-1<<8))
 
 
+#define	R_ICONTROL	R_PIC
 #define	ISPIF_EN	0x80010001
 #define	ISPIF_DIS	0x00010001
 #define	ISPIF_CLR	0x00000001

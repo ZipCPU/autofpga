@@ -970,7 +970,7 @@ module	main(i_clk, i_reset,
 	assign	buserr_data = r_bus_err;
 `ifdef	WBUBUS_MASTER
 `ifdef	INCLUDE_ZIPCPU
-	assign	wbu_zip_sel   = wbu_addr[30-1];
+	assign	wbu_zip_sel   = wbu_addr[29];
 `else
 	assign	wbu_zip_sel   = 1'b0;
 	assign	zip_dbg_ack   = 1'b0;

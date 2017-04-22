@@ -58,7 +58,6 @@
 #endif // INCLUDE_ZIPCPU
 
 
-
 typedef	struct	RTCLIGHT_S	{
 	unsigned	r_clock, r_stopwatch, r_timer, r_alarm;
 } RTCLIGHT;
@@ -199,26 +198,6 @@ typedef struct ENETMDIO_S {
 typedef struct  WBMOUSE_S {
 	unsigned	m_bus, m_raw, m_screen, m_size;
 } WBMOUSE;
-
-
-#define	SZPAGEB		256
-#define	PGLENB		256
-#define	SZPAGEW		64
-#define	PGLENW		64
-#define	NPAGES		256
-#define	SECTORSZB	(NPAGES * SZPAGEB)	// In bytes, not words!!
-#define	SECTORSZW	(NPAGES * SZPAGEW)	// In words
-#define	NSECTORS	64
-#define	SECTOROF(A)	((A) & (-1<<16))
-#define	SUBSECTOROF(A)	((A) & (-1<<12))
-#define	PAGEOF(A)	((A) & (-1<<8))
-
-
-
-
-#define	ISPIF_EN	0x80010001
-#define	ISPIF_DIS	0x00010001
-#define	ISPIF_CLR	0x00000001
 
 
 #ifdef	RTC_ACCESS
