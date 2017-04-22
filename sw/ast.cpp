@@ -150,6 +150,6 @@ void	AST_IDENTIFIER::dump(int offset) {
 	if (m_def)
 		printf("%*s%s (= %d)\n", offset, "", m_id.c_str(), m_v);
 	else
-		printf("%*s%s (Undefind)\n", offset, "", m_id.c_str());
+		printf("%*s%s (Undefined)\n", offset, "", m_id.c_str());
 }
 
