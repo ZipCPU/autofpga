@@ -173,6 +173,7 @@
 @LDSCRIPT.DEF	_flash=ORIGIN(flash);
 @REGDEFS.H.INSERT=
 
+#define	R_ICONTROL	R_PIC
 #define	ISPIF_EN	@$THIS.ISPIF_EN
 #define	ISPIF_DIS	@$THIS.ISPIF_DIS
 #define	ISPIF_CLR	@$THIS.ISPIF_CLR
@@ -201,6 +202,11 @@ typedef struct FLASHCTL_S {
 	unsigned	f_ereg, f_config, f_status, f_id;
 } FLASHCTL;
 @REGDEFS.H.INSERT=
+// Flash control constants
+#define	ERASEFLAG	0x80000000
+#define	DISABLEWP	0x10000000
+#define	ENABLEWP	0x00000000
+
 #define	SZPAGEB		256
 #define	PGLENB		256
 #define	SZPAGEW		64
