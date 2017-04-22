@@ -104,14 +104,22 @@ BASE	(Created and used internally)
 MASK	(Created and used internally)
 AWID
 
-REGS.NOTE
-REGS.N
-REGS.0...?
-REGS.INSERT.H
-vs ...
-REGS.NOTE
-REGS.<name>.ADDR
-REGS.<name>.UNAME(s)
+REGSDEFS.H.INCLUDE	Placed at the top of the regdefs.h file
+REGS.NOTE	A comment to be placed at the beginning of the register list
+		for this peripheral
+REGS.N		The number of registers this peripheral has.  AutoFPGA will then
+		look for keys of the form REGS.0 through REGS.(REGS.N-1).
+REGS.0...?	Describes a register by name.  The first value is the offset
+		within the address space of this device.  The second token
+		is a string defining a C #def'd constant.  The third and
+		subsequent tokens represent human readable names that may be
+		associated with this register.
+REGSDEFS.H.DEFNS	Placed with other definitions within regdefs.h
+REGS.H.INSERT
+I may change this to the following notation, though:
+REGSDEFS.NOTE
+REGS.<name>.ADDR	# Offset within the peripheral
+REGS.<name>.UNAME(s)	# User-readable name
 REGS.<name>.DESC(ription for LaTeX)
 
 
@@ -130,4 +138,10 @@ LDSCRIPT.DEF	(Any definitions to be added to the linker script)
 
 PIC.BUS		The name of a parameter to hold all of the interrupt wires
 PIC.MAX		The maximum number of interrutps this one can have
-PIC.ASSIGNED	Interrupts previously assigned
+
+INT.NAME.WIRE	Specifies that an interrupt with C #define name NAME is
+		connected to the internal wire with its name given by this key
+INT.NAME.PIC	Identifies which PIC this wire is connected to.  Any particular
+		interrupt may be assigned to multipl PICs.  If so, these
+		are listed on this line and separated by white space
+INT.NAME.ID	Identifies which interrupt wire this device it connected to
