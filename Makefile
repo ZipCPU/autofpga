@@ -51,3 +51,7 @@ autofpga: sw
 .PHONY: sw
 sw:
 	$(MAKE) --no-print-directory --directory=sw
+
+.PHONY: clean
+clean:
+	$(MAKE) --no-print-directory --directory=sw clean
