@@ -1603,7 +1603,7 @@ void	build_board_h(    MAPDHASH &master, FILE *fp, STRING &fname) {
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
-		defns = getstring(*kvpair->second.u.m_m, KYREGDEFS_H_INSERT);
+		defns = getstring(*kvpair->second.u.m_m, KYBDEF_INSERT);
 		if (defns)
 			fprintf(fp, "%s\n\n", defns->c_str());
 	}
@@ -2945,8 +2945,11 @@ int	main(int argc, char **argv) {
 	assign_interrupts(master);
 	assign_scopes(    master);
 	assign_addresses( master);
+	get_address_width(master);
 
 	reeval(master);
+
+	// mapdump(master);
 
 	str = subd->c_str(); str += "/regdefs.h";
 	fp = fopen(str.c_str(), "w");
