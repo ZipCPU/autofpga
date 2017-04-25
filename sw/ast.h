@@ -42,6 +42,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "parser.h"
+#include "kveval.h"
 
 class AST {
 public:
@@ -49,8 +50,8 @@ public:
 	char	m_node_type;
 	virtual bool	isdefined(void) = 0;
 	virtual long	eval(void) = 0;
-	virtual bool	define(MAPDHASH &top, MAPDHASH &comp) = 0;
-	virtual void	dump(int offset) = 0;
+	virtual bool	define(MAPSTACK &stack, MAPDHASH &comp) = 0;
+	virtual void	dump(FILE *fp, int offset) = 0;
 };
 
 class AST_BRANCH : public AST {
@@ -69,8 +70,8 @@ public:
 
 	virtual	bool	isdefined(void);
 	virtual	long	eval(void);
-	virtual	bool	define(MAPDHASH &map, MAPDHASH &here);
-	virtual	void	dump(int offset);
+	virtual	bool	define(MAPSTACK &stack, MAPDHASH &here);
+	virtual	void	dump(FILE *fp, int offset);
 };
 
 class	AST_SINGLEOP : public AST {
@@ -83,8 +84,8 @@ class	AST_SINGLEOP : public AST {
 
 	virtual	bool	isdefined(void);
 	virtual	long	eval(void);
-	virtual	bool	define(MAPDHASH &map, MAPDHASH &here);
-	virtual	void	dump(int offset);
+	virtual	bool	define(MAPSTACK &stack, MAPDHASH &here);
+	virtual	void	dump(FILE *fp, int offset);
 };
 
 class	AST_TRIOP : public AST {
@@ -100,8 +101,8 @@ public:
 
 	virtual	bool	isdefined(void);
 	virtual	long	eval(void);
-	virtual	bool	define(MAPDHASH &map, MAPDHASH &here);
-	virtual	void	dump(int offset);
+	virtual	bool	define(MAPSTACK &stack, MAPDHASH &here);
+	virtual	void	dump(FILE *fp, int offset);
 };
 
 class	AST_NUMBER : public AST {
@@ -111,8 +112,8 @@ public:
 
 	virtual	bool	isdefined(void);
 	virtual	long	eval(void);
-	virtual	bool	define(MAPDHASH &map, MAPDHASH &here);
-	virtual	void	dump(int offset);
+	virtual	bool	define(MAPSTACK &stack, MAPDHASH &here);
+	virtual	void	dump(FILE *fp, int offset);
 };
 
 class	AST_IDENTIFIER : public AST {
@@ -128,8 +129,8 @@ public:
 
 	virtual	bool	isdefined(void);
 	virtual	long	eval(void);
-	virtual	bool	define(MAPDHASH &map, MAPDHASH &here);
-	virtual	void	dump(int offset);
+	virtual	bool	define(MAPSTACK &stack, MAPDHASH &here);
+	virtual	void	dump(FILE *fp, int offset);
 };
 
 extern AST	*parse_ast(const STRING &str);

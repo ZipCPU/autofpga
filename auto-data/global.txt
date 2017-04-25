@@ -4,10 +4,9 @@
 #
 # @KEYS.TRIMLIST is a list of all string keys that need to be trimmed (have
 # spaces removed from either side) before being used
-@KEYS.TRIMLIST= PREFIX ACCESS PTYPE NADDR FORMAT BDEF.IOTYPE WIRE LD.PERM LD.NAME LD.DEFNS
 # @KEYS.INTLIST is a list of all things that need to be converted to integers
 @KEYS.INTLIST= BUS_ADDRESS_WIDTH NADDR NPIC NSCOPES PIC.MAX REGS.N ID
-@$RESET_ADDRESS.EXPR=@$flash.BASE+(@$flash.NADDR)
+@$RESET_ADDRESS=@$flash.BASE+(@$flash.NADDR)
 @RESET_ADDRESS.FORMAT=32'h%08x
 @LD.DEFNS=_top_of_stack = ORIGIN(mem) + LENGTH(mem) - 4;
 @REGDEFS.H.INSERT=

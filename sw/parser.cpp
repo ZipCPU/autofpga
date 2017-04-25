@@ -40,11 +40,17 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <assert.h>
 
 #include "mapdhash.h"
 #include "parser.h"
 #include "keys.h"
+
+extern	int	gbl_err;
 
 STRING	*rawline(FILE *fp) {
 	char		linebuf[512];
@@ -87,12 +93,12 @@ STRING	*getline(FILE *fp) {
 }
 
 bool	iskeyline(STRING &s) {
-	return (s[0] == '@');
+	return ((s[0] == '@')&&(s[1] != '@'));
 }
 
-MAPDHASH	*parsefile(FILE *fp) {
+MAPDHASH	*parsefile(FILE *fp, const STRING &search) {
 	STRING	key, value, *ln, prefix;
-	MAPDHASH		*fm = new MAPDHASH, *devm = NULL;
+	MAPDHASH	*fm = new MAPDHASH, *devm = NULL;
 	size_t		pos;
 
 	key = ""; value = "";
@@ -102,7 +108,12 @@ MAPDHASH	*parsefile(FILE *fp) {
 			// We may have a completed key-value pair that needs
 			// to be stored.
 			if (key.length()>0) {
+				// A key exists.  Let's store it.
 				if (key == KYPREFIX) {
+					// This isn't any old key, this is a
+					// prefix key.  All keys following will
+					// be placed in the hierarchy beneath
+					// this key.
 					MAPDHASH::iterator	kvpair;
 					kvpair = fm->find(value);
 					if (kvpair == fm->end()) {
@@ -115,37 +126,71 @@ MAPDHASH	*parsefile(FILE *fp) {
 						elm.u.m_m = devm;
 
 						fm->insert(KEYVALUE(STRING(*kyp),elm));
-						delete kyp;
+						elm.m_typ = MAPT_STRING;
+						elm.u.m_s = kyp;
+						devm->insert(KEYVALUE(KYPREFIX,elm));
 					} else if (kvpair->second.m_typ == MAPT_MAP) {
 						devm = kvpair->second.u.m_m;
 					} else {
 						fprintf(stderr, "NAME-CONFLICT!!\n");
 						exit(EXIT_FAILURE);
 					}
-				} if (devm)
-					addtomap(*devm, key, value);
-				else {
-					addtomap(*fm, key, value);
+				}
+
+				{
+					MAPDHASH	*parent;
+					if (devm)
+						parent = devm;
+					else
+						parent = fm;
+
+					if (key == KYINCLUDEFILE) {
+						MAPDHASH	*submap,
+								*plusmap;
+						MAPDHASH::iterator subp;
+						submap = parsefile(value.c_str(), search);
+						if (submap != NULL) {
+						subp = parent->find(KYPLUSDOT);
+						if (subp == parent->end()) {
+							MAPT	elm;
+							elm.m_typ = MAPT_MAP;
+							plusmap = new MAPDHASH;
+							elm.u.m_m = plusmap;
+							parent->insert(KEYVALUE(KYPLUSDOT, elm));
+						} else if (subp->second.m_typ != MAPT_MAP) {
+							fprintf(stderr, "ERR: KEY(+) EXISTS, AND ISN\'T A MAP\n");
+							// exit(EXIT_FAILURE);
+							gbl_err++;
+						} else {
+							plusmap = subp->second.u.m_m;
+						} if (plusmap)
+							mergemaps(*plusmap, *submap);
+						}
+					} else {
+						addtomap(*parent, key, value);
+						// mapdump(*devm);
+					}
 				}
 			}
 
 			if ((pos = ln->find("="))
 				&&(pos != STRING::npos)) {
-				int	start, len;
 				key   = ln->substr(1, pos-1);
 
-				start = pos+1;
-				while(isspace((*ln)[start]))
-					start++;
-				len = ln->length()-start;
-				while((len>start)&&(isspace((*ln)[start+len-1])))
-					len--;
-				if (len > 0)
-					value = ln->substr(start, len);
-				else
-					value = STRING("");
+				if (key.c_str()[(key.size())-1] == '+') {
+					key = STRING("+")+key.substr(0,key.size()-1);
+				}
+
+				STRINGP	trimd;
+				trimd =trim(ln->substr(pos+1));
+				value =STRING(*trimd);
+				delete	trimd;
 			} else {
 				key = ln->substr(1, ln->length()-1);
+				STRING	*s = trim(key);
+				key = *s;
+				delete s;
+				fprintf(stderr, "WARNING: Key line with no =, key was %s\n", key.c_str());
 				value = "";
 			}
 
@@ -158,28 +203,105 @@ MAPDHASH	*parsefile(FILE *fp) {
 
 		delete ln;
 	} if (key.length()>0) {
-		if (devm) {
-			addtomap(*devm, key, value);
+		MAPDHASH	*parent;
+		if (devm)
+			parent = devm;
+		else
+			parent = fm;
+
+		if (key == KYINCLUDEFILE) {
+			MAPDHASH	*submap,
+					*plusmap = NULL;
+			MAPDHASH::iterator subp;
+			submap = parsefile(value.c_str(), search);
+			if (submap != NULL) {
+				subp = parent->find(KYPLUSDOT);
+				if (subp == parent->end()) {
+					MAPT	elm;
+					elm.m_typ = MAPT_MAP;
+					plusmap = new MAPDHASH;
+					elm.u.m_m = plusmap;
+					parent->insert(KEYVALUE(KYPLUSDOT, elm));
+				} else if (subp->second.m_typ != MAPT_MAP) {
+					fprintf(stderr, "ERR: KEY(+) EXISTS, AND ISN\'T A MAP\n");
+					// exit(EXIT_FAILURE);
+					gbl_err++;
+				} else {
+					plusmap = subp->second.u.m_m;
+				} if (plusmap)
+					mergemaps(*plusmap, *submap);
+			}
 		} else {
-			addtomap(*fm, key, value);
+			addtomap(*parent, key, value);
+			// mapdump(*devm);
 		}
 	}
 
 	return fm;
 }
 
-MAPDHASH	*parsefile(const char *fname) {
-	FILE	*fp = fopen(fname, "r");
-	if (fp == NULL) {
-		fprintf(stderr, "ERR: Could not open %s\n", fname);
+FILE	*open_data_file(const char *fname) {
+	struct	stat	sb;
+	if ((access(fname, R_OK)!=0)||(stat(fname, &sb) != 0)) {
 		return NULL;
-	} MAPDHASH *map = parsefile(fp);
-	fclose(fp);
-
-	return map;
+	} else {
+		if (sb.st_mode & S_IFREG)
+			return fopen(fname, "r");
+	} return NULL;
 }
 
-MAPDHASH	*parsefile(const STRING &fname) {
-	return parsefile((const char *)fname.c_str());
+FILE	*search_and_open(const char *fname, const STRING &search) {
+	extern	FILE *gbl_dump;
+	FILE	*fp = open_data_file(fname);
+
+	if (fp == NULL) {
+		STRING	copy = search;
+		char	*sub = (char *)copy.c_str();
+		char	*dir = strtok(sub, ", \t\n:");
+		while(dir != NULL) {
+			char	*full = new char[strlen(fname)+2+strlen(dir)];
+			strcpy(full, dir);
+			strcat(full, "/");
+			strcat(full, fname);
+			if (NULL != (fp=open_data_file(full))) {
+				if (gbl_dump)
+					fprintf(gbl_dump, "Opened: %s\n", full);
+				delete[] full;
+				return fp;
+			} delete[] full;
+			dir = strtok(NULL, ", \t\n:");
+		}
+
+		fprintf(stderr, "ERR: Could not open %s\nSearched through %s\n",
+			fname, search.c_str());
+		gbl_err ++;
+		// exit(EXIT_FAILURE);
+		return NULL;
+	}
+
+	if (gbl_dump)
+		fprintf(gbl_dump, "Directly opened: %s\n", fname);
+	return fp;
+}
+
+MAPDHASH	*parsefile(const char *fname, const STRING &search) {
+	MAPDHASH	*map;
+	FILE		*fp = search_and_open(fname, search);
+
+	if (fp == NULL) {
+		fprintf(stderr, "PARSE-ERR: Could not open %s\n", fname);
+		gbl_err++;
+		return NULL;
+		// exit(EXIT_FAILURE);
+	} else {
+		map = parsefile(fp, search);
+		fclose(fp);
+
+		return map;
+	}
+}
+
+MAPDHASH	*parsefile(const STRING &fname, const STRING &search) {
+	return parsefile((const char *)fname.c_str(), search);
 }
 

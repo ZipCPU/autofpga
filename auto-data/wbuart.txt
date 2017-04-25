@@ -60,8 +60,11 @@
 @PTYPE=	OTHER
 @ACCESS= CONSOLE_ACCESS
 @$BAUDRATE=1000000
-@$UARTSETUP.EXPR=@$CLKFREQHZ/@$THIS.BAUDRATE
+@$UARTSETUP.EXPR=@$CLKFREQHZ/@$.BAUDRATE
 @UARTSETUP.FORMAT=31'h%08x
+@INT.INTLIST  = @$(PREFIX)rx_int @$(PREFIX)tx_int @$(PREFIX)rxf_int
+@INT.INTLIST += @$(PREFIX)txf_int
+
 @INT.UARTRX.WIRE=uartrx_int
 @INT.UARTTX.WIRE=uarttx_int
 @INT.UARTRXF.WIRE=uartrxf_int
@@ -70,26 +73,26 @@
 @INT.UARTTX.PIC=altpic
 @INT.UARTRXF.PIC=syspic
 @INT.UARTTXF.PIC=syspic
+@CTS=i_@$(PREFIX)_cts_n
+@RTS=o_@$(PREFIX)_rts_n
 @MAIN.PORTLIST=
 		// The UART console
-		i_aux_rx, o_aux_tx, i_aux_cts_n, o_aux_rts_n
+		i_@$(PREFIX)_rx, o_@$(PREFIX)_tx, @$CTS, @$RTS
 @MAIN.IODECL=
-	input	wire		i_aux_rx, i_aux_cts_n;
-	output	wire		o_aux_tx, o_aux_rts_n;
+	input	wire		i_@$(PREFIX)_rx, @$CTS;
+	output	wire		o_@$(PREFIX)_tx, @$RTS;
 @MAIN.INSERT=
-	wbuart #(.INITIAL_SETUP(@$THIS.UARTSETUP))
- 		console(i_clk, 1'b0,
- 			wb_cyc, (wb_stb)&&(uart_sel), wb_we,
+	wbuart #(.INITIAL_SETUP(@$.UARTSETUP))
+ 		@$(PREFIX)_uart(i_clk, 1'b0,
+ 			wb_cyc, (wb_stb)&&(@$(PREFIX)_sel), wb_we,
 				wb_addr[1:0], wb_data,
- 			uart_ack, uart_stall, uart_data,
- 			i_aux_rx, o_aux_tx, i_aux_cts_n, o_aux_rts_n,
-			uartrx_int, uarttx_int, uartrxf_int, uarttxf_int);
+ 			@$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_data,
+ 			i_@$(PREFIX)_rx, o_@$(PREFIX)_tx, @$CTS, @$RTS,
+			@$(PREFIX)rx_int, @$(PREFIX)tx_int,
+			@$(PREFIX)rxf_int, @$(PREFIX)txf_int);
 @MAIN.ALT=
-	assign	o_uart_tx    = 1'b1;
-	assign	o_uart_rts_n = 1'b0;
-@TOPLEVEL=
-# @SCOPE.DATA=
-# @SCOPE.TRIGGER=
+	assign	o_@$(PREFIX)_tx    = 1'b1;
+	assign	@$RTS = 1'b0;
 @REGS.NOTE = // WBUART registers
 @REGS.N = 4
 @REGS.0 = 0 R_UART_SETUP	 USETUP
@@ -129,7 +132,7 @@ typedef struct  WBUART_S {
 
 #endif
 
-@BDEF.IONAME= io_uart
+@BDEF.IONAME= _@$PREFIX
 @BDEF.IOTYPE= WBUART
 @BDEF.OSDEF=	_BOARD_HAS_WBUART
-@BDEF.OSVAL=static volatile WBUART *const _uart = &((WBUART *)@$THIS.BASE);
+@BDEF.OSVAL=static volatile WBUART *const @$BDEF.IONAME = &((WBUART *)@$.BASE);

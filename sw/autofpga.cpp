@@ -64,6 +64,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <limits.h>
+#include <ctype.h>
 
 #include "parser.h"
 #include "keys.h"
@@ -71,6 +72,8 @@
 
 int	gbl_err = 0;
 const bool	DELAY_ACK = true;
+FILE	*gbl_dump = NULL;
+
 
 
 //
@@ -159,7 +162,7 @@ public:
 		} else {
 			fprintf(stderr, "ERR: Cannot find PIC.MAX within ...\n");
 			gbl_err++;
-			mapdump(pic);
+			mapdump(stderr, pic);
 			i_max = 0;
 			i_alist = NULL;
 		}
@@ -176,7 +179,8 @@ public:
 		i_ilist.push_back(ip);
 
 		// Initialize the table entry with the name of this interrupt
-		ip->i_name = iname;
+		ip->i_name = trim(*iname);
+		assert(ip->i_name->size() > 0);
 		// The wire from the rest of the design to connect to this
 		// interrupt bus
 		ip->i_wire = getstring(psrc, KY_WIRE);
@@ -219,7 +223,8 @@ public:
 		// Otherwise, add the interrupt to our list
 		INTP	ip = new INTID();
 		i_ilist.push_back(ip);
-		ip->i_name = iname;
+		ip->i_name = trim(*iname);
+		assert(ip->i_name->size() > 0);
 		ip->i_wire = getstring(psrc, KY_WIRE);
 		ip->i_id   = id;
 		ip->i_hash = &psrc;
@@ -694,7 +699,8 @@ void	buildskip_plist(PLIST &plist, unsigned nulladdr) {
 	// { // Just do a double check here, for consistency
 
 	adrmask<<=2; // Convert the result from to octets
-	printf("ADRMASK = %08x (%2d bits)\n", adrmask, popc(adrmask));
+	if (gbl_dump)
+		fprintf(gbl_dump, "ADRMASK = %08x (%2d bits)\n", adrmask, popc(adrmask));
 	// printf("MASTRAD = %08x\n", masteraddr);
 	// printf("DISBITS = %08x\n", disbits);
 	// printf("SETBITS = %08x\n", setbits);
@@ -729,7 +735,10 @@ void	buildskip_plist(PLIST &plist, unsigned nulladdr) {
 		setvalue(*plist[i]->p_phash, KYSKIPNBITS, skipnbits);
 		setvalue(*plist[i]->p_phash, KYSKIPAWID,  sbaw);
 		// printf("// %08x %08x \n", p->p_base, pmsk);
-		printf("// skip-assigning %12s_... to %08x & %08x, %2d, [%08x]AWID=%d\n",
+		if (gbl_dump)
+			fprintf(gbl_dump,
+			"// skip-assigning %12s_... to %08x & %08x, "
+				"%2d, [%08x]AWID=%d\n",
 			plist[i]->p_name->c_str(), skipaddr, skipmask,
 			skipnbits, adrmask, sbaw);
 	}
@@ -760,7 +769,8 @@ void	build_plist(MAPDHASH &info) {
 	int np = count_peripherals(info);
 
 	if (np < 1) {
-		printf("Only %d peripherals\n", np);
+		if (gbl_dump)
+			fprintf(gbl_dump, "Only %d peripherals\n", np);
 		return;
 	}
 
@@ -784,13 +794,9 @@ void	build_plist(MAPDHASH &info) {
 	}
 
 	// Sort by address usage
-	printf("Sorting the SLIST\n");
 	std::sort(slist.begin(), slist.end(), compare_naddr);
-	printf("Sorting the DLIST\n");
 	std::sort(dlist.begin(), dlist.end(), compare_naddr);
-	printf("Sorting the MLIST\n");
 	std::sort(mlist.begin(), mlist.end(), compare_naddr);
-	printf("Sorting the PLIST\n");
 	std::sort(plist.begin(), plist.end(), compare_naddr);
 }
 
@@ -809,11 +815,11 @@ void assign_addresses(MAPDHASH &info, unsigned first_address = 0x400) {
 	int baw = count_peripherals(info);	// log_2 octets
 
 	if (np < 1) {
-		printf("Only %d peripherals\n", np);
 		return;
 	}
 
-	printf("// Assigning addresses to the S-LIST\n");
+	if (gbl_dump)
+		fprintf(gbl_dump, "// Assigning addresses to the S-LIST\n");
 	// Find the number of slist addresses
 	MAPDHASH	*sio_hash = NULL, *dio_hash = NULL;
 
@@ -822,14 +828,16 @@ void assign_addresses(MAPDHASH &info, unsigned first_address = 0x400) {
 		int naddr = slist.size();
 		for(unsigned i=0; i<slist.size(); i++) {
 			slist[i]->p_base = start_address + 4*i;
-			printf("// Assigning %12s_... to %08x\n", slist[i]->p_name->c_str(), slist[i]->p_base);
+			if (gbl_dump)
+				fprintf(gbl_dump, "// Assigning %12s_... to %08x\n", slist[i]->p_name->c_str(), slist[i]->p_base);
 
 			setvalue(*slist[i]->p_phash, KYBASE, slist[i]->p_base);
 		}
 		start_address += (1<<(nextlg(naddr)+2));
 
 		for(unsigned i=0; i<slist.size(); i++) {
-			printf("Setting SLIST[%d] MASK to %08x\n", i,
+			if (gbl_dump)
+			fprintf(gbl_dump, "Setting SLIST[%d] MASK to %08x\n", i,
 				((1<<baw)-1)&-4);
 			slist[i]->p_mask = (1<<(baw-2))-1;	// Words
 			setvalue(*slist[i]->p_phash, KYMASK, slist[i]->p_mask);
@@ -851,7 +859,8 @@ void assign_addresses(MAPDHASH &info, unsigned first_address = 0x400) {
 
 	// Assign double-peripheral bus addresses
 	{
-		printf("// Assigning addresses to the D-LIST, starting from %08x\n", start_address);
+		if (gbl_dump)
+			fprintf(gbl_dump, "// Assigning addresses to the D-LIST, starting from %08x\n", start_address);
 		unsigned start = 0;
 		for(unsigned i=0; i<dlist.size(); i++) {
 			dlist[i]->p_base = 0;
@@ -861,16 +870,15 @@ void assign_addresses(MAPDHASH &info, unsigned first_address = 0x400) {
 			start = dlist[i]->p_base + (1<<(dlist[i]->p_awid));
 		}
 
-printf("D-Start at end: %08x\n", start);
 		int dnaddr = (1<<nextlg(start));
-printf("Initial dnaddr = %08x\n", dnaddr);
 		start_address = (start_address + (dnaddr)-1)
 				& (~(dnaddr-1));
-printf("// start address for d = %08x\n", start_address);
 
 		for(unsigned i=0; i<dlist.size(); i++) {
 			dlist[i]->p_base += start_address;
-			printf("// Assigning %12s_... to %08x/%08x\n",
+			if (gbl_dump)
+				fprintf(gbl_dump,
+				"// Assigning %12s_... to %08x/%08x\n",
 				dlist[i]->p_name->c_str(), dlist[i]->p_base,
 				(-1<<(dlist[i]->p_awid)));
 
@@ -880,7 +888,6 @@ printf("// start address for d = %08x\n", start_address);
 		}
 
 		start_address = (start_address+dnaddr);
-printf("// Start address after d = %08x (dn = %08x)\n", start_address, dnaddr);
 
 		// Build an DIO peripheral
 		MAPT		elm;
@@ -891,22 +898,24 @@ printf("// Start address after d = %08x (dn = %08x)\n", start_address, dnaddr);
 		elm.u.m_s = new STRING(KYDIO);
 		dio_hash->insert(KEYVALUE(KYPREFIX, elm));
 		elm.m_typ = MAPT_INT;
-printf("Setting DNADDR to %08x\n", dnaddr);
 		elm.u.m_v = dnaddr;
 		dio_hash->insert(KEYVALUE(KYNADDR, elm));
 		setvalue(*dio_hash, KYREGS_N, 0);
 	}
 
 	// Assign bus addresses to the more generic peripherals
-	printf("// Assigning addresses to the P-LIST (all other addresses)\n");
-	printf("// Starting from %08x\n", start_address);
+	if (gbl_dump) {
+		fprintf(gbl_dump, "// Assigning addresses to the P-LIST (all other addresses)\n");
+		fprintf(gbl_dump, "// Starting from %08x\n", start_address);
+	}
 	for(unsigned i=0; i<plist.size(); i++) {
 		if (plist[i]->p_naddr < 1)
 			continue;
 		// Make this address 32-bit aligned
 		plist[i]->p_base = (start_address + ((1<<plist[i]->p_awid)-1));
 		plist[i]->p_base &= (-1<<(plist[i]->p_awid));
-		printf("// assigning %12s_... to %08x/%08x\n",
+		if (gbl_dump)
+		fprintf(gbl_dump, "// assigning %12s_... to %08x/%08x\n",
 			plist[i]->p_name->c_str(),
 			plist[i]->p_base,
 			(-1<<(plist[i]->p_awid)));
@@ -970,13 +979,16 @@ printf("Setting DNADDR to %08x\n", dnaddr);
 		masteraddr|= bvl;
 	}
 
-	printf("// Pre Null Mask: %08x\n", unusedmsk);
+	// printf("// Pre Null Mask: %08x\n", unusedmsk);
 	if ((1u<<nextlg(first_address))==first_address) {
 		unusedmsk |= (first_address);
 	}
-	printf("// Overall  Mask: %08x\n", unusedmsk);
-	printf("// SkipAddr Mask: %08x\n", ~unusedmsk);
-	printf("// Mask popcount: %08x\n", popc(unusedmsk));
+
+	if (gbl_dump) {
+		fprintf(gbl_dump, "// Overall  Mask: %08x\n", unusedmsk);
+		fprintf(gbl_dump, "// SkipAddr Mask: %08x\n", ~unusedmsk);
+		fprintf(gbl_dump, "// Mask popcount: %08x\n", popc(unusedmsk));
+	}
 
 	setvalue(info, KYSKIPADDR, unusedmsk);		// octets
 	setvalue(info, KYSKIPNBITS,popc(unusedmsk));	// octets
@@ -993,12 +1005,15 @@ printf("Setting DNADDR to %08x\n", dnaddr);
 		plist[dio_id]->p_base = dlist[0]->p_base;
 		assert(getvalue(*dio_hash, KYNADDR, v));
 		plist[dio_id]->p_naddr = v;
-		printf("DIO.NADDR = %08x\n", v);
+		if (gbl_dump)
+			fprintf(gbl_dump, "DIO.NADDR = %08x\n", v);
 		plist[dio_id]->p_awid  = nextlg(plist[dio_id]->p_naddr);
-		printf("DIO.AWID  = %08x\n", plist[dio_id]->p_awid);
+		if (gbl_dump)
+			fprintf(gbl_dump, "DIO.AWID  = %08x\n", plist[dio_id]->p_awid);
 		plist[dio_id]->p_mask = (-1<<(plist[dio_id]->p_awid-2));
 		dmask = plist[dio_id]->p_mask;
-		printf("DIO.MASK  = %08x\n", dmask);
+		if (gbl_dump)
+			fprintf(gbl_dump, "DIO.MASK  = %08x\n", dmask);
 		setvalue(*dio_hash, KYBASE, plist[dio_id]->p_base);
 		setvalue(*dio_hash, KYMASK, plist[dio_id]->p_mask);
 	} if (sio_hash) {
@@ -1017,8 +1032,10 @@ printf("Setting DNADDR to %08x\n", dnaddr);
 	}
 
 	// Let's build a minimal address for this component
-	printf("SMASK = %08x\n", smask);
-	printf("DMASK = %08x\n", dmask);
+	if (gbl_dump) {
+		fprintf(gbl_dump, "SMASK = %08x\n", smask);
+		fprintf(gbl_dump, "DMASK = %08x\n", dmask);
+	}
 	buildskip_plist(slist, 0);
 	buildskip_plist(dlist, 0);
 	buildskip_plist(plist, 0x400);
@@ -1031,9 +1048,42 @@ printf("Setting DNADDR to %08x\n", dnaddr);
 // interrupts to controllers.  Individual interrupt wires may be mapped to
 // multiple interrupt controllers.
 //
+void	assign_int_to_pics(const STRING &iname, MAPDHASH &ihash) {
+	STRINGP	picname;
+	int inum;
+
+	// Now, we need to map this to a PIC
+	if (NULL==(picname=getstring(ihash, KYPIC))) {
+		// fprintf(stderr,
+		//	"WARNING: No bus defined for INT_%s\nThis interrupt will not be connected.\n",
+		//	kvpair->first.c_str());
+		return;
+	}
+
+	char	*tok, *cpy;
+	cpy = strdup(picname->c_str());
+	tok = strtok(cpy, ", \t\n");
+	while(tok) {
+		unsigned pid;
+		for(pid = 0; pid<piclist.size(); pid++)
+			if (*piclist[pid]->i_name == tok)
+				break;
+		if (pid >= piclist.size()) {
+			fprintf(stderr, "ERR: PIC NOT FOUND: %s\n", tok);
+			gbl_err++;
+		} else if (getvalue(ihash, KY_ID, inum)) {
+			piclist[pid]->add((unsigned)inum, ihash, (STRINGP)&iname);
+		} else {
+			piclist[pid]->add(ihash, (STRINGP)&iname);
+		}
+		tok = strtok(NULL, ", \t\n");
+	} free(cpy);
+}
+
 void	assign_interrupts(MAPDHASH &master) {
 	MAPDHASH::iterator	kvpair, kvint, kvline;
 	MAPDHASH	*submap, *intmap;
+	STRINGP		sintlist;
 
 	// First step, gather all of our PIC's together
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
@@ -1058,11 +1108,25 @@ void	assign_interrupts(MAPDHASH &master) {
 		} if (kvint->second.m_typ != MAPT_MAP) {
 			continue;
 		}
-		{
-			if (kvint->second.m_typ != MAPT_MAP)
-				continue;
 
+		// Now, let's look to see if it has a list of interrupts
+		if (NULL != (sintlist = getstring(*kvint->second.u.m_m,
+					KYINTLIST))) {
+			STRING	scpy = *sintlist;
+			char	*tok;
 
+			tok = strtok((char *)scpy.c_str(), " \t\n,");
+			while(tok) {
+				STRING	stok = STRING(tok);
+
+				kvline = findkey(*kvint->second.u.m_m, stok);
+				if (kvline != kvint->second.u.m_m->end())
+					assign_int_to_pics(stok,
+						*kvline->second.u.m_m);
+				
+				tok = strtok(NULL, " \t\n,");
+			}
+		} else {
 			// NAME is now @comp.INT.
 
 			// Yes, an INT hash exists within this component.
@@ -1073,54 +1137,8 @@ void	assign_interrupts(MAPDHASH &master) {
 						kvline++) {
 				if (kvline->second.m_typ != MAPT_MAP)
 					continue;
-
-				/*
-				// NAME is now @comp.INT.<name>
-				printf("Examining: @%s.%s.%s\n",
-					kvpair->first.c_str(),
-					kvint->first.c_str(),
-					kvline->first.c_str());
-				*/
-
-				STRINGP	picname;
-				int inum;
-
-				trimall(*kvline->second.u.m_m, KYPIC);
-				trimall(*kvline->second.u.m_m, KY_WIRE);
-				// Now, we need to map this to a PIC
-				if (NULL==(picname=getstring(
-					*kvline->second.u.m_m, KYPIC))) {
-						fprintf(stderr,
-						"WARNING: No bus defined for INT_%s\nThis interrupt will not be connected.\n",
-						kvpair->first.c_str());
-					continue;
-				}
-
-
-				char	*tok, *cpy;
-				cpy = strdup(picname->c_str());
-				tok = strtok(cpy, ", \t\n");
-				while(tok) {
-					unsigned pid;
-
-					for(pid = 0; pid<piclist.size(); pid++)
-						if (*piclist[pid]->i_name == tok)
-							break;
-					if (pid >= piclist.size()) {
-						fprintf(stderr, "ERR: PIC NOT FOUND: %s\n", tok);
-						gbl_err++;
-					} else if (getvalue(*kvline->second.u.m_m,
-							KY_ID,inum)) {
-						piclist[pid]->add((unsigned)inum,
-							*kvline->second.u.m_m,
-							new STRING(kvline->first));
-					} else {
-						piclist[pid]->add(*kvline->second.u.m_m,
-							new STRING(kvline->first));
-					}
-
-					tok = strtok(NULL, ", \t\n");
-				} free(cpy);
+				assign_int_to_pics(kvline->first,
+					*kvline->second.u.m_m);
 			}
 		}
 	}
@@ -1153,11 +1171,12 @@ int	get_longest_defname(PLIST &plist) {
 			sprintf(nstr, "%d", j);
 			kvp = findkey(*plist[i]->p_phash,str=STRING("REGS.")+nstr);
 			if (kvp == plist[i]->p_phash->end()) {
-				printf("%s not found\n", str.c_str());
+				fprintf(stderr, "%s not found\n", str.c_str());
 				continue;
 			}
 			if (kvp->second.m_typ != MAPT_STRING) {
-				printf("%s is not a string\n", str.c_str());
+				if (gbl_dump)
+				fprintf(gbl_dump, "%s is not a string\n", str.c_str());
 				continue;
 			}
 
@@ -1168,7 +1187,7 @@ int	get_longest_defname(PLIST &plist) {
 			// 1. Read the number (Not used)
 			strtoul(scpy.c_str(), &nxtp, 0);
 			if ((nxtp==NULL)||(nxtp == scpy.c_str())) {
-				printf("No register name within string: %s\n", scpy.c_str());
+				fprintf(stderr, "No register name within string: %s\n", scpy.c_str());
 				continue;
 			}
 
@@ -1233,7 +1252,8 @@ void write_regdefs(FILE *fp, PLIST &plist, unsigned longest_defname) {
 			// 1. Read the number
 			int roff = strtoul(scpy.c_str(), &nxtp, 0);
 			if ((nxtp==NULL)||(nxtp == scpy.c_str())) {
-				printf("No register name within string: %s\n", scpy.c_str());
+				if (gbl_dump)
+				fprintf(gbl_dump, "No register name within string: %s\n", scpy.c_str());
 				continue;
 			}
 
@@ -1466,7 +1486,8 @@ void write_regnames(FILE *fp, PLIST &plist,
 			// 1. Read the number
 			strtoul(scpy.c_str(), &nxtp, 0);
 			if ((nxtp==NULL)||(nxtp == scpy.c_str())) {
-				printf("No register name within string: %s\n", scpy.c_str());
+				if (gbl_dump)
+				fprintf(gbl_dump, "No register name within string: %s\n", scpy.c_str());
 				continue;
 			}
 
@@ -2586,6 +2607,11 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 			if (defnstr)
 				fprintf(fp, "\tassign\t%s_int_vec = {\n",
 					defnstr->c_str());
+			else {
+				gbl_err++;
+				fprintf(stderr, "ERR: PIC has no associated name\n");
+				continue;
+			}
 		}
 
 		for(int iid=piclist[picid]->i_max-1; iid>=0; iid--) {
@@ -2851,9 +2877,9 @@ int	main(int argc, char **argv) {
 	int		argn, nhash = 0;
 	MAPDHASH	master;
 	FILE		*fp;
-	STRING		str;
-	STRING		cmdline;
+	STRING		str, cmdline, searchstr = ".";
 	const char	*subdir;
+	gbl_dump = fopen("dump.txt", "w");
 
 	if (argc > 0) {
 		cmdline = STRING(argv[0]);
@@ -2871,28 +2897,33 @@ int	main(int argc, char **argv) {
 				case 'o': subdir = argv[++argn];
 					j+=5000;
 					break;
+				case 'I':
+					searchstr = searchstr + ":" + argv[++argn];
+					setstring(master, KYPATH, new STRING(searchstr));
+					j+=5000;
+					break;
 				default:
 					fprintf(stderr, "Unknown argument, -%c\n", argv[argn][j]);
 				}
 			}
-		} else if (0 == access(argv[argn], R_OK)) {
+		} else {
 			MAPDHASH	*fhash;
+			STRINGP		path;
 
-			fhash = parsefile(argv[argn]);
+			path = getstring(master, KYPATH);
+			fhash = parsefile(argv[argn], *path);
 			if (fhash) {
-				// mapdump(*fhash);
 				mergemaps(master, *fhash);
 				delete fhash;
 
 				nhash++;
 			}
-		} else {
-			printf("Could not open %s\n", argv[argn]);
 		}
 	}
 
 	if (nhash == 0) {
-		printf("No files given, no files written\n");
+		fprintf(stderr, "ERR: No files given, no files written\n");
+		exit(EXIT_FAILURE);
 	}
 
 	STRINGP	subd;
@@ -2904,7 +2935,7 @@ int	main(int argc, char **argv) {
 		// subd = new STRING("autofpga-out");
 		subd = new STRING("demo-out");
 	if ((*subd) == STRING("/")) {
-		fprintf(stderr, "OUTPUT SUBDIRECTORY = %s\n", subd->c_str());
+		fprintf(stderr, "ERR: OUTPUT SUBDIRECTORY = %s\n", subd->c_str());
 		fprintf(stderr, "Cowardly refusing to place output products into the root directory, '/'\n");
 		exit(EXIT_FAILURE);
 	} if ((*subd)[subd->size()-1] == '/')
@@ -2921,7 +2952,7 @@ int	main(int argc, char **argv) {
 				exit(EXIT_FAILURE);
 			}
 		} else if (mkdir(subd->c_str(), 0777) != 0) {
-			fprintf(stderr, "Could not create %s/ directory\n",
+			fprintf(stderr, "ERR: Could not create %s/ directory\n",
 				subd->c_str());
 			exit(EXIT_FAILURE);
 		}
@@ -2935,10 +2966,11 @@ int	main(int argc, char **argv) {
 		setstring(master, KYLEGAL, legal);
 	}
 
-	trimbykeylist(master, KYKEYS_TRIMLIST);	
+	// trimbykeylist(master, KYKEYS_TRIMLIST);	
 	cvtintbykeylist(master, KYKEYS_INTLIST);
 
 	reeval(master);
+	flatten(master);
 
 	count_peripherals(master);
 	build_plist(master);
@@ -2948,8 +2980,6 @@ int	main(int argc, char **argv) {
 	get_address_width(master);
 
 	reeval(master);
-
-	// mapdump(master);
 
 	str = subd->c_str(); str += "/regdefs.h";
 	fp = fopen(str.c_str(), "w");
@@ -2979,5 +3009,8 @@ int	main(int argc, char **argv) {
 
 	if (0 != gbl_err)
 		fprintf(stderr, "ERR: Errors present\n");
+
+	if (gbl_dump)
+		mapdump(gbl_dump, master);
 	return gbl_err;
 }

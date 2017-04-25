@@ -39,8 +39,18 @@
 #ifndef	KVEVAL_H
 #define	KVEVAL_H
 
+#include <vector>
 #include "mapdhash.h"
 
-extern	bool	resolve(MAPDHASH &info);
+typedef	std::vector<MAPDHASH *>	MAPSTACK;
+
+bool	get_named_kvpair(MAPSTACK &stack, MAPDHASH &here, STRING &key,
+		MAPDHASH::iterator &pair);
+bool	get_named_value(MAPSTACK &stack, MAPDHASH &here, STRING &key,
+		int &value);
+STRINGP	get_named_string(MAPSTACK &stack, MAPDHASH &here, STRING &key);
+
+extern	bool	resolve_ast_expressions(MAPDHASH &info);
 extern	void	reeval(MAPDHASH &info);
+
 #endif

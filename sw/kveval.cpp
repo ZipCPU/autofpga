@@ -35,63 +35,91 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 //
+#include <vector>
+#include "mapdhash.h"
 #include "kveval.h"
 #include "keys.h"
 #include "ast.h"
 
-bool	get_named_value(MAPDHASH &top, MAPDHASH &here, STRING &key, int &value){
+
+typedef	std::vector<MAPDHASH *>	MAPSTACK;
+
+bool	get_named_kvpair(MAPSTACK &stack, MAPDHASH &here, STRING &key,
+		MAPDHASH::iterator &pair) {
 	MAPDHASH::iterator	kvpair, kvsub;
 
-	value = -1;
-
-	if (strncmp(key.c_str(), KYTHISDOT.c_str(), KYTHISDOT.size())==0) {
-		STRING	subkey = key.substr(KYTHISDOT.size(),
+	if ((key[0]=='.')||(strncmp(key.c_str(), KYTHISDOT.c_str(), KYTHISDOT.size())==0)) {
+		STRING	subkey = (key[0]=='.')?key.substr(1)
+			: key.substr(KYTHISDOT.size(),
 					key.size()-KYTHISDOT.size());
-		kvpair = findkey(here, subkey);
+		pair = findkey(here, subkey);
+		return (pair != here.end());
+	} else if (key[0] == '+') {
+		STRING	subkey = key.substr(1);
+
+		kvpair = findkey(here, KYPLUSDOT);
 		if (kvpair == here.end())
 			return false;
-	} else {
-		kvpair = findkey(top, key);
-		if (kvpair == top.end())
+		if (kvpair->second.m_typ != MAPT_MAP)
 			return false;
+		pair = findkey(*kvpair->second.u.m_m, subkey);
+		return (pair != kvpair->second.u.m_m->end());
+	} else if (key[0] == '/') {
+		STRING	subkey = key.substr(1);
+		pair = findkey(*stack[0], subkey);
+		return (pair != stack[0]->end());
+	// Ok, go first, look for things in the following order:
+	//	1. here
+	//	2. superclass (in a loop)
+	//	3. parent (in a loop)
+	//	....
+	//	4. top
+	} else if (here.end() != (pair = findkey(here, key))) {
+		return true;
 	}
 
-	if (kvpair->second.m_typ == MAPT_INT) {
-		value = kvpair->second.u.m_v;
-		return true; // Found it!
-	} else if (kvpair->second.m_typ == MAPT_MAP) {
-		return (getvalue(*kvpair->second.u.m_m, value));
+	{
+		int	posn = (int)stack.size()-1;
+		for(; posn>= 0; posn--) {
+			pair =findkey(*stack[posn], key);
+			if (pair != stack[posn]->end())
+				break;
+		} if (posn >= 0)
+			return true;
 	} return false;
 }
 
-STRINGP	get_named_string(MAPDHASH &top, MAPDHASH &here, STRING &key){
-	MAPDHASH::iterator	kvpair, kvsub, kvstr, kvfmt;
+bool	get_named_value(MAPSTACK &stack, MAPDHASH &here, STRING &key,
+		int &value){
+	MAPDHASH::iterator	kvpair;
+	if (get_named_kvpair(stack, here, key, kvpair)) {
+		if (kvpair->second.m_typ == MAPT_INT) {
+			value = kvpair->second.u.m_v;
+			return true;
+		} else if (kvpair->second.m_typ == MAPT_MAP) {
+			if (getvalue(*kvpair->second.u.m_m, value))
+				return true;
+		}
+	} return false;
+}
 
-	if (strncmp(key.c_str(), KYTHISDOT.c_str(), KYTHISDOT.size())==0) {
-		STRING	subkey = key.substr(KYTHISDOT.size(),
-					key.size()-KYTHISDOT.size());
-		kvpair = findkey(here, subkey);
-		if (kvpair == here.end())
-			return NULL;
-	} else {
-		kvpair = findkey(top, key);
-		if (kvpair == top.end());
-			return NULL;
-	}
+STRINGP	get_named_string(MAPSTACK &stack, MAPDHASH &here, STRING &key) {
+	MAPDHASH::iterator	kvpair;
 
-	if (kvpair->second.m_typ == MAPT_STRING) {
-		return kvpair->second.u.m_s; // Found it!
-	} else if (kvpair->second.m_typ == MAPT_MAP) {
-		// Need to dig within the map created for this value to get this
-		return getstring(*kvpair->second.u.m_m);
+	if (get_named_kvpair(stack, here, key, kvpair)) {
+		if (kvpair->second.m_typ == MAPT_MAP)
+			return getstring(*kvpair->second.u.m_m);
+		if (kvpair->second.m_typ != MAPT_STRING)
+			return NULL;
+		return kvpair->second.u.m_s;
 	} return NULL;
 }
 
-void	expr_eval(MAPDHASH &top, MAPDHASH &here, MAPDHASH &sub, MAPT &expr) {
+void	expr_eval(MAPSTACK &stack, MAPDHASH &here, MAPDHASH &sub, MAPT &expr) {
 	AST	*ast;
 	if (expr.m_typ == MAPT_STRING) {
 		ast = parse_ast(*expr.u.m_s);
-		ast->define(top, here);
+		ast->define(stack, here);
 		if (ast->isdefined()) {
 			expr.m_typ = MAPT_INT;
 			expr.u.m_v = ast->eval();
@@ -102,7 +130,7 @@ void	expr_eval(MAPDHASH &top, MAPDHASH &here, MAPDHASH &sub, MAPT &expr) {
 		}
 	} else if (expr.m_typ == MAPT_AST) {
 		ast = expr.u.m_a;
-		ast->define(top, here);
+		ast->define(stack, here);
 		if (ast->isdefined()) {
 			int	v = (int)ast->eval();
 			expr.m_typ = MAPT_INT;
@@ -112,7 +140,7 @@ void	expr_eval(MAPDHASH &top, MAPDHASH &here, MAPDHASH &sub, MAPT &expr) {
 	}
 }
 
-bool	find_any_unevaluated_sub(MAPDHASH &top, MAPDHASH *here, MAPDHASH &sub) {
+bool	find_any_unevaluated_sub(MAPSTACK &stack, MAPDHASH *here, MAPDHASH &sub) {
 	bool	changed = false;
 	MAPDHASH::iterator	pfx = sub.end(), subi;
 	MAPDHASH	*component;
@@ -125,16 +153,18 @@ bool	find_any_unevaluated_sub(MAPDHASH &top, MAPDHASH *here, MAPDHASH &sub) {
 
 	for(subi=sub.begin(); subi != sub.end(); subi++) {
 		if (subi->second.m_typ == MAPT_MAP) {
-			changed = find_any_unevaluated_sub(top, component,
+			stack.push_back(subi->second.u.m_m);
+			changed = find_any_unevaluated_sub(stack, component,
 				*subi->second.u.m_m) || (changed);
+			stack.pop_back();
 		} else if (subi->first == KYEXPR) {
 			if (subi->second.m_typ == MAPT_STRING) {
-				expr_eval(top, *component, sub, subi->second);
+				expr_eval(stack, *component, sub, subi->second);
 				if (subi->second.m_typ != MAPT_STRING)
 					changed = true;
 			} else if (subi->second.m_typ == MAPT_AST) {
 				AST	*ast = subi->second.u.m_a;
-				ast->define(top, *component);
+				ast->define(stack, *component);
 				if (ast->isdefined()) {
 					subi->second.m_typ = MAPT_INT;
 					subi->second.u.m_v = ast->eval();
@@ -144,7 +174,7 @@ bool	find_any_unevaluated_sub(MAPDHASH &top, MAPDHASH *here, MAPDHASH &sub) {
 			}
 		} else if (subi->second.m_typ == MAPT_AST) {
 			AST	*ast = subi->second.u.m_a;
-			ast->define(top, *component);
+			ast->define(stack, *component);
 			if (ast->isdefined()) {
 				int	val = ast->eval();
 				subi->second.m_typ = MAPT_INT;
@@ -159,19 +189,27 @@ bool	find_any_unevaluated_sub(MAPDHASH &top, MAPDHASH *here, MAPDHASH &sub) {
 void	find_any_unevaluated(MAPDHASH &info) {
 	MAPDHASH::iterator	topi;
 	bool	changed = false;
+	MAPSTACK	stack;
+	stack.push_back(&info);
 
 	do {
 		for(topi=info.begin(); topi != info.end(); topi++) {
 			if (topi->second.m_typ != MAPT_MAP)
 				continue;
-			changed = find_any_unevaluated_sub(info, &info,
+			changed = find_any_unevaluated_sub(stack, &info,
 					*topi->second.u.m_m);
 		}
 	} while(changed);
 }
 
-bool	subresults_into(MAPDHASH &info, MAPDHASH *here, STRINGP &sval) {
+bool	subresults_into(MAPSTACK stack, MAPDHASH *here, STRINGP &sval) {
 	bool	changed = false, everchanged = false;;
+	extern	FILE *gbl_dump;
+
+	if (STRING::npos != (sval->find("@$"))) {
+		if (gbl_dump)
+			fprintf(gbl_dump, "KVEVAL::Examining: %s\n", sval->c_str());
+	}
 
 	do {
 		unsigned long	sloc = -1;
@@ -179,25 +217,75 @@ bool	subresults_into(MAPDHASH &info, MAPDHASH *here, STRINGP &sval) {
 		changed = false;
 		sloc = 0;
 		while(STRING::npos != (sloc = sval->find("@$", sloc))) {
-			int	kylen = 0, value;
-			const char *ptr = sval->c_str() + sloc + 2;
-			for(; ptr[kylen]; kylen++) {
-				if((!isalpha(ptr[kylen]))
+			int	kylen = 0, value, endpos, kystart, fstart, fend;
+			const char *ptr = sval->c_str() + sloc + 2,
+				*fmt = NULL;
+
+			kystart = sloc+2;
+			if (*ptr == '[') {
+				fstart = kystart+1; fend = fstart;
+				ptr++; fmt = ptr;
+				for(; (*ptr)&&(*ptr != ']'); ptr++)
+					fend++;
+				assert(*ptr == ']');
+				assert((*sval)[fend] == ']');
+				ptr++;
+				kystart = fend+1;
+				fend -= fstart;
+			}
+			if (*ptr == '(') {
+				kystart++;
+				ptr++;
+				for(; (ptr[kylen]); kylen++) {
+					if((!isalpha(ptr[kylen]))
 						&&(!isdigit(ptr[kylen]))
 						&&(ptr[kylen] != '_')
 						&&(ptr[kylen] != '.'))
 					break;
-			} if (kylen > 0) {
-				STRING key = sval->substr(sloc+2, kylen), *vstr;
-				if (NULL != (vstr = get_named_string(info,*here, key))) {
-					sval->replace(sloc, kylen+2, *vstr);
+				} endpos = kylen+1+kystart-sloc;
+				assert(ptr[kylen] == ')');
+			} else {
+				for(; ptr[kylen]; kylen++) {
+					if((!isalpha(ptr[kylen]))
+						&&(!isdigit(ptr[kylen]))
+						&&(ptr[kylen] != '_')
+						&&(ptr[kylen] != '.'))
+					break;
+				} endpos = kylen+kystart-sloc;
+			}
+				
+			if (kylen > 0) {
+				STRING key = sval->substr(kystart, kylen),
+					*vstr;
+				if (gbl_dump)
+					fprintf(gbl_dump, "\tFound reference to: %s\n", key.c_str());
+				if ((fmt)&&(get_named_value(stack, *here,
+						key, value))) {
+					char	*tbuf, *fcpy;
+					fcpy = strdup(fmt); fcpy[fend]='\0';
+					STRING	tmp;
+					tbuf = new char[fend+64];
+					sprintf(tbuf, fcpy, value);
+					tmp = tbuf;
+					sval->replace(sloc, endpos, tmp);
+					delete[] fcpy;
+					delete[] tbuf;
+				} else if (NULL != (vstr = get_named_string(
+							stack, *here, key))) {
+					if (gbl_dump)
+						fprintf(gbl_dump, "\t\tFound string, %s\n", vstr->c_str());
+					sval->replace(sloc, endpos, *vstr);
+					fprintf(gbl_dump, "\t\tSTRING(%ld,%d): %s\n", sloc, endpos, sval->c_str());
 					changed = true;
-				}else if(get_named_value(info,*here,key,value)){
+				}else if(get_named_value(stack,*here,key,value)){
 					char	buffer[64];
+					if (gbl_dump)
+						fprintf(gbl_dump, "\t\tFound value, 0x%08x\n", value);
 					STRING	tmp;
 					sprintf(buffer, "%d", value);
 					tmp = buffer;
-					sval->replace(sloc, kylen+2, tmp);
+					sval->replace(sloc, endpos, tmp);
+					fprintf(gbl_dump, "\t\tVALUE(%ld,%d): %s\n", sloc, endpos, sval->c_str());
 					changed = true;
 				} else sloc++;
 			} else sloc++;
@@ -214,7 +302,6 @@ STRINGP	genstr(STRING fmt, int val) {
 	if (fmt.size() > 0) {
 		sprintf(buf, fmt.c_str(), val);
 	} else {
-		printf("No format\n");
 		sprintf(buf, "%d", val);
 	}
 
@@ -224,7 +311,7 @@ STRINGP	genstr(STRING fmt, int val) {
 }
 
 // Return if anything changes
-bool	resolve(MAPDHASH &exmap) {
+bool	resolve_ast_expressions(MAPDHASH &exmap) {
 	MAPDHASH::iterator	kvexpr, kvval, kvfmt, kvstr;
 	MAPT	elm;
 	STRINGP	strp;
@@ -278,14 +365,14 @@ bool	resolve(MAPDHASH &exmap) {
 		elm.u.m_v = kvexpr->second.u.m_v;
 		exmap.insert(KEYVALUE(KYVAL, elm));
 
-		resolve(exmap);
+		resolve_ast_expressions(exmap);
 		return true;
 	}
 
 	return false;
 }
 
-bool	substitute_any_results_sub(MAPDHASH &info, MAPDHASH *here,
+bool	substitute_any_results_sub(MAPSTACK &stack, MAPDHASH *here,
 		MAPDHASH &sub) {
 	MAPDHASH::iterator	pfx = sub.end(), subi, kvelm, kvstr, kvfmt;
 	MAPDHASH	*component;
@@ -299,23 +386,27 @@ bool	substitute_any_results_sub(MAPDHASH &info, MAPDHASH *here,
 
 	for(subi=sub.begin(); subi != sub.end(); subi++) {
 		if (subi->second.m_typ == MAPT_MAP) {
-			substitute_any_results_sub(info, component,
+			stack.push_back(subi->second.u.m_m);
+			substitute_any_results_sub(stack, component,
 				*subi->second.u.m_m);
+			stack.pop_back();
 			kvelm = subi->second.u.m_m->find(KYEXPR);
 			kvstr  = subi->second.u.m_m->find(KYSTR);
 			kvfmt  = subi->second.u.m_m->find(KYFORMAT);
 			if ((kvstr == subi->second.u.m_m->end())
 				&&(kvelm != subi->second.u.m_m->end())) {
-				v = resolve(*subi->second.u.m_m) || v;
+				v = resolve_ast_expressions(*subi->second.u.m_m) || v;
 			}
 		} else if (subi->second.m_typ == MAPT_STRING) {
-			v = subresults_into(info, here, subi->second.u.m_s) ||v;
+			v = subresults_into(stack, here, subi->second.u.m_s) ||v;
 		}
 	} return v;
 }
 
 bool	substitute_any_results(MAPDHASH &info) {
-	return substitute_any_results_sub(info, &info, info);
+	MAPSTACK	stack;
+	stack.push_back(&info);
+	return substitute_any_results_sub(stack, &info, info);
 }
 
 void	reeval(MAPDHASH &info) {

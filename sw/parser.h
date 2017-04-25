@@ -50,8 +50,8 @@
 
 extern	STRING	*rawline(FILE *fp);
 extern	STRING	*getline(FILE *fp);
-extern	MAPDHASH	*parsefile(FILE *fp);
-extern	MAPDHASH	*parsefile(const char *fname);
-extern	MAPDHASH	*parsefile(const STRING &fname);
+extern	MAPDHASH	*parsefile(FILE *fp, const STRING &search="");
+extern	MAPDHASH	*parsefile(const char *fname, const STRING &search="");
+extern	MAPDHASH	*parsefile(const STRING &fname, const STRING &search="");
 
 #endif

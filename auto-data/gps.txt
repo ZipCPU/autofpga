@@ -131,12 +131,10 @@ typedef	struct	GPSTB_S	{
 #
 #
 @PREFIX=gpsu
-@NADDR=4
-@PTYPE=OTHER
+@INCLUDEFILE=wbuart.txt
 @$BAUDRATE=9600
-@$UARTSETUP.EXPR=@$CLKFREQHZ/@$THIS.BAUDRATE
-@UARTSETUP.FORMAT=31'h%08x
 @ACCESS=GPSUART_ACCESS
+@INT.INTLIST= GPSRX GPSTX GPSRXF GPSTXF
 @INT.GPSRX.WIRE=  gpsurx_int
 @INT.GPSTX.WIRE=  gpsutx_int
 @INT.GPSRXF.WIRE= gpsurxf_int
@@ -147,59 +145,21 @@ typedef	struct	GPSTB_S	{
 @INT.GPSTXF.PIC= altpic
 @MAIN.PORTLIST=
 		// The GPS-UART
-		i_gps_rx, o_gps_tx
+		i_@$(PREFIX)_rx, o_@$(PREFIX)_tx
 @MAIN.IODECL=
-	input	wire		i_gps_rx;
-	output	wire		o_gps_tx;
-@MAIN.INSERT=
-	wire	w_gps_rts_n_ignored;
-	wbuart #(@$THIS.UARTSETUP) gpsuart(i_clk, 1'b0,
-		wb_stb, (wb_stb)&&(gpsu_sel), wb_we, wb_addr[1:0], wb_data,
-			gpsu_ack, gpsu_stall, gpsu_data,
-		i_gps_rx, o_gps_tx, 1'b0, w_gps_rts_n_ignored,
-		gpsurx_int, gpsutx_int, gpsurxf_int, gpsutxf_int);
-@MAIN.ALT=
-	assign	o_gps_tx = 1'b1;
-
+	input	wire		i_@$(PREFIX)_rx;
+	output	wire		o_@$(PREFIX)_tx;
+@MAIN.DEFNS=
+	wire	w_@$(PREFIX)_cts_n, w_@$(PREFIX)_rts_n;
+	assign	w_@$(PREFIX)_cts_n=1'b1;
+@RTS=w_@$(PREFIX)_rts_n
+@CTS=w_@$(PREFIX)_cts_n
 @REGS.NOTE= // GPS UART registers, similar to WBUART
 @REGS.N=4
 @REGS.0= 0 R_GPSU_SETUP  GPSSETUP
 @REGS.1= 1 R_GPSU_FIFO   GPSFIFO
 @REGS.2= 2 R_GPSU_UARTRX GPSRX
 @REGS.3= 3 R_GPSU_UARTTX GPSTX
-@BDEF.DEFN=
-#ifndef	WBUART_H
-#define	WBUART_H
-
-#define UART_PARITY_NONE        0
-#define UART_HWFLOW_OFF         0x40000000
-#define UART_PARITY_ODD         0x04000000
-#define UART_PARITY_EVEN        0x05000000
-#define UART_PARITY_SPACE       0x06000000
-#define UART_PARITY_MARK        0x07000000
-#define UART_STOP_ONEBIT        0
-#define UART_STOP_TWOBITS       0x08000000
-#define UART_DATA_8BITS         0
-#define UART_DATA_7BITS         0x10000000
-#define UART_DATA_6BITS         0x20000000
-#define UART_DATA_5BITS         0x30000000
-#define UART_RX_BREAK           0x0800
-#define UART_RX_FRAMEERR        0x0400
-#define UART_RX_PARITYERR       0x0200
-#define UART_RX_NOTREADY        0x0100
-#define UART_RX_ERR             (-256)
-#define UART_TX_BUSY            0x0100
-#define UART_TX_BREAK           0x0200
-
-typedef struct  WBUART_S {
-		unsigned	u_setup;
-		unsigned	u_fifo;
-		unsigned	u_rx, u_tx;
-} WBUART;
-#endif
-@BDEF.IONAME=io_gpsu
-@BDEF.IOTYPE=WBUART
+@BDEF.IONAME=gpsu
 @BDEF.OSDEF=_BOARD_HAS_GPS_UART
-@BDEF.OSVAL=static volatile @$THIS.BDEF.IOTYPE *const _gpsu = ((@$THIS.BDEF.IOTYPE *)@$THIS.BASE);
-#
 #

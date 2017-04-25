@@ -67,12 +67,10 @@ autofpga: $(OBJECTS)
 	echo $(OBJECTS)
 	$(CXX) $(CFLAGS) $(OBJECTS) -o $@
 
-VSRCS := global.txt clock.txt bkram.txt flash.txt zipmaster.txt wbubus.txt dlyarbiter.txt \
+VDATA := global.txt clock.txt bkram.txt flash.txt zipmaster.txt wbubus.txt dlyarbiter.txt \
 	gps.txt icape.txt mdio.txt spio.txt wboledbw.txt rtcdate.txt	\
 	hdmi.txt clkcounter.txt gpio.txt pwrcount.txt wbpmic.txt	\
 	version.txt buserr.txt pic.txt rtcgps.txt wbmouse.txt
-VDIR := ../auto-data
-VDATA := $(addprefix $(VDIR)/,$(VSRCS))
 # Unused:
 #	enet.txt sdspi.txt wbuart.txt
 
@@ -80,11 +78,11 @@ VDATA := $(addprefix $(VDIR)/,$(VSRCS))
 demo: runme.sh
 	bash runme.sh
 
-runme.sh: autofpga $(VDATA)
+runme.sh: autofpga $(addprefix ../auto-data/,$(VDATA))
 	echo "#!/bin/bash" > $@
 	echo >> $@
 	echo >> $@
-	echo ./autofpga -o ../demo-out $(VDATA)  >> $@
+	echo ./autofpga -o ../demo-out -I ../auto-data $(VDATA)  >> $@
 
 define	mk-objdir
 	@bash -c "if [ ! -e $(OBJDIR) ]; then mkdir -p $(OBJDIR); fi"

@@ -50,6 +50,9 @@ extern const	STRING	KYSUBD;
 extern const	STRING	KYBUS_ADDRESS_WIDTH;
 extern const	STRING	KYSKIPADDR;
 extern const	STRING	KYRESET_ADDRESS;
+// For subclassing
+extern const	STRING	KYPLUSDOT;
+extern const	STRING	KYINCLUDEFILE;
 // Other global keys
 extern const	STRING	KYREGDEFS_CPP_INCLUDE;
 extern const	STRING	KYREGDEFS_CPP_INSERT;
@@ -126,7 +129,7 @@ extern const	STRING	KYFLASH;
 // PIC definitions
 extern	const	STRING	KYPIC, KYPIC_BUS, KYPIC_MAX;
 // Interrupt definitions
-extern	const	STRING	KY_INT, KY_WIRE, KY_DOTWIRE, KY_ID;
+extern	const	STRING	KY_INT, KYINTLIST, KY_WIRE, KY_DOTWIRE, KY_ID;
 //
 extern const	STRING	KYSTHIS;
 extern const	STRING	KYTHISDOT;

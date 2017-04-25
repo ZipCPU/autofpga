@@ -45,13 +45,114 @@
 #include "ast.h"
 #include "kveval.h"
 
+MAPT	operator+(MAPT a, MAPT b) {
+	char	*sbuf;
+
+	switch(a.m_typ) {
+	case MAPT_STRING:
+		switch(b.m_typ) {
+		case MAPT_STRING:
+			sbuf = new char[a.u.m_s->length()
+					+b.u.m_s->length()+4];
+			sprintf(sbuf, "%s %s", a.u.m_s->c_str(),
+				b.u.m_s->c_str());
+			a.u.m_s = new STRING(sbuf);
+			delete sbuf;
+			break;
+		case	MAPT_INT:
+			sbuf = new char[a.u.m_s->length()+32];
+			sprintf(sbuf, "%s + %d", a.u.m_s->c_str(), b.u.m_v);
+			a.u.m_s = new STRING(sbuf);
+			delete sbuf;
+			break;
+		case	MAPT_AST:
+			fprintf(stderr, "WARNING: Dont know how to add STRING to AST\n");
+			break;
+		default:
+			fprintf(stderr, "WARNING: Dont know how to add STRING to other than INT or STRING\n");
+		} break;
+	case MAPT_INT:
+		switch(b.m_typ) {
+		case MAPT_STRING:
+			a.m_typ = MAPT_AST;
+			a.u.m_a = new AST_BRANCH(
+				'+', new AST_NUMBER(a.u.m_v),
+				parse_ast(*b.u.m_s));
+			break;
+		case MAPT_INT:
+			// a.m_typ = MAPT_INT;
+			a.u.m_v += b.u.m_v;
+			break;
+		case MAPT_AST:
+			a.m_typ = MAPT_AST;
+			a.u.m_a = new AST_BRANCH(
+				'+', new AST_NUMBER(a.u.m_v),
+				b.u.m_a);
+			break;
+		default:
+			fprintf(stderr, "WARNING: Dont know how to add INT to a MAP\n");
+		} break;
+	case MAPT_AST:
+		switch(b.m_typ) {
+		case MAPT_STRING:
+			a.u.m_a = new AST_BRANCH( '+', a.u.m_a,
+				parse_ast(*b.u.m_s));
+			break;
+		case MAPT_INT:
+			a.m_typ = MAPT_AST;
+			a.u.m_a = new AST_BRANCH('+', a.u.m_a,
+				new AST_NUMBER(b.u.m_v));
+			break;
+		case MAPT_AST:
+			a.u.m_a = new AST_BRANCH('+', a.u.m_a, b.u.m_a);
+			break;
+		default:
+			fprintf(stderr, "WARNING: Dont know how to add AST to a MAP\n");
+		} break;
+	default:
+		fprintf(stderr, "1. DONT KNOW HOW TO ADD TWO MAPS TOGETHER (%d and %d)\n",
+			a.m_typ, b.m_typ);
+		if (a.m_typ == MAPT_MAP)
+			mapdump(*a.u.m_m);
+		if (b.m_typ == MAPT_MAP)
+			mapdump(*b.u.m_m);
+	}
+
+	return a;
+}
+
+MAPT	operator+(MAPT a, const STRING b) {
+	char	*sbuf;
+
+	switch(a.m_typ) {
+	case MAPT_STRING:
+		sbuf = new char[a.u.m_s->length() +b.length()+4];
+		sprintf(sbuf, "%s %s", a.u.m_s->c_str(), b.c_str());
+		a.u.m_s = new STRING(sbuf);
+		delete sbuf;
+		break;
+	case MAPT_INT:
+		a.m_typ = MAPT_AST;
+		a.u.m_a = new AST_BRANCH( '+', new AST_NUMBER(a.u.m_v),
+			parse_ast(b));
+		break;
+	case MAPT_AST:
+		a.u.m_a = new AST_BRANCH( '+', a.u.m_a, parse_ast(b));
+		break;
+	default:
+		fprintf(stderr, "2. DONT KNOW HOW TO ADD A MAP TO A STRING (%d)\n", a.m_typ);
+		mapdump(*a.u.m_m);
+	}
+
+	return a;
+}
 STRING	*trim(const STRING &s) {
 	const char	*a, *b;
 	STRINGP		strp;
 	a = s.c_str();
 	b = s.c_str() + s.length()-1;
 
-	for(; (*a)&&(a<b); a++)
+	for(; (*a)&&(a<=b); a++)
 		if (!isspace(*a))
 			break;
 	for(; (b>a); b--)
@@ -77,122 +178,212 @@ bool	splitkey(const STRING &ky, STRING &mkey, STRING &subky) {
 void	addtomap(MAPDHASH &fm, STRING ky, STRING vl) {
 	STRING	mkey, subky;
 	STRINGP	trimmed;
-	bool	astnode = false;
+	bool	astnode = false, pluskey = false;
+	MAPT	subfm;
+	MAPDHASH::iterator	subloc = fm.end();
 
 	trimmed = trim(ky);
 	if ((*trimmed)[0] == '@') {
-		STRINGP	tmp = new STRING(trimmed->substr(1,trimmed->size()));
+		STRINGP	tmp = new STRING(trimmed->substr(1));
 		delete trimmed;
 		trimmed = tmp;
 	} if ((*trimmed)[0] == '$') {
 		astnode = true;
-		STRINGP	tmp = new STRING(trimmed->substr(1,trimmed->size()));
+		STRINGP	tmp = new STRING(trimmed->substr(1));
+		delete trimmed;
+		trimmed = tmp;
+	} if (((*trimmed)[0] == '+')&&((*trimmed)[1]!='.')) {
+		pluskey = true;
+		STRINGP	tmp = new STRING(trimmed->substr(1));
 		delete trimmed;
 		trimmed = tmp;
 	}
 
 	if (splitkey(*trimmed, mkey, subky)) {
-		MAPT	subfm;
 		MAPDHASH::iterator	subloc = fm.find(mkey);
 		delete	trimmed;
+
+		if ((subloc == fm.end())&&(pluskey))
+			subloc = fm.find(STRING("+")+mkey);
+		else if (subloc == fm.end()) {
+			subloc = fm.find(STRING("+")+mkey);
+			if (subloc != fm.end()) {
+				// REMOVE anything on conlict
+				fm.erase(subloc);
+				subloc = fm.end();
+			}
+		}
+
 		if (subloc == fm.end()) {
 			subfm.m_typ = MAPT_MAP;
 			subfm.u.m_m = new MAPDHASH;
 			fm.insert(KEYVALUE(mkey, subfm ) );
 		} else {
 			subfm = (*subloc).second;
-			if (subfm.m_typ != MAPT_MAP) {
-				fprintf(stderr, "MAP[%s] isnt a map\n", mkey.c_str());
-				return;
-			}
 		}
-		if (astnode)
-			subky = STRING("$") + subky;
-		addtomap(*subfm.u.m_m, subky, vl);
-		return;
+
+		if ((!pluskey)&&(subfm.m_typ != MAPT_MAP)) {
+			return;
+		} else if (subfm.m_typ == MAPT_MAP) {
+			if (pluskey)
+				subky = STRING("+") + subky;
+			if (astnode)
+				subky = STRING("$") + subky;
+			addtomap(*subfm.u.m_m, subky, vl);
+			return;
+		}
+	} else {
+		subloc = fm.find(*trimmed);
+		if ((subloc == fm.end())&&(pluskey))
+			subloc = fm.find(STRING("+")+(*trimmed));
+		if(subloc != fm.end()) {
+			subfm = subloc->second;
+		}
+	}
+
+	if ((astnode)&&(*trimmed != KYEXPR)) {
+		if (subloc  == fm.end()) {
+			MAPDHASH	*node;
+			MAPT		elm;
+
+			elm.m_typ = MAPT_MAP;
+			elm.u.m_m = node = new MAPDHASH;
+			fm.insert(KEYVALUE(*trimmed, elm));
+			addtomap(*node, STRING("$")+STRING((pluskey)?"+":"")+KYEXPR, vl);
+			return;
+		} else if (subfm.m_typ == MAPT_MAP) {
+			addtomap(*subfm.u.m_m, STRING("$")+STRING((pluskey)?"+":"")+KYEXPR, vl);
+			return;
+		}
 	}
 
 	MAPT	elm;
-	if (astnode) {
-		elm.m_typ = MAPT_AST;
-		elm.u.m_a = parse_ast(vl);
-		if (NULL == elm.u.m_a)
-			exit(EXIT_FAILURE);
-		if (elm.u.m_a->isdefined()) {
-			AST *ast = elm.u.m_a;
-			elm.m_typ = MAPT_INT;
-			long	v = ast->eval();
-			elm.u.m_v = (int)v;
-			delete	ast;
+	if (pluskey) {
+		if (subloc == fm.end()) {
+
+			MAPT	elm;
+			if (astnode) {
+				elm.m_typ = MAPT_AST;
+				elm.u.m_a = parse_ast(vl);
+			} else
+				elm.m_typ = MAPT_STRING;
+			fm.insert(KEYVALUE(STRING("+")+(*trimmed), elm));
+		} else {
+			subloc->second = subfm + vl;
 		}
-	} else {
+	} else if (astnode) {
+		if ((*trimmed)!=KYEXPR) {
+			MAPDHASH	*node;
+			elm.m_typ = MAPT_MAP;
+			elm.u.m_m = node = new MAPDHASH;
+			fm.insert(KEYVALUE(*trimmed, elm));
+			addtomap(*node, STRING("$")+STRING((pluskey)?"+":"")+KYEXPR, vl);
+		} else {
+			elm.m_typ = MAPT_AST;
+			elm.u.m_a = parse_ast(vl);
+			if (NULL == elm.u.m_a)
+				exit(EXIT_FAILURE);
+			fm.insert(KEYVALUE(*trimmed, elm ) );
+			if ((elm.u.m_a->isdefined())&&(*trimmed == KYEXPR)) {
+				AST *ast = elm.u.m_a;
+				elm.m_typ = MAPT_INT;
+				elm.u.m_v = (int)ast->eval();
+				fm.insert(KEYVALUE(KYVAL, elm));
+			} delete trimmed;
+			return;
+		}
+	} else if (subloc == fm.end()) {
 		elm.m_typ = MAPT_STRING;
 		elm.u.m_s = new STRING(vl);
+		fm.insert(KEYVALUE(*trimmed, elm ) );
+	} else {
+		subfm.m_typ = MAPT_STRING;
+		subfm.u.m_s = new STRING(vl);
 	}
-	fm.insert(KEYVALUE(*trimmed, elm ) );
 	delete	trimmed;
 }
 
-void	mapdump_aux(MAPDHASH &fm, int offset) {
+void	mapdump_aux(FILE *fp, MAPDHASH &fm, int offset) {
 	MAPDHASH::iterator	kvpair;
 
 	for(kvpair = fm.begin(); kvpair != fm.end(); kvpair++) {
-		printf("%*s%s: ", offset, "", (*kvpair).first.c_str());
+		fprintf(fp, "%*s%s: ", offset, "", (*kvpair).first.c_str());
 		if ((*kvpair).second.m_typ == MAPT_MAP) {
-			printf("\n");
-			mapdump_aux(*(*kvpair).second.u.m_m, offset+1);
+			fprintf(fp, "\n");
+			mapdump_aux(fp, *(*kvpair).second.u.m_m, offset+1);
 		} else if ((*kvpair).second.m_typ == MAPT_INT) {
-			printf("%d\n", (*kvpair).second.u.m_v);
+			fprintf(fp, "%d\n", (*kvpair).second.u.m_v);
 		} else if ((*kvpair).second.m_typ == MAPT_AST) {
 			AST	*ast = kvpair->second.u.m_a;
-			printf("<AST>");
+			fprintf(fp, "<AST>");
 			if (ast->isdefined()) {
-				printf("\tDEFINED and = %08lx\n", ast->eval());
+				fprintf(fp, "\tDEFINED and = %08lx\n", ast->eval());
 			} else
-				printf("\tNot defined\n");
-			ast->dump(offset+4);
+				fprintf(fp, "\tNot defined\n");
+			ast->dump(fp, offset+4);
 		} else { // if ((*kvpair).second.m_typ == MAPT_STRING)
 			STRINGP	s = (*kvpair).second.u.m_s;
 			size_t	pos;
 			if ((pos=s->find("\n")) == STRING::npos) {
-				printf("%s\n", s->c_str());
+				fprintf(fp, "%s\n", s->c_str());
 			} else if (pos == s->length()-1) {
-				printf("%s", s->c_str());
+				fprintf(fp, "%s", s->c_str());
 			} else	{
-				printf("<Multi-line-String>\n");
-				printf("\n\n----------------\n%s\n", s->c_str());
+				fprintf(fp, "<Multi-line-String>\n");
+				fprintf(fp, "\n\n----------------\n%s\n", s->c_str());
 			}
 		}
 	}
 }
 
+void	mapdump(FILE *fp, MAPDHASH &fm) {
+	fprintf(fp, "\n\nDUMPING!!\n\n");
+	mapdump_aux(fp, fm, 0);
+}
+
 void	mapdump(MAPDHASH &fm) {
-	printf("\n\nDUMPING!!\n\n");
-	mapdump_aux(fm, 0);
+	mapdump_aux(stdout, fm, 0);
 }
 
 //
 // Merge two maps, a master and a sub
 //
 void	mergemaps(MAPDHASH &master, MAPDHASH &sub) {
-	MAPDHASH::iterator	kvpair, kvsub;
+	MAPDHASH::iterator	kvmaster, kvsub;
 
-	for(kvpair = sub.begin(); kvpair != sub.end(); kvpair++) {
-		if ((*kvpair).second.m_typ == MAPT_MAP) {
-			kvsub = master.find(kvpair->first);
-			if (kvsub == master.end()) {
+	for(kvsub = sub.begin(); kvsub != sub.end(); kvsub++) {
+		bool	pluskey;
+		pluskey = (kvsub->first.c_str()[0] == '+');
+		if (kvsub->second.m_typ == MAPT_MAP) {
+			kvmaster = master.find(kvsub->first);
+			if (kvmaster == master.end()) {
 				// Not found
-				master.insert(KEYVALUE((*kvpair).first,
-					(*kvpair).second ) );
-			} else if (kvsub->second.m_typ == MAPT_MAP) {
-				mergemaps(*kvsub->second.u.m_m,
-					*kvpair->second.u.m_m);
+				master.insert(KEYVALUE((*kvsub).first,
+					(*kvsub).second ) );
+			} else if (kvmaster->second.m_typ == MAPT_MAP) {
+				mergemaps(*kvmaster->second.u.m_m,
+					*kvsub->second.u.m_m);
 			} else {
 				fprintf(stderr,
 					"NAME CONFLICT!  Files not merged\n");
 			}
+		} else if (pluskey) {
+			// Does the key already exist in the map?
+			if(kvsub->first.length() > 1) {
+				kvmaster = master.find(kvsub->first.substr(1));
+				if (kvmaster == master.end())
+					kvmaster = master.find(kvsub->first);
+			} else
+				kvmaster = master.find(kvsub->first);
+
+
+			if (kvmaster == master.end())
+				// No, this key doesn't exist.  Let's insert it
+				master.insert(KEYVALUE(kvsub->first, kvsub->second));
+			else
+				kvmaster->second = kvmaster->second + kvsub->second;
 		} else
-			master.insert(KEYVALUE(kvpair->first, kvpair->second));
+			master.insert(KEYVALUE(kvsub->first, kvsub->second));
 	}
 }
 
@@ -301,13 +492,14 @@ void	cvtintbykeylist(MAPDHASH &mp, const STRING &kylist) {
 			tok = strtok(NULL, delimiters);
 		}
 	}
-
+/*
 	MAPDHASH::iterator	kvpair;
 	for(kvpair=mp.begin(); kvpair != mp.end(); kvpair++) {
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
 		cvtintbykeylist(kvpair->second, kylist);
 	}
+*/
 }
 
 void	cvtintbykeylist(MAPT &elm, const STRING &kylist) {
@@ -344,19 +536,20 @@ void	cvtint(MAPDHASH &mp, const STRING &sky) {
 }
 
 MAPDHASH::iterator findkey_aux(MAPDHASH &master, const STRING &ky, const STRING &pre) {
+	STRING	mkey, subky;
 	MAPDHASH::iterator	result;
-	size_t	pos;
 
-	// printf("Searching for %s (from %s)\n", ky.c_str(), pre.c_str());
-	if (((pos=ky.find('.')) != STRING::npos)&&(pos != 0)
-			&&(pos < ky.length()-1)) {
-		STRING	mkey = ky.substr(0,pos),
-			subky = ky.substr(pos+1,ky.length()-pos+1);
-		assert(subky.length() > 0);
-
+	if (splitkey(ky, mkey, subky)) {
 		MAPDHASH::iterator	subloc = master.find(mkey);
 		if (subloc == master.end()) {
-			return subloc;
+			// Check any super classes for a definition of this key
+			if ((master.end() != (subloc = master.find(KYPLUSDOT)))
+					&&(subloc->second.m_typ == MAPT_MAP)) {
+				result = findkey_aux(*subloc->second.u.m_m, ky, pre);
+				if (result == subloc->second.u.m_m->end())
+					return master.end();
+				return result;
+			} return subloc;
 		} else {
 			MAPT	subfm;
 			subfm = (*subloc).second;
@@ -380,9 +573,6 @@ MAPDHASH::iterator findkey_aux(MAPDHASH &master, const STRING &ky, const STRING 
 	}
 
 	result = master.find(ky);
-	// if (result != master.end())
-	//	printf("FOUND\n");
-	// else	printf("Not found\n");
 	return	result;
 }
 
@@ -405,7 +595,7 @@ MAPDHASH *getmap(MAPDHASH &master, const STRING &ky) {
 STRINGP getstring(MAPDHASH &m) {
 	MAPDHASH::iterator	r;
 
-	resolve(m);
+	resolve_ast_expressions(m);
 
 	// Can we build this string?
 	r = m.find(KYSTR);
@@ -620,3 +810,43 @@ void	setvalue(MAPDHASH &master, const STRING &ky, int value) {
 		}
 	}
 }
+
+void	flatten_maps(MAPDHASH &node, MAPDHASH &sub) {
+	MAPDHASH::iterator	kvpair, nodepair;
+
+	for(kvpair = sub.begin(); kvpair!=sub.end(); kvpair++) {
+		nodepair = node.find(kvpair->first);
+		if (nodepair == node.end()) {
+			printf("Key not found, %s\n", kvpair->first.c_str());
+			node.insert(KEYVALUE(kvpair->first, kvpair->second));
+		} else if ((nodepair->second.m_typ==MAPT_MAP)&&(kvpair->second.m_typ == MAPT_MAP)) {
+			flatten_maps(*nodepair->second.u.m_m, *kvpair->second.u.m_m);
+		}
+	}
+}
+
+void	flatten_aux(MAPDHASH &master, MAPDHASH &sub) {
+	MAPDHASH::iterator	kvpair, kvsub;
+
+	for(kvpair=sub.begin(); kvpair != sub.end(); kvpair++) {
+		if ((KYPLUSDOT == kvpair->first)
+				&&(kvpair->second.m_typ == MAPT_MAP)) {
+			kvsub = kvpair->second.u.m_m->begin();
+			if ((kvsub == kvpair->second.u.m_m->end())
+					||(kvsub->second.m_typ != MAPT_MAP)) {
+				flatten_maps(sub, *kvpair->second.u.m_m);
+			} else
+				flatten_aux(master, *kvsub->second.u.m_m);
+		} else if (kvpair->first[0] == '/') {
+			STRING	nkey = kvpair->first.substr(1);
+			if (master.find(nkey) == master.end())
+				master.insert(KEYVALUE(nkey, kvpair->second));
+		} else if (kvpair->second.m_typ == MAPT_MAP)
+			flatten_aux(master, *kvpair->second.u.m_m);
+	}
+}
+
+void	flatten(MAPDHASH &master) {
+	flatten_aux(master, master);
+}
+

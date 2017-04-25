@@ -72,16 +72,16 @@ long AST_BRANCH::eval(void) {
 			return lft;
 	}
 }
-bool	AST_BRANCH::define(MAPDHASH &map, MAPDHASH &here) {
+bool	AST_BRANCH::define(MAPSTACK &stack, MAPDHASH &here) {
 	bool	v;
-	v =  m_left->define(map, here);
-	v = m_right->define(map, here) || v;
+	v =  m_left->define(stack, here);
+	v = m_right->define(stack, here) || v;
 	return v;
 }
-void	AST_BRANCH::dump(int offset) {
-	printf("%*s%c\n", offset, "", m_op);
-	 m_left->dump(offset+2);
-	m_right->dump(offset+2);
+void	AST_BRANCH::dump(FILE *fp, int offset) {
+	fprintf(fp, "%*s%c\n", offset, "", m_op);
+	 m_left->dump(fp, offset+2);
+	m_right->dump(fp, offset+2);
 }
 
 bool	AST_SINGLEOP::isdefined(void) {
@@ -92,12 +92,12 @@ long	AST_SINGLEOP::eval(void) {
 	else
 		return (m_val->eval())?0:1;
 }
-bool	AST_SINGLEOP::define(MAPDHASH &map, MAPDHASH &here) {
-	return m_val->define(map, here);
+bool	AST_SINGLEOP::define(MAPSTACK &stack, MAPDHASH &here) {
+	return m_val->define(stack, here);
 }
-void	AST_SINGLEOP::dump(int offset) {
-	printf("%*s%c\n", offset, "", m_op);
-	m_val->dump(offset+2);
+void	AST_SINGLEOP::dump(FILE *fp, int offset) {
+	fprintf(fp, "%*s%c\n", offset, "", m_op);
+	m_val->dump(fp, offset+2);
 }
 bool	AST_TRIOP::isdefined(void) {
 	return (m_cond->isdefined())&&(m_left->isdefined())
@@ -107,49 +107,45 @@ long	AST_TRIOP::eval(void) {
 	return (m_cond->eval())
 		? m_left->eval() : m_right->eval();
 }
-bool	AST_TRIOP::define(MAPDHASH &map, MAPDHASH &here) {
+bool	AST_TRIOP::define(MAPSTACK &stack, MAPDHASH &here) {
 	bool	v = false;
-	v =  (m_cond->define(map, here)) || v;
-	v =  (m_left->define(map, here)) || v;
-	v = (m_right->define(map, here)) || v;
+	v =  (m_cond->define(stack, here)) || v;
+	v =  (m_left->define(stack, here)) || v;
+	v = (m_right->define(stack, here)) || v;
 	return v;
 }
-void	AST_TRIOP::dump(int offset) {
-	printf("%*sTRIPL:\n", offset, "");
-	m_cond->dump(offset+2);
-	m_left->dump(offset+2);
-	m_right->dump(offset+2);
+void	AST_TRIOP::dump(FILE *fp, int offset) {
+	fprintf(fp, "%*sTRIPL:\n", offset, "");
+	m_cond->dump(fp, offset+2);
+	m_left->dump(fp, offset+2);
+	m_right->dump(fp, offset+2);
 }
 
 
 bool	AST_NUMBER::isdefined(void) { return true; }
 long	AST_NUMBER::eval(void) { return m_val; }
-bool	AST_NUMBER::define(MAPDHASH &map, MAPDHASH &here) { return false; }
-void	AST_NUMBER::dump(int offset) {
-	printf("%*s%ld\n", offset, "", m_val);
+bool	AST_NUMBER::define(MAPSTACK &stack, MAPDHASH &here) { return false; }
+void	AST_NUMBER::dump(FILE *fp, int offset) {
+	fprintf(fp, "%*s%ld\n", offset, "", m_val);
 }
 
 
 bool	AST_IDENTIFIER::isdefined(void) { return m_def; }
 long	AST_IDENTIFIER::eval(void) { return m_v; }
-bool	AST_IDENTIFIER::define(MAPDHASH &map, MAPDHASH &here) {
+bool	AST_IDENTIFIER::define(MAPSTACK &stack, MAPDHASH &here) {
 	if (m_def)
 		return false; // No change
-	if (strncmp(m_id.c_str(), KYTHISDOT.c_str(), KYTHISDOT.size())==0) {
-		STRING	tmp = m_id.substr(KYTHISDOT.size(), m_id.size()-KYTHISDOT.size());
-		if (getvalue(here, tmp, m_v)) {
-			m_def = true;
-			return true;	// We now know our value
-		}
-	} else if (getvalue(map, m_id, m_v)) {
+	if (get_named_value(stack, here, m_id, m_v)) {
+		// GOT IT!!!!  We now know our value, so ... set it and
+		// report that things have changed.
 		m_def = true;
-		return true;	// We now know our value
-	} return false;	// Nothing changed, still don't know it
+		return true;	// Things have changed!
+	} return false;	// Nothing changed, we still don't know our value
 }
-void	AST_IDENTIFIER::dump(int offset) {
+void	AST_IDENTIFIER::dump(FILE *fp, int offset) {
 	if (m_def)
-		printf("%*s%s (= %d)\n", offset, "", m_id.c_str(), m_v);
+		fprintf(fp, "%*s%s (= %d)\n", offset, "", m_id.c_str(), m_v);
 	else
-		printf("%*s%s (Undefined)\n", offset, "", m_id.c_str());
+		fprintf(fp, "%*s%s (Undefined)\n", offset, "", m_id.c_str());
 }
 
