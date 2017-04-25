@@ -55,17 +55,18 @@ The goal of AutoFPGA is to be able to run it with a list of peripheral
 definition files, given on the command line, and to thus be able to generate
 (or update?) the various board definition files discussed above:
 
-- sw/rtl/toplevel.v (Done, not tested)
-- sw/rtl/main.v	 (Done, passes Verilator build test)
-- sw/host/regdefs.h (Done, builds with g++)
-- sw/host/regdefs.cpp (Done, builds with g++)
-- sw/zlib/board.h (Done, not tested)
-- sw/zlib/board.ld
-- doc/src/(component name).tex
+- [sw/rtl/toplevel.v](demo-out/toplevel.v)
+- [sw/rtl/main.v](demo-out/main.v))
+- [sw/host/regdefs.h](demo-out/regdefs.h))
+- [sw/host/regdefs.cpp](demo-out/regdefs.cpp))
+- [sw/zlib/board.h](demo-out/board.h))
+- [sw/zlib/board.ld](demo-out/board.ld))
+- design.xdc file (Created by modifying an existing XDC file, it at all)
+- doc/src/(component name).tex (Not started yet)
 
 Specifically, the parser must determine:
-- If any of the peripherals used in this project need to be configured, and if so, what the configuration parameters are and how they need to be set.  For example, the UART baud rate and RTC and GPS clock steps both need to be set based upon the actual clock speed of the master clock.
-- If peripherals have or create interrupts, those need to be found and determined, and (even better) wired up.  To do this, the user may need to specify an interrupt file (for now), specyifying which are connected and how they are connected.
+- If any of the peripherals used in this project need to be configured, and if so, what the configuration parameters are and how they need to be set.  For example, the UART baud rate and RTC and GPS clock steps both need to be set based upon the actual clock speed of the master clock.  Placing [a module](auto-data/clock.txt) within the design that sets up a clock and declares its rate is the current method for accomplishing this.
+- If peripherals have or create interrupts, those need to be found and determined, and (even better) wired up.
 - If the item it is parsing fits into one of the following classes of items:
 	* Full bus masters
 	* (Partial) bus masters, wanting access to one peripheral only
@@ -73,22 +74,23 @@ Specifically, the parser must determine:
 	* Two-clock Peripherals (RTC clock, block RAM, scopes, etc.)
 	* Memory Peripherals
 		* These need a line within the linker script, and they need to define if their memory region, within that linker script, has read, write, or execute permissions
-	* Generic Peripherals (flash, SDRAM, MDIO, etc.)
-- Peripheral files need to be able to describe more than one peripheral.  For example, the GPS file has a GPS-Clock, GPS-TB to measure the performance of the GPS clock, and a WBUART to allow us to read from the GPS and to write to it and so configure it.  Of course ... this also includes a parameter that must be set (baud rate)
+	* Generic Peripherals ([flash](auto-data/flash.txt), SDRAM, [MDIO](auto-data/mdio.txt), etc.)
+- Peripheral files need to be able to describe more than one peripheral.  For example, the [GPS peripheral file](auto-data/gps.txt) has a GPS-Clock, GPS-TB to measure the performance of the GPS clock, and a WBUART to allow us to read from the GPS and to write to it and so configure it.  Of course ... this also includes a parameter that must be set (baud rate) based upon the global clock rate.
 
-Each peripheral may have 3-levels of container descriptions: top (information
-to be added to the toplevel.v file), main (information to be added to a main.v
-file), and sub (in case peripherals get lumped together beneath the main.v file).  Sub is only appropriate if the peripheral might be placed into a sub-container, such as a singleio.v container, or even (should I build one) a doubleio.v container.
+Each peripheral may have 2-levels of container descriptions: top (information
+to be added to the [toplevel.v](demo-out/toplevel.v) file), and main
+(information to be added to a [main.v](demo-out/main.v) file).  Further
+sub--module creation is not (yet) supported by AutoFPGA, and needs to be
+done via the component logic.
 
 ## Classes
 
 Some peripherals might exist at multiple locations within a design.
-For example, the WBUART can be used to create multiple serial ports.
-For now, we don't support classes, but rather
-individual peripheral files, since it's not clear what could stay the
-same.  In other words, MANY entries would need to change to avoid
-variable name contention.  Without solving this problem, we can't
-do classes (YET)
+For example, the WBUART component can be used to create multiple serial ports.
+
+To handle this case, include the WBUART by defining a key
+@INCLUDEFILE=[wbuart.txt](auto-data/wbuart.txt).  This will provide a set of
+keys that the current file can then override (inherit from).
 
 ## Math
 Some peripherals need to be able to perform math on a given value to determine
@@ -97,24 +99,19 @@ The classic examples are the baud rate, which depends upon the clock rate,
 as well as the step size necessary for the RTC and the GPS clocks, both of which
 also depend upon the master clock rate.
 
+This feature is currently fully supported using integer math.
+
 # Status
 
-This project has moved from its bare infancy to an initial demo that not
-only builds for a Nexys Video board, but ... several peripherals are now
-known to work using this approach.  You can see the code this program
-generates in the [demo directory](demo-out/).
-
-As of 20170408, the [main.v](demo-out/main.v),
-[regdefs.h](demo-out/regdefs.h),
-and [regdefs.cpp](demo-out/regdefs.cpp) files now pass not only an initial
-scrub by [Verilator](https://www.veripool.org/wiki/verilator)
-and [GCC](https://gcc.gnu.org), but also via Vivado.  Initial
-[Verilator](https://www.veripool.org/wiki/verilator) simulations are working,
-as the whole appears to be working in hardware as well!
+This project has moved from its bare infancy to an initial demo that is now
+working on a Nexys Video board.  You can see the code this program generates
+in the [demo directory](demo-out/), although you may have to collect the
+actual peripheral code from elsewhere.  (Most of it already exists in the
+[openarty](https://github.com/ZipCPU/openarty) project.)
 
 In detail:
-- Simple bus components ... just work.
-- Components with logic in the toplevel file ... just work as well.
+- Simple bus components work.
+- Components with logic in the topleve work as well.
 - Although it shouldn't have any problems integrating memory components and cores, I have yet to try integrating any [SDRAM](https://github.com/ZipCPU/xulalx25soc/blob/master/rtl/wbsdram.v) or [DDR3 SDRAM](http://opencores.org/project,wbddr3) components.
 - Only one [PC host to wishbone busmaster](auto-data/wbubus.txt) component has been integrated.  Driving the design from either JTAG or Digilent's DEPP interface would require a simple modification to this.
 - Addresses get assigned in three groups, and processed in three groups: components having only one address, components having more addresses but only a single clock delay, and all other components and memories
