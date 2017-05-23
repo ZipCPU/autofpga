@@ -51,7 +51,7 @@ extern "C" int	yywrap() { return 1;}
 %}
 
 %%
-[@]?[$]?[_A-Za-z][._a-zA-Z0-9]*  {
+[@]?[$]?[/.^+]?[_A-Za-z][._a-zA-Z0-9]*  {
 		if (yytext[0] == '@') {
 			if (yytext[1]=='$')
 				yylval.u_id = strdup(yytext+2);
