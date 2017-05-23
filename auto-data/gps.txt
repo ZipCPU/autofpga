@@ -44,18 +44,18 @@
 @PTYPE=DOUBLE
 @ACCESS=GPS_CLOCK
 @$GPS_STEP_EXPONENT=10
-@$GPS_STEP.EXPR=((((1<<60)/@$CLKFREQHZ)>>(@$THIS.GPS_STEP_EXPONENT-4))&0x0fffffff)|((@$THIS.GPS_STEP_EXPONENT&0x0f)<<28)
+@$GPS_STEP=((((1<<60)/@$CLKFREQHZ)>>(@$.GPS_STEP_EXPONENT-4))&0x0fffffff)|((@$.GPS_STEP_EXPONENT&0x0f)<<28)
 @GPS_STEP.FORMAT=32'h%08x
 @MAIN.PORTLIST=
 		// The GPS 1PPS signal port
 		i_gps_pps
 @MAIN.PARAM=
-	localparam [31:0] GPSCLOCK_DEFAULT_STEP = @$THIS.GPS_STEP;
+	localparam [31:0] GPSCLOCK_DEFAULT_STEP = @$.GPS_STEP;
 @MAIN.IODECL=
 	//The GPS Clock
 	input	wire		i_gps_pps;
 @MAIN.DEFNS=
-	wire	gps_pps, ck_pps, gps_led, gps_locked, gps_tracking;
+	wire	gps_pps, gps_led, gps_locked, gps_tracking;
 	wire	[63:0]	gps_now, gps_err, gps_step;
 	wire	[1:0]	gps_dbg_tick;
 @MAIN.INSERT=
@@ -80,6 +80,8 @@
 	assign	gps_led    = 1'b0;
 	assign	gps_locked = 1'b0;
 
+@INT.PPS.WIRE=ck_pps
+@INT.PPS.PIC=syspic
 @REGS.NOTE= // GPS clock tracker, control loop settings registers
 @REGS.N=4
 @REGS.0= 0 R_GPS_ALPHA	ALPHA
@@ -143,6 +145,18 @@ typedef	struct	GPSTB_S	{
 @INT.GPSTX.PIC=  altpic
 @INT.GPSRXF.PIC= syspic
 @INT.GPSTXF.PIC= altpic
+# Clear the other inherited wires, as we don't need them any more.
+@INT.UARTRX.WIRE=
+@INT.UARTTX.WIRE=
+@INT.UARTRXF.WIRE=
+@INT.UARTTXF.WIRE=
+@INT.UARTRX.PIC=
+@INT.UARTTX.PIC=
+@INT.UARTRXF.PIC=
+@INT.UARTTXF.PIC=
+@TOP.PORTLIST=
+		// The GPS-UART
+		i_@$(PREFIX)_rx, o_@$(PREFIX)_tx
 @MAIN.PORTLIST=
 		// The GPS-UART
 		i_@$(PREFIX)_rx, o_@$(PREFIX)_tx

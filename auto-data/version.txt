@@ -49,4 +49,4 @@
 @BDEF.IONAME=io_version
 @BDEF.IOTYPE=unsigned
 @BDEF.OSDEF=_BOARD_HAS_VERSION_ID
-@BDEF.IOTYPE=static volatile @$THIS.BDEF.IOTYPE *const _version = &((@$THIS.BDEF.IOTYPE *)@$THIS.BASE);
+@BDEF.IOTYPE=static volatile @$.BDEF.IOTYPE *const _version = &((@$.BDEF.IOTYPE *)@$.BASE);

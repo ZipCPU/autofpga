@@ -130,9 +130,9 @@ typedef struct  WBUART_S {
 	unsigned	u_rx, u_tx;
 } WBUART;
 
-#endif
+#endif	// WBUART_H
 
 @BDEF.IONAME= _@$PREFIX
 @BDEF.IOTYPE= WBUART
 @BDEF.OSDEF=	_BOARD_HAS_WBUART
-@BDEF.OSVAL=static volatile WBUART *const @$BDEF.IONAME = &((WBUART *)@$.BASE);
+@BDEF.OSVAL=static volatile WBUART *const @$BDEF.IONAME = ((WBUART *)@$.BASE);

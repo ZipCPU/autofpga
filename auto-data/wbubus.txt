@@ -40,7 +40,7 @@
 @ACCESS=WBUBUS_MASTER
 @MTYPE=HOST
 @$BAUDRATE=1000000
-@$SETUP.EXPR=@$CLKFREQHZ / @$THIS.BAUDRATE
+@$SETUP=@$CLKFREQHZ / @$.BAUDRATE
 @SETUP.FORMAT=24'h%x
 @TOP.PORTLIST=
 		// UART/host to wishbone interface
@@ -55,7 +55,7 @@
 	// UART interface
 	//
 	//
-	localparam [23:0] BUSUART = @$THIS.SETUP;	// @$THIS.BAUDRATE baud
+	localparam [23:0] BUSUART = @$.SETUP;	// @$.BAUDRATE baud
 	wire	[7:0]	rx_data, tx_data;
 	wire		rx_break, rx_parity_err, rx_frame_err, rx_stb;
 	wire		tx_stb, tx_busy;
@@ -92,13 +92,13 @@
 	wire	[31:0]	zip_dbg_data;
 `endif
 @$ZIP_ADDRESS_BIT=@$BUS_ADDRESS_WIDTH-1
-@$ZIP_ADDRESS.EXPR=(1<<(@$THIS.ZIP_ADDRESS_BIT))
+@$ZIP_ADDRESS=(1<<(@$THIS.ZIP_ADDRESS_BIT+2))
 @ZIP_ADDRESS.FORMAT= 0x%08x
-@$ZIP_DBGDATA.EXPR=4+@$THIS.ZIP_ADDRESS
+@$ZIP_DBGDATA=4+@$.ZIP_ADDRESS
 @ZIP_DBGDATA.FORMAT= 0x%08x
 @MAIN.INSERT=
 `ifdef	INCLUDE_ZIPCPU
-	assign	wbu_zip_sel   = wbu_addr[@$THIS.ZIP_ADDRESS_BIT];
+	assign	wbu_zip_sel   = wbu_addr[@$.ZIP_ADDRESS_BIT];
 `else
 	assign	wbu_zip_sel   = 1'b0;
 	assign	zip_dbg_ack   = 1'b0;
@@ -122,6 +122,6 @@
 	assign	wbu_sel = 4'hf;
 	assign	wbu_addr = wbu_tmp_addr[(@$BUS_ADDRESS_WIDTH-1):0];
 @REGDEFS.H.DEFNS=
-#define	R_ZIPCTRL	@$THIS.ZIP_ADDRESS
-#define	R_ZIPDATA	@$THIS.ZIP_DBGDATA
+#define	R_ZIPCTRL	@$.ZIP_ADDRESS
+#define	R_ZIPDATA	@$.ZIP_DBGDATA
 #

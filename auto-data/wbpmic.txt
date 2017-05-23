@@ -41,7 +41,7 @@
 @PTYPE=	OTHER
 @ACCESS= MICROPHONE_ACCESS
 @$SAMPLERATE=48000
-@$CLKSPERSAMPLE.EXPR=@$CLKFREQHZ/@$THIS.SAMPLERATE
+@$CLKSPERSAMPLE.EXPR=@$CLKFREQHZ/@$.SAMPLERATE
 @UARTSETUP.FORMAT=20'h%08x
 @INT.MIC.WIRE=pmic_int
 @INT.MIC.PIC=syspic
@@ -52,7 +52,7 @@
 	output	wire		o_mic_csn, o_mic_sck;
 	input	wire		i_mic_din;
 @MAIN.INSERT=
-	wbmic #(.DEFAULT_RELOAD(@$THIS.CLKSPERSAMPLE))
+	wbmic #(.DEFAULT_RELOAD(@$.CLKSPERSAMPLE))
  		microphone(i_clk, 1'b0,
  			wb_cyc, (wb_stb)&&(pmic_sel), wb_we,
 				wb_addr[0], wb_data,
@@ -79,4 +79,4 @@ typedef struct  WBMIC_S {
 @BDEF.IONAME= io_wbmic
 @BDEF.IOTYPE= WBMIC
 @BDEF.OSDEF=	_BOARD_HAS_WBMIC
-@BDEF.OSVAL=static volatile @$THIS.BDEF.IOTYPE *const _wbmic = ((@$THIS.BDEF.IOTYPE *)@$THIS.BASE);
+@BDEF.OSVAL=static volatile @$.BDEF.IOTYPE *const _wbmic = ((@$.BDEF.IOTYPE *)@$.BASE);
