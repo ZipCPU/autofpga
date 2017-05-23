@@ -96,6 +96,52 @@ bool	iskeyline(STRING &s) {
 	return ((s[0] == '@')&&(s[1] != '@'));
 }
 
+MAPDHASH	*genhash(STRING &prefix) {
+	MAPDHASH	*devm;
+	MAPT	elm;
+
+	devm = new MAPDHASH();
+	elm.m_typ = MAPT_STRING;
+	elm.u.m_s = trim(prefix);
+	devm->insert(KEYVALUE(KYPREFIX,elm));
+
+	return devm;
+}
+
+MAPDHASH	*gensubhash(MAPDHASH *top, STRING &prefix) {
+	extern	FILE *gbl_dump;
+	MAPDHASH	*devm = NULL;
+	STRINGP	tmp = trim(prefix);
+
+	// This isn't any old key, this is a
+	// prefix key.  All keys following will
+	// be placed in the hierarchy beneath
+	// this key.
+	MAPDHASH::iterator	kvpair;
+	kvpair = top->find(*tmp);
+	if (tmp->length() <= 0) {
+		fprintf(stderr, "ERR: EMPTY KEY\n");
+		exit(EXIT_FAILURE);
+	} else if (kvpair == top->end()) {
+		STRING	kyp = STRING(*tmp);
+		MAPT	elm;
+
+		devm = genhash(kyp);
+
+		elm.m_typ = MAPT_MAP;
+		elm.u.m_m = devm;
+
+		top->insert(KEYVALUE(kyp,elm));
+	} else if (kvpair->second.m_typ == MAPT_MAP) {
+		fprintf(gbl_dump, "SUBHASH INSERT: HASH %s ALREADY EXISTS\n", tmp->c_str());
+		devm = kvpair->second.u.m_m;
+	} else {
+		fprintf(stderr, "NAME-CONFLICT!! (witin the same file, too!)\n");
+		exit(EXIT_FAILURE);
+	} delete tmp;
+	return devm;
+}
+
 MAPDHASH	*parsefile(FILE *fp, const STRING &search) {
 	STRING	key, value, *ln, prefix;
 	MAPDHASH	*fm = new MAPDHASH, *devm = NULL;
@@ -110,31 +156,10 @@ MAPDHASH	*parsefile(FILE *fp, const STRING &search) {
 			if (key.length()>0) {
 				// A key exists.  Let's store it.
 				if (key == KYPREFIX) {
-					// This isn't any old key, this is a
-					// prefix key.  All keys following will
-					// be placed in the hierarchy beneath
-					// this key.
-					MAPDHASH::iterator	kvpair;
-					kvpair = fm->find(value);
-					if (kvpair == fm->end()) {
-						MAPT	elm;
-						STRINGP	kyp = trim(value);
-
-						prefix = value;
-						devm = new MAPDHASH;
-						elm.m_typ = MAPT_MAP;
-						elm.u.m_m = devm;
-
-						fm->insert(KEYVALUE(STRING(*kyp),elm));
-						elm.m_typ = MAPT_STRING;
-						elm.u.m_s = kyp;
-						devm->insert(KEYVALUE(KYPREFIX,elm));
-					} else if (kvpair->second.m_typ == MAPT_MAP) {
-						devm = kvpair->second.u.m_m;
-					} else {
-						fprintf(stderr, "NAME-CONFLICT!!\n");
-						exit(EXIT_FAILURE);
-					}
+					MAPDHASH	*sub;
+					sub = gensubhash(fm, value);
+					if (sub)
+						devm = sub;
 				}
 
 				{
@@ -203,37 +228,45 @@ MAPDHASH	*parsefile(FILE *fp, const STRING &search) {
 
 		delete ln;
 	} if (key.length()>0) {
-		MAPDHASH	*parent;
-		if (devm)
-			parent = devm;
-		else
-			parent = fm;
-
-		if (key == KYINCLUDEFILE) {
-			MAPDHASH	*submap,
-					*plusmap = NULL;
-			MAPDHASH::iterator subp;
-			submap = parsefile(value.c_str(), search);
-			if (submap != NULL) {
-				subp = parent->find(KYPLUSDOT);
-				if (subp == parent->end()) {
-					MAPT	elm;
-					elm.m_typ = MAPT_MAP;
-					plusmap = new MAPDHASH;
-					elm.u.m_m = plusmap;
-					parent->insert(KEYVALUE(KYPLUSDOT, elm));
-				} else if (subp->second.m_typ != MAPT_MAP) {
-					fprintf(stderr, "ERR: KEY(+) EXISTS, AND ISN\'T A MAP\n");
-					// exit(EXIT_FAILURE);
-					gbl_err++;
-				} else {
-					plusmap = subp->second.u.m_m;
-				} if (plusmap)
-					mergemaps(*plusmap, *submap);
-			}
+		if (key == KYPREFIX) {
+			MAPDHASH	*sub;
+			sub = gensubhash(fm, value);
+			if (sub)
+				devm = sub;
 		} else {
-			addtomap(*parent, key, value);
-			// mapdump(*devm);
+			MAPDHASH	*parent;
+
+			if (devm)
+				parent = devm;
+			else
+				parent = fm;
+
+			if (key == KYINCLUDEFILE) {
+				MAPDHASH	*submap,
+						*plusmap = NULL;
+				MAPDHASH::iterator subp;
+				submap = parsefile(value.c_str(), search);
+				if (submap != NULL) {
+					subp = parent->find(KYPLUSDOT);
+					if (subp == parent->end()) {
+						MAPT	elm;
+						elm.m_typ = MAPT_MAP;
+						plusmap = new MAPDHASH;
+						elm.u.m_m = plusmap;
+						parent->insert(KEYVALUE(KYPLUSDOT, elm));
+					} else if (subp->second.m_typ != MAPT_MAP) {
+						fprintf(stderr, "ERR: KEY(+) EXISTS, AND ISN\'T A MAP\n");
+						// exit(EXIT_FAILURE);
+						gbl_err++;
+					} else {
+						plusmap = subp->second.u.m_m;
+					} if (plusmap)
+						mergemaps(*plusmap, *submap);
+				}
+			} else {
+				addtomap(*parent, key, value);
+				// mapdump(*devm);
+			}
 		}
 	}
 
