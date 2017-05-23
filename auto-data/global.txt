@@ -1,6 +1,7 @@
 #
 @LEGAL=../auto-data/legalgen.txt
 @PROJECT=VideoZip, a ZipCPU SoC supporting video functionality
+@XDC.FILE=nexysv.xdc
 #
 # @KEYS.TRIMLIST is a list of all string keys that need to be trimmed (have
 # spaces removed from either side) before being used
