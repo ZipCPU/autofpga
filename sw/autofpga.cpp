@@ -858,7 +858,7 @@ void assign_addresses(MAPDHASH &info, unsigned first_address = 0x400) {
 	}
 
 	// Assign double-peripheral bus addresses
-	{
+	if (dlist.size() > 1) {
 		if (gbl_dump)
 			fprintf(gbl_dump, "// Assigning addresses to the D-LIST, starting from %08x\n", start_address);
 		unsigned start = 0;
@@ -901,7 +901,11 @@ void assign_addresses(MAPDHASH &info, unsigned first_address = 0x400) {
 		elm.u.m_v = dnaddr;
 		dio_hash->insert(KEYVALUE(KYNADDR, elm));
 		setvalue(*dio_hash, KYREGS_N, 0);
+	} else if (dlist.size() == 1) {
+		dio_hash = dlist[0]->p_phash;
 	}
+
+	fprintf(stderr, "DLIST.SIZE = %ld\n", dlist.size());
 
 	// Assign bus addresses to the more generic peripherals
 	if (gbl_dump) {
@@ -1041,13 +1045,6 @@ void assign_addresses(MAPDHASH &info, unsigned first_address = 0x400) {
 	buildskip_plist(plist, 0x400);
 }
 
-//
-// assign_interrupts
-//
-// Find all the interrup controllers, and then find all the interrupts, and map
-// interrupts to controllers.  Individual interrupt wires may be mapped to
-// multiple interrupt controllers.
-//
 void	assign_int_to_pics(const STRING &iname, MAPDHASH &ihash) {
 	STRINGP	picname;
 	int inum;
@@ -1080,6 +1077,13 @@ void	assign_int_to_pics(const STRING &iname, MAPDHASH &ihash) {
 	} free(cpy);
 }
 
+//
+// assign_interrupts
+//
+// Find all the interrup controllers, and then find all the interrupts, and map
+// interrupts to controllers.  Individual interrupt wires may be mapped to
+// multiple interrupt controllers.
+//
 void	assign_interrupts(MAPDHASH &master) {
 	MAPDHASH::iterator	kvpair, kvint, kvline;
 	MAPDHASH	*submap, *intmap;
@@ -1683,6 +1687,7 @@ void	build_board_h(    MAPDHASH &master, FILE *fp, STRING &fname) {
 			fprintf(fp, "%s\n\n", defns->c_str());
 	}
 
+	fprintf(fp, "#endif\t// BOARD_H\n");
 }
 
 void	build_board_ld(   MAPDHASH &master, FILE *fp, STRING &fname) {
@@ -2362,8 +2367,10 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 	"\t//\n");
 	fprintf(fp, "\n");
 
-	mkselect(fp, master, slist, KYSIO_SEL, "sio_skip");
-	mkselect(fp, master, dlist, KYDIO_SEL, "dio_skip");
+	if (slist.size() > 1)
+		mkselect(fp, master, slist, KYSIO_SEL, "sio_skip");
+	if (dlist.size() > 1)
+		mkselect(fp, master, dlist, KYDIO_SEL, "dio_skip");
 	mkselect(fp, master, plist, STRING(""), "wb_skip");
 
 	if (plist.size()>0) {
@@ -2966,11 +2973,12 @@ int	main(int argc, char **argv) {
 		setstring(master, KYLEGAL, legal);
 	}
 
+	flatten(master);
+
 	// trimbykeylist(master, KYKEYS_TRIMLIST);	
 	cvtintbykeylist(master, KYKEYS_INTLIST);
 
 	reeval(master);
-	flatten(master);
 
 	count_peripherals(master);
 	build_plist(master);
