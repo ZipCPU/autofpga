@@ -507,6 +507,12 @@ void	cvtintbykeylist(MAPT &elm, const STRING &kylist) {
 		cvtintbykeylist(*elm.u.m_m, kylist);
 }
 
+/*
+ * cvtint
+ *
+ * Traverse the map looking for all keys named sky, and convert them to
+ * integer values
+ */
 void	cvtint(MAPDHASH &mp, const STRING &sky) {
 	MAPDHASH::iterator	kvpair;
 	STRING	mkey, subky;
@@ -811,42 +817,110 @@ void	setvalue(MAPDHASH &master, const STRING &ky, int value) {
 	}
 }
 
-void	flatten_maps(MAPDHASH &node, MAPDHASH &sub) {
-	MAPDHASH::iterator	kvpair, nodepair;
+MAPDHASH *copy(MAPDHASH *top) {
+	MAPDHASH	*cp = new MAPDHASH();
+	MAPDHASH::iterator	kvpair;
+	extern FILE *gbl_dump;
 
+	for(kvpair = top->begin(); kvpair != top->end(); kvpair++) {
+		MAPT	elm;
+
+		elm.m_typ = kvpair->second.m_typ;
+		if (kvpair->second.m_typ == MAPT_INT)
+			elm.u.m_v = kvpair->second.u.m_v;
+		else if (kvpair->second.m_typ == MAPT_STRING)
+			elm.u.m_s = new STRING(*kvpair->second.u.m_s);
+		else if (kvpair->second.m_typ == MAPT_MAP)
+			elm.u.m_m = copy(kvpair->second.u.m_m);
+		else if (kvpair->second.m_typ == MAPT_AST)
+			elm.u.m_a = copy(kvpair->second.u.m_a);
+		else {
+			fprintf(gbl_dump, "COPY(MAP)::UNKNOWN TYPE, %d\n", kvpair->second.m_typ);
+			exit(EXIT_FAILURE);
+		}
+		cp->insert(KEYVALUE(kvpair->first, elm));
+	} return cp;
+}
+
+void	flatten_maps(MAPDHASH &node, MAPDHASH &sub, STRING &here) {
+	MAPDHASH::iterator	kvpair, nodepair;
+	extern FILE *gbl_dump;
+
+	fprintf(gbl_dump, "FLATT-MAP\n");
 	for(kvpair = sub.begin(); kvpair!=sub.end(); kvpair++) {
 		nodepair = node.find(kvpair->first);
 		if (nodepair == node.end()) {
-			printf("Key not found, %s\n", kvpair->first.c_str());
-			node.insert(KEYVALUE(kvpair->first, kvpair->second));
+			fprintf(gbl_dump, "Key not found, %s + %s, "
+				"inheriting key\n", here.c_str(),
+				kvpair->first.c_str());
+			MAPT	elm;
+
+			elm.m_typ = kvpair->second.m_typ;
+			if (kvpair->second.m_typ == MAPT_INT) {
+				elm.u.m_v = kvpair->second.u.m_v;
+			} else if (kvpair->second.m_typ == MAPT_STRING) {
+				elm.u.m_s = new STRING(*kvpair->second.u.m_s);
+			} else if (kvpair->second.m_typ == MAPT_MAP) {
+				elm.u.m_m = copy(kvpair->second.u.m_m);
+			} else if (kvpair->second.m_typ == MAPT_AST) {
+				elm.u.m_a = copy(kvpair->second.u.m_a);
+			} else {
+				fprintf(gbl_dump,
+					"FLATTEN(MAP)::UNKNOWN TYPE, %d\n",
+					kvpair->second.m_typ);
+				exit(EXIT_FAILURE);
+			}
+			node.insert(KEYVALUE(kvpair->first, elm));
 		} else if ((nodepair->second.m_typ==MAPT_MAP)&&(kvpair->second.m_typ == MAPT_MAP)) {
-			flatten_maps(*nodepair->second.u.m_m, *kvpair->second.u.m_m);
+			STRING	nxt = here + "." + nodepair->first;
+			fprintf(gbl_dump, "RECURSING TO COPY %s\n", nxt.c_str());
+			flatten_maps(*nodepair->second.u.m_m, *kvpair->second.u.m_m, nxt);
+		} else {
+			STRING	nkey = here + "." + nodepair->first;
+			fprintf(gbl_dump, "IGNORING %s (already exists)\n",
+				nkey.c_str());
 		}
 	}
 }
 
-void	flatten_aux(MAPDHASH &master, MAPDHASH &sub) {
-	MAPDHASH::iterator	kvpair, kvsub;
+void	flatten_aux(MAPDHASH &master, MAPDHASH &sub, STRING &here) {
+	MAPDHASH::iterator	kvpair, kvsub, kvnxt;
+	extern FILE *gbl_dump;
 
 	for(kvpair=sub.begin(); kvpair != sub.end(); kvpair++) {
-		if ((KYPLUSDOT == kvpair->first)
-				&&(kvpair->second.m_typ == MAPT_MAP)) {
-			kvsub = kvpair->second.u.m_m->begin();
-			if ((kvsub == kvpair->second.u.m_m->end())
-					||(kvsub->second.m_typ != MAPT_MAP)) {
-				flatten_maps(sub, *kvpair->second.u.m_m);
-			} else
-				flatten_aux(master, *kvsub->second.u.m_m);
+		if (kvpair->second.m_typ == MAPT_MAP) {
+			STRING	nkey = here + "." + STRING(kvpair->first);
+			fprintf(gbl_dump, "FLATT-AUX: RECURSING ON %s -> %s\n", here.c_str(), kvpair->first.c_str());
+			flatten_aux(master, *kvpair->second.u.m_m, nkey);
+
+			if (kvpair->first == KYPLUSDOT) {
+				fprintf(gbl_dump, "FOUND A PLUS DESCENDANT OF %s\n", here.c_str());
+				kvsub = kvpair->second.u.m_m->begin();
+				kvnxt = kvsub; kvnxt++;
+				assert(kvnxt == kvpair->second.u.m_m->end());
+				if (kvsub->second.m_typ == MAPT_MAP)
+				flatten_maps(sub, *kvsub->second.u.m_m, nkey);
+				else
+				flatten_maps(sub, *kvpair->second.u.m_m, nkey);
+			}
 		} else if (kvpair->first[0] == '/') {
 			STRING	nkey = kvpair->first.substr(1);
-			if (master.find(nkey) == master.end())
+			if (master.find(nkey) == master.end()) {
+				fprintf(gbl_dump, "Inserting %s into %s\n", nkey.c_str(), here.c_str());
 				master.insert(KEYVALUE(nkey, kvpair->second));
-		} else if (kvpair->second.m_typ == MAPT_MAP)
-			flatten_aux(master, *kvpair->second.u.m_m);
+			}
+		}
 	}
 }
 
 void	flatten(MAPDHASH &master) {
-	flatten_aux(master, master);
+	extern FILE *gbl_dump;
+	fprintf(gbl_dump, "PRE-FLATTENING MAP\n");
+	mapdump(gbl_dump, master);
+	fprintf(gbl_dump, "FLATTENING MAP\n");
+	STRING	top= STRING("");
+	flatten_aux(master, master, top);
+	fprintf(gbl_dump, "POST-FLATTENED MAP\n");
+	mapdump(gbl_dump, master);
 }
 
