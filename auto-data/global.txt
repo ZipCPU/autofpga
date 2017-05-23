@@ -40,6 +40,14 @@ unsigned	addrdecode(const char *v) {
 				return bregs[i].m_addr;
 		fprintf(stderr, "Unknown register: %s\n", v);
 		exit(-2);
+#ifdef	R_ZIPCTRL
+	} else if (strcasecmp(v, "CPU")==0) {
+		return R_ZIPCTRL;
+#endif	// R_ZIPCTRL
+#ifdef	R_ZIPDATA
+	} else if (strcasecmp(v, "CPUD")==0) {
+		return R_ZIPDATA;
+#endif	// R_ZIPDATA
 	} else
 		return strtoul(v, NULL, 0);
 }
