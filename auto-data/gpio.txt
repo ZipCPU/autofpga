@@ -49,7 +49,7 @@
 		o_hdmi_in_hpa,	// Hotplug assert
 		o_hdmi_in_txen,
 		io_hdmi_out_cec,
-		i_hdmi_out_hpd, // Hotplug detect
+		i_hdmi_out_hpd_n, // Hotplug detect
 		o_sd_reset, i_sd_cd,
 		i_gps_3df
 @TOP.IODECL=
@@ -58,31 +58,38 @@
 	output	wire	o_hdmi_in_hpa;
 	output	wire	o_hdmi_in_txen;
 	inout	wire	io_hdmi_out_cec;
-	input	wire	i_hdmi_out_hpd;
+	input	wire	i_hdmi_out_hpd_n;
 	input	wire	i_sd_cd;
 	output	wire	o_sd_reset;
 	input	wire	i_gps_3df;
 @TOP.DEFNS=
 	// GPIO declarations.  The two wire busses are just virtual lists of
 	// input (or output) ports.
-	wire	[14:0]	i_gpio, o_gpio;
+	wire	[15:0]	i_gpio, o_gpio;
 	wire		w_hdmi_out_en;
+	wire		w_hdmi_bypass_sda;
+	wire		w_hdmi_bypass_scl;
 @TOP.MAIN=
 		// GPIO wires
 		i_gpio, o_gpio
 @TOP.INSERT=
-	assign	i_gpio = { 10'h0, i_gps_3df, i_hdmi_out_hpd, i_sd_cd, io_hdmi_out_cec, io_hdmi_in_cec };
+	assign	i_gpio = { 11'h0,
+			sysclk_locked, i_gps_3df,
+			!i_hdmi_out_hpd_n, i_sd_cd,
+			io_hdmi_out_cec, io_hdmi_in_cec };
 	assign	io_hdmi_in_cec  = o_gpio[0] ? 1'bz : 1'b0;
 	assign	io_hdmi_out_cec = o_gpio[1] ? 1'bz : 1'b0;
-	assign	o_hdmi_in_txen  = o_gpio[2];
-	assign	o_sd_reset      = o_gpio[3];
-	assign	o_hdmi_in_hpa   = o_gpio[4];	// Hotplug assert
-	assign	w_hdmi_out_en   = o_gpio[5];
+	assign	w_hdmi_bypass_scl=o_gpio[2];
+	assign	w_hdmi_bypass_sda=o_gpio[3];
+	assign	o_hdmi_in_txen  = o_gpio[4];
+	assign	o_hdmi_in_hpa   = o_gpio[5];	// Hotplug assert
+	assign	o_sd_reset      = o_gpio[6];
+	assign	w_hdmi_out_en   = o_gpio[7];
 @MAIN.PORTLIST=
 		// GPIO ports
 		i_gpio, o_gpio
 @MAIN.DEFNS=
-	localparam	NGPI = 15, NGPO=15;
+	localparam	NGPI = 16, NGPO=16;
 	// GPIO ports
 	input		[(NGPI-1):0]	i_gpio;
 	output	wire	[(NGPO-1):0]	o_gpio;
@@ -95,27 +102,53 @@
 	// when any of the inputs changes.  (Sorry, which input isn't (yet)
 	// selectable.)
 	//
-	localparam	INITIAL_GPIO = 15'h03;
+	localparam	INITIAL_GPIO = 16'h0f;
 	wbgpio	#(NGPI, NGPO, INITIAL_GPIO)
 		gpioi(i_clk, 1'b1, (wb_stb)&&(gpio_sel), 1'b1,
 			wb_data, gpio_data, i_gpio, o_gpio, gpio_int);
 @REGS.N=1
 @REGS.0= 0 R_GPIO GPIO GPI GPO
-@BDEF.DEFNS=
+@BDEF.DEFN=
+//
+// GPIO input wires
+//
+#define	GPIO_HDMI_IN_CEC	0x000010000
+#define	GPIO_HDMI_OUT_CEC	0x000020000
 #define	GPIO_SD_DETECTED	0x000040000
-#define	GPIO_HDMI_IN_ENB	0x000000004
-#define	GPIO_HDMI_IN_ENB_SET	0x000400004
-#define	GPIO_HDMI_IN_ENB_CLR	0x000400000
-#define	GPIO_SD_RESET		0x000000008
-#define	GPIO_SD_RESET_SET	0x000080008
-#define	GPIO_SD_RESET_CLR	0x000080000
-#define	GPIO_HDMI_IN_HPA	0x000000010
-#define	GPIO_HDMI_IN_HPA_SET	0x001000010
-#define	GPIO_HDMI_IN_HPA_CLR	0x001000000
-#define	GPIO_HDMI_OUT_EN	0x000000020
-#define	GPIO_HDMI_OUT_EN_SET	0x002000020
-#define	GPIO_HDMI_OUT_EN_CLR	0x002000000
+#define	GPIO_HDMI_OUT_DETECT	0x000080000
+#define	GPIO_GPS_3DF		0x000100000
+#define	GPIO_SYSCLK_LOCKED	0x000200000
+//
+// GPIO output wires
+//
+#define	GPIO_SET(WIRE)	(((WIRE)<<16)|(WIRE))
+#define	GPIO_CLR(WIRE)	 ((WIRE)<<16)
+//
+#define	GPIO_HDMI_IN_CEC_SET	0x000010001
+#define	GPIO_HDMI_IN_CEC_CLR	0x000010000
+#define	GPIO_HDMI_OUT_CEC_SET	0x000020002
+#define	GPIO_HDMI_OUT_CEC_CLR	0x000020000
+#define	GPIO_EDID_SCL		0x000000004
+#define	GPIO_EDID_SDA		0x000000008
+//
+#define	GPIO_HDMI_IN_ENB	0x000000010
+#define	GPIO_HDMI_IN_HPA	0x000000020
+#define	GPIO_SD_RESET		0x000000040
+#define	GPIO_HDMI_OUT_EN	0x000000080
+//
+#define	GPIO_EDID_SCL_SET	GPIO_SET(GPIO_EDID_SCL)
+#define	GPIO_EDID_SCL_CLR	GPIO_CLR(GPIO_EDID_SCL)
+#define	GPIO_EDID_SDA_SET	GPIO_SET(GPIO_EDID_SDA)
+#define	GPIO_EDID_SDA_CLR	GPIO_CLR(GPIO_EDID_SDA)
+#define	GPIO_HDMI_IN_ENB_SET	GPIO_SET(GPIO_HDMI_IN_ENB)
+#define	GPIO_HDMI_IN_ENB_CLR	GPIO_CLR(GPIO_HDMI_IN_ENB)
+#define	GPIO_HDMI_IN_HPA_SET	GPIO_SET(GPIO_HDMI_IN_HPA)
+#define	GPIO_HDMI_IN_HPA_CLR	GPIO_CLR(GPIO_HDMI_IN_HPA)
+#define	GPIO_SD_RESET_SET	GPIO_SET(GPIO_SD_RESET)
+#define	GPIO_SD_RESET_CLR	GPIO_CLR(GPIO_SD_RESET)
+#define	GPIO_HDMI_OUT_EN_SET	GPIO_SET(GPIO_HDMI_OUT_EN)
+#define	GPIO_HDMI_OUT_EN_CLR	GPIO_CLR(GPIO_HDMI_OUT_EN)
 @BDEF.IONAME=	i_gpio
 @BDEF.IOTYPE=	unsigned
 @BDEF.OSDEF=	_BOARD_HAS_GPIO
-@BDEF.OSVAL=	static volatile @$THIS.BDEF.IOTYPE *const _gpio = ((@$THIS.BDEF.IOTYPE *)@$THIS.BASE);
+@BDEF.OSVAL=	static volatile @$.BDEF.IOTYPE *const _gpio = ((@$.BDEF.IOTYPE *)@$.BASE);
