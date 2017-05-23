@@ -84,6 +84,10 @@ void	AST_BRANCH::dump(FILE *fp, int offset) {
 	m_right->dump(fp, offset+2);
 }
 
+AST	*AST_BRANCH::copy(void) {
+	return new AST_BRANCH(m_op, ::copy(m_left), ::copy(m_right));
+}
+
 bool	AST_SINGLEOP::isdefined(void) {
 		return (m_val->isdefined()); }
 long	AST_SINGLEOP::eval(void) {
@@ -99,6 +103,11 @@ void	AST_SINGLEOP::dump(FILE *fp, int offset) {
 	fprintf(fp, "%*s%c\n", offset, "", m_op);
 	m_val->dump(fp, offset+2);
 }
+
+AST	*AST_SINGLEOP::copy(void) {
+	return new AST_SINGLEOP(m_op, ::copy(m_val));
+}
+
 bool	AST_TRIOP::isdefined(void) {
 	return (m_cond->isdefined())&&(m_left->isdefined())
 			&&(m_right->isdefined());
@@ -120,6 +129,9 @@ void	AST_TRIOP::dump(FILE *fp, int offset) {
 	m_left->dump(fp, offset+2);
 	m_right->dump(fp, offset+2);
 }
+AST	*AST_TRIOP::copy(void) {
+	return new AST_TRIOP(::copy(m_cond), ::copy(m_left), ::copy(m_right));
+}
 
 
 bool	AST_NUMBER::isdefined(void) { return true; }
@@ -127,6 +139,9 @@ long	AST_NUMBER::eval(void) { return m_val; }
 bool	AST_NUMBER::define(MAPSTACK &stack, MAPDHASH &here) { return false; }
 void	AST_NUMBER::dump(FILE *fp, int offset) {
 	fprintf(fp, "%*s%ld\n", offset, "", m_val);
+}
+AST	*AST_NUMBER::copy(void) {
+	return new AST_NUMBER(m_val);
 }
 
 
@@ -148,4 +163,6 @@ void	AST_IDENTIFIER::dump(FILE *fp, int offset) {
 	else
 		fprintf(fp, "%*s%s (Undefined)\n", offset, "", m_id.c_str());
 }
-
+AST	*AST_IDENTIFIER::copy(void) {
+	return new AST_IDENTIFIER(m_id.c_str());
+}
