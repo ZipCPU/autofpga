@@ -39,7 +39,7 @@
 @NADDR=4
 @PTYPE=DOUBLE
 @ACCESS=RTC_ACCESS
-@$CLKSTEP.EXPR=((1<<48)/@$CLKFREQHZ)
+@$CLKSTEP=((1<<48)/@$CLKFREQHZ)
 @CLKSTEP.FORMAT=32'h%08x
 @INT.RTC.WIRE=rtc_int
 @INT.RTC.PIC=altpic
@@ -48,7 +48,7 @@
 	wire	rtc_ppd, rtc_pps;
 	reg	r_rtc_ack;
 @MAIN.INSERT=
-	rtcgps	#(@$THIS.CLKSTEP) thertc(i_clk,
+	rtcgps	#(@$.CLKSTEP) thertc(i_clk,
 		wb_cyc, (wb_stb)&&(rtc_sel), wb_we, wb_addr[1:0], wb_data,
 		rtc_data, rtc_int, rtc_ppd,
 		gps_tracking, ck_pps, gps_step[47:16], rtc_pps);
@@ -71,6 +71,6 @@ typedef	struct	RTCLIGHT_S	{
 @BDEF.IONAME=io_rtc
 @BDEF.IOTYPE=RTCLIGHT
 @BDEF.OSDEF=_BOARD_HAS_RTCLIGHT
-@BDEF.OSVAL=static volatile @$THIS.BDEF.IOTYPE *const _rtc = ((@$THIS.BDEF.IOTYPE *)@$THIS.BASE);
+@BDEF.OSVAL=static volatile @$.BDEF.IOTYPE *const _rtc = ((@$.BDEF.IOTYPE *)@$.BASE);
 #
 #
