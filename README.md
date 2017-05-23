@@ -39,7 +39,11 @@ the [ZipCPU board definition file](https://github.com/ZipCPU/openarty/blob/maste
 the [linker script](https://github.com/ZipCPU/openarty/blob/master/sw/board/arty.ld) for the board,
 and even the [LaTeX specification](https://github.com/ZipCPU/openarty/blob/master/doc/src/spec.tex) for the board.
 Creating and updating all of these files by hand anytime I create a new board
-file can get tedious.
+file can get tedious.  Further, every time a board is reconfigured, the
+constraints file, whether
+[XDC](https://github.com/ZipCPU/openarty/blob/master/arty.xdc) or
+[UCF](https://github.com/ZipCPU/xulalx25soc/blob/master/xula.ucf) file, needs
+to be updated to match the current constraints.
 
 Solving this problem is the purpose of autofpga.
 
@@ -61,7 +65,7 @@ definition files, given on the command line, and to thus be able to generate
 - [sw/host/regdefs.cpp](demo-out/regdefs.cpp))
 - [sw/zlib/board.h](demo-out/board.h))
 - [sw/zlib/board.ld](demo-out/board.ld))
-- design.xdc file (Created by modifying an existing XDC file, it at all)
+- [build.xdc](demo-out/build.xdc)) (Created by modifying an existing XDC file)
 - doc/src/(component name).tex (Not started yet)
 
 Specifically, the parser must determine:
@@ -111,14 +115,14 @@ actual peripheral code from elsewhere.  (Most of it already exists in the
 
 In detail:
 - Simple bus components work.
-- Components with logic in the topleve work as well.
+- Components with logic in the toplevel work nicely as well.
 - Although it shouldn't have any problems integrating memory components and cores, I have yet to try integrating any [SDRAM](https://github.com/ZipCPU/xulalx25soc/blob/master/rtl/wbsdram.v) or [DDR3 SDRAM](http://opencores.org/project,wbddr3) components.
 - Only one [PC host to wishbone busmaster](auto-data/wbubus.txt) component has been integrated.  Driving the design from either JTAG or Digilent's DEPP interface would require a simple modification to this.
 - Addresses get assigned in three groups, and processed in three groups: components having only one address, components having more addresses but only a single clock delay, and all other components and memories
 - Interrupts get assigned to a named controller, and then C++ header files can be updated to reflect that
 - A simple mathematical expression evaluator exists, allowing simple math expressions and print formats.  This makes it possible to set a global clock frequency value, and to then set baud rates and other clock dividers from it.
-- The auto builder does nothing to create the master C++ Verilator simulation file, or any RTL based Makefiles---although updating it to provide some of these details wouldn't be very hard at all.
-- One type of address building is supported.  I'd like to be able to support others, but this is sufficient for my first project.
+- The auto builder does nothing to create the master C++ Verilator simulation file, or any RTL based Makefiles (yet)---although updating it to provide some of these details wouldn't be very hard at all.
+- Only one type of address building is supported.  I'd like to be able to support others, but so far this has been sufficient for my first project.
 - AutoFPGA now builds a [ZipCPU Linker Script](demo-out/board.ld) for the project
 - The LaTeX specification table building isn't there ... yet.
 
@@ -136,7 +140,7 @@ a [GPS UART and PPS-driven internal clock](auto-data/gps.txt),
 a [Real-Time (GPS driven) Clock](auto-data/rtcgps.txt),
 a [PS/2 Mouse](auto-data/wbmouse.txt),
 an [OLED component](auto-data/wboledbw.txt),
-and more.
+and more.  (I'm currently working on the SDRAM ...)
 Many of these component cores exist and have their own repositories elsewhere.
 For example, the wishbone UART core may be found
 [here](https://github.com/ZipCPU/wbuart32).
