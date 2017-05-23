@@ -36,58 +36,19 @@
 ################################################################################
 ##
 ##
-@PREFIX=clkhdmiin
-@NADDR=	1
-@PTYPE=	SINGLE
-@SINGLE.INPUTS=	ck_pps i_hdmi_in_clk
-@MAIN.DEFNS=
-	reg	r_clkhdmiin_ack;
-@MAIN.INSERT=
-	clkcounter clkhmdiin(i_clk, ck_pps, i_hdmi_in_clk, clkhdmiin_data);
-	always @(posedge i_clk)
-		r_clkhdmiin_ack <= (wb_stb)&&(clkhdmiin_sel);
-	assign	clkhdmiin_ack   = r_clkhdmiin_ack;
-	assign	clkhdmiin_stall = 1'b0;
-@REGS.NOTE = // HDMI-IN Clock Counter (measures clock speed)
-@REGS.N = 1
-@REGS.0 = 0 R_HDMI_INCLK	 HCLKIN
-@BDEF.IONAME= io_clkhdmiin
-@BDEF.IOTYPE= unsigned
-#
-#
-@PREFIX=clkhdmiout
-@NADDR=	1
-@PTYPE=	SINGLE
-@SINGLE.INPUTS=	ck_pps i_hdmi_out_clk
-@MAIN.DEFNS=
-	reg	r_clkhdmiout_ack;
-@MAIN.INSERT=
-	clkcounter clkhmdiout(i_clk, ck_pps, i_hdmi_out_clk, clkhdmiout_data);
-	always @(posedge i_clk)
-		r_clkhdmiout_ack <= (wb_stb)&&(clkhdmiout_sel);
-	assign	clkhdmiout_ack   = r_clkhdmiout_ack;
-	assign	clkhdmiout_stall = 1'b0;
-@REGS.NOTE = // HDMI-OUT Clock Counter (measures clock speed)
-@REGS.N = 1
-@REGS.0 = 0 R_HDMI_OUTCLK	 HCLKOUT
-@BDEF.IONAME= io_clkhdmiout
-@BDEF.IOTYPE= unsigned
-#
-#
-#
-#
 @PREFIX=sysclk
 @NADDR=	1
 @PTYPE=	SINGLE
-@SINGLE.INPUTS=	ck_pps
+@TSTCLK=i_clk
+# @SINGLE.INPUTS=	ck_pps
 @MAIN.DEFNS=
-	reg	r_sysclk_ack;
+	reg	r_@$(PREFIX)_ack;
 @MAIN.INSERT=
-	clkcounter sysclkctr(i_clk, ck_pps, i_clk, sysclk_data);
+	clkcounter sysclkctr(i_clk, ck_pps, i_clk, @$(PREFIX)_data);
 	always @(posedge i_clk)
-		r_sysclk_ack <= (wb_stb)&&(sysclk_sel);
-	assign	sysclk_ack   = r_sysclk_ack;
-	assign	sysclk_stall = 1'b0;
+		r_@$(PREFIX)_ack <= (wb_stb)&&(@$(PREFIX)_sel);
+	assign	@$(PREFIX)_ack   = r_@$(PREFIX)_ack;
+	assign	@$(PREFIX)_stall = 1'b0;
 @REGS.NOTE = // SYSCLK Clock Counter (measures clock speed)
 @REGS.N = 1
 @REGS.0 = 0 R_SYSCLK SYSCLK
