@@ -126,6 +126,11 @@ extern const	STRING	KYLD_NAME;
 extern const	STRING	KYLD_PERM;
 extern const	STRING	KYLD_DEFNS;
 extern const	STRING	KYFLASH;
+// XDC/UCF definitions
+extern	const	STRING	KYXDC_FILE;
+extern	const	STRING	KYXDC_INSERT;
+extern	const	STRING	KYUCF_FILE;
+extern	const	STRING	KYUCF_INSERT;
 // PIC definitions
 extern	const	STRING	KYPIC, KYPIC_BUS, KYPIC_MAX;
 // Interrupt definitions

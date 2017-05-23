@@ -1114,7 +1114,7 @@ void	assign_interrupts(MAPDHASH &master) {
 		}
 
 		// Now, let's look to see if it has a list of interrupts
-		if (NULL != (sintlist = getstring(*kvint->second.u.m_m,
+		if (NULL != (sintlist = getstring(kvint->second,
 					KYINTLIST))) {
 			STRING	scpy = *sintlist;
 			char	*tok;
@@ -1612,7 +1612,7 @@ void	build_board_h(    MAPDHASH &master, FILE *fp, STRING &fname) {
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
-		defns = getstring(*kvpair->second.u.m_m, KYBDEF_INCLUDE);
+		defns = getstring(kvpair->second, KYBDEF_INCLUDE);
 		if (defns)
 			fprintf(fp, "%s\n\n", defns->c_str());
 	}
@@ -1620,7 +1620,7 @@ void	build_board_h(    MAPDHASH &master, FILE *fp, STRING &fname) {
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
-		defns = getstring(*kvpair->second.u.m_m, KYBDEF_DEFN);
+		defns = getstring(kvpair->second, KYBDEF_DEFN);
 		if (defns)
 			fprintf(fp, "%s\n\n", defns->c_str());
 	}
@@ -1628,7 +1628,7 @@ void	build_board_h(    MAPDHASH &master, FILE *fp, STRING &fname) {
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
-		defns = getstring(*kvpair->second.u.m_m, KYBDEF_INSERT);
+		defns = getstring(kvpair->second, KYBDEF_INSERT);
 		if (defns)
 			fprintf(fp, "%s\n\n", defns->c_str());
 	}
@@ -2858,6 +2858,30 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 
 }
 
+STRINGP	remove_comments(STRINGP s) {
+	STRINGP	r;
+	int	si, di;	// Source and destination indices
+
+	r = new STRING(*s);
+	for(si=0, di=0; (*s)[si]; si++) {
+		if (((*s)[si] == '/')&&((*s)[si+1])&&((*s)[si+1] == '/')) {
+			// Comment to the end of the line
+			si += 2;
+			while(((*s)[si])&&((*s)[si] != '\r')&&((*s)[si] != '\n'))
+				si++;
+		} else if (((*s)[si] == '/')&&((*s)[si+1])&&((*s)[si+1] == '*')) {
+			si += 2;
+			// Go until the end of a block comment
+			while(((*s)[si])&&((*s)[si] != '*')&&((!(*s)[si+1])||((*s)[si+1]!='/')))
+				si++;
+			si += 1;
+		} else
+			(*r)[di++] = (*s)[si];
+	} (*r)[di] = '\0';
+
+	return r;
+}
+
 FILE	*open_in(MAPDHASH &info, const STRING &fname) {
 	static	const	char	delimiters[] = " \t\n:,";
 	STRINGP	path = getstring(info, KYPATH);
@@ -2877,8 +2901,252 @@ FILE	*open_in(MAPDHASH &info, const STRING &fname) {
 			}
 			tok = strtok(NULL, delimiters);
 		}
-	} return fopen(fname.c_str(), "r");
+	}
+	return fopen(fname.c_str(), "r");
 }
+
+
+typedef	std::vector<STRINGP>	PORTLIST;
+void	get_portlist(MAPDHASH &master, PORTLIST &ports) {
+	MAPDHASH::iterator	kvpair;
+	STRINGP			str, stripped;
+	char			*pptr;
+
+	for(kvpair = master.begin(); kvpair != master.end(); kvpair++) {
+		const	char	*DELIMITERS = ", \t\n";
+		if (kvpair->second.m_typ != MAPT_MAP)
+			continue;
+		str = getstring(kvpair->second, KYTOP_PORTLIST);
+		if (str == NULL)
+			str = getstring(kvpair->second, KYMAIN_PORTLIST);
+		if (str == NULL)
+			continue;
+		stripped = remove_comments(str);
+
+		pptr = strtok((char *)stripped->c_str(), DELIMITERS);
+		while(pptr) {
+			ports.push_back(new STRING(pptr));
+			if (gbl_dump) fprintf(gbl_dump, "\t%s\n", pptr);
+			pptr = strtok(NULL, DELIMITERS);
+		} delete stripped;
+	}
+}
+
+void	build_xdc(MAPDHASH &master, FILE *fp, STRING &fname) {
+	MAPDHASH::iterator	kvpair;
+	STRINGP			str;
+	PORTLIST		ports;
+	FILE			*fpsrc;
+	char	line[512];
+
+	if (gbl_dump) {
+		fprintf(gbl_dump, "\n\nBUILD-XDC\nLooking for ports:\n");
+		fflush(gbl_dump);
+	}
+
+	get_portlist(master, ports);
+
+	str = getstring(master, KYXDC_FILE);
+	fpsrc = open_in(master, *str);
+
+	if (!fpsrc) {
+		fprintf(stderr, "ERR: Could not find or open %s\n", str->c_str());
+		exit(EXIT_FAILURE);
+	}
+
+	while(fgets(line, sizeof(line), fpsrc)) {
+		const char	*GET_PORTS_KEY = "get_ports",
+				*SET_PROPERTY_KEY = "set_property";
+		const	char	*cptr;
+
+		STRINGP	tmp = trim(STRING(line));
+		strcpy(line, tmp->c_str());
+		delete	tmp;
+
+
+		// Ignore any lines that don't begin with #,
+		// Ignore any lines that start with two ##'s,
+		// Ignore any lines that don't have set_property within them
+		if ((line[0] != '#')||(line[1] == '#')
+			||(NULL == (cptr= strstr(line, SET_PROPERTY_KEY)))) {
+			fprintf(fp, "%s\n", line);
+			continue;
+		}
+
+		if (NULL != (cptr = strstr(cptr, GET_PORTS_KEY))) {
+			bool	found = false;
+
+			cptr += strlen(GET_PORTS_KEY);
+			while((*cptr)&&(*cptr != '{')&&(isspace(*cptr)))
+				cptr++;
+			if (*cptr == '{')
+				cptr++;
+			if (!(*cptr)) {
+				fprintf(fp, "%s\n", line);
+				continue;
+			}
+
+			while((*cptr)&&(isspace(*cptr)))
+				cptr++;
+
+			char		*ptr, *name;
+			name = strdup(cptr);
+			ptr = name;
+			while((*ptr)
+				&&(*ptr != '[')
+				&&(*ptr != '}')
+				&&(*ptr != ']')
+				&&(!isspace(*ptr)))
+				ptr++;
+			*ptr = '\0';
+
+			if (gbl_dump)
+				fprintf(gbl_dump, "Found XDC port: %s\n", name);
+
+			// Now, let's check to see if this is in our set
+			for(unsigned k=0; k<ports.size(); k++) {
+				if (strcmp(ports[k]->c_str(), name)==0) {
+					found = true;
+					break;
+				}
+			} free(name);
+
+			if (found) {
+				int start = 0;
+				while((line[start])&&(
+						(line[start]=='#')
+						||(isspace(line[start]))))
+					start++;
+				fprintf(fp, "%s\n", &line[start]);
+			} else
+				fprintf(fp, "%s\n", line);
+		} else
+			fprintf(fp, "%s\n", line);
+	}
+
+	fclose(fpsrc);
+
+	fprintf(fp, "\n## Adding in any XDC_INSERT tags\n\n");
+	for(kvpair = master.begin(); kvpair != master.end(); kvpair++) {
+		if (kvpair->second.m_typ != MAPT_MAP)
+			continue;
+		str = getstring(kvpair->second, KYXDC_INSERT);
+		if (NULL == str)
+			continue;
+
+		fprintf(fp, "## From %s\n%s", kvpair->first.c_str(),
+			kvpair->second.u.m_s->c_str());
+	}	
+	str = getstring(master, KYXDC_INSERT);
+	if (NULL != str) {
+		fprintf(fp, "## From the global level\n%s",
+			kvpair->second.u.m_s->c_str());
+	}
+}
+
+
+void	build_ucf(MAPDHASH &master, FILE *fp, STRING &fname) {
+	MAPDHASH::iterator	kvpair;
+	STRINGP			str;
+	FILE			*fpsrc;
+	PORTLIST		ports;
+	char	line[512];
+
+	if (gbl_dump) {
+		fprintf(gbl_dump, "\n\nBUILD-UCF\nLooking for ports:\n");
+		fflush(gbl_dump);
+	}
+
+	get_portlist(master, ports);
+
+	str = getstring(master, KYUCF_FILE);
+	fpsrc = open_in(master, *str);
+
+	if (!fpsrc) {
+		fprintf(stderr, "ERR: Could not find or open %s\n", str->c_str());
+		exit(EXIT_FAILURE);
+	}
+
+	while(fgets(line, sizeof(line), fpsrc)) {
+		const char	*NET_KEY = "NET";
+		const char	*cptr;
+
+		if ((line[0] == '#')&&(cptr = strstr(line, NET_KEY))) {
+			bool	found = false;
+
+
+			cptr += strlen(NET_KEY);
+			if (!isspace(*cptr)) {
+				fprintf(fp, "%s", line);
+				continue;
+			}
+
+			// Skip white space
+			while((*cptr)&&(isspace(*cptr)))
+				cptr++;
+
+			// On a broken file, just continue
+			if (!(*cptr)) {
+				fprintf(fp, "%s", line);
+				continue;
+			}
+
+
+			char	*ptr, *name;
+			name = strdup(cptr+1);
+
+			ptr = name;
+			while((*ptr)&&(!isspace(*ptr))&&(*ptr != ';'))
+				ptr++;
+			*ptr = '\0';
+
+			if (gbl_dump) {
+				fprintf(gbl_dump, "Found UCF port: %s", name);
+				fflush(gbl_dump);
+			}
+
+			// Now, let's check to see if this is in our set
+			for(unsigned k=0; k<ports.size(); k++) {
+				if (strcmp(ports[k]->c_str(), name)==0) {
+					found = true;
+					break;
+				}
+			} free(name);
+
+			if (found) {
+				unsigned start = 0;
+				while((line[start])&&(
+						(line[start]=='#')
+						||(isspace(line[start]))))
+					start++;
+				fprintf(fp, "%s", &line[start]);
+			} else
+				fprintf(fp, "%s", line);
+		} else
+			fprintf(fp, "%s", line);
+	}
+
+	fclose(fpsrc);
+
+
+	fprintf(fp, "\n## Adding in any UCF_INSERT tags\n\n");
+	for(kvpair = master.begin(); kvpair != master.end(); kvpair++) {
+		if (kvpair->second.m_typ != MAPT_MAP)
+			continue;
+		str = getstring(kvpair->second, KYUCF_INSERT);
+		if (str == NULL)
+			continue;
+
+		fprintf(fp, "## From %s\n%s", kvpair->first.c_str(),
+			kvpair->second.u.m_s->c_str());
+	}	
+	str = getstring(master, KYUCF_INSERT);
+	if (NULL != str) {
+		fprintf(fp, "## From the global level\n%s",
+			kvpair->second.u.m_s->c_str());
+	}
+}
+
 
 int	main(int argc, char **argv) {
 	int		argn, nhash = 0;
@@ -3014,6 +3282,19 @@ int	main(int argc, char **argv) {
 	str = subd->c_str(); str += "/main.v";
 	fp = fopen(str.c_str(), "w");
 	if (fp) { build_main_v(  master, fp, str); fclose(fp); }
+
+	if (NULL != getstring(master, KYXDC_FILE)) {
+		str = subd->c_str(); str += "/build.xdc";
+		fp = fopen(str.c_str(), "w");
+		if (fp) { build_xdc(  master, fp, str); fclose(fp); }
+	}
+
+	if (NULL != getstring(master, KYUCF_FILE)) {
+		str = subd->c_str(); str += "/build.ucf";
+		fp = fopen(str.c_str(), "w");
+		if (fp) { build_ucf(  master, fp, str); fclose(fp); }
+	}
+
 
 	if (0 != gbl_err)
 		fprintf(stderr, "ERR: Errors present\n");

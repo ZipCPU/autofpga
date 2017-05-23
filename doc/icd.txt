@@ -1,34 +1,46 @@
-AutoFPGA does all of its work based upon KEY/VALUE pairs.  
+AutoFPGA does all of its work based upon KEY/VALUE pairs.  Key/value pairs
+are organized into a hierarchical, but unordered, structure which is then
+referenced by the logic that follows.  The values themselves are either strings
+or numbers.
 
-AutoFPGA document lines starting with @ specify a key.  Lines starting with a
-@$ specify an integer valued expression.  The key is given by the string
+Lines defining keys may begin as:
+@KEY=	Defining a given key
+@$KEY=	Defines a numeric key value that may need to be evaluated
+@KEY+=	Concatenates the following onto the pre-existing string key.  If the
+	key does not (yet) exist, it is created and initialized to this value.
+@/KEY=	References a global key
+@/KEY+=	Concatenates onto a global key
+
+
+Lines not defining keys are either comment lines (lines beginning with either
+## or # and a space), or lines appended to the value of the last key.
+
+AutoFPGA document lines starting with @ specify a key name.  Lines starting with
+a @$ specify an integer valued expression.  The key is given by the string
 between the @ (or @$) and the ='s (minus any white space at the end, white
 space at the beginning is not allowed).  KEYs are case sensitive.  By
 convention, KEYs are in all caps, although keys with lower case letters are
-allowed.  For discussion, the @ will be placed back in front of the key to
-identify the item as a key.
+allowed and used as names of particular file components.  For the discussion 
+below, any keys will be identified by prefixing the key name with an @ sign.
 
-Comments.  Lines beginning with either two hash marks, ##, or a hash followed
-by a space, as in "# ", are comment lines.  Other lines beginning with "#" are
-not comments, neither do lines containing "#" in any location other than the
-first location contain comments.
+Comments.  Lines beginning with either two hash marks, ##, or a single hash
+followed by a space, as in "# ", are comment lines.  Other lines beginning
+with "#", such as #define, are not comments, neither do lines containing "#"
+in any location other than the first location contain comments.
 
 KEYs are by convention all capitals.  They are also hierarchical.  Hence,
 a key BDEFS.IONAME references the BDEFS set of key-value pairs, with the keyname
 IONAME within that set.
 
-Every device or master *must* contain a @PREFIX key.  This key will be used as a
-unique string to identify the device.  As parsing takes place, all of the keys
-for a given device will be placed into a key-value set prefixed by the
+Every device or bus master *must* contain a @PREFIX key.  This key will be used
+as a unique string to identify the device.  As parsing takes place, all of the
+keys for a given device will be placed into a key-value set prefixed by the
 @PREFIX key.  Hence, for a device with name @PREFIX=uart, a definition such as
-@NADDR=4 creates a key named @uart.NADDR and gives it the value 4.  The key
-@THIS references the first key-value map file above it having a @PREFIX type. 
-Hence, @THIS.BASE might reference @uart.BASE, the base address of the UART
-device.
+@NADDR=4 creates a key named @uart.NADDR and gives it the value 4. 
 
-Keys may be defined prior to the first @PREFIX key.  These are global keys,
-and are not given any @PREFIX in front of them prior to being inserted into the
-master key-value mapping.
+Keys defined prior to the first @PREFIX key are global keys, and are not given
+any @PREFIX in front of them prior to being inserted into the master key-value
+mapping.
 
 Key definitions beginning with @$ are integer expressions that will be evaluated
 before use.
@@ -131,6 +143,18 @@ BDEF.OSVAL
 // defaults to static volatile @THIS.BDEF.IOTYPE *const @THIS.BDEF.IONAME = &((@THIS.BDEF.IOTYPE *)@THIS.BASE);
 (deprecated) IONAME
 (deprecated) CSTRUCT (now BDEF.DEFN)
+
+XDC.FILE	If present, autofpga will open this file and look through it
+		for commented lines defining pins that exist in our top
+		level port list.  Lines beginning with a #, but not ##, will
+		be uncommented and added the build.xdc file.  If no XDC.FILE
+		key is given, then the build.xdc file will not be created.
+XDC.INSERT	This line, if present, gets inserted verbatim at the bottom of
+		the generated XDC file
+UCF.FILE	Does the same thing with a UCF file as was done with the
+		XDC.FILE, creating a build.ucf file when done.
+UCF.INSERT	Adds lines to the UCF file, just as with the XDC.INSERT tag
+		does for the XDC file.
 
 LDSCRIPT.PTR	(Name to be used within the linker script)
 LDSCRIPT.PSTR	(Permission string for the linker script)
