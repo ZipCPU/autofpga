@@ -1,6 +1,6 @@
 /*******************************************************************************
 **
-** Filename: 	zasm.l
+** Filename: 	expr.l
 **
 ** Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 **
