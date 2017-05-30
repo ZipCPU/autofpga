@@ -63,8 +63,8 @@
 `define	HDMI_IN_EDID_ACCESS
 `define	GPS_CLOCK
 `define	HDMIIN_ACCESS
-`define	BLKRAM_ACCESS
 `define	FLASH_ACCESS
+`define	BLKRAM_ACCESS
 `define	FLASH_ACCESS
 `define	OLEDBW_ACCESS
 `define	BUSPIC_ACCESS
@@ -435,6 +435,9 @@ module	main(i_clk, i_reset,
 	wire	hdmiin_ack, hdmiin_stall, hdmiin_sel;
 	wire	[31:0]	hdmiin_data;
 
+	wire	flctl_ack, flctl_stall, flctl_sel;
+	wire	[31:0]	flctl_data;
+
 	wire	pwrcount_ack, pwrcount_stall, pwrcount_sel;
 	wire	[31:0]	pwrcount_data;
 
@@ -443,9 +446,6 @@ module	main(i_clk, i_reset,
 
 	wire	flash_ack, flash_stall, flash_sel;
 	wire	[31:0]	flash_data;
-
-	wire	flctl_ack, flctl_stall, flctl_sel;
-	wire	[31:0]	flctl_data;
 
 	wire	scope_sdcard_ack, scope_sdcard_stall, scope_sdcard_sel;
 	wire	[31:0]	scope_sdcard_data;
@@ -1015,6 +1015,24 @@ module	main(i_clk, i_reset,
 	assign	hdmiin_int = 1'b0;	// hdmiin.INT.VSYNC.WIRE
 `endif	// HDMIIN_ACCESS
 
+`ifdef	FLASH_ACCESS
+	// The Flash control interface result comes back together with the
+	// flash interface itself.  Hence, we always return zero here.
+	assign	flctl_ack   = 1'b0;
+	assign	flctl_stall = 1'b0;
+	assign	flctl_data  = 0;
+`else	// FLASH_ACCESS
+
+	reg	r_flctl_ack;
+	always @(posedge i_clk)
+		r_flctl_ack <= (wb_stb)&&(flctl_sel);
+
+	assign	flctl_ack   = r_flctl_ack;
+	assign	flctl_stall = 1'b0;
+	assign	flctl_data  = 32'h0;
+
+`endif	// FLASH_ACCESS
+
 	initial	r_pwrcount_data = 32'h0;
 	always @(posedge i_clk)
 	if (r_pwrcount_data[31])
@@ -1028,7 +1046,7 @@ module	main(i_clk, i_reset,
 
 `ifdef	BLKRAM_ACCESS
 	memdev #(.LGMEMSZ(20), .EXTRACLOCK(1))
-		blkram(i_clk,
+		memi(i_clk,
 			(wb_cyc), (wb_stb)&&(mem_sel), wb_we,
 				wb_addr[(20-3):0], wb_data, wb_sel,
 				mem_ack, mem_stall, mem_data);
@@ -1067,24 +1085,6 @@ module	main(i_clk, i_reset,
 	assign	flash_data  = 32'h0;
 
 	assign	flash_interrupt = 1'b0;	// flash.INT.FLASH.WIRE
-`endif	// FLASH_ACCESS
-
-`ifdef	FLASH_ACCESS
-	// The Flash control interface result comes back together with the
-	// flash interface itself.  Hence, we always return zero here.
-	assign	flctl_ack   = 1'b0;
-	assign	flctl_stall = 1'b0;
-	assign	flctl_data  = 0;
-`else	// FLASH_ACCESS
-
-	reg	r_flctl_ack;
-	always @(posedge i_clk)
-		r_flctl_ack <= (wb_stb)&&(flctl_sel);
-
-	assign	flctl_ack   = r_flctl_ack;
-	assign	flctl_stall = 1'b0;
-	assign	flctl_data  = 32'h0;
-
 `endif	// FLASH_ACCESS
 
 `ifdef	SDSPI_SCOPE

@@ -228,11 +228,6 @@
 
 
 // @REGDEFS.H.INSERT for peripherals
-
-#define	R_ICONTROL	R_PIC
-#define	ISPIF_EN	0x80080008
-#define	ISPIF_DIS	0x00080008
-#define	ISPIF_CLR	0x00000008
 // Flash control constants
 #define	ERASEFLAG	0x80000000
 #define	DISABLEWP	0x10000000
@@ -250,6 +245,11 @@
 #define	SUBSECTOROF(A)	((A) & (-1<<12))
 #define	PAGEOF(A)	((A) & (-1<<8))
 
+
+#define	R_ICONTROL	R_PIC
+#define	ISPIF_EN	0x80080008
+#define	ISPIF_DIS	0x00080008
+#define	ISPIF_CLR	0x00000008
 // @REGDEFS.H.INSERT from the top level
 typedef	struct {
 	unsigned	m_addr;

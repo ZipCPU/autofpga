@@ -178,10 +178,10 @@ typedef struct WBSCOPE_S {
 #endif
 
 
-#define	CLKFREQHZ	100000000
-
-
 #define	SYSPIC(A)	(1<<(A))
+
+
+#define	CLKFREQHZ	100000000
 
 
 // Definitions to interact with the OLED device
@@ -351,7 +351,7 @@ static volatile HDMI_IN *const _hin = ((HDMI_IN *)2176);
 extern int	_blkram[1];
 #endif	// BLKRAM_ACCESS
 #ifdef	FLASH_ACCESS
-#define	_BOARD_HASH_FLASH
+#define	_BOARD_HAS_FLASH
 extern int _flash[1];
 #endif	// FLASH_ACCESS
 #ifdef	SDSPI_SCOPE

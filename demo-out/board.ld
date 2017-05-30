@@ -50,7 +50,6 @@ MEMORY
 
 _mem      = ORIGIN(mem);
 _flash    = ORIGIN(flash);
-_top_of_stack = ORIGIN(mem) + LENGTH(mem) - 4;
 SECTIONS
 {
 	.rocode 0x01400000 : ALIGN(4) {
