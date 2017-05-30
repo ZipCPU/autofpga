@@ -38,6 +38,7 @@
 all:
 PROGRAMS := autofpga demo
 OBJDIR:= obj-pc
+YYMMDD:= `date +%Y%m%d`
 CXX:= g++
 SED:= sed
 CFLAGS:= -std=c++11 -g -Wall
@@ -49,6 +50,14 @@ OBJECTS := $(addprefix $(OBJDIR)/,$(subst .c,.o,$(subst .cpp,.o,$(SOURCES))))
 
 all: $(PROGRAMS)
 
+$(OBJDIR)/autofpga.o: autofpga.cpp
+	$(mk-objdir)
+	$(CXX) -DBUILDDATE=0x$(YYMMDD) $(CFLAGS) -c $< -o $@
+
+$(OBJDIR)/lex.yy.o: lex.yy.cpp
+	$(mk-objdir)
+	$(CXX) $(CFLAGS) -Wno-sign-compare -Wno-unused-function -c $< -o $@
+
 $(OBJDIR)/%.o: %.cpp
 	$(mk-objdir)
 	$(CXX) $(CFLAGS) -c $< -o $@
@@ -57,10 +66,12 @@ $(OBJDIR)/%.o: %.c
 	$(mk-objdir)
 	$(CXX) $(CFLAGS) -c $< -o $@
 
-expr.tab.cpp expr.tab.h: expr.ypp
+expr.tab.h: expr.ypp
 	bison --defines=expr.tab.h expr.ypp
+expr.tab.cpp: expr.tab.h
+$(OBJDIR)/expr.tab.o: lex.yy.h
 
-lex.yy.cpp lex.yy.h: expr.l
+lex.yy.cpp lex.yy.h: expr.l expr.tab.h
 	flex --header-file=lex.yy.h -o lex.yy.cpp expr.l
 
 autofpga: $(OBJECTS)
