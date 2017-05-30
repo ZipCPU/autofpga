@@ -78,6 +78,13 @@ the following values:
 
 
 Other tags include
+ACCESS	This is a STRING that will be turned into an IFDEF in the main.v file.
+	The idea is, if this string is defined, then the components logic
+	will be included, otherwise not.
+DEPENDS	If the logic of one component is dependent upon another, set the
+	DEPENDS tag to be a list of ACCESS parameters upon which this component
+	depends upon.  The ACCESS item for this parameter will then be
+	turned off if it's dependencies are not met.
 NADDR	The number of uniquely addressable registers/ports this device has
 /*
 	Future: BUSTYPE, for now the default will be WB-B4/pipeline.
@@ -169,3 +176,42 @@ INT.NAME.PIC	Identifies which PIC this wire is connected to.  Any particular
 		interrupt may be assigned to multipl PICs.  If so, these
 		are listed on this line and separated by white space
 INT.NAME.ID	Identifies which interrupt wire this device it connected to
+
+OUT.FILE	Creates an output file by this name
+OUT.DATA	Places this information within the data file
+
+RTL.MAKE.GROUP	A make variable name which will contain the file list for this
+		component
+RTL.MAKE.FILES	The files composing this component
+RTL.MAKE.SUBD	The location of the Verilog files for this component
+
+SIM.INCLUDE	Place any #includes here.  #includes will be included before
+		anything else
+SIM.DEFINES	#define's follow any #includes.  You can place those here.
+SIM.DEFNS	Any variables necessary in the Verilog simulation class can
+		be defined within this tag.
+SIM.INIT	If variables need to be initialized when the verilog simulation
+		object is initialized, place that initialization code within
+		this tag
+SIM.SETRESET	If your component has specific simulation actions that need
+		to take place when the reset pin is set high, place that code
+		in this block.
+SIM.CLRRESET	CLRRESET code goes in the same block as the reset method, but
+		gets called after the reset tick.
+SIM.TICK	If you want your simulation software to be called as part of
+		a simulation tick, place that code within this tag
+SIM.DBGCONDITION	If you might need to debug your component, you can
+		put a debug condition here.  The condition code should set
+		the bool "writeout" to true, or leave it as it is.
+SIM.DEBUG	If you are doing debug by printf, place any of your printf
+		debug lines in this tag
+SIM.LOAD	If your component is a memory that might need to be loaded
+		when your program is loaded into the simulation, you'll need
+		to define this component.  Your code will be passed a
+		"start" offset into your address region, a buffer pointer, buf,
+		an "offset" into that buffer, and a length (wlen) to copy
+		from the buffer into your memory area.
+
+SIM.METHODS	If your code requires the definition of methods to be used
+		within the Verilator simulator class, place those definitions
+		here.
