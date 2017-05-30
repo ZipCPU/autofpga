@@ -1154,10 +1154,12 @@ void	assign_interrupts(MAPDHASH &master) {
 	// mapdump(master);
 }
 
+/*
 void	assign_scopes(    MAPDHASH &master) {
 #ifdef	NEW_FILE_FORMAT
 #endif
 }
+*/
 
 int	get_longest_defname(PLIST &plist) {
 	unsigned	longest_defname = 0;
@@ -1973,6 +1975,167 @@ void	build_toplevel_v( MAPDHASH &master, FILE *fp, STRING &fname) {
 
 }
 
+
+void	build_access_ifdefs_v(MAPDHASH &master, FILE *fp) {
+	MAPDHASH::iterator	kvpair;
+	STRING		already_defined;
+	MAPDHASH	dephash;
+
+	fprintf(fp,
+"//\n"
+"//\n"
+"// Here is a list of defines which may be used, post auto-design\n"
+"// (not post-build), to turn particular peripherals (and bus masters)\n"
+"// on and off.  In particular, to turn off support for a particular\n"
+"// design component, just comment out its respective define below\n"
+"//\n"
+"// These lines are taken from the respective @ACCESS tags for each of our\n"
+"// components.  If a component doesn\'t have an @ACCESS tag, it will not\n"
+"// be listed here.\n"
+"//\n");
+	fprintf(fp, "// First, the independent access fields for any bus masters\n");
+	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
+		if (kvpair->second.m_typ != MAPT_MAP)
+			continue;
+		if (isperipheral(kvpair->second))
+			continue;
+		STRINGP	dep, accessp;
+		dep = getstring(*kvpair->second.u.m_m, KYDEPENDS);
+		accessp = getstring(*kvpair->second.u.m_m, KYACCESS);
+		if (NULL == accessp)
+			continue;
+		if (NULL != dep) {
+			dephash.insert(*kvpair);
+		} else {
+			fprintf(fp, "`define\t%s\n", accessp->c_str());
+			already_defined = already_defined + " " + (*accessp);
+		}
+	}
+
+	fprintf(fp, "// And then for the independent peripherals\n");
+	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
+		if (kvpair->second.m_typ != MAPT_MAP)
+			continue;
+		if (!isperipheral(kvpair->second))
+			continue;
+		STRINGP	dep, accessp;
+		dep = getstring(kvpair->second, KYDEPENDS);
+		accessp = getstring(kvpair->second, KYACCESS);
+		if (NULL == accessp)
+			continue;
+		else if (NULL != dep) {
+			dephash.insert(*kvpair);
+		} else {
+			fprintf(fp, "`define\t%s\n", accessp->c_str());
+			already_defined = already_defined + " " + (*accessp);
+		}
+	}
+
+	if (dephash.begin() != dephash.end()) {
+		fprintf(fp, "//\n//\n// Then, the list of those things that have dependencies\n//\n//\n");
+
+		bool	done;
+		do {
+			done = true;
+			STRING	depstr, endstr;
+	
+			for(kvpair=dephash.begin(); kvpair != dephash.end(); kvpair++) {
+				const char	DELIMITERS[] = ", \t\n";
+				if (kvpair->second.m_typ != MAPT_MAP)
+					continue;
+				STRINGP	dep, accessp;
+				dep = getstring(kvpair->second, KYDEPENDS);
+				accessp = getstring(kvpair->second, KYACCESS);
+	
+	
+				bool	depsmet = true;
+				char	*deplist, *dependency;
+				deplist = strdup(dep->c_str());
+	
+				depstr = "";
+				endstr = "";
+	
+				dependency = strtok(deplist, DELIMITERS);
+				while(dependency) {
+					STRING	mstr = STRING(" ")+STRING(dependency)
+						+STRING(" ");
+					if (NULL == strstr(already_defined.c_str(),
+							mstr.c_str())) {
+						depsmet = false;
+						break;
+					}
+	
+					depstr += STRING("`ifdef\t")
+						+STRING(dependency)
+						+STRING("\n");
+					endstr += STRING("`endif\n");
+					dependency = strtok(NULL, DELIMITERS);
+				}
+	
+	
+				if (depsmet) {
+					fprintf(fp, "%s", depstr.c_str());
+					fprintf(fp, "`define\t%s\n", accessp->c_str());
+					fprintf(fp, "%s", endstr.c_str());
+	
+					already_defined = already_defined + STRING(" ")
+						+ (*accessp) + STRING(" ");
+					dephash.erase(kvpair);
+					kvpair = dephash.begin();
+					if (kvpair == dephash.end())
+						break;
+	
+					// We changed something, so ...
+					done = false;
+				}
+			}
+	
+	
+			if (dephash.begin() == dephash.end())
+				done = true;
+		} while(!done);
+	}
+	
+	if (dephash.begin() != dephash.end()) {
+		fprintf(fp, "// The following have unmet dependencies.  They are listed\n"
+			"// here for reference, but their dependencies cannot be met.\n");
+
+
+		for(kvpair=dephash.begin(); kvpair != dephash.end(); kvpair++) {
+			const char	DELIMITERS[] = ", \t\n";
+			if (kvpair->second.m_typ != MAPT_MAP)
+				continue;
+			STRINGP	dep, accessp;
+			dep = getstring(kvpair->second, KYDEPENDS);
+			accessp = getstring(kvpair->second, KYACCESS);
+	
+	
+			char	*deplist, *dependency;
+			deplist = strdup(dep->c_str());
+	
+			STRING	depstr, endstr;
+	
+			depstr = "";
+			endstr = "";
+	
+			dependency = strtok(deplist, DELIMITERS);
+			while(dependency) {
+				depstr += STRING("`ifdef\t")
+					+STRING(dependency)
+					+STRING("\n");
+				endstr += STRING("`endif\n");
+				dependency = strtok(NULL, DELIMITERS);
+			}
+	
+			fprintf(fp, "%s", depstr.c_str());
+			fprintf(fp, "`define\t%s\n", accessp->c_str());
+			fprintf(fp, "%s\n", endstr.c_str());
+		}
+	}
+
+	fprintf(fp, "//\n// End of dependency list\n//\n//\n");
+}
+
 void	mkselect(FILE *fp, MAPDHASH &master, PLIST &plist, const STRING &subsel,
 		const char *skipn) {
 	const	char	*addrbus = "wb_addr";
@@ -2046,7 +2209,7 @@ void	mkselect(FILE *fp, MAPDHASH &master, PLIST &plist, const STRING &subsel,
 
 void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 	MAPDHASH::iterator	kvpair, kvaccess, kvsearch;
-	STRING	str = "ACCESS", astr, sellist, acklist, siosel_str, diosel_str;
+	STRING	str, astr, sellist, acklist, siosel_str, diosel_str;
 	int		first;
 	unsigned	nsel = 0, nacks = 0, baw;
 
@@ -2056,39 +2219,8 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 	// Include a legal notice
 	// Build a set of ifdefs to turn things on or off
 	fprintf(fp, "`default_nettype\tnone\n");
-	fprintf(fp,
-"//\n"
-"//\n"
-"// Here is a list of defines which may be used, post auto-design\n"
-"// (not post-build), to turn particular peripherals (and bus masters)\n"
-"// on and off.  In particular, to turn off support for a particular\n"
-"// design component, just comment out its respective define below\n"
-"//\n"
-"// These lines are taken from the respective @ACCESS tags for each of our\n"
-"// components.  If a component doesn\'t have an @ACCESS tag, it will not\n"
-"// be listed here.\n"
-"//\n");
-	fprintf(fp, "// First, the access fields for any bus masters\n");
-	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
-		if (kvpair->second.m_typ != MAPT_MAP)
-			continue;
-		if (isperipheral(kvpair->second))
-			continue;
-		STRINGP	strp = getstring(*kvpair->second.u.m_m, str);
-		if (strp)
-			fprintf(fp, "`define\t%s\n", strp->c_str());
-	}
 
-	fprintf(fp, "// And then for the peripherals\n");
-	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
-		if (kvpair->second.m_typ != MAPT_MAP)
-			continue;
-		if (!isperipheral(kvpair->second))
-			continue;
-		STRINGP	strp = getstring(*kvpair->second.u.m_m, str);
-		if (strp)
-			fprintf(fp, "`define\t%s\n", strp->c_str());
-	}
+	build_access_ifdefs_v(master, fp);
 
 	fprintf(fp, "//\n//\n");
 	fprintf(fp, 
@@ -2882,6 +3014,52 @@ STRINGP	remove_comments(STRINGP s) {
 	return r;
 }
 
+void	build_outfile_aux(MAPDHASH &info, STRINGP fname, STRINGP data) {
+	STRING	str;
+	STRINGP	subd = getstring(info, KYSUBD);
+
+	if ((NULL != strchr(fname->c_str(), '/'))
+		||(strchr(fname->c_str(), '.'))) {
+		fprintf(stderr, "WARNING: Output files can only be placed in output directory\n");
+		fprintf(stderr, "Output file: %s ignored\n",
+			fname->c_str());
+		return;
+	}
+
+	FILE	*fp;
+	str = subd->c_str(); str += "/"+(*fname);
+	fp = fopen(str.c_str(), "w");
+	if (NULL == fp) {
+		fprintf(stderr, "ERROR: Cannot write %s\n", str.c_str());
+		exit(EXIT_FAILURE);
+	}
+
+	unsigned nw = fwrite(data->c_str(), 1, data->size(), fp);
+	if (nw != data->size()) {
+		fprintf(stderr, "ERROR: %s data not fully written\n", str.c_str());
+		exit(EXIT_FAILURE);
+	}
+}
+
+
+void	build_other_files(MAPDHASH &info) {
+	MAPDHASH::iterator	kvpair;
+	STRINGP			fname, data;
+
+	for(kvpair = info.begin(); kvpair != info.end(); kvpair++) {
+		if (kvpair->second.m_typ != MAPT_MAP)
+			continue;
+		fname = getstring(kvpair->second, KYOUT_FILE);
+		if (NULL == fname)
+			continue;
+		data  = getstring(kvpair->second, KYOUT_DATA);
+		if (NULL == data)
+			continue;
+
+		build_outfile_aux(info, fname, data);
+	}
+}
+
 FILE	*open_in(MAPDHASH &info, const STRING &fname) {
 	static	const	char	delimiters[] = " \t\n:,";
 	STRINGP	path = getstring(info, KYPATH);
@@ -3202,13 +3380,16 @@ int	main(int argc, char **argv) {
 	}
 
 	STRINGP	subd;
-	if (subdir)
+	if (subdir) {
 		subd = new STRING(subdir);
-	else
-		subd = getstring(master, str=STRING("SUBDIR"));
-	if (subd == NULL)
+		setstring(master, KYSUBD, subd);
+	} else {
+		subd = getstring(master, KYSUBD);
+	} if (subd == NULL) {
 		// subd = new STRING("autofpga-out");
 		subd = new STRING("demo-out");
+		setstring(master, KYSUBD, subd);
+	}
 	if ((*subd) == STRING("/")) {
 		fprintf(stderr, "ERR: OUTPUT SUBDIRECTORY = %s\n", subd->c_str());
 		fprintf(stderr, "Cowardly refusing to place output products into the root directory, '/'\n");
@@ -3251,7 +3432,7 @@ int	main(int argc, char **argv) {
 	count_peripherals(master);
 	build_plist(master);
 	assign_interrupts(master);
-	assign_scopes(    master);
+	// assign_scopes(    master);
 	assign_addresses( master);
 	get_address_width(master);
 
@@ -3295,6 +3476,7 @@ int	main(int argc, char **argv) {
 		if (fp) { build_ucf(  master, fp, str); fclose(fp); }
 	}
 
+	build_other_files(master);
 
 	if (0 != gbl_err)
 		fprintf(stderr, "ERR: Errors present\n");

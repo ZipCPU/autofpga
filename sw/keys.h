@@ -45,6 +45,7 @@
 extern const	STRING	KYLEGAL;
 extern const	STRING	KYCOPYRIGHT;
 extern const	STRING	KYCMDLINE;
+extern const	STRING	KYSUBD;	// Output subdirectory
 extern const	STRING	KYPATH;
 extern const	STRING	KYSUBD;
 extern const	STRING	KYBUS_ADDRESS_WIDTH;
@@ -67,6 +68,7 @@ extern const	STRING	KYDIO_SEL;
 //
 extern const	STRING	KYPREFIX;
 extern const	STRING	KYACCESS;
+extern const	STRING	KYDEPENDS;
 extern const	STRING	KYPTYPE;
 extern const	STRING	KYMTYPE;
 //
@@ -131,6 +133,12 @@ extern	const	STRING	KYXDC_FILE;
 extern	const	STRING	KYXDC_INSERT;
 extern	const	STRING	KYUCF_FILE;
 extern	const	STRING	KYUCF_INSERT;
+// Arbitrary output data files
+extern	const	STRING	KYOUT_FILE;
+extern	const	STRING	KYOUT_DATA;
+// rtl/Makefile include file
+extern	const	STRING	KYRTL_MAKE_GROUP;
+extern	const	STRING	KYRTL_MAKE_FILES;
 // PIC definitions
 extern	const	STRING	KYPIC, KYPIC_BUS, KYPIC_MAX;
 // Interrupt definitions

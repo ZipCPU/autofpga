@@ -51,10 +51,10 @@
 // components.  If a component doesn't have an @ACCESS tag, it will not
 // be listed here.
 //
-// First, the access fields for any bus masters
+// First, the independent access fields for any bus masters
 `define	WBUBUS_MASTER
 `define	INCLUDE_ZIPCPU
-// And then for the peripherals
+// And then for the independent peripherals
 `define	SDSPI_ACCESS
 `define	RTC_ACCESS
 `define	MICROPHONE_ACCESS
@@ -66,7 +66,6 @@
 `define	BLKRAM_ACCESS
 `define	FLASH_ACCESS
 `define	FLASH_ACCESS
-`define	SDSPI_SCOPE
 `define	OLEDBW_ACCESS
 `define	BUSPIC_ACCESS
 `define	GPSUART_ACCESS
@@ -75,6 +74,18 @@
 `define	NETCTRL_ACCESS
 `define	SPIO_ACCESS
 `define	HDMI_OUT_EDID_ACCESS
+//
+//
+// Then, the list of those things that have dependencies
+//
+//
+`ifdef	SDSPI_ACCESS
+`define	SDSPI_SCOPE
+`endif
+//
+// End of dependency list
+//
+//
 //
 //
 // Finally, we define our main module itself.  We start with the list of

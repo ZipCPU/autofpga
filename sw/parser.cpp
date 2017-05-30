@@ -93,6 +93,8 @@ STRING	*getline(FILE *fp) {
 }
 
 bool	iskeyline(STRING &s) {
+	if (s.compare(0,3,STRING("@$("))==0)
+		return false;
 	return ((s[0] == '@')&&(s[1] != '@'));
 }
 
@@ -109,7 +111,6 @@ MAPDHASH	*genhash(STRING &prefix) {
 }
 
 MAPDHASH	*gensubhash(MAPDHASH *top, STRING &prefix) {
-	extern	FILE *gbl_dump;
 	MAPDHASH	*devm = NULL;
 	STRINGP	tmp = trim(prefix);
 
@@ -133,7 +134,6 @@ MAPDHASH	*gensubhash(MAPDHASH *top, STRING &prefix) {
 
 		top->insert(KEYVALUE(kyp,elm));
 	} else if (kvpair->second.m_typ == MAPT_MAP) {
-		fprintf(gbl_dump, "SUBHASH INSERT: HASH %s ALREADY EXISTS\n", tmp->c_str());
 		devm = kvpair->second.u.m_m;
 	} else {
 		fprintf(stderr, "NAME-CONFLICT!! (witin the same file, too!)\n");
@@ -142,8 +142,49 @@ MAPDHASH	*gensubhash(MAPDHASH *top, STRING &prefix) {
 	return devm;
 }
 
+MAPDHASH	*parsefile(FILE *fp, const STRING &search);
+
+void	process_keyvalue_pair(MAPDHASH *parent, const STRING &search, STRING &key, STRING &value) {
+
+	if (key == KYINCLUDEFILE) {
+		MAPDHASH	*submap,
+				*plusmap;
+		MAPDHASH::iterator subp;
+
+		// Read and insert the given file here
+		submap= parsefile(value.c_str(), search);
+
+		// If the file was found, as with the data within it, then ...
+		if (submap != NULL) {
+
+			// Read this file, creating a hash
+			subp = parent->find(KYPLUSDOT);
+
+			// Declare everything within the file to be of the
+			// sub-key "+" (KYPLUSDOT)
+			//
+			if (subp == parent->end()) {
+				MAPT	elm;
+				elm.m_typ = MAPT_MAP;
+				plusmap = new MAPDHASH;
+				elm.u.m_m = plusmap;
+				parent->insert(KEYVALUE(KYPLUSDOT, elm));
+			} else if (subp->second.m_typ != MAPT_MAP) {
+				fprintf(stderr, "ERR: KEY(+) EXISTS, AND ISN\'T A MAP\n");
+				// exit(EXIT_FAILURE);
+				gbl_err++;
+			} else {
+				plusmap = subp->second.u.m_m;
+			} if (plusmap)
+				mergemaps(*plusmap, *submap);
+		} // Otherwise ... (*TRY*) to ignore the error
+	} else // If its a normal key, just add it to the map
+		addtomap(*parent, key, value);
+}
+
+
 MAPDHASH	*parsefile(FILE *fp, const STRING &search) {
-	STRING	key, value, *ln, prefix;
+	STRING		key, value, *ln, prefix;
 	MAPDHASH	*fm = new MAPDHASH, *devm = NULL;
 	size_t		pos;
 
@@ -153,8 +194,12 @@ MAPDHASH	*parsefile(FILE *fp, const STRING &search) {
 
 			// We may have a completed key-value pair that needs
 			// to be stored.
-			if (key.length()>0) {
+			if (key.length() > 0) {
+
 				// A key exists.  Let's store it.
+
+				// If it's a PREFIX key, create a sub hash of
+				// the FILE's hash
 				if (key == KYPREFIX) {
 					MAPDHASH	*sub;
 					sub = gensubhash(fm, value);
@@ -162,66 +207,58 @@ MAPDHASH	*parsefile(FILE *fp, const STRING &search) {
 						devm = sub;
 				}
 
-				{
-					MAPDHASH	*parent;
-					if (devm)
-						parent = devm;
-					else
-						parent = fm;
+				MAPDHASH	*parent;
+				if (devm)
+					parent = devm;
+				else
+					parent = fm;
 
-					if (key == KYINCLUDEFILE) {
-						MAPDHASH	*submap,
-								*plusmap;
-						MAPDHASH::iterator subp;
-						submap = parsefile(value.c_str(), search);
-						if (submap != NULL) {
-						subp = parent->find(KYPLUSDOT);
-						if (subp == parent->end()) {
-							MAPT	elm;
-							elm.m_typ = MAPT_MAP;
-							plusmap = new MAPDHASH;
-							elm.u.m_m = plusmap;
-							parent->insert(KEYVALUE(KYPLUSDOT, elm));
-						} else if (subp->second.m_typ != MAPT_MAP) {
-							fprintf(stderr, "ERR: KEY(+) EXISTS, AND ISN\'T A MAP\n");
-							// exit(EXIT_FAILURE);
-							gbl_err++;
-						} else {
-							plusmap = subp->second.u.m_m;
-						} if (plusmap)
-							mergemaps(*plusmap, *submap);
-						}
-					} else {
-						addtomap(*parent, key, value);
-						// mapdump(*devm);
-					}
-				}
+
+				// Process the old key
+				process_keyvalue_pair(parent, search, key, value);
 			}
 
+				//
 			if ((pos = ln->find("="))
-				&&(pos != STRING::npos)) {
+					&&(pos != STRING::npos)) {
+
+				// Separate the key from its value
 				key   = ln->substr(1, pos-1);
 
+				// If we have a @KEY += line, then place the
+				// plus in front of the key.  @+KEY is an
+				// invalid key, so ... this should work.
 				if (key.c_str()[(key.size())-1] == '+') {
+					// Our key takes the + off the right,
+					// and adds it to the left
 					key = STRING("+")+key.substr(0,key.size()-1);
 				}
 
+				// Trim any whitespace from the key
 				STRINGP	trimd;
-				trimd =trim(ln->substr(pos+1));
-				value =STRING(*trimd);
+				trimd = trim(key);
+				key   = STRING(*trimd);
+				delete	trimd;
+
+				// Trim any whitespace from the value on this
+				// line
+				trimd = trim(ln->substr(pos+1));
+				value = STRING(*trimd);
 				delete	trimd;
 			} else {
+				// If we have a key with no "=" sign,
+				// assume the whole line is the key.
+				// Trim it up.
 				key = ln->substr(1, ln->length()-1);
-				STRING	*s = trim(key);
-				key = *s;
-				delete s;
+				STRINGP	trimd;
+				trimd = trim(key);
+				key   = STRING(*trimd);
+				delete trimd;
+
 				fprintf(stderr, "WARNING: Key line with no =, key was %s\n", key.c_str());
 				value = "";
 			}
 
-			STRING	*s = trim(key);
-			key = *s;
-			delete s;
 		} else if (ln->c_str()[0]) {
 			value = value + (*ln);
 		}
@@ -233,41 +270,17 @@ MAPDHASH	*parsefile(FILE *fp, const STRING &search) {
 			sub = gensubhash(fm, value);
 			if (sub)
 				devm = sub;
-		} else {
-			MAPDHASH	*parent;
-
-			if (devm)
-				parent = devm;
-			else
-				parent = fm;
-
-			if (key == KYINCLUDEFILE) {
-				MAPDHASH	*submap,
-						*plusmap = NULL;
-				MAPDHASH::iterator subp;
-				submap = parsefile(value.c_str(), search);
-				if (submap != NULL) {
-					subp = parent->find(KYPLUSDOT);
-					if (subp == parent->end()) {
-						MAPT	elm;
-						elm.m_typ = MAPT_MAP;
-						plusmap = new MAPDHASH;
-						elm.u.m_m = plusmap;
-						parent->insert(KEYVALUE(KYPLUSDOT, elm));
-					} else if (subp->second.m_typ != MAPT_MAP) {
-						fprintf(stderr, "ERR: KEY(+) EXISTS, AND ISN\'T A MAP\n");
-						// exit(EXIT_FAILURE);
-						gbl_err++;
-					} else {
-						plusmap = subp->second.u.m_m;
-					} if (plusmap)
-						mergemaps(*plusmap, *submap);
-				}
-			} else {
-				addtomap(*parent, key, value);
-				// mapdump(*devm);
-			}
 		}
+
+
+		MAPDHASH	*parent;
+
+		if (devm)
+			parent = devm;
+		else
+			parent = fm;
+
+		process_keyvalue_pair(parent, search, key, value);
 	}
 
 	return fm;
@@ -287,7 +300,7 @@ FILE	*search_and_open(const char *fname, const STRING &search) {
 	extern	FILE *gbl_dump;
 	FILE	*fp = open_data_file(fname);
 
-	if (fp == NULL) {
+	if ((fp == NULL)&&(fname[0] != '/')&&(fname[0] != '.')) {
 		STRING	copy = search;
 		char	*sub = (char *)copy.c_str();
 		char	*dir = strtok(sub, ", \t\n:");
@@ -320,9 +333,13 @@ FILE	*search_and_open(const char *fname, const STRING &search) {
 MAPDHASH	*parsefile(const char *fname, const STRING &search) {
 	MAPDHASH	*map;
 	FILE		*fp = search_and_open(fname, search);
+	extern	FILE	*gbl_dump;
 
 	if (fp == NULL) {
+		fprintf(gbl_dump, "PARSE-ERR: Could not open %s\n", fname);
+		fprintf(gbl_dump, "\tSearched through: %s\n", search.c_str());
 		fprintf(stderr, "PARSE-ERR: Could not open %s\n", fname);
+		fprintf(stderr, "\tSearched through: %s\n", search.c_str());
 		gbl_err++;
 		return NULL;
 		// exit(EXIT_FAILURE);

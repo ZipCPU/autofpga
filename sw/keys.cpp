@@ -63,6 +63,7 @@ const	STRING	KYDIO_SEL=	"dio_sel";
 //
 const	STRING	KYPREFIX=	"PREFIX";
 const	STRING	KYACCESS=	"ACCESS";
+const	STRING	KYDEPENDS=	"DEPENDS";
 const	STRING	KYPTYPE=	"PTYPE";
 const	STRING	KYMTYPE=	"MTYPE";
 //
@@ -133,6 +134,9 @@ const	STRING	KYINTLIST=	"INTLIST";
 const	STRING	KY_WIRE=	"WIRE";
 const	STRING	KY_DOTWIRE=	".WIRE";
 const	STRING	KY_ID=		"ID";
+// Arbitrary output data files
+const	STRING	KYOUT_FILE=	"OUT.FILE";
+const	STRING	KYOUT_DATA=	"OUT.DATA";
 // PIC definitions
 const	STRING	KYPIC=		"PIC";
 const	STRING	KYPIC_BUS=	"PIC.BUS";
