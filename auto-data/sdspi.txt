@@ -43,10 +43,14 @@
 ##
 ##
 @PREFIX=sdcard
+@DEVID=SDSPI
 @NADDR=4
 @ACCESS=SDSPI_ACCESS
 @PTYPE=DOUBLE
-@INT.SDCARD.WIRE= sdcard_int
+@BUS.PREFIX=wb
+# @SCOPE.TRIGGER=sd_debug[31]
+# @SCOPE.DATA=sd_debug
+@INT.SDCARD.WIRE= @$(PREFIX)_int
 @INT.SDCARD.PIC= buspic syspic
 @TOP.PORTLIST=
 		// SD Card
@@ -85,17 +89,21 @@
 	input	wire		i_sd_cmd;
 	input	wire	[3:0]	i_sd_data;
 	input	wire		i_sd_detect;
+@MAIN.DEFNS=
+	wire[31:0]	sdspi_debug;
 @MAIN.INSERT=
-	wire[31:0]	sd_debug;
 	// SPI mapping
 	wire	w_sd_cs_n, w_sd_mosi, w_sd_miso;
 
-	sdspi	sdctrl(i_clk,
-		wb_cyc, (wb_stb)&&(sdcard_sel), wb_we,
-			wb_addr[1:0], wb_data,
-			sdcard_ack, sdcard_stall, sdcard_data,
+	sdspi	@$(PREFIX)i(i_clk,
+		@$(BUS.PREFIX)_cyc,
+			(@$(BUS.PREFIX)_stb)&&(@$(PREFIX)_sel),
+			@$(BUS.PREFIX)_we,
+			@$(BUS.PREFIX)_addr[1:0],
+			@$(BUS.PREFIX)_data,
+			@$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_data,
 		w_sd_cs_n, o_sd_sck, w_sd_mosi, w_sd_miso,
-		sdcard_int, 1'b1, sd_debug);
+		@$(PREFIX)_int, 1'b1, sdspi_debug);
 
 	assign	w_sd_miso = i_sd_data[0];
 	assign	o_sd_data = { w_sd_cs_n, 3'b111 };
@@ -117,24 +125,80 @@
 	assign io_sd[3] = w_sd_data[3]? 1'bz:1'b0;
 @REGS.N=4
 @REGS.NOTE= // SD-SPI addresses
-@REGS.0= 0 R_SDCARD_CTRL  	SDCARD
-@REGS.1= 1 R_SDCARD_DATA 	SDDATA
-@REGS.2= 2 R_SDCARD_FIFOA	SDFIFOA, SDFIF0, SDFIFA
-@REGS.3= 3 R_SDCARD_FIFOB	SDFIFOB, SDFIF1, SDFIFB
-@CSTRUCT=
-#define	SD_SETAUX	0x0ff
-#define	SD_READAUX	0x0bf
-#define	SD_CMD		0x040
-#define	SD_FIFO_OP	0x0800	// Read only
-#define	SD_WRITEOP	0x0c00	// Write to the FIFO
-#define	SD_ALTFIFO	0x1000
-#define	SD_BUSY		0x4000
-#define	SD_ERROR	0x8000
-#define	SD_CLEARERR	0x8000
-#define	SD_READ_SECTOR	((SD_CMD|SD_CLEARERR|SD_FIFO_OP)+17)
-#define	SD_WRITE_SECTOR	((SD_CMD|SD_CLEARERR|SD_WRITEOP)+24)
+@REGS.0= 0 R_@$(DEVID)_CTRL  	SDCARD
+@REGS.1= 1 R_@$(DEVID)_DATA 	SDDATA
+@REGS.2= 2 R_@$(DEVID)_FIFOA	SDFIFOA, SDFIF0, SDFIFA
+@REGS.3= 3 R_@$(DEVID)_FIFOB	SDFIFOB, SDFIF1, SDFIFB
+@BDEF.DEFN=
+#define	@$(DEVID)_SETAUX	0x0ff
+#define	@$(DEVID)_READAUX	0x0bf
+#define	@$(DEVID)_CMD		0x040
+#define	@$(DEVID)_FIFO_OP	0x0800	// Read only
+#define	@$(DEVID)_WRITEOP	0x0c00	// Write to the FIFO
+#define	@$(DEVID)_ALTFIFO	0x1000
+#define	@$(DEVID)_BUSY		0x4000
+#define	@$(DEVID)_ERROR	0x8000
+#define	@$(DEVID)_CLEARERR	0x8000
+#define	@$(DEVID)_READ_SECTOR	((@$(DEVID)_CMD|@$(DEVID)_CLEARERR|@$(DEVID)_FIFO_OP)+17)
+#define	@$(DEVID)_WRITE_SECTOR	((@$(DEVID)_CMD|@$(DEVID)_CLEARERR|@$(DEVID)_WRITEOP)+24)
 
-typedef	struct SDCARD_S {
+typedef	struct @$(DEVID)_S {
 	unsigned	sd_ctrl, sd_data, sd_fifo[2];
-} SDCARD;
-@IONAME=io_sd
+} @$(DEVID);
+@BDEF.IONAME=_sdcard
+@BDEF.IOTYPE=@$(DEVID)
+@BDEF.OSDEF=_BOARD_HAS_@$(DEVID)
+@BDEF.OSVAL=static volatile @$BDEF.IOTYPE *const @$BDEF.IONAME = ((@$BDEF.IOTYPE *)@$BASE);
+#
+#
+#
+@PREFIX=scope_sdcard
+@PTYPE=OTHER
+@DEVID=SDSPI
+@NADDR=2
+@BUS.PREFIX=wb
+@ACCESS=SDSPI_SCOPE
+@DEPENDS=SDSPI_ACCESS
+@INT.SDSCOPE.WIRE=@$(PREFIX)_int
+@INT.SDSCOPE.BUS= buspic
+@MAIN.DEFNS=
+	wire	@$(PREFIX)_trigger,
+		@$(PREFIX)_ce;
+@MAIN.INSERT=
+	assign	@$(PREFIX)_trigger = (@$(BUS.PREFIX)_stb)
+				&&(sdcard_sel)&&(@$(BUS.PREFIX)_we);
+	assign	@$(PREFIX)_ce = 1'b1;
+	wbscope #(5'h9) sdspiscope(i_clk, @$(PREFIX)_ce,
+			@$(PREFIX)_trigger,
+			sdspi_debug,
+			i_clk, @$(BUS.PREFIX)_cyc,
+			(@$(BUS.PREFIX)_stb)&&(@$(PREFIX)_sel),
+			@$(BUS.PREFIX)_we,
+			@$(BUS.PREFIX)_addr[0],
+			@$(BUS.PREFIX)_data,
+			@$(PREFIX)_ack,
+			@$(PREFIX)_stall,
+			@$(PREFIX)_data,
+			@$(PREFIX)_int);
+
+@REGS.NOTE=// SDSPI Debugging scope
+@REGS.N=2
+@REGS.0= 0 R_@$(DEVID)_SCOPC SDSCOPC SDSCOPE
+@REGS.1= 1 R_@$(DEVID)_SCOPD SDSCOPD
+@BDEF.DEFN=
+#ifndef	WBSCOPE_H
+#define	WBSCOPE_H
+
+#define	WBSCOPE_NO_RESET	0x800000000
+#define	WBSCOPE_TRIGGER		(WBSCOPE_NO_RESET|0x08000000)
+#define	WBSCOPE_MANUAL		(WBSCOPE_TRIGGER)
+#define	WBSCOPE_DISABLE		0x04000000
+
+typedef struct WBSCOPE_S {
+	unsigned s_ctrl, s_data;
+} WBSCOPE;
+#endif
+@BDEF.IONAME= _@$(PREFIX)
+@BDEF.IOTYPE=WBSCOPE
+@BDEF.OSDEF=_BOARD_HAS_SDSPI_SCOPE
+@BDEF.OSVAL=static volatile @$BDEF.IOTYPE *const @$(BDEF.IONAME) = ((@$BDEF.IOTYPE *)@$BASE);
