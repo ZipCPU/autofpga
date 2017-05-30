@@ -133,7 +133,7 @@ public:
 			// controller
 			i_bus;
 	unsigned	i_max,	// Max # of interrupts this controller can handle
-			// i_nassigned is the number of interrupts that have 
+			// i_nassigned is the number of interrupts that have
 			// been given assignments (positions) to our interrupt
 			// vector
 			i_nassigned,
@@ -258,7 +258,7 @@ public:
 				i_nassigned++;
 			} else
 				continue; // All interrupts assigned
-		} 
+		}
 		if (i_max < i_ilist.size()) {
 			fprintf(stderr, "WARNING: Too many interrupts assigned to PIC %s\n", i_name->c_str());
 		}
@@ -272,7 +272,7 @@ public:
 		}
 	}
 
-	// Given an interrupt number associated with this PIC, lookup the 
+	// Given an interrupt number associated with this PIC, lookup the
 	// interrupt having that number, returning NULL on error or if not
 	// found.
 	INTP	getint(unsigned iid) {
@@ -602,7 +602,7 @@ int	addto_plist(PLIST &plist, MAPDHASH *phash) {
 		fprintf(stderr, "ERR: Skipping unnamed peripheral\n");
 		return -1;
 	}
-	
+
 	if (!getvalue(*phash, KYNADDR, naddr)) {
 		fprintf(stderr,
 		"WARNING: Skipping peripheral %s with no addresses\n",
@@ -695,8 +695,6 @@ void	buildskip_plist(PLIST &plist, unsigned nulladdr) {
 		// to be set.
 		masteraddr|= bvl;
 	}
-
-	// { // Just do a double check here, for consistency
 
 	adrmask<<=2; // Convert the result from to octets
 	if (gbl_dump)
@@ -904,8 +902,6 @@ void assign_addresses(MAPDHASH &info, unsigned first_address = 0x400) {
 	} else if (dlist.size() == 1) {
 		dio_hash = dlist[0]->p_phash;
 	}
-
-	fprintf(stderr, "DLIST.SIZE = %ld\n", dlist.size());
 
 	// Assign bus addresses to the more generic peripherals
 	if (gbl_dump) {
@@ -1127,7 +1123,7 @@ void	assign_interrupts(MAPDHASH &master) {
 				if (kvline != kvint->second.u.m_m->end())
 					assign_int_to_pics(stok,
 						*kvline->second.u.m_m);
-				
+
 				tok = strtok(NULL, " \t\n,");
 			}
 		} else {
@@ -1160,6 +1156,28 @@ void	assign_scopes(    MAPDHASH &master) {
 #endif
 }
 */
+void	writeout(FILE *fp, MAPDHASH &master, const STRING &ky) {
+	MAPDHASH::iterator	kvpair;
+	STRINGP	str;
+
+	fprintf(fp, "// Looking for string: %s\n", ky.c_str());
+
+	str = getstring(master, ky);
+	if (NULL != str) {
+		fprintf(fp, "%s", str->c_str());
+	}
+
+	for(kvpair = master.begin(); kvpair != master.end(); kvpair++) {
+		if (kvpair->second.m_typ != MAPT_MAP)
+				continue;
+		str = getstring(kvpair->second, ky);
+		if (str == NULL)
+			continue;
+
+		fprintf(fp, "%s", str->c_str());
+	}
+}
+
 
 int	get_longest_defname(PLIST &plist) {
 	unsigned	longest_defname = 0;
@@ -1268,7 +1286,7 @@ void write_regdefs(FILE *fp, PLIST &plist, unsigned longest_defname) {
 			fprintf(fp, "#define\t%-*s\t0x%08x", longest_defname,
 				rname, (roff<<2)+plist[i]->p_base);
 
-			fprintf(fp, "\t// %08x, wbregs names: ", plist[i]->p_base); 
+			fprintf(fp, "\t// %08x, wbregs names: ", plist[i]->p_base);
 			int	first = 1;
 			// 3. Get the various user names
 			while(NULL != (rv = strtok(NULL, " \t\n,"))) {
@@ -1420,7 +1438,7 @@ void	build_regdefs_h(  MAPDHASH &master, FILE *fp, STRING &fname) {
 // get_longest_uname
 //
 // This is very similar to the get longest defname (get length of the longest
-// variable definition name) above, save that this is applied to the user 
+// variable definition name) above, save that this is applied to the user
 // names within regdefs.cpp
 //
 unsigned	get_longest_uname(PLIST &plist) {
@@ -1438,7 +1456,7 @@ unsigned	get_longest_uname(PLIST &plist) {
 		for(int j=0; j<nregs; j++) {
 			char	nstr[32];
 			sprintf(nstr, "%d", j);
-			strp = getstring(*plist[i]->p_phash, 
+			strp = getstring(*plist[i]->p_phash,
 						str=STRING("REGS.")+nstr);
 			STRING	scpy = *strp;
 
@@ -1468,7 +1486,7 @@ unsigned	get_longest_uname(PLIST &plist) {
 //
 // write_regnames
 //
-// 
+//
 void write_regnames(FILE *fp, PLIST &plist,
 		unsigned longest_defname, unsigned longest_uname) {
 	STRING	str;
@@ -1698,7 +1716,7 @@ void	build_board_ld(   MAPDHASH &master, FILE *fp, STRING &fname) {
 	int		reset_address;
 	PERIPHP		fastmem = NULL, bigmem = NULL;
 
-	legal_notice(master, fp, fname, "/*******************************************************************************", "*"); 
+	legal_notice(master, fp, fname, "/*******************************************************************************", "*");
 	fprintf(fp, "*/\n");
 
 	std::sort(mlist.begin(), mlist.end(), compare_naddr);
@@ -1732,7 +1750,7 @@ void	build_board_ld(   MAPDHASH &master, FILE *fp, STRING &fname) {
 		STRINGP	name = getstring(*mlist[i]->p_phash, KYLD_NAME);
 		if (NULL == name)
 			name = mlist[i]->p_name;
-		
+
 		fprintf(fp, "_%-8s = ORIGIN(%s);\n",
 			name->c_str(), name->c_str());
 	}
@@ -1840,7 +1858,7 @@ void	build_toplevel_v( MAPDHASH &master, FILE *fp, STRING &fname) {
 	// Include a legal notice
 	// Build a set of ifdefs to turn things on or off
 	fprintf(fp, "\n\n");
-	
+
 	// Define our external ports within a port list
 	fprintf(fp, "//\n"
 	"// Here we declare our toplevel.v (toplevel) design module.\n"
@@ -2038,7 +2056,7 @@ void	build_access_ifdefs_v(MAPDHASH &master, FILE *fp) {
 		do {
 			done = true;
 			STRING	depstr, endstr;
-	
+
 			for(kvpair=dephash.begin(); kvpair != dephash.end(); kvpair++) {
 				const char	DELIMITERS[] = ", \t\n";
 				if (kvpair->second.m_typ != MAPT_MAP)
@@ -2046,15 +2064,15 @@ void	build_access_ifdefs_v(MAPDHASH &master, FILE *fp) {
 				STRINGP	dep, accessp;
 				dep = getstring(kvpair->second, KYDEPENDS);
 				accessp = getstring(kvpair->second, KYACCESS);
-	
-	
+
+
 				bool	depsmet = true;
 				char	*deplist, *dependency;
 				deplist = strdup(dep->c_str());
-	
+
 				depstr = "";
 				endstr = "";
-	
+
 				dependency = strtok(deplist, DELIMITERS);
 				while(dependency) {
 					STRING	mstr = STRING(" ")+STRING(dependency)
@@ -2064,38 +2082,38 @@ void	build_access_ifdefs_v(MAPDHASH &master, FILE *fp) {
 						depsmet = false;
 						break;
 					}
-	
+
 					depstr += STRING("`ifdef\t")
 						+STRING(dependency)
 						+STRING("\n");
 					endstr += STRING("`endif\n");
 					dependency = strtok(NULL, DELIMITERS);
 				}
-	
-	
+
+
 				if (depsmet) {
 					fprintf(fp, "%s", depstr.c_str());
 					fprintf(fp, "`define\t%s\n", accessp->c_str());
 					fprintf(fp, "%s", endstr.c_str());
-	
+
 					already_defined = already_defined + STRING(" ")
 						+ (*accessp) + STRING(" ");
 					dephash.erase(kvpair);
 					kvpair = dephash.begin();
 					if (kvpair == dephash.end())
 						break;
-	
+
 					// We changed something, so ...
 					done = false;
 				}
 			}
-	
-	
+
+
 			if (dephash.begin() == dephash.end())
 				done = true;
 		} while(!done);
 	}
-	
+
 	if (dephash.begin() != dephash.end()) {
 		fprintf(fp, "// The following have unmet dependencies.  They are listed\n"
 			"// here for reference, but their dependencies cannot be met.\n");
@@ -2108,16 +2126,16 @@ void	build_access_ifdefs_v(MAPDHASH &master, FILE *fp) {
 			STRINGP	dep, accessp;
 			dep = getstring(kvpair->second, KYDEPENDS);
 			accessp = getstring(kvpair->second, KYACCESS);
-	
-	
+
+
 			char	*deplist, *dependency;
 			deplist = strdup(dep->c_str());
-	
+
 			STRING	depstr, endstr;
-	
+
 			depstr = "";
 			endstr = "";
-	
+
 			dependency = strtok(deplist, DELIMITERS);
 			while(dependency) {
 				depstr += STRING("`ifdef\t")
@@ -2126,7 +2144,7 @@ void	build_access_ifdefs_v(MAPDHASH &master, FILE *fp) {
 				endstr += STRING("`endif\n");
 				dependency = strtok(NULL, DELIMITERS);
 			}
-	
+
 			fprintf(fp, "%s", depstr.c_str());
 			fprintf(fp, "`define\t%s\n", accessp->c_str());
 			fprintf(fp, "%s\n", endstr.c_str());
@@ -2223,14 +2241,14 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 	build_access_ifdefs_v(master, fp);
 
 	fprintf(fp, "//\n//\n");
-	fprintf(fp, 
+	fprintf(fp,
 "// Finally, we define our main module itself.  We start with the list of\n"
 "// I/O ports, or wires, passed into (or out of) the main function.\n"
 "//\n"
 "// These fields are copied verbatim from the respective I/O port lists,\n"
 "// from the fields given by @MAIN.PORTLIST\n"
 "//\n");
-	
+
 	// Define our external ports within a port list
 	fprintf(fp, "module\tmain(i_clk, i_reset,\n");
 	str = "MAIN.PORTLIST";
@@ -3014,12 +3032,85 @@ STRINGP	remove_comments(STRINGP s) {
 	return r;
 }
 
+void	build_rtl_make_inc(MAPDHASH &master, FILE *fp, STRING &fname) {
+	MAPDHASH::iterator	kvpair;
+	STRINGP	mkgroup, mkfiles, mksubd;
+	STRING	allgroups, vdirs;
+
+	legal_notice(master, fp, fname,
+		"########################################"
+		"########################################", "##");
+
+	for(kvpair=master.begin(); kvpair!=master.end(); kvpair++) {
+		const	char	DELIMITERS[] = ", \t\n";
+		if (kvpair->second.m_typ != MAPT_MAP)
+			continue;
+		mkgroup = getstring(kvpair->second, KYRTL_MAKE_GROUP);
+		if (NULL == mkgroup)
+			continue;
+		mkfiles = getstring(kvpair->second, KYRTL_MAKE_FILES);
+		mksubd  = getstring(kvpair->second, KYRTL_MAKE_SUBD);
+
+		char	*tokstr = strdup(mkfiles->c_str()), *tok;
+		STRING	filstr = "";
+
+		tok = strtok(tokstr, DELIMITERS);
+		while(NULL != tok) {
+			filstr += STRING(tok) + " ";
+			tok = strtok(NULL, DELIMITERS);
+		} if (filstr[filstr.size()-1] == ' ')
+			filstr[filstr.size()-1] = '\0';
+		if (mksubd) {
+			fprintf(fp, "%sD := %s\n\n", mkgroup->c_str(),
+					mksubd->c_str());
+			fprintf(fp, "%s  := $(addprefix $(%sD)/,%s)\n",
+				mkgroup->c_str(),
+				mkgroup->c_str(), filstr.c_str());
+
+			vdirs = vdirs + STRING(" -y $(")+(*mkgroup)
+					+STRING("D) ");
+		} else {
+			fprintf(fp, "%s:= %s\n\n", mkgroup->c_str(), filstr.c_str());
+		}
+
+		allgroups = allgroups + STRING(" $(") + (*mkgroup) + STRING(")");
+		free(tokstr);
+	}
+
+	mkgroup = getstring(master, KYRTL_MAKE_GROUP);
+	if (NULL == mkgroup)
+		mkgroup = new STRING(KYVFLIST);
+	mkfiles = getstring(master, KYRTL_MAKE_FILES);
+	mksubd  = getstring(master, KYRTL_MAKE_SUBD);
+
+	if (NULL != mkfiles) {
+		if (mksubd) {
+			fprintf(fp, "%sD := %s\n", mkgroup->c_str(),
+				mksubd->c_str());
+			fprintf(fp, "%s := $(addprefix $(%sD)/,%s) \\\t\t%s\n",
+				mkgroup->c_str(), mkgroup->c_str(),
+				mkfiles->c_str(), allgroups.c_str());
+			vdirs = vdirs + STRING(" -y $(")+(*mkgroup)
+					+STRING("D) ");
+		} else
+			fprintf(fp, "%s := %s \\\t\t%s\n",
+				mkgroup->c_str(),
+				mkfiles->c_str(), allgroups.c_str());
+	} else if (allgroups.size() > 0) {
+		fprintf(fp, "%s := %s\n", mkgroup->c_str(), allgroups.c_str());
+	}
+
+	mksubd = getstring(master, KYRTL_MAKE_VDIRS);
+	if (NULL == mksubd)
+		mksubd = new STRING(KYAUTOVDIRS);
+	fprintf(fp, "%s := %s\n", mksubd->c_str(), vdirs.c_str());
+}
+
 void	build_outfile_aux(MAPDHASH &info, STRINGP fname, STRINGP data) {
 	STRING	str;
 	STRINGP	subd = getstring(info, KYSUBD);
 
-	if ((NULL != strchr(fname->c_str(), '/'))
-		||(strchr(fname->c_str(), '.'))) {
+	if (NULL != strchr(fname->c_str(), '/')) {
 		fprintf(stderr, "WARNING: Output files can only be placed in output directory\n");
 		fprintf(stderr, "Output file: %s ignored\n",
 			fname->c_str());
@@ -3214,7 +3305,7 @@ void	build_xdc(MAPDHASH &master, FILE *fp, STRING &fname) {
 
 		fprintf(fp, "## From %s\n%s", kvpair->first.c_str(),
 			kvpair->second.u.m_s->c_str());
-	}	
+	}
 	str = getstring(master, KYXDC_INSERT);
 	if (NULL != str) {
 		fprintf(fp, "## From the global level\n%s",
@@ -3317,7 +3408,7 @@ void	build_ucf(MAPDHASH &master, FILE *fp, STRING &fname) {
 
 		fprintf(fp, "## From %s\n%s", kvpair->first.c_str(),
 			kvpair->second.u.m_s->c_str());
-	}	
+	}
 	str = getstring(master, KYUCF_INSERT);
 	if (NULL != str) {
 		fprintf(fp, "## From the global level\n%s",
@@ -3325,6 +3416,164 @@ void	build_ucf(MAPDHASH &master, FILE *fp, STRING &fname) {
 	}
 }
 
+void	build_main_tb_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
+	MAPDHASH::iterator	kvpair;
+	STRINGP			str;
+
+	legal_notice(master, fp, fname);
+
+	fprintf(fp, "//\n// SIM.INCLUDE\n//\n");
+	writeout(fp, master, KYSIM_INCLUDE);
+	writeout(fp, master, KYSIM_DEFINES);
+
+	// Class definitions
+	fprintf(fp, "class\tMAINTB : public PARENT {\npublic:\n\tbool\tm_done;\n");
+	writeout(fp, master, KYSIM_DEFNS);
+
+
+	fprintf(fp, "\tMAINTB(void) {");
+/*
+	// Pre-Initial stuffs ....
+	{
+		bool	have_initial = false;
+
+		str = getstring(master, KYSIM_PREINITIAL);
+		if (NULL != str) {
+			fprintf(fp, ":\n%s", str->c_str());
+			have_initial = true;
+		}
+
+		for(kvpair = master.begin(); kvpair != master.end(); kvpair++) {
+			if (kvpair->second.m_typ != MAPT_MAP)
+				continue;
+			str = getstring(kvpair->second, KYSIM_PREINITIAL);
+			if (str == NULL)
+				continue;
+
+			if (!have_initial)
+				fprintf(fp, ":\n");
+			else	fprintf(fp, ",\n");
+			have_initial = true;
+			fprintf(fp, "\t// From %s\n%s", kvpair->first.c_str(),
+				str->c_str());
+		}
+	} fprintf(fp, "\t{\n");
+*/
+
+	fprintf(fp, "\t\tm_done = false;\n");
+	str = getstring(master, KYSIM_INIT);
+	if (NULL != str) {
+		fprintf(fp, "\t%s", str->c_str());
+	}
+
+	for(kvpair = master.begin(); kvpair != master.end(); kvpair++) {
+		if (kvpair->second.m_typ != MAPT_MAP)
+				continue;
+		str = getstring(kvpair->second, KYSIM_INIT);
+		if (str == NULL)
+			continue;
+
+		fprintf(fp, "\t// From %s\n%s", kvpair->first.c_str(),
+			str->c_str());
+	}
+
+	fprintf(fp, "\t}\n\n");
+
+	fprintf(fp, "\tvoid\treset(void) {\n");
+
+	writeout(fp, master, KYSIM_SETRESET);
+
+	fprintf(fp, "\t\tm_core->i_clk = 1;\n"
+		"\t\tm_core->eval();\n");
+
+	writeout(fp, master, KYSIM_CLRRESET);
+
+	fprintf(fp, "\t}\n");
+
+	fprintf(fp, "\n"
+"\tvoid	trace(const char *vcd_trace_file_name) {\n"
+"\t\tfprintf(stderr, \"Opening TRACE(%%s)\\n\",\n"
+"\t\t		vcd_trace_file_name);\n"
+"\t\topentrace(vcd_trace_file_name);\n"
+"\t\tm_traceticks = 0;\n"
+"\t}\n\n");
+
+	fprintf(fp,
+"	void	close(void) {\n"
+"		m_done = true;\n"
+"	}\n"
+"\n"
+"	void	tick(void) {\n"
+"		if (m_done)\n"
+"			return;\n");
+
+	writeout(fp, master, KYSIM_TICK);
+
+	fprintf(fp, "\t\tPARENT::tick();\n\n");
+	fprintf(fp, "\t\tbool\twriteout = false;\n\n");
+	writeout(fp, master, KYSIM_DBGCONDITION);
+	fprintf(fp, "\n\t\tif (writeout) {\n");
+	writeout(fp, master, KYSIM_DEBUG);
+	fprintf(fp, "\t\t}\n");
+	fprintf(fp, "\t}\n\n");
+
+	fprintf(fp, "\tbool\tload(uint32_t addr, const char *buf, uint32_t len) {\n");
+	STRING	prestr = STRING("\t\tuint32_t\tstart, offset, wlen, base, naddr;\n\n");
+
+	for(kvpair = master.begin(); kvpair != master.end(); kvpair++) {
+		if (kvpair->second.m_typ != MAPT_MAP)
+				continue;
+		MAPDHASH *dev = kvpair->second.u.m_m;
+		int	base, naddr;
+		STRINGP	accessp;
+
+		str = getstring(kvpair->second, KYSIM_LOAD);
+		if (str == NULL)
+			continue;
+		if (!getvalue(*dev, KYBASE, base))
+			continue;
+		if (!getvalue(*dev, KYNADDR, naddr))
+			continue;
+		accessp = getstring(*dev, KYACCESS);
+
+		if (prestr[0]) {
+			fprintf(fp, "%s", prestr.c_str());
+			prestr[0] = '\0';
+		}
+
+		fprintf(fp, "\t\tbase  = 0x%08x;\n\t\tnaddr = 0x%08x;\n\n", base, naddr);
+		fprintf(fp, "\t\tif ((addr >= base)&&(addr < base + naddr)) {\n");
+		fprintf(fp, "\t\t\t// If the start access is in %s\n", kvpair->first.c_str());
+		fprintf(fp, "\t\t\tstart = (addr > base) ? (addr-base) : 0;\n");
+		fprintf(fp, "\t\t\toffset = (start + base) - addr;\n");
+		fprintf(fp, "\t\t\twlen = (len-offset > naddr - start)\n\t\t\t\t? (naddr - start) : len - offset;\n");
+
+
+		if (accessp)
+			fprintf(fp, "#ifdef\t%s\n", accessp->c_str());
+		fprintf(fp, "\t\t\t// FROM %s.%s\n", kvpair->first.c_str(), KYSIM_LOAD.c_str());
+		fprintf(fp, "%s", str->c_str());
+		fprintf(fp, "\t\t\t// AUTOFPGA::Now clean up anything else\n");
+		fprintf(fp, "\t\t\t// Was there more to write than we wrote?\n");
+		fprintf(fp, "\t\t\tif (addr + len > base + naddr)\n");
+		fprintf(fp, "\t\t\t\treturn load(base + naddr, &buf[offset+wlen], len-wlen);\n");
+		fprintf(fp, "\t\t\treturn true;\n");
+		if (accessp) {
+			fprintf(fp, "#else\t// %s\n", accessp->c_str());
+			fprintf(fp, "\t\t\treturn false;\n");
+			fprintf(fp, "#endif\t// %s\n", accessp->c_str());
+		}
+
+		fprintf(fp, "\t\t}\n\n");
+	}
+	fprintf(fp, "\t\treturn false;\n");
+	fprintf(fp, "\t}\n\n");
+
+	writeout(fp, master, KYSIM_METHODS);
+
+	fprintf(fp, "\tbool	done(void) { return m_done; }\n\n");
+	fprintf(fp, "};\n\n");
+}
 
 int	main(int argc, char **argv) {
 	int		argn, nhash = 0;
@@ -3355,6 +3604,13 @@ int	main(int argc, char **argv) {
 					setstring(master, KYPATH, new STRING(searchstr));
 					j+=5000;
 					break;
+				case 'V':
+#ifdef	BUILDDATE
+					printf("autofpga\nbuilt on %08x\n", BUILDDATE);
+#else
+					printf("autofpga [data-file-list]*\n");
+#endif
+					exit(EXIT_SUCCESS);
 				default:
 					fprintf(stderr, "Unknown argument, -%c\n", argv[argn][j]);
 				}
@@ -3364,6 +3620,10 @@ int	main(int argc, char **argv) {
 			STRINGP		path;
 
 			path = getstring(master, KYPATH);
+			if (NULL == path) {
+				path = new STRING(".");
+				setstring(master, KYPATH, path);
+			}
 			fhash = parsefile(argv[argn], *path);
 			if (fhash) {
 				mergemaps(master, *fhash);
@@ -3424,7 +3684,7 @@ int	main(int argc, char **argv) {
 
 	flatten(master);
 
-	// trimbykeylist(master, KYKEYS_TRIMLIST);	
+	// trimbykeylist(master, KYKEYS_TRIMLIST);
 	cvtintbykeylist(master, KYKEYS_INTLIST);
 
 	reeval(master);
@@ -3464,6 +3724,10 @@ int	main(int argc, char **argv) {
 	fp = fopen(str.c_str(), "w");
 	if (fp) { build_main_v(  master, fp, str); fclose(fp); }
 
+	str = subd->c_str(); str += "/rtl.make.inc";
+	fp = fopen(str.c_str(), "w");
+	if (fp) { build_rtl_make_inc(  master, fp, str); fclose(fp); }
+
 	if (NULL != getstring(master, KYXDC_FILE)) {
 		str = subd->c_str(); str += "/build.xdc";
 		fp = fopen(str.c_str(), "w");
@@ -3475,6 +3739,10 @@ int	main(int argc, char **argv) {
 		fp = fopen(str.c_str(), "w");
 		if (fp) { build_ucf(  master, fp, str); fclose(fp); }
 	}
+
+	str = subd->c_str(); str += "/main_tb.cpp";
+	fp = fopen(str.c_str(), "w");
+	if (fp) { build_main_tb_cpp(  master, fp, str); fclose(fp); }
 
 	build_other_files(master);
 

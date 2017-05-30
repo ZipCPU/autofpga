@@ -139,10 +139,20 @@ extern	const	STRING	KYOUT_DATA;
 // rtl/Makefile include file
 extern	const	STRING	KYRTL_MAKE_GROUP;
 extern	const	STRING	KYRTL_MAKE_FILES;
+extern	const	STRING	KYRTL_MAKE_SUBD;
+extern	const	STRING	KYRTL_MAKE_VDIRS;
+extern	const	STRING	KYVFLIST;
+extern	const	STRING	KYAUTOVDIRS;
 // PIC definitions
 extern	const	STRING	KYPIC, KYPIC_BUS, KYPIC_MAX;
 // Interrupt definitions
 extern	const	STRING	KY_INT, KYINTLIST, KY_WIRE, KY_DOTWIRE, KY_ID;
+// SIM definitions
+extern	const	STRING	KYSIM_INCLUDE, KYSIM_DEFINES, KYSIM_DEFNS,
+			KYSIM_PREINITIAL, KYSIM_INIT, KYSIM_TICK,
+			KYSIM_SETRESET, KYSIM_CLRRESET,
+			KYSIM_DBGCONDITION, KYSIM_DEBUG,
+			KYSIM_LOAD, KYSIM_METHODS;
 //
 extern const	STRING	KYSTHIS;
 extern const	STRING	KYTHISDOT;

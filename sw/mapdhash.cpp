@@ -200,6 +200,7 @@ void	addtomap(MAPDHASH &fm, STRING ky, STRING vl) {
 	}
 
 	if (splitkey(*trimmed, mkey, subky)) {
+
 		MAPDHASH::iterator	subloc = fm.find(mkey);
 		delete	trimmed;
 
@@ -265,8 +266,10 @@ void	addtomap(MAPDHASH &fm, STRING ky, STRING vl) {
 			if (astnode) {
 				elm.m_typ = MAPT_AST;
 				elm.u.m_a = parse_ast(vl);
-			} else
+			} else {
 				elm.m_typ = MAPT_STRING;
+				elm.u.m_s = new STRING(vl);
+			}
 			fm.insert(KEYVALUE(STRING("+")+(*trimmed), elm));
 		} else {
 			subloc->second = subfm + vl;
@@ -835,6 +838,7 @@ MAPDHASH *copy(MAPDHASH *top) {
 		else if (kvpair->second.m_typ == MAPT_AST)
 			elm.u.m_a = copy(kvpair->second.u.m_a);
 		else {
+			fprintf(stderr, "ERROR in COPY(MAP)::UNKNOWN TYPE, %d\n", kvpair->second.m_typ);
 			fprintf(gbl_dump, "COPY(MAP)::UNKNOWN TYPE, %d\n", kvpair->second.m_typ);
 			exit(EXIT_FAILURE);
 		}
@@ -890,11 +894,10 @@ void	flatten_aux(MAPDHASH &master, MAPDHASH &sub, STRING &here) {
 	for(kvpair=sub.begin(); kvpair != sub.end(); kvpair++) {
 		if (kvpair->second.m_typ == MAPT_MAP) {
 			STRING	nkey = here + "." + STRING(kvpair->first);
-			fprintf(gbl_dump, "FLATT-AUX: RECURSING ON %s -> %s\n", here.c_str(), kvpair->first.c_str());
+
 			flatten_aux(master, *kvpair->second.u.m_m, nkey);
 
 			if (kvpair->first == KYPLUSDOT) {
-				fprintf(gbl_dump, "FOUND A PLUS DESCENDANT OF %s\n", here.c_str());
 				kvsub = kvpair->second.u.m_m->begin();
 				kvnxt = kvsub; kvnxt++;
 				assert(kvnxt == kvpair->second.u.m_m->end());
@@ -903,6 +906,34 @@ void	flatten_aux(MAPDHASH &master, MAPDHASH &sub, STRING &here) {
 				else
 				flatten_maps(sub, *kvpair->second.u.m_m, nkey);
 			}
+		}
+
+
+		if (kvpair->first[0] == '+') {
+				STRING	ikey = kvpair->first.substr(1);
+				MAPDHASH::iterator	kvprior;
+
+				kvprior = sub.find(ikey);
+				if (kvprior == master.end()) {
+					sub.insert(KEYVALUE(ikey,
+						kvpair->second));
+				} else if ((kvpair->second.m_typ == kvprior->second.m_typ)
+					&&(kvprior->second.m_typ == MAPT_STRING)) {
+
+					STRINGP	pstr = kvprior->second.u.m_s;
+					if (isspace((*pstr)[(*pstr).size()-1]))
+
+						(*kvprior->second.u.m_s) = (*kvprior->second.u.m_s) + (*kvpair->second.u.m_s);
+					else
+						(*kvprior->second.u.m_s) = (*kvprior->second.u.m_s) + STRING(" ") + (*kvpair->second.u.m_s);
+				}
+
+				sub.erase(kvpair);
+				kvpair = sub.begin();
+				if (kvpair == sub.end())
+					break;
+
+		//else if((kvpair->first[0] == '/')&&(kvpair->first[1]=='+'))
 		} else if (kvpair->first[0] == '/') {
 			STRING	nkey = kvpair->first.substr(1);
 			if (master.find(nkey) == master.end()) {
