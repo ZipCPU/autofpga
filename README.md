@@ -7,10 +7,11 @@ After now having built several FPGA designs, such as the
 [zbasic](https://github.com/ZipCPU/zbasic),
 and even a Basys-3 design of my own that hasn't been published, I started
 recognizing that all of these designs have a lot in common.  In particular, they
-all have a set of bus masters, such as the UART-to-wishbone bridge that I use,
-or even the [zipcpu](https://github.com/ZipCPU/zipcpu).  Many of these designs
-have also started to use (and reuse) many of the peripherals I've developed,
-such as
+all have a set of bus masters, such as the
+[UART-to-wishbone](https://github.com/ZipCPU/zbasic/blob/master/rtl/wbubus.v)
+bridge that I use, or even the [zipcpu](https://github.com/ZipCPU/zipcpu). 
+Many of these designs have also started to use (and reuse) many of the
+peripherals I've developed, such as
 the generic [UART](https://github.com/ZipCPU/wbuart),
 the [QSPI flash controller](https://github.com/ZipCPU/qspiflash),
 the [SD-card controller](https://github.com/ZipCPU/sdspi),
@@ -29,29 +30,46 @@ top level design, all of these require a certain amount of care and feeding
 as part of that top level design, but yet rebuilding that top level design over
 and over just to repeat this information becomes a pain.
 
-Where things really get annoying is where and when you want to assign peripheral
-addresses to all of these files.  While the peripheral decoding is typically
-done in some [main Verilog file](https://github.com/ZipCPU/openarty/blob/master/rtl/busmaster.v),
+Where things were really starting to get annoying is when C++ information
+was depending upon Verilog information.  A classic example of this is the
+base address of any bus components.  However, if you add clock rate into
+the mix, you can then also control things such as any default UART
+configuration, default clock stepping information (for the RTC clock),
+or even default video clock information.
+
+Sharing information between Verilog and C++ was one of the primary reasons
+for creating autofpga.  While peripheral decoding is typically done in some
+[main Verilog
+file](https://github.com/ZipCPU/openarty/blob/master/rtl/busmaster.v),
 other files depend upon what this peripheral decoding is.  These other files
-include the [host register definition file](https://github.com/ZipCPU/openarty/blob/master/sw/host/regdefs.h),
-the [register naming file](https://github.com/ZipCPU/openarty/blob/master/sw/host/regdefs.cpp),
-the [ZipCPU board definition file](https://github.com/ZipCPU/openarty/blob/master/sw/zlib/artyboard.h),
-the [linker script](https://github.com/ZipCPU/openarty/blob/master/sw/board/arty.ld) for the board,
-and even the [LaTeX specification](https://github.com/ZipCPU/openarty/blob/master/doc/src/spec.tex) for the board.
-Creating and updating all of these files by hand anytime I create a new board
-file can get tedious.  Further, every time a board is reconfigured, the
-constraints file, whether
+include the [host register definition
+file](https://github.com/ZipCPU/openarty/blob/master/sw/host/regdefs.h) (used
+for debugging access), the [register naming
+file](https://github.com/ZipCPU/openarty/blob/master/sw/host/regdefs.cpp), the
+[ZipCPU board definition
+file](https://github.com/ZipCPU/openarty/blob/master/sw/zlib/artyboard.h) used
+by newlib, the [linker
+script](https://github.com/ZipCPU/openarty/blob/master/sw/board/arty.ld) used
+by the compiler, and even the [LaTeX
+specification](https://github.com/ZipCPU/openarty/blob/master/doc/src/spec.tex)
+for the board.  Creating and updating all of these files by hand anytime I
+create a new board file can get tedious.  Further, every time a board is
+reconfigured, the constraints file, whether
 [XDC](https://github.com/ZipCPU/openarty/blob/master/arty.xdc) or
 [UCF](https://github.com/ZipCPU/xulalx25soc/blob/master/xula.ucf) file, needs
 to be updated to match the current constraints.
 
-Solving this problem is the purpose of autofpga.
+Solving this multi-language coordination problem is the purpose of autofpga.
 
 Unlike many of the other tools out there, such as Xilinx's schematic capture,
 autofpga is not built with the beginner in mind, neither is it built to hide
-the details of what is going on.  Instead, it is built to alleviate the burden
-of an experienced FPGA designer who otherwise has to create and maintain
-coherency between multiple design files.
+the details of what is going within the project it creates.  Instead, autofpga
+is built with the sole purpose of alleviate any burden on the FPGA designer
+who otherwise has to create and maintain coherency between multiple design
+files.
+
+That this program facilitates composing and building new designs from existing
+components ... is just a bonus.
 
 # Goal
 
@@ -59,49 +77,77 @@ The goal of AutoFPGA is to be able to run it with a list of peripheral
 definition files, given on the command line, and to thus be able to generate
 (or update?) the various board definition files discussed above:
 
-- [sw/rtl/toplevel.v](demo-out/toplevel.v)
-- [sw/rtl/main.v](demo-out/main.v))
-- [sw/host/regdefs.h](demo-out/regdefs.h))
-- [sw/host/regdefs.cpp](demo-out/regdefs.cpp))
-- [sw/zlib/board.h](demo-out/board.h))
-- [sw/zlib/board.ld](demo-out/board.ld))
-- [build.xdc](demo-out/build.xdc)) (Created by modifying an existing XDC file)
+- [rtl/toplevel.v](demo-out/toplevel.v)
+- [rtl/main.v](demo-out/main.v)
+- [rtl/make.inc](demo-out/rtl.make.inc)
+- [sw/host/regdefs.h](demo-out/regdefs.h)
+- [sw/host/regdefs.cpp](demo-out/regdefs.cpp)
+- [sw/zlib/board.h](demo-out/board.h)
+- [sw/zlib/board.ld](demo-out/board.ld)
+- [build.xdc](demo-out/build.xdc) (Created by modifying an existing XDC file)
+- [sim/verilated/testb.h](demo-out/testb.h)
+- [sim/verilated/main_tb.h](demo-out/main_tb.cpp)
 - doc/src/(component name).tex (Not started yet)
 
 Specifically, the parser must determine:
-- If any of the peripherals used in this project need to be configured, and if so, what the configuration parameters are and how they need to be set.  For example, the UART baud rate and RTC and GPS clock steps both need to be set based upon the actual clock speed of the master clock.  Placing [a module](auto-data/clock.txt) within the design that sets up a clock and declares its rate is the current method for accomplishing this.
-- If peripherals have or create interrupts, those need to be found and determined, and (even better) wired up.
-- If the item it is parsing fits into one of the following classes of items:
-	* Full bus masters
-	* (Partial) bus masters, wanting access to one peripheral only
-	* One-clock Peripherals (interrupt controller, etc.)
-	* Two-clock Peripherals (RTC clock, block RAM, scopes, etc.)
-	* Memory Peripherals
-		* These need a line within the linker script, and they need to define if their memory region, within that linker script, has read, write, or execute permissions
-	* Generic Peripherals ([flash](auto-data/flash.txt), SDRAM, [MDIO](auto-data/mdio.txt), etc.)
-- Peripheral files need to be able to describe more than one peripheral.  For example, the [GPS peripheral file](auto-data/gps.txt) has a GPS-Clock, GPS-TB to measure the performance of the GPS clock, and a WBUART to allow us to read from the GPS and to write to it and so configure it.  Of course ... this also includes a parameter that must be set (baud rate) based upon the global clock rate.
 
-Each peripheral may have 2-levels of container descriptions: top (information
-to be added to the [toplevel.v](demo-out/toplevel.v) file), and main
-(information to be added to a [main.v](demo-out/main.v) file).  Further
-sub--module creation is not (yet) supported by AutoFPGA, and needs to be
-done via the component logic.
+- If any of the peripherals used in this project need to be configured, and if
+  so, what the configuration parameters are and how they need to be set.  For
+  example, the UART baud rate and RTC and GPS clock steps both need to be set
+  based upon the actual clock speed of the master clock.  Placing [a
+  module](auto-data/clock.txt) within the design that sets up a clock and
+  declares its rate is the current method for accomplishing this.
+
+- If peripherals have or create interrupts, those need to be found and
+  determined, and (even better) wired up.
+
+- If the item it is parsing fits into one of the following classes of items:
+
+  * Full bus masters
+
+  * (Partial) bus masters, wanting access to one peripheral only
+
+  * One-clock Peripherals (interrupt controller, etc.)
+
+  * Two-clock Peripherals (RTC clock, block RAM, scopes, etc.)
+
+  * Memory Peripherals
+
+    o These need a line within the linker script, and they need to define if
+      their memory region, within that linker script, has read, write, or
+      execute permissions
+
+    o Generic Peripherals ([flash](auto-data/flash.txt), SDRAM,
+      [MDIO](auto-data/mdio.txt), etc.)
+
+- Peripheral files need to be able to describe more than one peripheral.  For
+  example, the [GPS peripheral file](auto-data/gps.txt) has a GPS-Clock,
+  GPS-TB to measure the performance of the GPS clock, and a serial port
+  (WBUART) to allow us
+  to read from the GPS and to write to it and so configure it.  Of course ...
+  this also includes a parameter that must be set (baud rate) based upon the
+  global clock rate.
 
 ## Classes
 
 Some peripherals might exist at multiple locations within a design.
-For example, the WBUART component can be used to create multiple serial ports.
+For example, the WBUART serial component can be used to create multiple
+serial ports within a design.
 
-To handle this case, include the WBUART by defining a key
+To handle this case, the WBUART configuration file may be subclassed within
+other component configuration files by defining a key
 @INCLUDEFILE=[wbuart.txt](auto-data/wbuart.txt).  This will provide a set of
 keys that the current file can then override (inherit from).
 
+**TODO**: Subclass only named components of a configuration file
+
 ## Math
+
 Some peripherals need to be able to perform math on a given value to determine
 an appropriate setting value.  These peripherals need access to variables.
 The classic examples are the baud rate, which depends upon the clock rate,
-as well as the step size necessary for the RTC and the GPS clocks, both of which
-also depend upon the master clock rate.
+as well as the step size necessary for the RTC and the GPS clocks, both of
+which also depend upon the master clock rate.
 
 This feature is currently fully supported using integer math.
 
@@ -114,23 +160,60 @@ actual peripheral code from elsewhere.  (Most of it already exists in the
 [openarty](https://github.com/ZipCPU/openarty) project.)
 
 In detail:
-- Simple bus components work.
+
+- Simple bus components ... just work.
+
 - Components with logic in the toplevel work nicely as well.
-- Although it shouldn't have any problems integrating memory components and cores, I have yet to try integrating any [SDRAM](https://github.com/ZipCPU/xulalx25soc/blob/master/rtl/wbsdram.v) or [DDR3 SDRAM](http://opencores.org/project,wbddr3) components.
-- Only one [PC host to wishbone busmaster](auto-data/wbubus.txt) component has been integrated.  Driving the design from either JTAG or Digilent's DEPP interface would require a simple modification to this.
-- Addresses get assigned in three groups, and processed in three groups: components having only one address, components having more addresses but only a single clock delay, and all other components and memories
-- Interrupts get assigned to a named controller, and then C++ header files can be updated to reflect that
-- A simple mathematical expression evaluator exists, allowing simple math expressions and print formats.  This makes it possible to set a global clock frequency value, and to then set baud rates and other clock dividers from it.
-- The auto builder does nothing to create the master C++ Verilator simulation file, or any RTL based Makefiles (yet)---although updating it to provide some of these details wouldn't be very hard at all.
-- Only one type of address building is supported.  I'd like to be able to support others, but so far this has been sufficient for my first project.
-- AutoFPGA now builds a [ZipCPU Linker Script](demo-out/board.ld) for the project
+
+- Although it shouldn't have any problems integrating memory components and
+  cores, I have yet to try integrating any
+  [SDRAM](https://github.com/ZipCPU/xulalx25soc/blob/master/rtl/wbsdram.v) or
+  [DDR3 SDRAM](http://opencores.org/project,wbddr3) components.
+
+  o AutoFPGA now has support for building a [test bench](demo-out/testb.h)
+    driver that would match multiple on-board clocks, and even a main Verilator
+    [test bench module](demo-out/main_tb.cpp) that will call any C++ simulators
+    associated with the various clocks and clock rates at the appropriate
+    time in your simulation.
+
+- Addresses get assigned in three groups, and processed in three groups:
+  components having only one address, components having more addresses but
+  only a single clock delay, and all other components and memories
+
+- Interrupts get assigned to a named controller, and then C++ header files are
+  updated to reflect the interrupt assignments
+
+- A simple integer mathematical expression evaluator exists, allowing simple
+  math expressions and print formats.  This makes it possible to set a global
+  clock frequency value, and to then set baud rates and other clock dividers
+  from it.
+
+- The auto builder now creates a master C++ Verilator simulation class
+  file, calls any verilator simulation support routines, and organizes these
+  by whever clock rate they are placed upon.
+
+- A [Makefile include](demo-out/rtl.make.inc) is created for the Verilog
+  (RTL) directory, so as to
+  facilitate the modifications necessary for integrating the new component into
+  the verilator simulation build
+
+- Only one type of address building is supported.  I'd like to be able to
+  support others, but so far this has been sufficient for my first project.
+
+  o Likewise, the project only supports WB B4/pipelined.  No support is
+    provided for WB B3/classic (yet), although creating such support shoud not
+    be difficult at all.
+
+- AutoFPGA now builds a [ZipCPU Linker Script](demo-out/board.ld) for the
+  project
+
 - The LaTeX specification table building isn't there ... yet.
 
 # Sample component files
 
 Component files now exist for many of the components I've been using regularly.
 These include: 
-a [Flash](auto-data/flash.txt),
+a [Flash](auto-data/flash.txt) controller,
 [block RAM](auto-data/bkram.txt),
 a [UART console](auto-data/wbuart.txt),
 a very simple [GPIO controller](auto-data/gpio.txt),
@@ -145,8 +228,8 @@ Many of these component cores exist and have their own repositories elsewhere.
 For example, the wishbone UART core may be found
 [here](https://github.com/ZipCPU/wbuart32).
 Building the cores themselves is not a part of this project, but rather
-figuring out how to create a top level design from both cores and component
-descriptions.
+figuring out how to compose multiple cores into a top level design from
+both cores and component descriptions.
 
 # License
 
