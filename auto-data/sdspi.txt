@@ -46,7 +46,7 @@
 @DEVID=SDSPI
 @NADDR=4
 @ACCESS=SDSPI_ACCESS
-@PTYPE=DOUBLE
+@PTYPE=OTHER
 @BUS.PREFIX=wb
 # @SCOPE.TRIGGER=sd_debug[31]
 # @SCOPE.DATA=sd_debug
@@ -133,6 +133,7 @@
 #define	@$(DEVID)_SETAUX	0x0ff
 #define	@$(DEVID)_READAUX	0x0bf
 #define	@$(DEVID)_CMD		0x040
+#define	@$(DEVID)_ACMD		(0x040+55) // CMD55
 #define	@$(DEVID)_FIFO_OP	0x0800	// Read only
 #define	@$(DEVID)_WRITEOP	0x0c00	// Write to the FIFO
 #define	@$(DEVID)_ALTFIFO	0x1000
@@ -149,6 +150,114 @@ typedef	struct @$(DEVID)_S {
 @BDEF.IOTYPE=@$(DEVID)
 @BDEF.OSDEF=_BOARD_HAS_@$(DEVID)
 @BDEF.OSVAL=static volatile @$BDEF.IOTYPE *const @$BDEF.IONAME = ((@$BDEF.IOTYPE *)@$BASE);
+@SIM.INCLUDE=
+#include "sdspisim.h"
+@SIM.DEFNS=
+#ifdef	SDSPI_ACCESS
+	SDSPISIM	m_sdcard;
+#endif
+@SIM.INIT=
+#ifdef	@$(ACCESS)
+		m_sdcard.debug(false);
+#endif	// @$(ACCESS)
+@SIM.METHODS=
+#ifdef	@$(ACCESS)
+	void	setsdcard(const char *fn) {
+		m_sdcard.load(fn);
+	}
+#endif
+@SIM.TICK=
+#ifdef	@$(ACCESS)
+		m_core->i_sd_data = m_sdcard((m_core->o_sd_data&8)?1:0,
+				m_core->o_sd_sck, m_core->o_sd_cmd);
+		m_core->i_sd_data &= 1;
+		m_core->i_sd_data |= (m_core->o_sd_data&0x0e);
+		m_core->i_sd_detect = 1;
+#endif	// @$(ACCESS)
+@SIM.DEFINES=
+#define	sd_cmd_busy	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)i__DOT__r_cmd_busy
+#define	sd_clk		@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)i__DOT__r_sdspi_clk
+#define	sd_cmd_state	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)i__DOT__r_cmd_state
+#define	sd_rsp_state	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)i__DOT__r_rsp_state
+#define	sd_ll_cmd_stb	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__ll_cmd_stb
+#define	sd_ll_cmd_dat	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__ll_cmd_dat
+#define	sd_ll_z_counter	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__lowlevel__DOT__r_z_counter
+#define	sd_ll_clk_counter	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__lowlevel__DOT__r_clk_counter
+#define	sd_ll_idle	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__lowlevel__DOT__r_idle
+#define	sd_ll_state	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__lowlevel__DOT__r_state
+#define	sd_ll_byte	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__lowlevel__DOT__r_byte
+#define	sd_ll_ireg	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__lowlevel__DOT__r_ireg
+#define	sd_ll_out_stb	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__ll_out_stb
+#define	sd_ll_out_dat	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__ll_out_dat
+#define	sd_lgblklen	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__r_lgblklen
+#define	sd_fifo_rd_crc	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__fifo_rd_crc_reg
+#define	sd_cmd_crc	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__r_cmd_crc,
+#define	sd_cmd_crc_cnt	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__r_cmd_crc_cnt
+#define	sd_fifo_rd_crc_stb	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__fifo_rd_crc_stb
+#define	ll_fifo_pkt_state	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__ll_fifo_pkt_state
+#define	sd_have_data_response_token	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__r_have_data_response_token
+#define	sd_fifo_wr_crc		@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__fifo_wr_crc_reg
+#define	sd_fifo_wr_crc_stb	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__fifo_wr_crc_stb,
+#define	sd_ll_fifo_wr_state	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__ll_fifo_wr_state,
+#define	sd_ll_fifo_wr_complete	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__ll_fifo_wr_complete
+#define	sd_use_fifo	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__r_use_fifo
+#define	sd_fifo_wr	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__r_fifo_wr
+
+@SIM.DBGCONDITION=
+			writeout = true;
+@SIM.DEBUG=
+			/*
+			printf(" SDSPI[%d,%d(%d),(%d)]",
+				m_core->sd_cmd_busy,
+				m_core->sd_clk,
+				m_core->sd_cmd_state,
+				m_core->sd_rsp_state);
+			printf(" LL[%d,%2x->CK=%d/%2x,%s,ST=%2d,TX=%2x,RX=%2x->%d,%2x] ",
+				m_core->sd_ll_cmd_stb,
+				m_core->sd_ll_cmd_dat,
+				m_core->sd_ll_z_counter,
+				// (m_core->sd_ll_clk_counter==0)?1:0,
+				m_core->sd_ll_clk_counter,
+				(m_core->sd_ll_idle)?"IDLE":"    ",
+				m_core->sd_ll_state,
+				m_core->sd_ll_byte,
+				m_core->sd_ll_ireg,
+				m_core->sd_ll_out_stb,
+				m_core->sd_ll_out_dat
+				);
+			printf(" CRC=%02x/%2d",
+				m_core->sd_cmd_crc,
+				m_core->sd_cmd_crc_cnt);
+			printf(" SPI(%d,%d,%d/%d,%d)->?",
+				m_core->o_sf_cs_n,
+				m_core->o_sd_cs_n,
+				m_core->o_spi_sck,
+				m_core->@$(VERILATOR_PREFIX)__DOT__sdcard_sck,
+				m_core->o_spi_mosi);
+
+			printf(" CK=%d,LN=%d",
+				m_core->sd_clk,
+				m_core->sd_lgblklen);
+
+
+			if (m_core->sd_use_fifo){
+				printf(" FIFO");
+				if (m_core->sd_fifo_wr)
+					printf("-WR(%04x,%d,%d,%d)",
+						m_core->sd_fifo_rd_crc,
+						m_core->sd_fifo_rd_crc_stb,
+						m_core->sd_ll_fifo_pkt_state,
+						m_core->sd_have_data_response_token);
+				else
+					printf("-RD(%04x,%d,%d,%d)",
+						m_core->sd_fifo_wr_crc,
+						m_core->sd_fifo_wr_crc_stb,
+						m_core->sd_ll_fifo_wr_state,
+						m_core->sd_ll_fifo_wr_complete
+						);
+			}
+			*/
+
 #
 #
 #
@@ -202,3 +311,5 @@ typedef struct WBSCOPE_S {
 @BDEF.IOTYPE=WBSCOPE
 @BDEF.OSDEF=_BOARD_HAS_SDSPI_SCOPE
 @BDEF.OSVAL=static volatile @$BDEF.IOTYPE *const @$(BDEF.IONAME) = ((@$BDEF.IOTYPE *)@$BASE);
+@RTL.MAKE.GROUP= SDSPI
+@RTL.MAKE.FILES= sdspi.v llsdspi.v wbscope.v

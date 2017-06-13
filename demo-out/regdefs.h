@@ -88,20 +88,15 @@
 #define	R_TIMER           	0x00000834	// 00000830, wbregs names: TIMER
 #define	R_STOPWATCH       	0x00000838	// 00000830, wbregs names: STOPWATCH
 #define	R_CKALARM         	0x0000083c	// 00000830, wbregs names: ALARM, CKALARM
-// SD-SPI addresses
-#define	R_SDSPI_CTRL      	0x00000840	// 00000840, wbregs names: SDCARD
-#define	R_SDSPI_DATA      	0x00000844	// 00000840, wbregs names: SDDATA
-#define	R_SDSPI_FIFOA     	0x00000848	// 00000840, wbregs names: SDFIFOA, SDFIF0, SDFIFA
-#define	R_SDSPI_FIFOB     	0x0000084c	// 00000840, wbregs names: SDFIFOB, SDFIF1, SDFIFB
 // GPS clock test bench registers, for measuring the clock trackers performance
-#define	R_GPSTB_FREQ      	0x00000860	// 00000860, wbregs names: GPSFREQ
-#define	R_GPSTB_JUMP      	0x00000864	// 00000860, wbregs names: GPSJUMP
-#define	R_GPSTB_ERRHI     	0x00000868	// 00000860, wbregs names: ERRHI
-#define	R_GPSTB_ERRLO     	0x0000086c	// 00000860, wbregs names: ERRLO
-#define	R_GPSTB_COUNTHI   	0x00000870	// 00000860, wbregs names: CNTHI
-#define	R_GPSTB_COUNTLO   	0x00000874	// 00000860, wbregs names: CNTLO
-#define	R_GPSTB_STEPHI    	0x00000878	// 00000860, wbregs names: STEPHI
-#define	R_GPSTB_STEPLO    	0x0000087c	// 00000860, wbregs names: STEPLO
+#define	R_GPSTB_FREQ      	0x00000840	// 00000840, wbregs names: GPSFREQ
+#define	R_GPSTB_JUMP      	0x00000844	// 00000840, wbregs names: GPSJUMP
+#define	R_GPSTB_ERRHI     	0x00000848	// 00000840, wbregs names: ERRHI
+#define	R_GPSTB_ERRLO     	0x0000084c	// 00000840, wbregs names: ERRLO
+#define	R_GPSTB_COUNTHI   	0x00000850	// 00000840, wbregs names: CNTHI
+#define	R_GPSTB_COUNTLO   	0x00000854	// 00000840, wbregs names: CNTLO
+#define	R_GPSTB_STEPHI    	0x00000858	// 00000840, wbregs names: STEPHI
+#define	R_GPSTB_STEPLO    	0x0000085c	// 00000840, wbregs names: STEPLO
 // HDMI in (sink) bit slip control
 #define	R_HIN_FRAMEADDR   	0x00000880	// 00000880, wbregs names: HINFRAME
 #define	R_HIN_ORIGIN      	0x00000884	// 00000880, wbregs names: HINORIGIN
@@ -146,6 +141,11 @@
 #define	R_GPSU_FIFO       	0x00000c34	// 00000c30, wbregs names: GPSFIFO
 #define	R_GPSU_UARTRX     	0x00000c38	// 00000c30, wbregs names: GPSRX
 #define	R_GPSU_UARTTX     	0x00000c3c	// 00000c30, wbregs names: GPSTX
+// SD-SPI addresses
+#define	R_SDSPI_CTRL      	0x00000c40	// 00000c40, wbregs names: SDCARD
+#define	R_SDSPI_DATA      	0x00000c44	// 00000c40, wbregs names: SDDATA
+#define	R_SDSPI_FIFOA     	0x00000c48	// 00000c40, wbregs names: SDFIFOA, SDFIF0, SDFIFA
+#define	R_SDSPI_FIFOB     	0x00000c4c	// 00000c40, wbregs names: SDFIFOB, SDFIF1, SDFIFB
 // FPGA CONFIG REGISTERS: 0x4e0-0x4ff
 #define	R_CFG_CRC         	0x00000c80	// 00000c80, wbregs names: FPGACRC
 #define	R_CFG_FAR         	0x00000c84	// 00000c80, wbregs names: FPGAFAR
@@ -198,11 +198,11 @@
 #define	R_ZIPDATA	0x80000004
 #define	CLKFREQHZ	100000000
 // @REGDEFS.H.DEFNS for peripherals
-#define	BKMEMBASE	1048576
-#define	BKMEMLEN	0x00100000
 #define	FLASHBASE	16777216
 #define	FLASHLEN	0x01000000
 #define	FLASHLGLEN	24
+#define	BKRAMBASE	1048576
+#define	BKRAMLEN	0x00100000
 // @REGDEFS.H.DEFNS at the top level
 // End of definitions from REGDEFS.H.DEFNS
 //
@@ -247,9 +247,9 @@
 
 
 #define	R_ICONTROL	R_PIC
-#define	ISPIF_EN	0x80080008
-#define	ISPIF_DIS	0x00080008
-#define	ISPIF_CLR	0x00000008
+#define	ISPIF_EN	0x80040004
+#define	ISPIF_DIS	0x00040004
+#define	ISPIF_CLR	0x00000004
 // @REGDEFS.H.INSERT from the top level
 typedef	struct {
 	unsigned	m_addr;

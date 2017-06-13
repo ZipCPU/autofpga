@@ -38,6 +38,10 @@
 ################################################################################
 ##
 ##
+## Define @SYSPIC so that other peripherals needing to be on the ZipSystem's
+## PIC know the name of the PIC we are using.  Note that this is a global.
+##
+@SYSPIC= syspic
 @PREFIX=zip
 @ACCESS=INCLUDE_ZIPCPU
 @MTYPE=CPU
@@ -139,6 +143,210 @@
 #define	CPU_uPC		0x001f
 
 
+@SIM.INCLUDE=
+#include "zipelf.h"
+
+@SIM.DEFINES=
+#define	cpu_break 	@$(VERILATOR_PREFIX)__DOT__swic__DOT__cpu_break
+#define	cpu_cmd_halt	@$(VERILATOR_PREFIX)__DOT__swic__DOT__cmd_halt
+#define	cpu_ipc		@$(VERILATOR_PREFIX)__DOT__swic__DOT__thecpu__DOT__ipc
+#define	cpu_upc		@$(VERILATOR_PREFIX)__DOT__swic__DOT__thecpu__DOT__r_upc
+#define	cpu_gie		@$(VERILATOR_PREFIX)__DOT__swic__DOT__thecpu__DOT__r_gie
+#define	cpu_iflags	@$(VERILATOR_PREFIX)__DOT__swic__DOT__thecpu__DOT__w_iflags
+#define	cpu_uflags	@$(VERILATOR_PREFIX)__DOT__swic__DOT__thecpu__DOT__w_uflags
+#define	cpu_regs	@$(VERILATOR_PREFIX)__DOT__swic__DOT__thecpu__DOT__regset
+#define	cpu_cmd_addr	@$(VERILATOR_PREFIX)__DOT__swic__DOT__cmd_addr
+#define	cpu_bus_err	@$(VERILATOR_PREFIX)__DOT__swic__DOT__thecpu__DOT__bus_err
+#define	cpu_ibus_err	@$(VERILATOR_PREFIX)__DOT__swic__DOT__thecpu__DOT__ibus_err_flag
+#define	cpu_ubus_err	@$(VERILATOR_PREFIX)__DOT__swic__DOT__thecpu__DOT__r_ubus_err_flag
+#define	cpu_mem_rdaddr	@$(VERILATOR_PREFIX)__DOT__swic__DOT__thecpu__DOT__domem__DOT__rdaddr
+#define	cpu_mem_wraddr	@$(VERILATOR_PREFIX)__DOT__swic__DOT__thecpu__DOT__domem__DOT__wraddr
+#define	cpu_op_sim	@$(VERILATOR_PREFIX)__DOT__swic__DOT__thecpu__DOT__op_sim
+#define	cpu_op_valid	@$(VERILATOR_PREFIX)__DOT__swic__DOT__thecpu__DOT__op_valid
+#define	cpu_alu_ce	@$(VERILATOR_PREFIX)__DOT__swic__DOT__thecpu__DOT__alu_ce
+#define	cpu_new_pc	@$(VERILATOR_PREFIX)__DOT__swic__DOT__thecpu__DOT__new_pc
+#define	cpu_sim_immv	@$(VERILATOR_PREFIX)__DOT__swic__DOT__thecpu__DOT__op_sim_immv
+
+@SIM.DEFNS=
+	int	m_cpu_bombed;
+@SIM.INIT=
+		m_cpu_bombed = 0;
+@SIM.SETRESET=
+		m_core->i_cpu_reset = 1;
+@SIM.CLRRESET=
+		m_core->i_cpu_reset = 0;
+@SIM.METHODS=
+
+	void	loadelf(const char *elfname) {
+		ELFSECTION	**secpp, *secp;
+		uint32_t	entry;
+
+		elfread(elfname, entry, secpp);
+
+		for(int s=0; secpp[s]->m_len; s++) {
+			secp = secpp[s];
+
+			load(secp->m_start, secp->m_data, secp->m_len);
+		}
+	}
+
+
+	bool	gie(void) {
+		return (m_core->cpu_gie);
+	}
+
+	void dump(const uint32_t *regp) {
+		uint32_t	uccv, iccv;
+		fflush(stderr);
+		fflush(stdout);
+		printf("ZIPM--DUMP: ");
+		if (gie())
+			printf("Interrupts-enabled\n");
+		else
+			printf("Supervisor mode\n");
+		printf("\n");
+
+		iccv = m_core->cpu_iflags;
+		uccv = m_core->cpu_uflags;
+
+		printf("sR0 : %08x ", regp[0]);
+		printf("sR1 : %08x ", regp[1]);
+		printf("sR2 : %08x ", regp[2]);
+		printf("sR3 : %08x\n",regp[3]);
+		printf("sR4 : %08x ", regp[4]);
+		printf("sR5 : %08x ", regp[5]);
+		printf("sR6 : %08x ", regp[6]);
+		printf("sR7 : %08x\n",regp[7]);
+		printf("sR8 : %08x ", regp[8]);
+		printf("sR9 : %08x ", regp[9]);
+		printf("sR10: %08x ", regp[10]);
+		printf("sR11: %08x\n",regp[11]);
+		printf("sR12: %08x ", regp[12]);
+		printf("sSP : %08x ", regp[13]);
+		printf("sCC : %08x ", iccv);
+		printf("sPC : %08x\n",regp[15]);
+
+		printf("\n");
+
+		printf("uR0 : %08x ", regp[16]);
+		printf("uR1 : %08x ", regp[17]);
+		printf("uR2 : %08x ", regp[18]);
+		printf("uR3 : %08x\n",regp[19]);
+		printf("uR4 : %08x ", regp[20]);
+		printf("uR5 : %08x ", regp[21]);
+		printf("uR6 : %08x ", regp[22]);
+		printf("uR7 : %08x\n",regp[23]);
+		printf("uR8 : %08x ", regp[24]);
+		printf("uR9 : %08x ", regp[25]);
+		printf("uR10: %08x ", regp[26]);
+		printf("uR11: %08x\n",regp[27]);
+		printf("uR12: %08x ", regp[28]);
+		printf("uSP : %08x ", regp[29]);
+		printf("uCC : %08x ", uccv);
+		printf("uPC : %08x\n",regp[31]);
+		printf("\n");
+		fflush(stderr);
+		fflush(stdout);
+	}
+
+
+	void	execsim(const uint32_t imm) {
+		uint32_t	*regp = m_core->cpu_regs;
+		int		rbase;
+		rbase = (gie())?16:0;
+
+		fflush(stdout);
+		if ((imm & 0x03fffff)==0)
+			return;
+		// fprintf(stderr, "SIM-INSN(0x%08x)\n", imm);
+		if ((imm & 0x0fffff)==0x00100) {
+			// SIM Exit(0)
+			close();
+			exit(0);
+		} else if ((imm & 0x0ffff0)==0x00310) {
+			// SIM Exit(User-Reg)
+			int	rcode;
+			rcode = regp[(imm&0x0f)+16] & 0x0ff;
+			close();
+			exit(rcode);
+		} else if ((imm & 0x0ffff0)==0x00300) {
+			// SIM Exit(Reg)
+			int	rcode;
+			rcode = regp[(imm&0x0f)+rbase] & 0x0ff;
+			close();
+			exit(rcode);
+		} else if ((imm & 0x0fff00)==0x00100) {
+			// SIM Exit(Imm)
+			int	rcode;
+			rcode = imm & 0x0ff;
+			close();
+			exit(rcode);
+		} else if ((imm & 0x0fffff)==0x002ff) {
+			// Full/unconditional dump
+			printf("SIM-DUMP\n");
+			dump(regp);
+		} else if ((imm & 0x0ffff0)==0x00200) {
+			// Dump a register
+			int rid = (imm&0x0f)+rbase;
+			printf("%8lu @%08x R[%2d] = 0x%08x\n", m_time_ps/1000,
+			m_core->cpu_ipc, rid, regp[rid]);
+		} else if ((imm & 0x0ffff0)==0x00210) {
+			// Dump a user register
+			int rid = (imm&0x0f);
+			printf("%8lu @%08x uR[%2d] = 0x%08x\n", m_time_ps/1000,
+				m_core->cpu_ipc,
+				rid, regp[rid+16]);
+		} else if ((imm & 0x0ffff0)==0x00230) {
+			// SOUT[User Reg]
+			int rid = (imm&0x0f)+16;
+			printf("%c", regp[rid]&0x0ff);
+		} else if ((imm & 0x0fffe0)==0x00220) {
+			// SOUT[User Reg]
+			int rid = (imm&0x0f)+rbase;
+			printf("%c", regp[rid]&0x0ff);
+		} else if ((imm & 0x0fff00)==0x00400) {
+			// SOUT[Imm]
+			printf("%c", imm&0x0ff);
+		} else { // if ((insn & 0x0f7c00000)==0x77800000)
+			uint32_t	immv = imm & 0x03fffff;
+			// Simm instruction that we dont recognize
+			// if (imm)
+			// printf("SIM 0x%08x\n", immv);
+			printf("SIM 0x%08x (ipc = %08x, upc = %08x)\n", immv,
+				m_core->cpu_ipc,
+				m_core->cpu_upc);
+		} fflush(stdout);
+	}
+
+@SIM.TICK=
+#ifdef	@$(ACCESS)
+		// ZipCPU Sim instruction support
+		if ((m_core->cpu_op_sim)
+			&&(m_core->cpu_op_valid)
+			&&(m_core->cpu_alu_ce)
+			&&(!m_core->cpu_new_pc)) {
+			//
+			execsim(m_core->cpu_sim_immv);
+		}
+
+		if (m_core->v__DOT__swic__DOT__cpu_break) {
+			printf("\n\nBOMB : CPU BREAK RECEIVED\n");
+			m_cpu_bombed++;
+			dump(m_core->cpu_regs);
+		} else if (m_cpu_bombed) {
+			if (m_cpu_bombed++ > 12)
+				m_done = true;
+		}
+#endif	// @$(ACCESS)
+
+#
+#
+#
+@RTL.MAKE.GROUP=ZIPCPU
+@RTL.MAKE.FILES= zipcpu.v cpuops.v pfcache.v pipemem.v pfcache.v idecode.v
+		wbpriarbiter.v zipsystem.v zipcounter.v zipjiffies.v ziptimer.v
+		wbdmac.v icontrol.v wbwatchdog.v busdelay.v cpudefs.v
+@RTL.MAKE.SUBD= cpu
 #
 #
 #

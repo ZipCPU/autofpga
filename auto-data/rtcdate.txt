@@ -38,21 +38,20 @@
 @PREFIX=date
 @NADDR=1
 @ACCESS=RTCDATE_ACCESS
+@DEPENDS=RTC_ACCESS
 @PTYPE=SINGLE
-# @SINGLE.OUTPUTS=
-@SINGLE.INPUTS= rtc_ppd
 @RTL.MAKE.GROUP=RTCDATE
 @RTL.MAKE.FILES=rtcdate.v
 @MAIN.INSERT=
 	//
 	// The Calendar DATE
 	//
-	rtcdate	thedate(i_clk, rtc_ppd,
+	rtcdate	the@$(PREFIX)(i_clk, rtc_ppd,
 		(wb_stb)&&(@$(PREFIX)_sel), wb_we, wb_data,
 			@$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_data);
 @REGS.N=1
 @REGS.0= 0 R_DATE RTCDATE DATE
-@BDEF.IONAME=	i_rtcdate
+@BDEF.IONAME=	_date
 @BDEF.IOTYPE=	unsigned
 @BDEF.OSDEF=	_BOARD_HAS_RTCDATE
-@BDEF.OSVAL=	static volatile @$BDEF.IOTYPE *const _date = ((@$.BDEF.IOTYPE *)@$.BASE);
+@BDEF.OSVAL=	static volatile @$BDEF.IOTYPE *const @$(BDEF.IONAME) = ((@$BDEF.IOTYPE *)@$BASE);

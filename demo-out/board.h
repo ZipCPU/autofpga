@@ -61,6 +61,7 @@
 #define	SDSPI_SETAUX	0x0ff
 #define	SDSPI_READAUX	0x0bf
 #define	SDSPI_CMD		0x040
+#define	SDSPI_ACMD		(0x040+55) // CMD55
 #define	SDSPI_FIFO_OP	0x0800	// Read only
 #define	SDSPI_WRITEOP	0x0c00	// Write to the FIFO
 #define	SDSPI_ALTFIFO	0x1000
@@ -133,10 +134,18 @@ typedef struct  WBMIC_S {
 #define	GPIO_HDMI_OUT_EN_CLR	GPIO_CLR(GPIO_HDMI_OUT_EN)
 
 
-// Mouse definitions
-typedef struct  WBMOUSE_S {
-	unsigned	m_bus, m_raw, m_screen, m_size;
-} WBMOUSE;
+
+typedef	struct	EDID_SRC_S {
+	unsigned	o_cmd;
+	unsigned	o_spd;
+	unsigned	o_ignored[64-2];
+	unsigned	o_data[64];
+} EDID_SRC;
+
+#define	READ_EDID(START,LN)	((0xa1<<16)|(((START)&0x0ff)<<8)|((LN)&0x0ff))
+#define	EDID_SRC_BUSY	0x80000000
+#define	EDID_SRC_ERR	0x40000000
+
 
 
 typedef	struct	GPSTRACKER_S	{
@@ -164,6 +173,12 @@ typedef struct FLASHCTL_S {
 } FLASHCTL;
 
 
+// Mouse definitions
+typedef struct  WBMOUSE_S {
+	unsigned	m_bus, m_raw, m_screen, m_size;
+} WBMOUSE;
+
+
 #ifndef	WBSCOPE_H
 #define	WBSCOPE_H
 
@@ -178,10 +193,10 @@ typedef struct WBSCOPE_S {
 #endif
 
 
-#define	SYSPIC(A)	(1<<(A))
-
-
 #define	CLKFREQHZ	100000000
+
+
+#define	SYSPIC(A)	(1<<(A))
 
 
 // Definitions to interact with the OLED device
@@ -200,6 +215,29 @@ typedef	struct OLEDBW_S {
 	unsigned	o_ctrl, o_a, o_b, o_data;
 } OLEDBW;
 
+
+
+// Offsets for the ICAPE2 interface
+#define	CFG_CRC		0
+#define	CFG_FAR		1
+#define	CFG_FDRI	2
+#define	CFG_FDRO	3
+#define	CFG_CMD		4
+#define	CFG_CTL0	5
+#define	CFG_MASK	6
+#define	CFG_STAT	7
+#define	CFG_LOUT	8
+#define	CFG_COR0	9
+#define	CFG_MFWR	10
+#define	CFG_CBC		11
+#define	CFG_IDCODE	12
+#define	CFG_AXSS	13
+#define	CFG_COR1	14
+#define	CFG_WBSTAR	16
+#define	CFG_TIMER	17
+#define	CFG_BOOTSTS	22
+#define	CFG_CTL1	24
+#define	CFG_BSPI	31
 
 
 #define	ALTPIC(A)	(1<<(A))
@@ -244,29 +282,6 @@ typedef	struct	GPSTB_S	{
 } GPSTB;
 
 
-// Offsets for the ICAPE2 interface
-#define	CFG_CRC		0
-#define	CFG_FAR		1
-#define	CFG_FDRI	2
-#define	CFG_FDRO	3
-#define	CFG_CMD		4
-#define	CFG_CTL0	5
-#define	CFG_MASK	6
-#define	CFG_STAT	7
-#define	CFG_LOUT	8
-#define	CFG_COR0	9
-#define	CFG_MFWR	10
-#define	CFG_CBC		11
-#define	CFG_IDCODE	12
-#define	CFG_AXSS	13
-#define	CFG_COR1	14
-#define	CFG_WBSTAR	16
-#define	CFG_TIMER	17
-#define	CFG_BOOTSTS	22
-#define	CFG_CTL1	24
-#define	CFG_BSPI	31
-
-
 //
 // The Ethernet MDIO interface
 //
@@ -303,29 +318,15 @@ typedef struct ENETMDIO_S {
 #define	SPIO_BTNU	0x00100
 
 
-
-typedef	struct	EDID_SRC_S {
-	unsigned	o_cmd;
-	unsigned	o_spd;
-	unsigned	o_ignored[64-2];
-	unsigned	o_data[64];
-} EDID_SRC;
-
-#define	READ_EDID(START,LN)	((0xa1<<16)|(((START)&0x0ff)<<8)|((LN)&0x0ff))
-#define	EDID_SRC_BUSY	0x80000000
-#define	EDID_SRC_ERR	0x40000000
-
-
-
 #ifdef	SDSPI_ACCESS
 #define	_BOARD_HAS_SDSPI
-static volatile SDSPI *const _sdcard = ((SDSPI *)2112);
+static volatile SDSPI *const _sdcard = ((SDSPI *)3136);
 #endif	// SDSPI_ACCESS
 #ifdef	RTC_ACCESS
 #define	_BOARD_HAS_RTCLIGHT
 static volatile RTCLIGHT *const _rtc = ((RTCLIGHT *)2096);
 #endif	// RTC_ACCESS
-#define	_BOARD_HAS_VERSION_ID
+#define	_BOARD_HAS_VERSION
 #ifdef	MICROPHONE_ACCESS
 #define	_BOARD_HAS_WBMIC
 static volatile WBMIC *const _wbmic = ((WBMIC *)3072);
@@ -334,6 +335,22 @@ static volatile WBMIC *const _wbmic = ((WBMIC *)3072);
 #define	_BOARD_HAS_GPIO
 static volatile unsigned *const _gpio = ((unsigned *)1044);
 #endif	// GPIO_ACCESS
+#ifdef	HDMI_OUT_EDID_ACCESS
+#define	_BOARD_HAS_HDMI_SRC_EDID
+static volatile EDID_SRC *const _edout = ((EDID_SRC *)2560);
+#endif	// HDMI_OUT_EDID_ACCESS
+#ifdef	HDMIIN_ACCESS
+#define	_BOARD_HAS_HDMI_IN
+static volatile HDMI_IN *const _hin = ((HDMI_IN *)2176);
+#endif	// HDMIIN_ACCESS
+#ifdef	FLASH_ACCESS
+#define	_BOARD_HAS_FLASH
+extern char _flash[0x01000000];
+#endif	// FLASH_ACCESS
+#ifdef	BKRAM_ACCESS
+#define	_BOARD_HAS_BKRAM
+extern char	_bkram[0x00100000];
+#endif	// BKRAM_ACCESS
 #ifdef	MOUSE_ACCESS
 #define	_BOARD_HAS_WBMOUSE
 static volatile WBMOUSE *const _mouse = ((WBMOUSE *)2064);
@@ -342,18 +359,6 @@ static volatile WBMOUSE *const _mouse = ((WBMOUSE *)2064);
 #define	_BOARD_HAS_HDMI_IN_EDID
 static volatile unsigned *const _edin = ((unsigned *)2304);
 #endif	// HDMI_IN_EDID_ACCESS
-#ifdef	HDMIIN_ACCESS
-#define	_BOARD_HAS_HDMI_IN
-static volatile HDMI_IN *const _hin = ((HDMI_IN *)2176);
-#endif	// HDMIIN_ACCESS
-#ifdef	BLKRAM_ACCESS
-#define	_BOARD_HAS_BLKRAM
-extern int	_blkram[1];
-#endif	// BLKRAM_ACCESS
-#ifdef	FLASH_ACCESS
-#define	_BOARD_HAS_FLASH
-extern int _flash[1];
-#endif	// FLASH_ACCESS
 #ifdef	SDSPI_SCOPE
 #define	_BOARD_HAS_SDSPI_SCOPE
 static volatile WBSCOPE *const _scope_sdcard = ((WBSCOPE *)3096);
@@ -362,6 +367,14 @@ static volatile WBSCOPE *const _scope_sdcard = ((WBSCOPE *)3096);
 #define	_BOARD_HAS_OLEDBW
 static volatile OLEDBW *const _oledbw = ((OLEDBW *)2080);
 #endif	// OLEDBW_ACCESS
+#ifdef	CFG_ACCESS
+#define	_BOARD_HAS_ICAPTETWO
+static volatile unsigned *const _icape = ((unsigned *)3200);
+#endif	// CFG_ACCESS
+#ifdef	RTCDATE_ACCESS
+#define	_BOARD_HAS_RTCDATE
+static volatile unsigned *const _date = ((unsigned *)1040);
+#endif	// RTCDATE_ACCESS
 #define	_BOARD_HAS_BUSERR
 static volatile unsigned *const _buserr = ((unsigned *)1024);
 #ifdef	BUSPIC_ACCESS
@@ -372,14 +385,6 @@ static volatile unsigned *const _buspic = ((unsigned *)1028);
 #define	_BOARD_HAS_GPS_UART
 static volatile WBUART *const gpsu = ((WBUART *)3120);
 #endif	// GPSUART_ACCESS
-#ifdef	RTCDATE_ACCESS
-#define	_BOARD_HAS_RTCDATE
-static volatile unsigned *const _date = ((unsigned *)1040);
-#endif	// RTCDATE_ACCESS
-#ifdef	CFG_ACCESS
-#define	_BOARD_HAS_ICAPTETWO
-static volatile unsigned *const _icape = ((unsigned *)3200);
-#endif	// CFG_ACCESS
 #ifdef	NETCTRL_ACCESS
 #define	_BOARD_HAS_NETMDIO
 static volatile ENETMDIO *const _mdio = ((ENETMDIO *)3328);
@@ -388,10 +393,6 @@ static volatile ENETMDIO *const _mdio = ((ENETMDIO *)3328);
 #define	_BOARD_HAS_SPIO
 static volatile unsigned *const _spio = ((unsigned *)1052);
 #endif	// SPIO_ACCESS
-#ifdef	HDMI_OUT_EDID_ACCESS
-#define	_BOARD_HAS_HDMI_SRC_EDID
-static volatile EDID_SRC *const _edout = ((EDID_SRC *)2560);
-#endif	// HDMI_OUT_EDID_ACCESS
 //
 // Interrupt assignments (3 PICs)
 //
@@ -405,10 +406,10 @@ static volatile EDID_SRC *const _edout = ((EDID_SRC *)2560);
 #define	SYSPIC_BUS	SYSPIC(6)
 #define	SYSPIC_SDCARD	SYSPIC(7)
 #define	SYSPIC_MIC	SYSPIC(8)
-#define	SYSPIC_MOUSE	SYSPIC(9)
+#define	SYSPIC_EDID	SYSPIC(9)
 #define	SYSPIC_PPS	SYSPIC(10)
-#define	SYSPIC_OLED	SYSPIC(11)
-#define	SYSPIC_EDID	SYSPIC(12)
+#define	SYSPIC_MOUSE	SYSPIC(11)
+#define	SYSPIC_OLED	SYSPIC(12)
 // PIC: altpic
 #define	ALTPIC_UIC	ALTPIC(0)
 #define	ALTPIC_UOC	ALTPIC(1)
@@ -423,9 +424,9 @@ static volatile EDID_SRC *const _edout = ((EDID_SRC *)2560);
 #define	ALTPIC_GPSRX	ALTPIC(10)
 // PIC: buspic
 #define	BUSPIC_SDCARD	BUSPIC(0)
-#define	BUSPIC_MOUSE	BUSPIC(1)
-#define	BUSPIC_HINSCOPE	BUSPIC(2)
-#define	BUSPIC_FLASH	BUSPIC(3)
+#define	BUSPIC_HINSCOPE	BUSPIC(1)
+#define	BUSPIC_FLASH	BUSPIC(2)
+#define	BUSPIC_MOUSE	BUSPIC(3)
 #define	BUSPIC_SPIO	BUSPIC(4)
 #define	BUSPIC_SCOPE	BUSPIC(5)
 #endif	// BOARD_H

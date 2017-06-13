@@ -65,10 +65,8 @@ module	toplevel(i_clk,
 		i_hdmi_out_hpd_n, // Hotplug detect
 		o_sd_reset, i_sd_cd,
 		i_gps_3df,
-		// The PS/2 Mouse
-		io_ps2_clk, io_ps2_data,
-		// HDMI input EDID I2C ports
-		io_hdmi_in_scl, io_hdmi_in_sda,
+		// HDMI output EDID I2C ports
+		io_hdmi_out_scl, io_hdmi_out_sda,
 		// The GPS 1PPS signal port
 		i_gps_pps,
 		// HDMI input clock, and then data
@@ -76,6 +74,10 @@ module	toplevel(i_clk,
 		i_hdmi_in_p, i_hdmi_in_n,
 		// Top level Quad-SPI I/O ports
 		o_qspi_cs_n, io_qspi_dat,
+		// The PS/2 Mouse
+		io_ps2_clk, io_ps2_data,
+		// HDMI input EDID I2C ports
+		io_hdmi_in_scl, io_hdmi_in_sda,
 		// UART/host to wishbone interface
 		i_host_uart_rx, o_host_uart_tx,
 		// A reset wire for the ZipCPU
@@ -92,9 +94,7 @@ module	toplevel(i_clk,
 		// Toplevel ethernet MDIO ports
 		o_eth_mdclk, io_eth_mdio,
 		// SPIO interface
-		i_sw, i_btnc, i_btnd, i_btnl, i_btnr, i_btnu, o_led,
-		// HDMI output EDID I2C ports
-		io_hdmi_out_scl, io_hdmi_out_sda);
+		i_sw, i_btnc, i_btnd, i_btnl, i_btnr, i_btnu, o_led);
 	//
 	// Declaring our input and output ports.  We listed these above,
 	// now we are declaring them here.
@@ -123,9 +123,8 @@ module	toplevel(i_clk,
 	input	wire	i_sd_cd;
 	output	wire	o_sd_reset;
 	input	wire	i_gps_3df;
-	inout	wire	io_ps2_clk, io_ps2_data;
-	// HDMI input EDID I2C ports
-	inout	wire	io_hdmi_in_scl, io_hdmi_in_sda;
+	// HDMI output EDID I2C ports
+	inout	wire	io_hdmi_out_scl, io_hdmi_out_sda;
 	//The GPS Clock
 	input	wire		i_gps_pps;
 	// HDMI input clock
@@ -134,6 +133,9 @@ module	toplevel(i_clk,
 	// Quad SPI flash
 	output	wire		o_qspi_cs_n;
 	inout	wire	[3:0]	io_qspi_dat;
+	inout	wire	io_ps2_clk, io_ps2_data;
+	// HDMI input EDID I2C ports
+	inout	wire	io_hdmi_in_scl, io_hdmi_in_sda;
 	// UART/host to wishbone interface
 	input	wire		i_host_uart_rx;
 	output	wire		o_host_uart_tx;
@@ -155,8 +157,6 @@ module	toplevel(i_clk,
 	input	wire	[7:0]	i_sw;
 	input	wire		i_btnc, i_btnd, i_btnl, i_btnr, i_btnu;
 	output	wire	[7:0]	o_led;
-	// HDMI output EDID I2C ports
-	inout	wire	io_hdmi_out_scl, io_hdmi_out_sda;
 
 
 	//
@@ -173,11 +173,10 @@ module	toplevel(i_clk,
 	wire		w_hdmi_out_en;
 	wire		w_hdmi_bypass_sda;
 	wire		w_hdmi_bypass_scl;
-	wire	[1:0]	w_ps2;
 	// HDMI command I2C wires, to support the EDID protocol
 	// These are used to determine if the bus wires are to be set to zero
 	// or not
-	wire		w_hdmi_in_scl, w_hdmi_in_sda;
+	wire		w_hdmi_out_scl, w_hdmi_out_sda;
 	wire		w_hdmi_in_logic_clk, w_hdmi_in_hsclk,
 			w_hdmi_in_clk_no_buf, w_hdmi_in_clk_no_delay,
 			w_hdmi_in_clk_raw;
@@ -192,6 +191,11 @@ module	toplevel(i_clk,
 	wire		w_qspi_sck, w_qspi_cs_n;
 	wire	[1:0]	qspi_bmod;
 	wire	[3:0]	qspi_dat;
+	wire	[1:0]	w_ps2;
+	// HDMI command I2C wires, to support the EDID protocol
+	// These are used to determine if the bus wires are to be set to zero
+	// or not
+	wire		w_hdmi_in_scl, w_hdmi_in_sda;
 	//
 	//
 	// UART interface
@@ -208,10 +212,6 @@ module	toplevel(i_clk,
 	wire	[9:0]	w_hdmi_out_r, w_hdmi_out_g, w_hdmi_out_b;
 	// Ethernet control (MDIO)
 	wire		w_mdio, w_mdwe;
-	// HDMI command I2C wires, to support the EDID protocol
-	// These are used to determine if the bus wires are to be set to zero
-	// or not
-	wire		w_hdmi_out_scl, w_hdmi_out_sda;
 
 
 	//
@@ -236,9 +236,8 @@ module	toplevel(i_clk,
 		o_mic_csn, o_mic_sck, i_mic_din,
 		// GPIO wires
 		i_gpio, o_gpio,
-		// The PS/2 Mouse
-		{ io_ps2_clk, io_ps2_data }, w_ps2,
-	io_hdmi_in_scl, io_hdmi_in_sda, w_hdmi_in_scl, w_hdmi_in_sda,
+		// EDID port for the HDMI source
+		io_hdmi_out_scl, io_hdmi_out_sda, w_hdmi_out_scl, w_hdmi_out_sda,
 		// The GPS 1PPS signal port
 		i_gps_pps,
 		// HDMI input clock
@@ -250,6 +249,9 @@ module	toplevel(i_clk,
 		w_hdmi_in_actual_delay_b, w_hdmi_in_delay,
 		// Quad SPI flash
 		w_qspi_cs_n, w_qspi_sck, qspi_dat, io_qspi_dat, qspi_bmod,
+		// The PS/2 Mouse
+		{ io_ps2_clk, io_ps2_data }, w_ps2,
+	io_hdmi_in_scl, io_hdmi_in_sda, w_hdmi_in_scl, w_hdmi_in_sda,
 		// External USB-UART bus control
 		rx_stb, rx_data, tx_stb, tx_data, tx_busy,
 		// Reset wire for the ZipCPU
@@ -265,9 +267,7 @@ module	toplevel(i_clk,
 		i_gpsu_rx, o_gpsu_tx,
 		o_eth_mdclk, w_mdio, w_mdwe, io_eth_mdio,
 		// SPIO interface
-		i_sw, i_btnc, i_btnd, i_btnl, i_btnr, i_btnu, o_led,
-		// EDID port for the HDMI source
-		io_hdmi_out_scl, io_hdmi_out_sda, w_hdmi_out_scl, w_hdmi_out_sda);
+		i_sw, i_btnc, i_btnd, i_btnl, i_btnr, i_btnu, o_led);
 
 
 	//
@@ -301,19 +301,12 @@ module	toplevel(i_clk,
 	assign	o_sd_reset      = o_gpio[6];
 	assign	w_hdmi_out_en   = o_gpio[7];
 
-	// WB-Mouse
-	//
-	// Adjustments necessary to turn the PS/2 logic to pull-up logic,
-	// with a high impedence state if not used.
-	assign	io_ps2_clk  = (w_ps2[1])? 1'bz:1'b0;
-	assign	io_ps2_data = (w_ps2[0])? 1'bz:1'b0;
-
 	// The EDID I2C port for the HDMI source port
 	//
 	// We need to make certain we only force the pin to a zero (drain)
 	// when trying to do so.  Otherwise we let it float (back) high.
-	assign	io_hdmi_in_scl = (w_hdmi_in_scl) ? 1'bz : 1'b0;
-	assign	io_hdmi_in_sda = (w_hdmi_in_sda) ? 1'bz : 1'b0;
+	assign	io_hdmi_out_scl = ((w_hdmi_bypass_scl)&&(w_hdmi_out_scl)) ? 1'bz : 1'b0;
+	assign	io_hdmi_out_sda = ((w_hdmi_bypass_sda)&&(w_hdmi_out_sda)) ? 1'bz : 1'b0;
 
 
 	// First, let's get our clock up and running
@@ -451,6 +444,20 @@ module	toplevel(i_clk,
 	);
 
 
+	// WB-Mouse
+	//
+	// Adjustments necessary to turn the PS/2 logic to pull-up logic,
+	// with a high impedence state if not used.
+	assign	io_ps2_clk  = (w_ps2[1])? 1'bz:1'b0;
+	assign	io_ps2_data = (w_ps2[0])? 1'bz:1'b0;
+
+	// The EDID I2C port for the HDMI source port
+	//
+	// We need to make certain we only force the pin to a zero (drain)
+	// when trying to do so.  Otherwise we let it float (back) high.
+	assign	io_hdmi_in_scl = (w_hdmi_in_scl) ? 1'bz : 1'b0;
+	assign	io_hdmi_in_sda = (w_hdmi_in_sda) ? 1'bz : 1'b0;
+
 	// The Host USB interface, to be used by the WB-UART bus
 	rxuartlite	#(BUSUART) rcv(s_clk, i_host_uart_rx,
 				rx_stb, rx_data);
@@ -478,13 +485,6 @@ module	toplevel(i_clk,
 			{ o_hdmi_out_p[0], o_hdmi_out_n[0] });
 
 	assign	io_eth_mdio = (w_mdwe)?w_mdio : 1'bz;
-
-	// The EDID I2C port for the HDMI source port
-	//
-	// We need to make certain we only force the pin to a zero (drain)
-	// when trying to do so.  Otherwise we let it float (back) high.
-	assign	io_hdmi_out_scl = ((w_hdmi_bypass_scl)&&(w_hdmi_out_scl)) ? 1'bz : 1'b0;
-	assign	io_hdmi_out_sda = ((w_hdmi_bypass_sda)&&(w_hdmi_out_sda)) ? 1'bz : 1'b0;
 
 
 

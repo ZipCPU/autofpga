@@ -36,17 +36,18 @@
 ##
 ##
 @PREFIX=version
+@DEVID=VERSION
 @NADDR=1
 @PTYPE=SINGLE
 @MAIN.DEFNS=
 `include "builddate.v"
 @MAIN.INSERT=
-	assign	version_data = `DATESTAMP;
-	assign	version_ack = 1'b0;
-	assign	version_stall = 1'b0;
+	assign	@$(PREFIX)_data = `DATESTAMP;
+	assign	@$(PREFIX)_ack = 1'b0;
+	assign	@$(PREFIX)_stall = 1'b0;
 @REGS.N=1
-@REGS.0= 0 R_VERSION VERSION
-@BDEF.IONAME=io_version
+@REGS.0= 0 R_@$(DEVID) @$(DEVID)
+@BDEF.IONAME=_@$(PREFIX)
 @BDEF.IOTYPE=unsigned
-@BDEF.OSDEF=_BOARD_HAS_VERSION_ID
-@BDEF.IOTYPE=static volatile @$.BDEF.IOTYPE *const _version = &((@$.BDEF.IOTYPE *)@$.BASE);
+@BDEF.OSDEF=_BOARD_HAS_@$(DEVID)
+@BDEF.IOTYPE=static volatile @$BDEF.IOTYPE *const @$BDEF.IONAME = &((@$.BDEF.IOTYPE *)@$.BASE);

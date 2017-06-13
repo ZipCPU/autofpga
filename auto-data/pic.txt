@@ -39,6 +39,7 @@
 @NADDR=1
 @ACCESS=BUSPIC_ACCESS
 @PTYPE=SINGLE
+@DEVID=BUSPIC
 @PIC.BUS= bus_int_vector
 @PIC.MAX= 15
 @INT.BUS.WIRE= w_bus_int
@@ -48,12 +49,15 @@
 	//
 	// The BUS Interrupt controller
 	//
-	icontrol #(15)	buspic(i_clk, 1'b0, (wb_stb)&&(buspic_sel),
-			wb_data, buspic_data, bus_int_vector, w_bus_int);
+	icontrol #(15)	@$(PREFIX)i(i_clk, 1'b0, (wb_stb)&&(@$(PREFIX)_sel),
+			wb_data, @$(PREFIX)_data, bus_int_vector, w_bus_int);
 @MAIN.ALT=
 @REGS.N=1
 @REGS.0= 0 R_PIC PIC
-@BDEF.IONAME= i_pic
+@BDEF.IONAME= _@$(PREFIX)
 @BDEF.IOTYPE= unsigned
-@BDEF.OSDEF= _BOARD_HAS_BUSPIC
-@BDEF.OSVAL= static volatile @$THIS.BDEF.IOTYPE *const _buspic = ((@$THIS.BDEF.IOTYPE *)@$THIS.BASE);
+@BDEF.OSDEF= _BOARD_HAS_@$(DEVID)
+@BDEF.OSVAL= static volatile @$BDEF.IOTYPE *const @$BDEF.IONAME = ((@$BDEF.IOTYPE *)@$BASE);
+@RTL.MAKE.GROUP= BUSPIC
+@RTL.MAKE.SUBD= cpu
+@RTL.MAKE.FILES=icontrol.v

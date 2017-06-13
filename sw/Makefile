@@ -43,7 +43,8 @@ CXX:= g++
 SED:= sed
 CFLAGS:= -std=c++11 -g -Wall
 SOURCES := autofpga.cpp parser.cpp kveval.cpp keys.cpp mapdhash.cpp ast.cpp \
-	expr.tab.cpp lex.yy.cpp
+	legalnotice.cpp ifdefs.cpp bldregdefs.cpp expr.tab.cpp lex.yy.cpp   \
+	plist.cpp bitlib.cpp bldtestb.cpp bldsim.cpp
 POSSHDRS:= $(subst .c,.h,$(subst .cpp,.h,$(SOURCES)))
 HEADERS := $(foreach header,$(POSSHDRS),$(wildcard $(header)))
 OBJECTS := $(addprefix $(OBJDIR)/,$(subst .c,.o,$(subst .cpp,.o,$(SOURCES))))
@@ -78,7 +79,8 @@ autofpga: $(OBJECTS)
 	echo $(OBJECTS)
 	$(CXX) $(CFLAGS) $(OBJECTS) -o $@
 
-VDATA := global.txt clock.txt bkram.txt flash.txt zipmaster.txt wbubus.txt dlyarbiter.txt \
+VDATA := global.txt clock.txt bkram.txt flash.txt zipmaster.txt		\
+	wbubus.txt dlyarbiter.txt \
 	gps.txt icape.txt mdio.txt spio.txt wboledbw.txt rtcdate.txt	\
 	hdmi.txt clkcounter.txt gpio.txt pwrcount.txt wbpmic.txt	\
 	version.txt buserr.txt pic.txt rtcgps.txt wbmouse.txt sdspi.txt
@@ -89,11 +91,12 @@ VDATA := global.txt clock.txt bkram.txt flash.txt zipmaster.txt wbubus.txt dlyar
 demo: runme.sh
 	bash runme.sh
 
+.PHONY: runme.sh	# Force a rebuild of this file every time
 runme.sh: autofpga $(addprefix ../auto-data/,$(VDATA))
-	echo "#!/bin/bash" > $@
-	echo >> $@
-	echo >> $@
-	echo ./autofpga -o ../demo-out -I ../auto-data $(VDATA)  >> $@
+	@echo "#!/bin/bash" > $@
+	@echo >> $@
+	@echo >> $@
+	@echo ./autofpga -o ../demo-out -I ../auto-data $(VDATA)  >> $@
 
 define	mk-objdir
 	@bash -c "if [ ! -e $(OBJDIR) ]; then mkdir -p $(OBJDIR); fi"

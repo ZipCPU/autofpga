@@ -45,7 +45,7 @@
 @MAIN.DEFNS=
 	reg	r_@$(PREFIX)_ack;
 @MAIN.INSERT=
-	clkcounter sysclkctr(i_clk, ck_pps, i_clk, @$(PREFIX)_data);
+	clkcounter clk@$(PREFIX)ctr(i_clk, ck_pps, i_clk, @$(PREFIX)_data);
 	always @(posedge i_clk)
 		r_@$(PREFIX)_ack <= (wb_stb)&&(@$(PREFIX)_sel);
 	assign	@$(PREFIX)_ack   = r_@$(PREFIX)_ack;

@@ -215,3 +215,16 @@ SIM.LOAD	If your component is a memory that might need to be loaded
 SIM.METHODS	If your code requires the definition of methods to be used
 		within the Verilator simulator class, place those definitions
 		here.
+SIM.CLOCK	Specifies the clock that is used for the SIM.TICK method.  Only
+		one clock is allowed.  If you need another, make another
+		component using the other clock.
+
+CLOCK.NAME	A list of the clocks used by this component
+CLOCK.WIRE	A list of the clock names used by this component.  These
+		names should already be defined in either the main I/O ports
+		list, or the main definitions.  If no wire is given for a clock,
+		the clock's name with a i_ prepended to the beginning is
+		used instead.  For this reason, the CLOCK.WIRE field may not
+		be necessary for your application.
+CLOCK.FREQUENCY	A list of frequencies in Hz corresponding to each of the clocks
+		listed in CLOCK.NAME

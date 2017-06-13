@@ -167,7 +167,7 @@
 #define	FLASHLGLEN	@$.LGFLASHSZ
 @REGS.0= 0 FLASHMEM FLASH
 @BDEF.OSDEF=_BOARD_HAS_FLASH
-@BDEF.OSVAL=extern int _flash[1];
+@BDEF.OSVAL=extern char _flash[@$NBYTES];
 @LDSCRIPT.PSTR=	rx
 @LDSCRIPT.PTR=	flash
 @LDSCRIPT.DEF=
@@ -178,23 +178,23 @@ _flash=ORIGIN(flash);
 #define	ISPIF_EN	@$.ISPIF_EN
 #define	ISPIF_DIS	@$.ISPIF_DIS
 #define	ISPIF_CLR	@$.ISPIF_CLR
-@SIM.INCLUDES+=
+@SIM.INCLUDE+=
 #include "qspiflashsim.h"
 @SIM.DEFNS+=
 #ifdef	@$(ACCESS)
-	QSPIFLASHSIM	m_@$(MEM.NAME);
+	QSPIFLASHSIM	*m_@$(MEM.NAME);
 #endif
-@SIM.PREINITIAL+=
+@SIM.INIT+=
 #ifdef	@$(ACCESS)
-	m_@$(MEM.NAME)(FLASHLGLEN)
+	m_@$(MEM.NAME) = new QSPIFLASHSIM(FLASHLGLEN);
 #endif
-@SIM.TICK+=
+@SIM.TICK +=
 #ifdef	@$(ACCESS)
-		m_core->i_qspi_dat = m_@$(MEM.NAME)(m_core->o_qspi_cs_n,
+		m_core->i_qspi_dat = (*m_@$(MEM.NAME))(m_core->o_qspi_cs_n,
 			m_core->o_qspi_sck, m_core->o_qspi_dat);
 #endif
 @SIM.LOAD +=
-			m_@$(MEM.NAME).load(start, &buf[offset], wlen);
+			m_@$(MEM.NAME)->load(start, &buf[offset], wlen);
 #
 #
 #
@@ -243,4 +243,4 @@ typedef struct FLASHCTL_S {
 
 @BDEF.IONAME= io_flctl
 @RTL.MAKE.GROUP= FLASH
-@RTL.MAKE.FILES= wbqspiflash.v llqspi.v flashcofig.v
+@RTL.MAKE.FILES= wbqspiflash.v llqspi.v flash_config.v

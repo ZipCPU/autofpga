@@ -39,14 +39,26 @@
 ################################################################################
 ##
 ##
-WBMOUSED := wbmouse
-
-WBMOUSE  := $(addprefix $(WBMOUSED)/,wbmouse.v llps2.v)
-FLASH:= wbqspiflash.v llqspi.v flashcofig.v
+FLASH:= wbqspiflash.v llqspi.v flash_config.v
 
 BKRAM:= memdev.v
 
+WBMOUSE:= wbmouse.v llps2.v
+
+SDSPI:= sdspi.v llsdspi.v wbscope.v
+
+ZIPCPUD := cpu
+
+ZIPCPU  := $(addprefix $(ZIPCPUD)/,zipcpu.v cpuops.v pfcache.v pipemem.v pfcache.v idecode.v wbpriarbiter.v zipsystem.v zipcounter.v zipjiffies.v ziptimer.v wbdmac.v icontrol.v wbwatchdog.v busdelay.v cpudefs.v)
 RTCDATE:= rtcdate.v
 
-VFLIST :=  $(WBMOUSE) $(FLASH) $(BKRAM) $(RTCDATE)
-AUTOVDIRS :=  -y $(WBMOUSED) 
+BUSDLYD := cpu
+
+BUSDLY  := $(addprefix $(BUSDLYD)/,busdelay.v)
+BUSPICD := cpu
+
+BUSPIC  := $(addprefix $(BUSPICD)/,icontrol.v)
+WBUART:= wbuart.v ufifo.v rxuart.v txuart.v
+
+VFLIST :=  $(FLASH) $(BKRAM) $(WBMOUSE) $(SDSPI) $(ZIPCPU) $(RTCDATE) $(BUSDLY) $(BUSPIC) $(WBUART)
+AUTOVDIRS :=  -y $(ZIPCPUD)  -y $(BUSDLYD)  -y $(BUSPICD) 

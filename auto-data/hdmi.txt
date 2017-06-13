@@ -140,6 +140,8 @@
 		// HDMI input delay control
 		i_hdmi_in_actual_delay_r, i_hdmi_in_actual_delay_g,
 		i_hdmi_in_actual_delay_b, o_hdmi_in_delay
+@CLOCK.NAME=hdmi_in_clk hdmi_in_hsclk clk_200mhz
+@CLOCK.FREQUENCY=148500000 1485000000 200000000
 @MAIN.IODECL=
 	// HDMI input ports
 	input	wire		i_hdmi_in_clk;
@@ -310,6 +312,8 @@ typedef	struct	HDMI_IN_S {
 	input	wire	i_hdmi_out_clk;
 	// HDMI output pixels
 	output	wire	[9:0]	o_hdmi_out_r, o_hdmi_out_g, o_hdmi_out_b;
+@CLOCK.NAME=hdmi_out_clk
+@CLOCK.FREQUENCY=148500000
 #
 #
 #

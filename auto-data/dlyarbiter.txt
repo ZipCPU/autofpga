@@ -38,11 +38,12 @@
 @PREFIX=dwb
 @MAIN.DEFNS=
 	// Bus arbiter's lines
-	wire		dwb_cyc, dwb_stb, dwb_we, dwb_ack, dwb_stall, dwb_err;
-	wire	[(@$BUS_ADDRESS_WIDTH-1):0]	dwb_addr;
-	wire	[31:0]	dwb_odata, dwb_idata;
-	wire	[3:0]	dwb_sel;
+	wire		@$(PREFIX)_cyc, @$(PREFIX)_stb, @$(PREFIX)_we, @$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_err;
+	wire	[(@$BUS_ADDRESS_WIDTH-1):0]	@$(PREFIX)_addr;
+	wire	[31:0]	@$(PREFIX)_odata, @$(PREFIX)_idata;
+	wire	[3:0]	@$(PREFIX)_sel;
 @MAIN.INSERT=
+`ifdef	INCLUDE_ZIPCPU
 	//
 	//
 	// And an arbiter to decide who gets access to the bus
@@ -57,20 +58,34 @@
 			wbu_addr[(@$BUS_ADDRESS_WIDTH-1):0], wbu_data, wbu_sel,
 			wbu_ack, wbu_stall, wbu_err,
 		// Common bus returns
-		dwb_cyc, dwb_stb, dwb_we, dwb_addr, dwb_odata, dwb_sel,
-			dwb_ack, dwb_stall, dwb_err);
+		@$(PREFIX)_cyc, @$(PREFIX)_stb, @$(PREFIX)_we, @$(PREFIX)_addr, @$(PREFIX)_odata, @$(PREFIX)_sel,
+			@$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_err);
 
 	// And because the ZipCPU and the Arbiter can create an unacceptable
 	// delay, we often fail timing.  So, we add in a delay cycle
+`else
+	// If no ZipCPU, no delay arbiter is needed
+	assign	@$(PREFIX)_cyc  = wbu_cyc;
+	assign	@$(PREFIX)_stb  = wbu_stb;
+	assign	@$(PREFIX)_we   = wbu_we;
+	assign	@$(PREFIX)_addr = wbu_addr;
+	assign	@$(PREFIX)_odata = wbu_data;
+	assign	@$(PREFIX)_sel  = wbu_sel;
+	assign	wbu_ack   = @$(PREFIX)_ack;
+	assign	wbu_stall = @$(PREFIX)_stall;
+	assign	wbu_err   = @$(PREFIX)_err;
+	// assign wbu_idata = @$(PREFIX)_idata;
+`endif	// INCLUDE_ZIPCPU
+
 `ifdef	WBUBUS_MASTER
 `ifdef	INCLUDE_ZIPCPU
 `define	BUS_DELAY_NEEDED
 `endif
 `endif
 `ifdef	BUS_DELAY_NEEDED
-	busdelay #(@$BUS_ADDRESS_WIDTH)	dwb_delay(i_clk,
-		dwb_cyc, dwb_stb, dwb_we, dwb_addr, dwb_odata, dwb_sel,
-			dwb_ack, dwb_stall, dwb_idata, dwb_err,
+	busdelay #(@$BUS_ADDRESS_WIDTH)	@$(PREFIX)_delay(i_clk,
+		@$(PREFIX)_cyc, @$(PREFIX)_stb, @$(PREFIX)_we, @$(PREFIX)_addr, @$(PREFIX)_odata, @$(PREFIX)_sel,
+			@$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_idata, @$(PREFIX)_err,
 		wb_cyc, wb_stb, wb_we, wb_addr, wb_data, wb_sel,
 			wb_ack, wb_stall, wb_idata, wb_err);
 `else
@@ -78,16 +93,21 @@
 	// don't need the bus delay, and we can go directly from the bus driver
 	// to the bus itself
 	//
-	assign	wb_cyc    = dwb_cyc;
-	assign	wb_stb    = dwb_stb;
-	assign	wb_we     = dwb_we;
-	assign	wb_addr   = dwb_addr;
-	assign	wb_data   = dwb_odata;
-	assign	wb_sel    = dwb_sel;
-	assign	dwb_ack   = wb_ack;
-	assign	dwb_stall = wb_stall;
-	assign	dwb_err   = wb_err;
-	assign	dwb_idata = wb_idata;
+	assign	wb_cyc    = @$(PREFIX)_cyc;
+	assign	wb_stb    = @$(PREFIX)_stb;
+	assign	wb_we     = @$(PREFIX)_we;
+	assign	wb_addr   = @$(PREFIX)_addr;
+	assign	wb_data   = @$(PREFIX)_odata;
+	assign	wb_sel    = @$(PREFIX)_sel;
+	assign	@$(PREFIX)_ack   = wb_ack;
+	assign	@$(PREFIX)_stall = wb_stall;
+	assign	@$(PREFIX)_err   = wb_err;
+	assign	@$(PREFIX)_idata = wb_idata;
 `endif
-	assign	wbu_idata = dwb_idata;
-	assign	zip_idata = dwb_idata;
+	assign	wbu_idata = @$(PREFIX)_idata;
+`ifdef	INCLUDE_ZIPCPU
+	assign	zip_idata = @$(PREFIX)_idata;
+`endif
+@RTL.MAKE.GROUP= BUSDLY
+@RTL.MAKE.FILES= busdelay.v
+@RTL.MAKE.SUBD=cpu

@@ -1,0 +1,17 @@
+1. Be able to create a project from a series of configuration files, where each
+	file specifies a component of the ultimate project.
+2. Maintain the look/feel of an open source project
+	All source should be readable, and maintainable.  This includes any
+	component configuration/description files
+3. Turn into a full Verilog/C/C++ project
+	Code should be "added" at appropriate points down stream
+	Removing a component should just take appropriate code sections out
+	later.
+
+	Configuration files should consist of those data portions necessary
+	to cut/copy/paste into a project to get it up and running.  The
+	result should therefore be as though someone had configured the project
+	by hand and included the new component, only that the auto-component
+	compiler had done the configuration work instead.
+4. Preserve the ability to have comments in the ultimate source code.  Such
+	comments should be able to pass through the configuration files

@@ -4,7 +4,8 @@
 ##
 ## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 ##
-## Purpose:	
+## Purpose:	To define the interface to a generic block RAM device for the
+##		purposes of autofpga.
 ##
 ## Creator:	Dan Gisselquist, Ph.D.
 ##		Gisselquist Technology, LLC
@@ -35,44 +36,45 @@
 ################################################################################
 ##
 ##
-@PREFIX=mem
+@PREFIX=bkram
+@DEVID=BKRAM
 @$LGMEMSZ=20
 @LGMEMSZ.FORMAT=%d
 @$NADDR=(1<<(@$THIS.LGMEMSZ-2))
 @$NBYTES=(1<<(@$THIS.LGMEMSZ))
 @NBYTES.FORMAT=0x%08x
-@ACCESS=BLKRAM_ACCESS
+@ACCESS=@$(DEVID)_ACCESS
 @PTYPE=MEMORY
 @LD.PERM=wx
 @MAIN.INSERT=
 	memdev #(.LGMEMSZ(@$THIS.LGMEMSZ), .EXTRACLOCK(1))
 		@$(PREFIX)i(i_clk,
-			(wb_cyc), (wb_stb)&&(mem_sel), wb_we,
+			(wb_cyc), (wb_stb)&&(@$(PREFIX)_sel), wb_we,
 				wb_addr[(@$THIS.LGMEMSZ-3):0], wb_data, wb_sel,
-				mem_ack, mem_stall, mem_data);
+				@$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_data);
 @REGS.N=1
-@REGS.0= 0 BKRAM RAM
+@REGS.0= 0 @$(DEVID) RAM
 @REGDEFS.H.DEFNS=
-#define	BKMEMBASE	@$THIS.BASE
-#define	BKMEMLEN	@$THIS.NBYTES
-@BDEF.OSDEF=_BOARD_HAS_BLKRAM
-@BDEF.OSVAL=extern int	_blkram[1];
-@MEM.NAME= blkram
+#define	@$(DEVID)BASE	@$BASE
+#define	@$(DEVID)LEN	@$NBYTES
+@BDEF.OSDEF=_BOARD_HAS_@$(DEVID)
+@MEM.NAME= @$(PREFIX)
+@BDEF.OSVAL=extern char	_@$(MEM.NAME)[@$NBYTES];
 @LDSCRIPT.PSTR=	wx
 @LDSCRIPT.PTR=	@$(MEM.NAME)
 @LDSCRIPT.DEF=
 _@$(MEM.NAME) = ORIGIN(@$(MEM.NAME))
-@RTL.MAKE.GROUP= BKRAM
+@RTL.MAKE.GROUP= @$(DEVID)
 @RTL.MAKE.FILES= memdev.v
 @$BASEHX = @$BASE
 @BASEHX.FORMAT= 0x%08x
 @$NADDRHX = @$NADDR
 @NADDRHX.FORMAT= 0x%x
-@SIM.INCLUDES+=
-#include "bswap.h"
-@SIM.DEFINES+=
-#define	ram_mem		@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)i__DOT__mem
-@SIM.LOAD+=
+@SIM.INCLUDE=
+#include "byteswap.h"
+@SIM.DEFINES=
+#define	block_ram	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)i__DOT__mem
+@SIM.LOAD=
 			start = start & (-4);
 			wlen = (wlen+3)&(-4);
 
@@ -80,5 +82,5 @@ _@$(MEM.NAME) = ORIGIN(@$(MEM.NAME))
 			char	*bswapd = new char[len+8];
 			memcpy(bswapd, &buf[offset], wlen);
 			byteswapbuf(len>>2, (uint32_t *)bswapd);
-			memcpy(&m_core->raw_mem[start], bswapd, wlen);
+			memcpy(&m_core->block_ram[start], bswapd, wlen);
 			delete	bswapd;

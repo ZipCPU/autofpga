@@ -39,6 +39,7 @@
 ################################################################################
 ##
 ##
+@$GPSPORT_OFFSET=2
 @PREFIX=gck
 @NADDR=4
 @PTYPE=DOUBLE
@@ -176,4 +177,10 @@ typedef	struct	GPSTB_S	{
 @REGS.3= 3 R_GPSU_UARTTX GPSTX
 @BDEF.IONAME=gpsu
 @BDEF.OSDEF=_BOARD_HAS_GPS_UART
+@$SIM.PORTOFFSET=@/GPSPORT_OFFSET
+@SIM.INIT=
+#ifdef	@$(ACCESS)
+		m_@$(PREFIX) = new UARTSIM(FPGAPORT+@$(SIM.PORTOFFSET));
+		m_@$(PREFIX)->setup(@$(SIM.UARTSETUP));
+#endif
 #

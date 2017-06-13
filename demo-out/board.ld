@@ -44,11 +44,11 @@ ENTRY(_start)
 
 MEMORY
 {
-	     mem(wx) : ORIGIN = 0x00100000, LENGTH = 0x00100000
+	   bkram(wx) : ORIGIN = 0x00100000, LENGTH = 0x00100000
 	   flash(rx) : ORIGIN = 0x01000000, LENGTH = 0x01000000
 }
 
-_mem      = ORIGIN(mem);
+_bkram    = ORIGIN(bkram);
 _flash    = ORIGIN(flash);
 SECTIONS
 {
@@ -65,11 +65,11 @@ SECTIONS
 		*(.text*)
 		*(.rodata*) *(.strings)
 		*(.data) *(COMMON)
-		}> mem AT> flash
+		}> bkram AT> flash
 	_ram_image_end = . ;
 	.bss : ALIGN_WITH_INPUT {
 		*(.bss)
 		_bss_image_end = . ;
-		} > mem
+		} > bkram
 	_top_of_heap = .;
 }

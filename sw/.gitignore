@@ -6,3 +6,4 @@ lex.yy.h
 lex.yy.cpp
 *tmp.txt
 tmp*.txt
+demo-out
