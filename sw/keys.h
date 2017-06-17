@@ -69,8 +69,10 @@ extern const	STRING	KYDIO_SEL;
 extern const	STRING	KYPREFIX;
 extern const	STRING	KYACCESS;
 extern const	STRING	KYDEPENDS;
-extern const	STRING	KYPTYPE;
-extern const	STRING	KYMTYPE;
+extern const	STRING	KYSLAVE;
+extern const	STRING	KYSLAVE_TYPE;
+extern const	STRING	KYSLAVE_BUS;
+extern const	STRING	KYMASTER_TYPE;
 //
 extern const	STRING	KYBASE;
 extern const	STRING	KYMASK;
@@ -90,6 +92,7 @@ extern const	STRING	KYSCOPE;
 extern const	STRING	KYMEMORY;
 extern const	STRING	KYSINGLE;
 extern const	STRING	KYDOUBLE;
+extern const	STRING	KYOTHER;
 //
 extern const	STRING	KYNP;
 extern const	STRING	KYNPIC;
@@ -153,7 +156,23 @@ extern	const	STRING	KYSIM_INCLUDE, KYSIM_DEFINES, KYSIM_DEFNS,
 			KYSIM_SETRESET, KYSIM_CLRRESET,
 			KYSIM_DBGCONDITION, KYSIM_DEBUG,
 			KYSIM_LOAD, KYSIM_METHODS, KYSIM_CLOCK;
-extern	const	STRING	KYCLOCK, KYCLOCK_NAME, KY_NAME, KY_FREQUENCY;
+// CLOCK definitions
+extern	const	STRING	KYCLOCK,
+			KYCLOCK_NAME,
+			KY_NAME,
+			KY_FREQUENCY;
+// BUS definitions
+extern	const	STRING	KYBUS,
+			KYBUS_NAME,
+			KYBUS_PREFIX,
+			KYBUS_TYPE,
+			KYBUS_WIDTH,
+			KYBUS_AWID,
+			KYBUS_CLOCK,
+			KY_TYPE,
+			KY_WIDTH,
+			KY_CLOCK,
+			KYDEFAULT_BUS;
 //
 extern const	STRING	KYSTHIS;
 extern const	STRING	KYTHISDOT;

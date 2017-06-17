@@ -57,7 +57,8 @@
 #	OTHER (the default), for a peripheral that may take *many* clocks to
 #		respond to a bus transaction, ... one that uses its stall
 #		line of a necessity.
-@PTYPE=	OTHER
+@SLAVE.TYPE=	OTHER
+@SLAVE.BUS=wb
 @ACCESS= CONSOLE_ACCESS
 @$BAUDRATE=1000000
 @$UARTSETUP.EXPR=@$CLKFREQHZ/@$.BAUDRATE

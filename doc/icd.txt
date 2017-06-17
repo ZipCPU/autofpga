@@ -59,8 +59,8 @@ base @KEY.  Further, this value will be substituted wherever @$KEY exists
 within any other VALUE's.  Which value it gets, either the number or the
 string, is dependent upon the context and how it is referenced.
 
-Peripheral devices *must* also contain a @PTYPE key.  This key can have one of
-the following values:
+Peripheral devices *must* also contain a @SLAVE.TYPE key.  This key can have
+one of the following values:
 	SINGLE	A peripheral with no internal address decoding, but
 		whose output value (@PREFIX_data) is valid on any given clock.
 		These peripherals are not allowed to stall the bus.
@@ -74,6 +74,8 @@ the following values:
 		a linker script.  Examples of MEMORY can be block RAM's,
 		SDRAM, or even FLASH.  MEMORY that fits the criteria for DOUBLE
 		is also best given the MEMORY attribute instead.
+	BUS	This slave is a bus translator.  It acts as a slave on its
+		given bus, but has a bus (MASTER) interface beneath it
 	OTHER	Any peripheral that doesn't match the above.
 
 
@@ -121,7 +123,7 @@ MAIN.ALT
 
 BASE	(Created and used internally)
 MASK	(Created and used internally)
-AWID
+AWID	Address width, in terms of # of address lines, used by this component
 
 REGSDEFS.H.INCLUDE	Placed at the top of the regdefs.h file
 REGS.NOTE	A comment to be placed at the beginning of the register list
@@ -142,12 +144,24 @@ REGS.<name>.UNAME(s)	# User-readable name
 REGS.<name>.DESC(ription for LaTeX)
 
 
-BDEF.DEFN
-BDEF.IONAME
-BDEF.IOTYPE
-BDEF.OSDEF
-BDEF.OSVAL
-// defaults to static volatile @THIS.BDEF.IOTYPE *const @THIS.BDEF.IONAME = &((@THIS.BDEF.IOTYPE *)@THIS.BASE);
+BDEF.INCLUDE	Gets placed at the top of the board definitions file, and
+		is used to insert references for any particular include files
+		into the board file.  Include files are not ordered by
+		dependency, so they should either be independent of each other,
+		or they should reference any other component they use.
+
+BDEF.DEFN	A list of lines defining anything that needs to be defined
+		inside the board component description.  This might include,
+		for example, a type for the component or particular defines
+		that define things associated with the component
+BDEF.IONAME	The name given to this component in the board.h file
+BDEF.IOTYPE	The name of a type, describing the structure of the memory
+		begin pointed to.
+BDEF.OSDEF	Contains the name of a value that will be #define'd if this
+		component is included in the design, and not otherwise
+BDEF.OSVAL	A definition line, to be placed into the board definitions file,
+		that is then used to define a pointer to this type of object
+// Likely to default, in the future, to static volatile @BDEF.IOTYPE *const @BDEF.IONAME = &((@BDEF.IOTYPE *)@BASE);
 (deprecated) IONAME
 (deprecated) CSTRUCT (now BDEF.DEFN)
 
@@ -227,4 +241,36 @@ CLOCK.WIRE	A list of the clock names used by this component.  These
 		used instead.  For this reason, the CLOCK.WIRE field may not
 		be necessary for your application.
 CLOCK.FREQUENCY	A list of frequencies in Hz corresponding to each of the clocks
-		listed in CLOCK.NAME
+		listed in the CLOCK.NAME tag
+
+SLAVE.TYPE	Indicates the type of peripheral
+SLAVE.BUS	Indicates the name of the bus used by this slave
+MASTER.BUS	Indicates that this component acts as a bus master, and
+		identifies (names) the bus it is a master of
+
+BUS.NAME	wb - master wishbone bus, dbg the debug port (wbu),
+		zip - the ZipCPU bus master
+		sdram - the MIG generated bus master
+BUS.PREFIX	$(BUS.NAME)_
+BUS.TYPE	One of WB, (b4 assumed), WB/B4, WB/B3, WB/C(lassic), or AXI
+
+BUS.WIDTH	32 (common), could also be 8, 16, 64, 128, 256, etc.
+
+BUS.AWID	Width of the address bus, also known as the number of
+		address lines used to address items on this bus
+
+BUS.CLOCK	The name of a previously defined clock from which this bus
+		runs on
+DEFAULT.BUS	The name of the default bus, which we spend most of our time on.
+		This bus gets the null device, for example
+
+
+
+.... GOALS ...
+Build S/W to collect all busses together
+Allow someone to inherit from the arbiters in such a manner that they can
+connect busses together simply
+Redo the address assignments, so as to be on a bus-by-bus basis
+Set the peripherals up in such a way that, if you have to walk from one bus to
+  the next, you can still figure out what the adderss of the peripheral is--even
+  if it is a couple busses deep

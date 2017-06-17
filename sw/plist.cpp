@@ -55,6 +55,7 @@
 #include "kveval.h"
 #include "plist.h"
 #include "bitlib.h"
+#include "businfo.h"
 
 extern	int	gbl_err;
 extern	FILE	*gbl_dump;
@@ -84,7 +85,7 @@ int count_peripherals(MAPDHASH &info) {
 			count++;
 
 			// Let see what type of peripheral this is
-			strp = getstring(kvpair->second, KYPTYPE);
+			strp = getstring(kvpair->second, KYSLAVE_TYPE);
 			if (KYSINGLE == *strp) {
 				np_single++;
 			} else if (KYDOUBLE == *strp) {
@@ -136,7 +137,7 @@ bool	compare_address(PERIPHP a, PERIPHP b) {
 
 //
 // Add a peripheral to a given list of peripherals
-int	addto_plist(PLIST &plist, MAPDHASH *phash) {
+int	PLIST::add(MAPDHASH *phash) {
 	STRINGP	pname;
 	int	naddr;
 
@@ -158,13 +159,15 @@ int	addto_plist(PLIST &plist, MAPDHASH *phash) {
 	p->p_awid  = nextlg(p->p_naddr)+2;
 	p->p_phash = phash;
 	p->p_name  = pname;
+	p->p_slave_bus  = NULL;
+	p->p_master_bus = NULL;
 
-	plist.push_back(p);
-	return plist.size()-1;
+	push_back(p);
+	return size()-1;
 }
-int	addto_plist(PLIST &plist, PERIPHP p) {
+int	PLIST::add(PERIPHP p) {
 	plist.push_back(p);
-	return plist.size()-1;
+	return size()-1;
 }
 
 /*
@@ -319,18 +322,18 @@ void	build_plist(MAPDHASH &info) {
 		if (isperipheral(kvpair->second)) {
 			STRINGP	ptype;
 			MAPDHASH	*phash = kvpair->second.u.m_m;
-			if (NULL != (ptype = getstring(kvpair->second, KYPTYPE))) {
+			if (NULL != (ptype = getstring(kvpair->second, KYSLAVE_TYPE))) {
 				if (KYSINGLE == *ptype)
-					addto_plist(slist, phash);
+					slist.add(phash);
 				else if (KYDOUBLE == *ptype)
-					addto_plist(dlist, phash);
+					dlist.add(phash);
 				else if (KYMEMORY == *ptype) {
-					addto_plist(plist, phash);
-					addto_plist(mlist, plist[plist.size()-1]);
+					plist.add(phash);
+					mlist.add(plist[plist.size()-1]);
 				} else
-					addto_plist(plist, phash);
+					plist.add(phash);
 			} else
-				addto_plist(plist, phash);
+				plist.add(phash);
 		}
 	}
 
@@ -341,3 +344,99 @@ void	build_plist(MAPDHASH &info) {
 	std::sort(plist.begin(), plist.end(), compare_naddr);
 }
 
+bool	PLIST::get_base_address(MAPDHASH *phash, unsigned &base) {
+	for(iterator p=begin(); p!=end(); p++) {
+		if ((*p)->p_phash == phash) {
+			base = (*p)->p_base;
+			return true;
+		} else if ((*p)->p_master_bus) {
+			if ((*p)->p_master_bus->get_base_address(phash, base))
+				return true;
+		}
+	} return false;
+}
+
+unsigned	PLIST::min_addr_size(unsigned np, unsigned mina) {
+	unsigned	start = 0, pa, base;
+
+	for(unsigned i=0; i<np; i++) {
+		pa = (*this)[i]->p_awid;
+		if ((*this)[i]->p_awid < mina)
+			pa = mina;
+		base = (start + ((1<<pa)-1));
+		base &= (-1<<pa);
+		// First valid next address is ...
+		start = base + (1<<pa);
+	} return nextlg(start);
+}
+
+
+void	PLIST::assign_addresses(void) {
+	if (size() < 1) {
+		m_address_width = 0;
+		return;
+	} else if (size() < 2) {
+		(*this)[0]->p_base = 0;
+		(*this)[0]->p_mask = 0;
+		m_address_width = (*this)[0]->p_awid;
+	} else {
+		// We'll need a minimum of nextlg(p->size()) bits to address
+		// p->size() separate peripherals.  While we'd like to minimize
+		// the number of bits we use to do this, adding one extra bit
+		// in to the minimum number of bits required gives us a little
+		// bit of flexibility while also attempting to keep our bus
+		// width to a minimum.
+		unsigned maxabits = nextlg(size())+1;
+		unsigned	start_address = 0;
+		unsigned min_awd, min_asz;
+
+		// Sort our peripherals by the number of address lines they
+		// will be using.  At the end of this, we'll know that we'll
+		// need a minimum of (*p)[p->size()-1]->p_awid+1 address lines.
+		sort(begin(), end(), compare_naddr);
+
+		//
+		// We've got two Goals:
+		//
+		// #1 Keep the bus address width to a minimum
+		// #2 Keep the LUTs required to a minimum
+		//
+
+		// Let's start by calculating the number of bits we will need
+		// if we don't do anything smart
+		min_awd = 1;
+		min_asz = min_addr_size(size(), min_awd);
+
+		// Now, let's see if we can't fit everything in
+		//   (*p)[p->size()-1]->p_awid+1
+		// bits, and work our way on up to
+		//   (*p)[p->size()-1]->p_awid+maxabits;
+		for(unsigned block_address_width = 0;
+			 	block_address_width < maxabits;
+				block_address_width++) {
+			//
+			unsigned address_bits_used =
+					(*this)[size()-1]->p_awid
+					+ 1 + block_address_width;
+			unsigned mina = address_bits_used - maxabits, asz;
+			//
+			asz = min_addr_size(size(), mina);
+			if (asz > min_asz)
+				break;
+			min_asz = asz;
+			min_awd = mina;
+		}
+
+		start_address = 0;
+		for(unsigned i=0; i<size(); i++) {
+			unsigned	pa;
+			pa = (*this)[i]->p_awid;
+			if ((*this)[i]->p_awid < min_awd)
+				pa = min_awd;
+			(*this)[i]->p_base = start_address + ((1<<pa)-1);
+			(*this)[i]->p_base &= (-1<<pa);
+			start_address = (*this)[i]->p_base + (1<<pa);
+		}
+		m_address_width = nextlg(start_address);
+	}
+}

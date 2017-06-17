@@ -44,7 +44,9 @@ SED:= sed
 CFLAGS:= -std=c++11 -g -Wall
 SOURCES := autofpga.cpp parser.cpp kveval.cpp keys.cpp mapdhash.cpp ast.cpp \
 	legalnotice.cpp ifdefs.cpp bldregdefs.cpp expr.tab.cpp lex.yy.cpp   \
-	plist.cpp bitlib.cpp bldtestb.cpp bldsim.cpp
+	plist.cpp bitlib.cpp bldtestb.cpp bldsim.cpp predicates.cpp	    \
+	businfo.cpp
+
 POSSHDRS:= $(subst .c,.h,$(subst .cpp,.h,$(SOURCES)))
 HEADERS := $(foreach header,$(POSSHDRS),$(wildcard $(header)))
 OBJECTS := $(addprefix $(OBJDIR)/,$(subst .c,.o,$(subst .cpp,.o,$(SOURCES))))

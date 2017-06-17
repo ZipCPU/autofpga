@@ -55,179 +55,31 @@
 //
 // Register address definitions, from @REGS.#d
 //
-#define	R_BUSERR          	0x00000400	// 00000400, wbregs names: BUSERR
-#define	R_PIC             	0x00000404	// 00000404, wbregs names: PIC
-// HDMI-IN Clock Counter (measures clock speed)
-#define	R_HDMI_INCLK      	0x00000408	// 00000408, wbregs names: HCLKIN
-// HDMI-OUT Clock Counter (measures clock speed)
-#define	R_HDMI_OUTCLK     	0x0000040c	// 0000040c, wbregs names: HCLKOUT
-#define	R_DATE            	0x00000410	// 00000410, wbregs names: RTCDATE, DATE
-#define	R_GPIO            	0x00000414	// 00000414, wbregs names: GPIO, GPI, GPO
-#define	PWCOUNT           	0x00000418	// 00000418, wbregs names: PWRCOUNT
-#define	R_SPIO            	0x0000041c	// 0000041c, wbregs names: SPIO
-// SYSCLK Clock Counter (measures clock speed)
-#define	R_SYSCLK          	0x00000420	// 00000420, wbregs names: SYSCLK
-#define	R_VERSION         	0x00000424	// 00000424, wbregs names: VERSION
 
 
-// GPS clock tracker, control loop settings registers
-#define	R_GPS_ALPHA       	0x00000800	// 00000800, wbregs names: ALPHA
-#define	R_GPS_BETA        	0x00000804	// 00000800, wbregs names: BETA
-#define	R_GPS_GAMMA       	0x00000808	// 00000800, wbregs names: GAMMA
-#define	R_GPS_STEP        	0x0000080c	// 00000800, wbregs names: STEP
-#define	R_MOUSE_STAT      	0x00000810	// 00000810, wbregs names: MSTAT
-#define	R_MOUSE_RAW       	0x00000814	// 00000810, wbregs names: MRAW
-#define	R_SCRN_MOUSE      	0x00000818	// 00000810, wbregs names: MOUSE
-#define	R_SCRN_SIZE       	0x0000081c	// 00000810, wbregs names: MSIZ
-#define	R_OLED_CMD        	0x00000820	// 00000820, wbregs names: OLED
-#define	R_OLED_CDATA      	0x00000824	// 00000820, wbregs names: OLEDCA
-#define	R_OLED_CDATB      	0x00000828	// 00000820, wbregs names: OLEDCB
-#define	R_OLED_DATA       	0x0000082c	// 00000820, wbregs names: ODATA
-// RTC clock registers
-#define	R_CLOCK           	0x00000830	// 00000830, wbregs names: CLOCK, TIMER
-#define	R_TIMER           	0x00000834	// 00000830, wbregs names: TIMER
-#define	R_STOPWATCH       	0x00000838	// 00000830, wbregs names: STOPWATCH
-#define	R_CKALARM         	0x0000083c	// 00000830, wbregs names: ALARM, CKALARM
-// GPS clock test bench registers, for measuring the clock trackers performance
-#define	R_GPSTB_FREQ      	0x00000840	// 00000840, wbregs names: GPSFREQ
-#define	R_GPSTB_JUMP      	0x00000844	// 00000840, wbregs names: GPSJUMP
-#define	R_GPSTB_ERRHI     	0x00000848	// 00000840, wbregs names: ERRHI
-#define	R_GPSTB_ERRLO     	0x0000084c	// 00000840, wbregs names: ERRLO
-#define	R_GPSTB_COUNTHI   	0x00000850	// 00000840, wbregs names: CNTHI
-#define	R_GPSTB_COUNTLO   	0x00000854	// 00000840, wbregs names: CNTLO
-#define	R_GPSTB_STEPHI    	0x00000858	// 00000840, wbregs names: STEPHI
-#define	R_GPSTB_STEPLO    	0x0000085c	// 00000840, wbregs names: STEPLO
-// HDMI in (sink) bit slip control
-#define	R_HIN_FRAMEADDR   	0x00000880	// 00000880, wbregs names: HINFRAME
-#define	R_HIN_ORIGIN      	0x00000884	// 00000880, wbregs names: HINORIGIN
-#define	R_HIN_MAXSZ       	0x00000888	// 00000880, wbregs names: HINMAXSZ
-#define	R_HIN_RESERVED    	0x0000088c	// 00000880, wbregs names: HINRESERVED
-#define	R_HIN_SYNC_CTRL   	0x00000890	// 00000880, wbregs names: HINSYNCC, HINDLY
-#define	R_HIN_SLIP        	0x00000894	// 00000880, wbregs names: HINSYNCM, HINMANUALSYNC, HINMSYNC, HINSLIP
-#define	R_HIN_SYNC_DATA   	0x00000898	// 00000880, wbregs names: HINSYNCD, HINSYNCDATA, HINSYNC
-#define	R_HIN_SYNCQ       	0x0000089c	// 00000880, wbregs names: HINSYNCQ
-#define	R_HIN_CKWORD      	0x000008a0	// 00000880, wbregs names: HINCW, HINCKWORD, HINPIXCLK//, 9-111
-#define	R_HIN_COLUMNS     	0x000008b0	// 00000880, wbregs names: HINCOLS
-#define	R_HIN_ROWS        	0x000008b4	// 00000880, wbregs names: HINROWS
-#define	R_HIN_HMODE       	0x000008b8	// 00000880, wbregs names: HINHMODE
-#define	R_HIN_VMODE       	0x000008bc	// 00000880, wbregs names: HINVMODE
-// HDMI EDID for the input HDMI port
-#define	R_EDID_IN         	0x00000900	// 00000900, wbregs names: EDIN
-// HDMI EDID for the output (source) HDMI port
-#define	R_EDID_CMD        	0x00000a00	// 00000a00, wbregs names: EDCMD
-#define	R_EDID_SPD        	0x00000a04	// 00000a00, wbregs names: EDSPD
-#define	R_EDID_OUT        	0x00000b00	// 00000a00, wbregs names: EDOUT
 
 
-// WB-Microphone registers
-#define	R_MIC_DATA        	0x00000c00	// 00000c00, wbregs names: MICD
-#define	R_MIC_CTRL        	0x00000c04	// 00000c00, wbregs names: MICC
-// EDID/I2C Debug Scope
-#define	R_EDID_SCOPC      	0x00000c08	// 00000c08, wbregs names: ESCOPC, ESCOPE
-#define	R_EDID_SCOPD      	0x00000c0c	// 00000c08, wbregs names: ESCOPD
-// Scope outputs, for the hdmi input values
-#define	R_SCOP_HDMIIN_CTRL	0x00000c10	// 00000c10, wbregs names: HINSCOPC, HINSCOPE
-#define	R_SCOP_HDMIIN_DATA	0x00000c14	// 00000c10, wbregs names: HINSCOPD
-// SDSPI Debugging scope
-#define	R_SDSPI_SCOPC     	0x00000c18	// 00000c18, wbregs names: SDSCOPC, SDSCOPE
-#define	R_SDSPI_SCOPD     	0x00000c1c	// 00000c18, wbregs names: SDSCOPD
-// FLASH erase/program configuration registers
-#define	R_QSPI_EREG       	0x00000c20	// 00000c20, wbregs names: QSPIE
-#define	R_QSPI_CREG       	0x00000c24	// 00000c20, wbregs names: QSPIC
-#define	R_QSPI_SREG       	0x00000c28	// 00000c20, wbregs names: QSPIS
-#define	R_QSPI_IDREG      	0x00000c2c	// 00000c20, wbregs names: QSPII
-// GPS UART registers, similar to WBUART
-#define	R_GPSU_SETUP      	0x00000c30	// 00000c30, wbregs names: GPSSETUP
-#define	R_GPSU_FIFO       	0x00000c34	// 00000c30, wbregs names: GPSFIFO
-#define	R_GPSU_UARTRX     	0x00000c38	// 00000c30, wbregs names: GPSRX
-#define	R_GPSU_UARTTX     	0x00000c3c	// 00000c30, wbregs names: GPSTX
-// SD-SPI addresses
-#define	R_SDSPI_CTRL      	0x00000c40	// 00000c40, wbregs names: SDCARD
-#define	R_SDSPI_DATA      	0x00000c44	// 00000c40, wbregs names: SDDATA
-#define	R_SDSPI_FIFOA     	0x00000c48	// 00000c40, wbregs names: SDFIFOA, SDFIF0, SDFIFA
-#define	R_SDSPI_FIFOB     	0x00000c4c	// 00000c40, wbregs names: SDFIFOB, SDFIF1, SDFIFB
-// FPGA CONFIG REGISTERS: 0x4e0-0x4ff
-#define	R_CFG_CRC         	0x00000c80	// 00000c80, wbregs names: FPGACRC
-#define	R_CFG_FAR         	0x00000c84	// 00000c80, wbregs names: FPGAFAR
-#define	R_CFG_FDRI        	0x00000c88	// 00000c80, wbregs names: FPGAFDRI
-#define	R_CFG_FDRO        	0x00000c8c	// 00000c80, wbregs names: FPGAFDRO
-#define	R_CFG_CMD         	0x00000c90	// 00000c80, wbregs names: FPGACMD
-#define	R_CFG_CTL0        	0x00000c94	// 00000c80, wbregs names: FPGACTL0
-#define	R_CFG_MASK        	0x00000c98	// 00000c80, wbregs names: FPGAMASK
-#define	R_CFG_STAT        	0x00000c9c	// 00000c80, wbregs names: FPGASTAT
-#define	R_CFG_LOUT        	0x00000ca0	// 00000c80, wbregs names: FPGALOUT
-#define	R_CFG_COR0        	0x00000ca4	// 00000c80, wbregs names: FPGACOR0
-#define	R_CFG_MFWR        	0x00000ca8	// 00000c80, wbregs names: FPGAMFWR
-#define	R_CFG_CBC         	0x00000cac	// 00000c80, wbregs names: FPGACBC
-#define	R_CFG_IDCODE      	0x00000cb0	// 00000c80, wbregs names: FPGAIDCODE
-#define	R_CFG_AXSS        	0x00000cb4	// 00000c80, wbregs names: FPGAAXSS
-#define	R_CFG_COR1        	0x00000cb8	// 00000c80, wbregs names: FPGACOR1
-#define	R_CFG_WBSTAR      	0x00000cc0	// 00000c80, wbregs names: WBSTAR
-#define	R_CFG_TIMER       	0x00000cc4	// 00000c80, wbregs names: CFGTIMER
-#define	R_CFG_BOOTSTS     	0x00000cd8	// 00000c80, wbregs names: BOOTSTS
-#define	R_CFG_CTL1        	0x00000ce0	// 00000c80, wbregs names: FPGACTL1
-#define	R_CFG_BSPI        	0x00000cfc	// 00000c80, wbregs names: FPGABSPI
-// Ethernet configuration (MDIO) port
-#define	R_MDIO_BMCR       	0x00000d00	// 00000d00, wbregs names: BMCR
-#define	R_MDIO_BMSR       	0x00000d04	// 00000d00, wbregs names: BMSR
-#define	R_MDIO_PHYIDR1    	0x00000d08	// 00000d00, wbregs names: PHYIDR1
-#define	R_MDIO_PHYIDR2    	0x00000d0c	// 00000d00, wbregs names: PHYIDR2
-#define	R_MDIO_ANAR       	0x00000d10	// 00000d00, wbregs names: ANAR
-#define	R_MDIO_ANLPAR     	0x00000d14	// 00000d00, wbregs names: ANLPAR
-#define	R_MDIO_ANER       	0x00000d18	// 00000d00, wbregs names: ANER
-#define	R_MDIO_ANNPTR     	0x00000d1c	// 00000d00, wbregs names: ANNPTR
-#define	R_MDIO_PHYSTS     	0x00000d40	// 00000d00, wbregs names: PHYSYTS
-#define	R_MDIO_FCSCR      	0x00000d50	// 00000d00, wbregs names: FCSCR
-#define	R_MDIO_RECR       	0x00000d54	// 00000d00, wbregs names: RECR
-#define	R_MDIO_PCSR       	0x00000d58	// 00000d00, wbregs names: PCSR
-#define	R_MDIO_RBR        	0x00000d5c	// 00000d00, wbregs names: RBR
-#define	R_MDIO_LEDCR      	0x00000d60	// 00000d00, wbregs names: LEDCR
-#define	R_MDIO_PHYCR      	0x00000d64	// 00000d00, wbregs names: PHYCR
-#define	R_MDIO_BTSCR      	0x00000d68	// 00000d00, wbregs names: BTSCR
-#define	R_MDIO_CDCTRL     	0x00000d6c	// 00000d00, wbregs names: CDCTRL
-#define	R_MDIO_EDCR       	0x00000d74	// 00000d00, wbregs names: EDCR
-#define	BKRAM             	0x00100000	// 00100000, wbregs names: RAM
-#define	FLASHMEM          	0x01000000	// 01000000, wbregs names: FLASH
 
 
 //
 // The @REGDEFS.H.DEFNS tag
 //
 // @REGDEFS.H.DEFNS for masters
-#define	R_ZIPCTRL	0x80000000
-#define	R_ZIPDATA	0x80000004
-#define	CLKFREQHZ	100000000
-// @REGDEFS.H.DEFNS for peripherals
-#define	FLASHBASE	16777216
+#define	FLASHBASE	@$.BASE
 #define	FLASHLEN	0x01000000
 #define	FLASHLGLEN	24
-#define	BKRAMBASE	1048576
+#define	BKRAMBASE	@$BASE
 #define	BKRAMLEN	0x00100000
+#define	R_ZIPCTRL	@$.ZIP_ADDRESS
+#define	R_ZIPDATA	@$.ZIP_DBGDATA
+#define	CLKFREQHZ	100000000
+// @REGDEFS.H.DEFNS for peripherals
 // @REGDEFS.H.DEFNS at the top level
 // End of definitions from REGDEFS.H.DEFNS
 //
 // The @REGDEFS.H.INSERT tag
 //
 // @REGDEFS.H.INSERT for masters
-
-#define	CPU_GO		0x0000
-#define	CPU_RESET	0x0040
-#define	CPU_INT		0x0080
-#define	CPU_STEP	0x0100
-#define	CPU_STALL	0x0200
-#define	CPU_HALT	0x0400
-#define	CPU_CLRCACHE	0x0800
-#define	CPU_sR0		0x0000
-#define	CPU_sSP		0x000d
-#define	CPU_sCC		0x000e
-#define	CPU_sPC		0x000f
-#define	CPU_uR0		0x0010
-#define	CPU_uSP		0x001d
-#define	CPU_uCC		0x001e
-#define	CPU_uPC		0x001f
-
-
-// @REGDEFS.H.INSERT for peripherals
 // Flash control constants
 #define	ERASEFLAG	0x80000000
 #define	DISABLEWP	0x10000000
@@ -250,6 +102,25 @@
 #define	ISPIF_EN	0x80040004
 #define	ISPIF_DIS	0x00040004
 #define	ISPIF_CLR	0x00000004
+
+#define	CPU_GO		0x0000
+#define	CPU_RESET	0x0040
+#define	CPU_INT		0x0080
+#define	CPU_STEP	0x0100
+#define	CPU_STALL	0x0200
+#define	CPU_HALT	0x0400
+#define	CPU_CLRCACHE	0x0800
+#define	CPU_sR0		0x0000
+#define	CPU_sSP		0x000d
+#define	CPU_sCC		0x000e
+#define	CPU_sPC		0x000f
+#define	CPU_uR0		0x0010
+#define	CPU_uSP		0x001d
+#define	CPU_uCC		0x001e
+#define	CPU_uPC		0x001f
+
+
+// @REGDEFS.H.INSERT for peripherals
 // @REGDEFS.H.INSERT from the top level
 typedef	struct {
 	unsigned	m_addr;

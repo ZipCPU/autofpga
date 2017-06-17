@@ -41,7 +41,8 @@
 @$NBYTES=(1<<@$.LGFLASHSZ)
 @NBYTES.FORMAT=0x%08x
 @ACCESS= FLASH_ACCESS
-@PTYPE=  MEMORY
+@SLAVE.TYPE=MEMORY
+@SLAVE.BUS=wb
 @LD.PERM=rx
 @INT.FLASH.WIRE= flash_interrupt
 @INT.FLASH.PIC= buspic
@@ -206,7 +207,8 @@ _flash=ORIGIN(flash);
 @ACCESS= FLASH_ACCESS
 # This cannot be a DOUBLE peripheral type, since our response may take more than
 # two clock cycles.
-@PTYPE= OTHER
+@SLAVE.TYPE=OTHER
+@SLAVE.BUS=wb
 @MAIN.INSERT=
 	// The Flash control interface result comes back together with the
 	// flash interface itself.  Hence, we always return zero here.

@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Filename: 	pwrcount.txt
+## Filename: 	biarbiter.txt
 ##
 ## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 ##
@@ -35,19 +35,53 @@
 ################################################################################
 ##
 ##
-@PREFIX=pwrcount
-@NADDR=1
-@SLAVE.TYPE=SINGLE
-@SLAVE.BUS=wb
-@MAIN.DEFNS=
-	reg	[31:0]	r_pwrcount_data;
+@PREFIX=bar
+@A.BUS=zip
+@$A.WID= @$/zip.AWID
+@B.BUS=wbu
+@$A.WID= @$/wbu.AWID
+@MASTER.BUS= @$(A.BUS) @$(B.BUS)
+@O.BUS=dwb
 @MAIN.INSERT=
-	initial	r_pwrcount_data = 32'h0;
-	always @(posedge i_clk)
-	if (r_pwrcount_data[31])
-		r_pwrcount_data[30:0] <= r_pwrcount_data[30:0] + 1'b1;
-	else
-		r_pwrcount_data[31:0] <= r_pwrcount_data[31:0] + 1'b1;
-	assign	pwrcount_data = r_pwrcount_data;
-@REGS.N=1
-@REGS.0= 0 PWCOUNT PWRCOUNT
+	//
+	//
+	// And an arbiter to decide who gets access to the bus
+	//
+	//
+	wbpriarbiter #($(O.BUS.DW),@$(O.BUS.AWID))
+		bus_arbiter(@$O.BUS.CLOCK,
+		// The Zip CPU bus master --- gets the priority slot
+		@$(A.BUS)_cyc,
+		@$(A.BUS)_stb,
+		@$(A.BUS)_we,
+		@$(A.BUS)_addr,
+		@$(A.BUS)_data,
+		@$(A.BUS)_sel,
+		@$(A.BUS)_ack,
+		@$(A.BUS)_stall,
+		@$(A.BUS)_err,
+		// The UART interface master
+		@$(B.BUS)_cyc,
+		@$(B.BUS)_stb,
+		@$(B.BUS)_we,
+		@$(B.BUS)_addr,
+		@$(B.BUS)_data,
+		@$(B.BUS)_we,
+		@$(B.BUS)_addr[(@$(B.WID)-1):0],
+		@$(B.BUS)_data,
+		@$(B.BUS)_sel,
+		@$(B.BUS)_ack,
+		@$(B.BUS)_stall,
+		@$(B.BUS)_err,
+		// Common bus returns
+		@$(O.BUS)_cyc,
+		@$(O.BUS)_stb,
+		@$(O.BUS)_we,
+		@$(O.BUS)_addr[(@$(B.WID)-1):0],
+		@$(O.BUS)_odata,
+		@$(O.BUS)_sel,
+		@$(O.BUS)_ack,
+		@$(O.BUS)_stall,
+		@$(O.BUS)_err);
+	assign	@$(A.BUS)_idata = @$(O.BUS)_idata;
+	assign	@$(B.BUS)_idata = @$(O.BUS)_idata;

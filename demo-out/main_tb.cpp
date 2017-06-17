@@ -285,60 +285,6 @@ public:
 		m_changed = false;
 	}
 	bool	load(uint32_t addr, const char *buf, uint32_t len) {
-		uint32_t	start, offset, wlen, base, naddr;
-
-		base  = 0x01000000;
-		naddr = 0x00400000;
-
-		if ((addr >= base)&&(addr < base + naddr)) {
-			// If the start access is in flash
-			start = (addr > base) ? (addr-base) : 0;
-			offset = (start + base) - addr;
-			wlen = (len-offset > naddr - start)
-				? (naddr - start) : len - offset;
-#ifdef	FLASH_ACCESS
-			// FROM flash.SIM.LOAD
-			m_flash->load(start, &buf[offset], wlen);
-			// AUTOFPGA::Now clean up anything else
-			// Was there more to write than we wrote?
-			if (addr + len > base + naddr)
-				return load(base + naddr, &buf[offset+wlen], len-wlen);
-			return true;
-#else	// FLASH_ACCESS
-			return false;
-#endif	// FLASH_ACCESS
-		}
-
-		base  = 0x00100000;
-		naddr = 0x00040000;
-
-		if ((addr >= base)&&(addr < base + naddr)) {
-			// If the start access is in bkram
-			start = (addr > base) ? (addr-base) : 0;
-			offset = (start + base) - addr;
-			wlen = (len-offset > naddr - start)
-				? (naddr - start) : len - offset;
-#ifdef	BKRAM_ACCESS
-			// FROM bkram.SIM.LOAD
-			start = start & (-4);
-			wlen = (wlen+3)&(-4);
-
-			// Need to byte swap data to get it into the memory
-			char	*bswapd = new char[len+8];
-			memcpy(bswapd, &buf[offset], wlen);
-			byteswapbuf(len>>2, (uint32_t *)bswapd);
-			memcpy(&m_core->block_ram[start], bswapd, wlen);
-			delete	bswapd;
-			// AUTOFPGA::Now clean up anything else
-			// Was there more to write than we wrote?
-			if (addr + len > base + naddr)
-				return load(base + naddr, &buf[offset+wlen], len-wlen);
-			return true;
-#else	// BKRAM_ACCESS
-			return false;
-#endif	// BKRAM_ACCESS
-		}
-
 		return false;
 	}
 

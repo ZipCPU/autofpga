@@ -40,7 +40,8 @@
 # Technically, this could be DOUBLE memory.  It meets the requirements.
 # Here, we place it into OTHER anyway, to guarantee it gets shuffled into
 # an address last.
-@PTYPE=OTHER
+@SLAVE.TYPE=OTHER
+@SLAVE.BUS=wb
 @MAIN.INSERT=
 `ifndef	ETHERNET_ACCESS
 	// Ethernet packet memory declaration
@@ -71,7 +72,8 @@
 @INT.NETRX.PIC=syspic
 @INT.NETTX.PIC=syspic
 @NADDR=8
-@PTYPE=DOUBLE
+@SLAVE.TYPE=DOUBLE
+@SLAVE.BUS=wb
 @ACCESS=ETHERNET_ACCESS
 @MAIN.PORTLIST=
 		// Ethernet control (packets) lines

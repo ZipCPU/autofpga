@@ -38,7 +38,8 @@
 @PREFIX=hdmiin
 @NADDR=16
 @ACCESS=HDMIIN_ACCESS
-@PTYPE=DOUBLE
+@SLAVE.TYPE=DOUBLE
+@SLAVE.BUS=wb
 @TOP.PORTLIST=
 		// HDMI input clock, and then data
 		i_hdmi_in_clk_n, i_hdmi_in_clk_p,
@@ -224,7 +225,8 @@ typedef	struct	HDMI_IN_S {
 #
 #
 @PREFIX=scope_hdmiin
-@PTYPE=OTHER
+@SLAVE.TYPE=OTHER
+@SLAVE.BUS=wb
 @NADDR=2
 @INT.HINSCOPE.WIRE=	scop_hdmiin_int
 @INT.HINSCOPE.PIC=	buspic
@@ -323,7 +325,8 @@ typedef	struct	HDMI_IN_S {
 @PREFIX=edin
 @$LGMEMSZ=8
 @$NADDR=(1<<(@$.LGMEMSZ-2))
-@PTYPE=DOUBLE
+@SLAVE.TYPE=DOUBLE
+@SLAVE.BUS=wb
 @ACCESS=HDMI_IN_EDID_ACCESS
 @TOP.PORTLIST=
 		// HDMI input EDID I2C ports
@@ -381,7 +384,8 @@ typedef	struct	HDMI_IN_S {
 # The EDID I2C port for the HDMI source (out) port
 @PREFIX=edout
 @NADDR=128
-@PTYPE=DOUBLE
+@SLAVE.TYPE=DOUBLE
+@SLAVE.BUS=wb
 @INT.EDID.WIRE=	edid_out_int
 @INT.EDID.PIC=	syspic
 @ACCESS=HDMI_OUT_EDID_ACCESS
@@ -460,7 +464,8 @@ typedef	struct	EDID_SRC_S {
 	assign	o_hdmi_out_b = hdmi_in_b;
 
 @PREFIX=scop_edid
-@PTYPE=OTHER
+@SLAVE.TYPE=OTHER
+@SLAVE.BUS=wb
 @NADDR=2
 @INT.SCOPE.WIRE=scop_edid_int
 @INT.SCOPE.PIC=buspic

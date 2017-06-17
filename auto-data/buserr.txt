@@ -38,7 +38,8 @@
 ##
 @PREFIX=buserr
 @NADDR=1
-@PTYPE=SINGLE
+@SLAVE.TYPE=SINGLE
+@SLAVE.BUS=wb
 @SINGLE.INPUT= r_bus_err
 @MAIN.INSERT=
 	assign	buserr_data = r_bus_err;

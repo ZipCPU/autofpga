@@ -76,6 +76,8 @@
 #include "bldregdefs.h"
 #include "ifdefs.h"
 #include "bldsim.h"
+#include "predicates.h"
+#include "businfo.h"
 
 int	gbl_err = 0;
 FILE	*gbl_dump = NULL;
@@ -273,79 +275,6 @@ typedef	std::vector<PICP>	PICLIST;
 PICLIST	piclist;
 unsigned	unusedmsk;
 
-
-
-//
-// Is the given location within our hash a master?  Look it up.
-//
-// To be a bus master, it must have a @MTYPE field.
-//
-bool	isbusmaster(MAPDHASH &phash) {
-	return (phash.end() != phash.find(KYMTYPE));
-}
-
-//
-// Same thing, but when given a location within the tree, rather than a hash
-// value.
-bool	isbusmaster(MAPT &pmap) {
-	if (pmap.m_typ != MAPT_MAP)
-		return false;
-	return isbusmaster(*pmap.u.m_m);
-}
-
-//
-// Is the given hash a definition of a peripheral
-//
-// To be a peripheral, it must have a @PTYPE field.
-//
-bool	isperipheral(MAPDHASH &phash) {
-	return (phash.end() != phash.find(KYPTYPE));
-}
-
-bool	isperipheral(MAPT &pmap) {
-	if (pmap.m_typ != MAPT_MAP)
-		return false;
-	return isperipheral(*pmap.u.m_m);
-}
-
-//
-// Does the given hash define a programmable interrupt controller?
-//
-// If so, it must have a @PIC.MAX field identifying the maximum number of
-// interrupts that can be assigned to it.
-bool	ispic(MAPDHASH &phash) {
-	return (phash.end() != findkey(phash, KYPIC_MAX));
-}
-
-bool	ispic(MAPT &pmap) {
-	if (pmap.m_typ != MAPT_MAP)
-		return false;
-	return ispic(*pmap.u.m_m);
-}
-
-/*
-bool	hasscope(MAPDHASH &phash) {
-	return (phash.end() != phash.find(KYSCOPE));
-}
-*/
-
-// Does this reference a memory peripheral?
-bool	ismemory(MAPDHASH &phash) {
-	STRINGP	strp;
-
-	strp = getstring(phash, KYPTYPE);
-	if (!strp)
-		return false;
-	if (STRING(KYMEMORY)!= *strp)
-		return false;
-	return true;
-}
-
-bool	ismemory(MAPT &pmap) {
-	if (pmap.m_typ != MAPT_MAP)
-		return false;
-	return ismemory(*pmap.u.m_m);
-}
 
 // Look up the number of bits in the address bus of the given hash
 int	get_address_width(MAPDHASH &info) {
@@ -586,7 +515,7 @@ void assign_addresses(MAPDHASH &info, unsigned first_address = 0x400) {
 
 	unsigned	smask = 0, dmask = 0;
 	if (dio_hash) {
-		int dio_id = addto_plist(plist, dio_hash);
+		int dio_id = plist.add(dio_hash);
 		int	v;
 
 		assert(dio_id >= 0);
@@ -605,7 +534,7 @@ void assign_addresses(MAPDHASH &info, unsigned first_address = 0x400) {
 		setvalue(*dio_hash, KYBASE, plist[dio_id]->p_base);
 		setvalue(*dio_hash, KYMASK, plist[dio_id]->p_mask);
 	} if (sio_hash) {
-		int sio_id = addto_plist(plist, sio_hash);
+		int sio_id = plist.add(sio_hash);
 		int	v;
 
 		assert(sio_id >= 0);
@@ -2522,8 +2451,9 @@ int	main(int argc, char **argv) {
 	build_plist(master);
 	assign_interrupts(master);
 	// assign_scopes(    master);
-	assign_addresses( master);
-	get_address_width(master);
+	build_bus_list(master);
+	// assign_addresses( master);
+	// get_address_width(master);
 
 	reeval(master);
 
@@ -2551,7 +2481,9 @@ int	main(int argc, char **argv) {
 
 	str = subd->c_str(); str += "/main.v";
 	fp = fopen(str.c_str(), "w");
-	if (fp) { build_main_v(  master, fp, str); fclose(fp); }
+	if (fp) { build_main_v(  master, fp, str);
+		mkselect2(fp, master);
+		fclose(fp); }
 
 	str = subd->c_str(); str += "/rtl.make.inc";
 	fp = fopen(str.c_str(), "w");

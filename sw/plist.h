@@ -45,6 +45,8 @@
 
 #include "parser.h"
 
+class	BUSINFO;
+
 //
 // The PLIST, made of PERIPH(erals)
 //
@@ -64,12 +66,27 @@ typedef	struct PERIPH_S {
 	unsigned	p_sbaw;
 	STRINGP		p_name;
 	MAPDHASH	*p_phash;
+	BUSINFO		*p_slave_bus;
+	BUSINFO		*p_master_bus;
 } PERIPH, *PERIPHP;
-typedef	std::vector<PERIPHP>	PLIST;
 
-//
-// Define some global variables, such as a couple different lists of various
-// peripheral sets
+class	PLIST : public std::vector<PERIPHP> {
+public:
+	STRINGP	m_stype;
+	unsigned	m_address_width;
+
+	void	set_stype(STRING &stype);
+	//
+	// Add a peripheral to a given list of peripherals
+	int	add(MAPDHASH *phash);
+	int	add(PERIPHP p);
+	void	assign_addresses(void);
+	bool	get_base_address(MAPDHASH *phash, unsigned &base);
+	unsigned	min_addr_size(unsigned, unsigned);
+};
+
+// A pointer to a set of peripherals
+typedef	PLIST *PLISTP;
 extern	PLIST	plist, slist, dlist, mlist;
 
 //
@@ -89,11 +106,6 @@ extern	int count_peripherals(MAPDHASH &info);
 extern	bool	compare_naddr(PERIPHP a, PERIPHP b);
 
 extern	bool	compare_address(PERIPHP a, PERIPHP b);
-
-//
-// Add a peripheral to a given list of peripherals
-extern	int	addto_plist(PLIST &plist, MAPDHASH *phash);
-extern	int	addto_plist(PLIST &plist, PERIPHP p);
 
 /*
  * build_skiplist

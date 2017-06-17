@@ -40,7 +40,8 @@
 @PREFIX=mdio
 @NADDR=32
 @ACCESS=NETCTRL_ACCESS
-@PTYPE=OTHER
+@SLAVE.TYPE=OTHER
+@SLAVE.BUS=wb
 @TOP.PORTLIST=
 		// Toplevel ethernet MDIO ports
 		o_eth_mdclk, io_eth_mdio
