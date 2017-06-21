@@ -2036,6 +2036,8 @@ void	build_rtl_make_inc(MAPDHASH &master, FILE *fp, STRING &fname) {
 			continue;
 		mkfiles = getstring(kvpair->second, KYRTL_MAKE_FILES);
 		mksubd  = getstring(kvpair->second, KYRTL_MAKE_SUBD);
+		if (!mkfiles)
+			continue;
 
 		char	*tokstr = strdup(mkfiles->c_str()), *tok;
 		STRING	filstr = "";
@@ -2083,7 +2085,7 @@ void	build_rtl_make_inc(MAPDHASH &master, FILE *fp, STRING &fname) {
 				mkgroup->c_str(),
 				mkfiles->c_str(), allgroups.c_str());
 	} else if (allgroups.size() > 0) {
-		fprintf(fp, "%s := %s\n", mkgroup->c_str(), allgroups.c_str());
+		fprintf(fp, "%s := main.v %s\n", mkgroup->c_str(), allgroups.c_str());
 	}
 
 	mksubd = getstring(master, KYRTL_MAKE_VDIRS);
