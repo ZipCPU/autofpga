@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	setaddr.cpp
+// Filename: 	businfo.cpp
 //
 // Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 //
@@ -58,11 +58,79 @@
 #include "bldsim.h"
 #include "predicates.h"
 #include "businfo.h"
-
-extern	int	gbl_err;
-extern	FILE	*gbl_dump ;
+#include "globals.h"
 
 BUSLIST	*gbl_blist;
+
+
+// Look up the number of bits in the address bus of the given hash
+int	BUSINFO::address_width(void) {
+	if (!m_addresses_assigned)
+		assign_addresses();
+
+	return m_address_width;
+}
+
+bool	BUSINFO::get_base_address(MAPDHASH *phash, unsigned &base) {
+	return m_plist->get_base_address(phash, base);
+}
+
+unsigned	BUSINFO::min_addr_size(unsigned np, unsigned mina) {
+	unsigned	start = 0, pa, base;
+
+	for(unsigned i=0; i<np; i++) {
+		pa = (*m_plist)[i]->p_awid;
+		if ((*m_plist)[i]->p_awid < mina)
+			pa = mina;
+		base = (start + ((1<<pa)-1));
+		base &= (-1<<pa);
+		// First valid next address is ...
+		start = base + (1<<pa);
+	} return nextlg(start);
+}
+
+void	BUSINFO::assign_addresses(void) {
+	if ((!m_plist)||(m_plist->size() < 1)) {
+		m_address_width = 0;
+	} else if (!m_addresses_assigned) {
+if (gbl_dump) fprintf(gbl_dump, "BUSINFO:Assigning bus addresses for bus: %s\n", m_name->c_str());
+if (gbl_dump) fprintf(gbl_dump, " DW = %d, NS = %d\n", m_data_width, m_nullsz);
+
+		m_plist->assign_addresses(m_data_width, m_nullsz);
+		m_address_width = m_plist->m_address_width;
+	} m_addresses_assigned = true;
+}
+
+
+bool	BUSINFO::need_translator(BUSINFO *m) {
+	// If they are the same bus, then no translator is necessary
+	if ((m==NULL)||(this == m))
+		return false;
+	if (m_name->compare(*m->m_name)==0)
+		return false;
+
+	// If they are of different clocks, then a translator is required
+	if ((m_clock)&&(m->m_clock)&&(m_clock != m->m_clock))
+		return true;
+
+	// If they are of different widths
+	if ((m_data_width)&&(m->m_data_width)
+			&&(m_data_width != m->m_data_width))
+		return true;
+
+	// If they are of different bus types
+	if ((m_type)&&(m->m_type)
+			&&(m_type->compare(*m->m_type) != 0))
+		return true;
+	//
+	//
+	return false;
+}
+bool	need_translator(BUSINFO *s, BUSINFO *m) {
+	if (!s)
+		return false;
+	return s->need_translator(m);
+}
 
 BUSINFO *BUSLIST::find_bus(STRINGP name) {
 	if (!name)
@@ -73,6 +141,10 @@ BUSINFO *BUSLIST::find_bus(STRINGP name) {
 			return (*this)[k];
 		}
 	} return NULL;
+}
+
+BUSINFO *find_bus(STRINGP name) {
+	return gbl_blist->find_bus(name);
 }
 
 unsigned	BUSLIST::get_base_address(MAPDHASH *phash) {
@@ -113,6 +185,7 @@ void	BUSLIST::addperipheral(MAPT &map) {
 }
 
 void	BUSLIST::adddefault(STRINGP defname) {
+	if (gbl_dump) fprintf(stderr, "Adding default bus: %s\n", defname->c_str());
 	if (size() == 0) {
 		push_back(new BUSINFO());
 		(*this)[0]->m_name = defname;
@@ -153,12 +226,9 @@ void	BUSLIST::addbus(MAPDHASH *phash) {
 	STRINGP		str;
 	BUSINFO		*bi;
 
-printf("Calling ADDBUS\n");
 	bp = getmap(*phash, KYBUS);
-	if (!bp) {
-printf("\tERR: NO BUS MAP WITHIN HASH\n");
+	if (!bp)
 		return;
-}
 
 	str = getstring(*bp, KY_NAME);
 	if (str) {
@@ -185,19 +255,23 @@ printf("\tERR: NO BUS MAP WITHIN HASH\n");
 		}
 	}
 
-#warning "BUS.CLOCK is a MAP--code skipped"
-/*
 	if (NULL != (str = getstring(*bp, KY_CLOCK))) {
+		bi->m_clock = NULL;
+		for(MAPDHASH::iterator kvpair = gbl_hash->begin();
+				kvpair != gbl_hash->end(); kvpair++) {
+			if (kvpair->second.m_typ != MAPT_MAP)
+				continue;
+			if (kvpair->first.compare(*str)==0) {
+				bi->m_clock = kvpair->second.u.m_m;
+				break;
+			}
+		}
 		if (bi->m_clock == NULL) {
-			bi->m_clock = str;
-		} else if (bi->m_clock->compare(*str) != 0) {
-			fprintf(stderr, "ERR: Conflicting bus clocks "
-					"for %s\n", bi->m_name);
+			fprintf(stderr, "ERR: Clock %s not defined for %s\n",
+				str->c_str(), bi->m_name->c_str());
 			gbl_err++;
 		}
 	}
-*/
-
 
 	if (getvalue(*bp, KY_WIDTH, value)) {
 		if (bi->m_data_width <= 0) {
@@ -207,45 +281,16 @@ printf("\tERR: NO BUS MAP WITHIN HASH\n");
 			gbl_err++;
 		}
 	}
+
+	if (getvalue(*bp, KY_NULLSZ, value)) {
+		bi->m_nullsz = value;
+		// bi->m_addresses_assigned = false;
+	}
 }
+
 void	BUSLIST::addbus(MAPT &map) {
 	if (map.m_typ == MAPT_MAP)
 		addbus(map.u.m_m);
-}
-
-// Look up the number of bits in the address bus of the given hash
-int	BUSINFO::address_width(void) {
-	if (!m_addresses_assigned)
-		assign_addresses();
-
-	return m_address_width;
-}
-
-bool	BUSINFO::get_base_address(MAPDHASH *phash, unsigned &base) {
-	return m_plist->get_base_address(phash, base);
-}
-
-unsigned	BUSINFO::min_addr_size(unsigned np, unsigned mina) {
-	unsigned	start = 0, pa, base;
-
-	for(unsigned i=0; i<np; i++) {
-		pa = (*m_plist)[i]->p_awid;
-		if ((*m_plist)[i]->p_awid < mina)
-			pa = mina;
-		base = (start + ((1<<pa)-1));
-		base &= (-1<<pa);
-		// First valid next address is ...
-		start = base + (1<<pa);
-	} return nextlg(start);
-}
-
-void	BUSINFO::assign_addresses(void) {
-	if ((!m_plist)||(m_plist->size() < 1)) {
-		m_address_width = 0;
-	} else {
-		m_plist->assign_addresses();
-		m_address_width = m_plist->m_address_width;
-	} m_addresses_assigned = true;
 }
 
 //
@@ -255,259 +300,28 @@ void	BUSINFO::assign_addresses(void) {
 // from.  The first address helps to insure that the NULL address creates a
 // proper error (as it should).
 //
-void assign_addresses(PLIST plist) {
-/*
-	unsigned	start_address = first_address;
-	MAPDHASH::iterator	kvpair;
-
-	int np = count_peripherals(info);
-	int baw = count_peripherals(info);	// log_2 octets
-
-	if (np < 1) {
-		return;
-	}
-
-	if (gbl_dump)
-		fprintf(gbl_dump, "// Assigning addresses to the S-LIST\n");
-	// Find the number of slist addresses
-	MAPDHASH	*sio_hash = NULL, *dio_hash = NULL;
-
-	if (slist.size() > 0) {
-		// Each has only the one address ...
-		int naddr = slist.size();
-		for(unsigned i=0; i<slist.size(); i++) {
-			slist[i]->p_base = start_address + 4*i;
-			if (gbl_dump)
-				fprintf(gbl_dump, "// Assigning %12s_... to %08x\n", slist[i]->p_name->c_str(), slist[i]->p_base);
-
-			setvalue(*slist[i]->p_phash, KYBASE, slist[i]->p_base);
-		}
-		start_address += (1<<(nextlg(naddr)+2));
-
-		for(unsigned i=0; i<slist.size(); i++) {
-			if (gbl_dump)
-			fprintf(gbl_dump, "Setting SLIST[%d] MASK to %08x\n", i,
-				((1<<baw)-1)&-4);
-			slist[i]->p_mask = (1<<(baw-2))-1;	// Words
-			setvalue(*slist[i]->p_phash, KYMASK, slist[i]->p_mask);
-		}
-
-		// Build an SIO peripheral
-		MAPT		elm;
-		elm.m_typ = MAPT_MAP;
-		elm.u.m_m = sio_hash = new MAPDHASH;
-		info.insert(KEYVALUE(KYSIO, elm));
-		elm.m_typ = MAPT_STRING;
-		elm.u.m_s = new STRING(KYSIO);
-		sio_hash->insert(KEYVALUE(KYPREFIX, elm));
-		elm.m_typ = MAPT_INT;
-		elm.u.m_v = (1<<(nextlg(naddr)));
-		sio_hash->insert(KEYVALUE(KYNADDR, elm));
-		setvalue(*sio_hash, KYREGS_N, 0);
-	}
-
-	// Assign double-peripheral bus addresses
-	if (dlist.size() > 1) {
-		if (gbl_dump)
-			fprintf(gbl_dump, "// Assigning addresses to the D-LIST, starting from %08x\n", start_address);
-		unsigned start = 0;
-		for(unsigned i=0; i<dlist.size(); i++) {
-			dlist[i]->p_base = 0;
-			dlist[i]->p_base = (start + ((1<<dlist[i]->p_awid)-1));
-			dlist[i]->p_base &= (-1<<(dlist[i]->p_awid));
-			// First valid next address is ...
-			start = dlist[i]->p_base + (1<<(dlist[i]->p_awid));
-		}
-
-		int dnaddr = (1<<nextlg(start));
-		start_address = (start_address + (dnaddr)-1)
-				& (~(dnaddr-1));
-
-		for(unsigned i=0; i<dlist.size(); i++) {
-			dlist[i]->p_base += start_address;
-			if (gbl_dump)
-				fprintf(gbl_dump,
-				"// Assigning %12s_... to %08x/%08x\n",
-				dlist[i]->p_name->c_str(), dlist[i]->p_base,
-				(-1<<(dlist[i]->p_awid)));
-
-			setvalue(*dlist[i]->p_phash, KYBASE, dlist[i]->p_base);
-			dlist[i]->p_mask = (-1<<(dlist[i]->p_awid-2));
-			setvalue(*dlist[i]->p_phash, KYMASK, dlist[i]->p_mask);
-		}
-
-		start_address = (start_address+dnaddr);
-
-		// Build an DIO peripheral
-		MAPT		elm;
-		elm.m_typ = MAPT_MAP;
-		elm.u.m_m = dio_hash = new MAPDHASH;
-		info.insert(KEYVALUE(KYDIO, elm));
-		elm.m_typ = MAPT_STRING;
-		elm.u.m_s = new STRING(KYDIO);
-		dio_hash->insert(KEYVALUE(KYPREFIX, elm));
-		elm.m_typ = MAPT_INT;
-		elm.u.m_v = dnaddr;
-		dio_hash->insert(KEYVALUE(KYNADDR, elm));
-		setvalue(*dio_hash, KYREGS_N, 0);
-	} else if (dlist.size() == 1) {
-		// dio_hash = dlist[0]->p_phash;
-		plist.push_back(dlist[0]);
-		dlist.pop_back();
-		dio_hash = NULL;
-	}
-
-	// Assign bus addresses to the more generic peripherals
-	if (gbl_dump) {
-		fprintf(gbl_dump, "// Assigning addresses to the P-LIST (all other addresses)\n");
-		fprintf(gbl_dump, "// Starting from %08x\n", start_address);
-	}
-	for(unsigned i=0; i<plist.size(); i++) {
-		if (plist[i]->p_naddr < 1)
-			continue;
-		// Make this address 32-bit aligned
-		plist[i]->p_base = (start_address + ((1<<plist[i]->p_awid)-1));
-		plist[i]->p_base &= (-1<<(plist[i]->p_awid));
-		if (gbl_dump)
-		fprintf(gbl_dump, "// assigning %12s_... to %08x/%08x\n",
-			plist[i]->p_name->c_str(),
-			plist[i]->p_base,
-			(-1<<(plist[i]->p_awid)));
-		start_address = plist[i]->p_base + (1<<(plist[i]->p_awid));
-		plist[i]->p_mask = (-1<<(plist[i]->p_awid-2));
-
-		setvalue(*plist[i]->p_phash, KYBASE, plist[i]->p_base);
-		setvalue(*plist[i]->p_phash, KYMASK, plist[i]->p_mask);
-	}
-
-	// Adjust the mask to find only those bits that are needed
-	unsigned	masteraddr = 0;
-	unusedmsk = 0xffffffff;
-	for(int bit=31; bit >= 0; bit--) {
-		unsigned	bmsk = (1<<bit), bvl;
-		bool	bset = false, onebit=true;
-
-		for(unsigned i=0; i<slist.size(); i++) {
-			if (bmsk & slist[i]->p_mask) {
-				if (!bset) {
-					bvl = bmsk & (slist[i]->p_base>>2);
-					bset = true;
-					onebit = true;
-				} else if ((slist[i]->p_base & bmsk)!=bvl) {
-					onebit = false;
-					break;
-				}
-			}
-		} if (!onebit)
-			continue;
-
-		for(unsigned i=0; i<dlist.size(); i++) {
-			if (bmsk & dlist[i]->p_mask) {
-				if (!bset) {
-					bvl = bmsk & (dlist[i]->p_base>>2);
-					bset = true;
-					onebit = true;
-				} else if ((dlist[i]->p_base & bmsk)!=bvl) {
-					onebit = false;
-					break;
-				}
-			}
-		} if (!onebit)
-			continue;
-
-		for(unsigned i=0; i<plist.size(); i++) {
-			if (bmsk & plist[i]->p_mask) {
-				if (!bset) {
-					bvl = bmsk & (plist[i]->p_base>>2);
-					bset = true;
-					onebit = true;
-				} else if ((plist[i]->p_base & bmsk)!=bvl) {
-					onebit = false;
-					break;
-				}
-			}
-		} if (!onebit)
-			continue;
-
-		unusedmsk &= (~bmsk);
-		masteraddr|= bvl;
-	}
-
-	// printf("// Pre Null Mask: %08x\n", unusedmsk);
-	if ((1u<<nextlg(first_address))==first_address) {
-		unusedmsk |= (first_address);
-	}
-
-	if (gbl_dump) {
-		fprintf(gbl_dump, "// Overall  Mask: %08x\n", unusedmsk);
-		fprintf(gbl_dump, "// SkipAddr Mask: %08x\n", ~unusedmsk);
-		fprintf(gbl_dump, "// Mask popcount: %08x\n", popc(unusedmsk));
-	}
-
-	setvalue(info, KYSKIPADDR, unusedmsk);		// octets
-	setvalue(info, KYSKIPNBITS,popc(unusedmsk));	// octets
-	// Now, go back and see if anything references this address
-	// or these masks
-	reeval(info);
-
-	unsigned	smask = 0, dmask = 0;
-	if (dio_hash) {
-		int dio_id = addto_plist(plist, dio_hash);
-		int	v;
-
-		assert(dio_id >= 0);
-		plist[dio_id]->p_base = dlist[0]->p_base;
-		assert(getvalue(*dio_hash, KYNADDR, v));
-		plist[dio_id]->p_naddr = v;
-		if (gbl_dump)
-			fprintf(gbl_dump, "DIO.NADDR = %08x\n", v);
-		plist[dio_id]->p_awid  = nextlg(plist[dio_id]->p_naddr);
-		if (gbl_dump)
-			fprintf(gbl_dump, "DIO.AWID  = %08x\n", plist[dio_id]->p_awid);
-		plist[dio_id]->p_mask = (-1<<(plist[dio_id]->p_awid-2));
-		dmask = plist[dio_id]->p_mask;
-		if (gbl_dump)
-			fprintf(gbl_dump, "DIO.MASK  = %08x\n", dmask);
-		setvalue(*dio_hash, KYBASE, plist[dio_id]->p_base);
-		setvalue(*dio_hash, KYMASK, plist[dio_id]->p_mask);
-	} if (sio_hash) {
-		int sio_id = addto_plist(plist, sio_hash);
-		int	v;
-
-		assert(sio_id >= 0);
-		plist[sio_id]->p_base = slist[0]->p_base;
-		getvalue(*sio_hash, KYNADDR, v);
-		plist[sio_id]->p_naddr = v;
-		plist[sio_id]->p_awid  = nextlg(plist[sio_id]->p_naddr);
-		plist[sio_id]->p_mask = (-1<<(plist[sio_id]->p_awid));
-		smask = plist[sio_id]->p_mask;
-		setvalue(*sio_hash, KYBASE, plist[sio_id]->p_base);
-		setvalue(*sio_hash, KYMASK, plist[sio_id]->p_mask);
-	}
-
-	// Let's build a minimal address for this component
-	if (gbl_dump) {
-		fprintf(gbl_dump, "SMASK = %08x\n", smask);
-		fprintf(gbl_dump, "DMASK = %08x\n", dmask);
-	}
-	buildskip_plist(slist, 0);
-	buildskip_plist(dlist, 0);
-	buildskip_plist(plist, 0x400);
-*/
+void assign_addresses(void) {
+	for(unsigned i=0; i<gbl_blist->size(); i++)
+		(*gbl_blist)[i]->assign_addresses();
 }
 
 void	mkselect2(FILE *fp, MAPDHASH &master, BUSINFO *bi) {
 	STRING	addrbus = STRING(*bi->m_name)+"_addr";
 	unsigned	sbaw = bi->address_width();
+	unsigned	dw   = bi->m_data_width;
+	unsigned	dalines = nextlg(dw/8);
 
 	for(unsigned i=0; i< bi->m_plist->size(); i++) {
 		if ((*bi->m_plist)[i]->p_name) {
 			fprintf(fp, "//x2\tassign\t%12s_sel "
-					"= ((%s & %2d\'h%x) == %2d\'h%x);\n",
+					"= ((%s[%2d:0] & %2d\'h%x) == %2d\'h%0*x);\n",
 				(*bi->m_plist)[i]->p_name->c_str(),
 				addrbus.c_str(),
-				sbaw, (*bi->m_plist)[i]->p_mask,
-				sbaw, (*bi->m_plist)[i]->p_base);
+				sbaw-dalines-1,
+				sbaw-dalines, (*bi->m_plist)[i]->p_mask,
+				sbaw-dalines,
+				(sbaw-dalines+3)/4,
+				(*bi->m_plist)[i]->p_base>>dalines);
 		} if ((*bi->m_plist)[i]->p_master_bus) {
 			fprintf(fp, "//x2\tWas a master bus as well\n");
 		}
@@ -537,18 +351,30 @@ void	build_bus_list(MAPDHASH &master) {
 	STRINGP	str;
 
 printf("BUILD-BUS-LIST!!!!!!!!!!!!!!!!!!!!!!\n");
+	if (gbl_dump) fprintf(gbl_dump, "BUILD-BUS-LIST!!!!!!!!!!!!!!!!!\n");
 
-	if (NULL != (str = getstring(master, KYDEFAULT_BUS)))
+	if (NULL != (str = getstring(master, KYDEFAULT_BUS))) {
+		if (gbl_dump) fprintf(gbl_dump, "Found default bus: %s\n", str->c_str());
 		bl->adddefault(str);
+		if (gbl_dump) fprintf(gbl_dump, "Default bus: %s\n", str->c_str());
+	}
+else { if (gbl_dump) fprintf(gbl_dump, "NO default bus found\n"); }
+
+fflush(gbl_dump);
+
 	//
 	if (refbus(master))
 		bl->addbus(&master);
 	//
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
-		if (!isperipheral(kvpair->second))
+		if (kvpair->second.m_typ != MAPT_MAP)
+			continue;
+		if (NULL != getstring(*kvpair->second.u.m_m, KYBUS))
 			continue;
 		bl->addbus(kvpair->second);
 	}
+
+if (gbl_dump) { fprintf(gbl_dump, "Looking for other buses that might be part of peripherals\n"); fflush(gbl_dump); }
 
 	//
 	//
@@ -558,8 +384,12 @@ printf("BUILD-BUS-LIST!!!!!!!!!!!!!!!!!!!!!!\n");
 		bl->addperipheral(kvpair->second);
 	}
 
+if (gbl_dump) { fprintf(gbl_dump, "All busses found, assigning addresses\n"); fflush(gbl_dump); }
+
 	for(unsigned i=0; i< bl->size(); i++)
 		(*bl)[i]->assign_addresses();
+
+if (gbl_dump) { fprintf(gbl_dump, "All addresses assigned\n"); fflush(gbl_dump); }
 
 	for(unsigned i=0; i< bl->size(); i++) {
 		STRINGP	bname = (*bl)[i]->m_name;

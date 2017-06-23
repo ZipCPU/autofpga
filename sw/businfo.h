@@ -53,15 +53,18 @@ class	BUSINFO {
 public:
 	PLISTP    m_plist;
 	STRINGP   m_name, m_prefix, m_type;
-	MAPDHASH *m_clock;
-	int	m_data_width, m_address_width;
+	MAPDHASH *m_clock; // , *m_bhash;
+	int	m_data_width, m_address_width, m_nullsz;
+	bool	m_has_slist, m_has_dlist;
 
-	BUSINFO(void) {
-		m_plist = NULL;
-		m_name  = NULL;
-		m_prefix= NULL;
-		m_type  = NULL;
-		m_clock = NULL;
+	BUSINFO(void) { // MAPDHASH *hash) {
+		// m_bhash  = hash;
+		m_plist  = NULL;
+		m_name   = NULL;
+		m_prefix = NULL;
+		m_type   = NULL;
+		m_clock  = NULL;
+		m_nullsz = 0;
 		m_data_width = 0;
 		m_addresses_assigned = false;
 		m_address_width = 0;
@@ -71,6 +74,17 @@ public:
 	void	assign_addresses(void);
 	int	address_width(void);
 	unsigned	min_addr_size(unsigned np, unsigned mina);
+	PERIPH *add(PERIPHP p) {
+		int	pi;
+
+		if (!m_plist)
+			m_plist = new PLIST();
+		pi = m_plist->add(p);
+		p = (*m_plist)[pi];
+		p->p_slave_bus = this;
+
+		return p;
+	}
 	PERIPH *add(MAPDHASH *phash) {
 		PERIPH	*p;
 		int	pi;
@@ -83,6 +97,7 @@ public:
 
 		return p;
 	}
+	bool	need_translator(BUSINFO *b);
 };
 
 class	BUSLIST : public std::vector<BUSINFO *>	{
@@ -100,5 +115,7 @@ public:
 
 extern	void	build_bus_list(MAPDHASH &master);
 extern	void	mkselect2(FILE *, MAPDHASH &master);
+extern	BUSINFO *find_bus(STRINGP name);
+extern	bool	need_translator(BUSINFO *a, BUSINFO *b);
 
 #endif	// BUSINFO_H

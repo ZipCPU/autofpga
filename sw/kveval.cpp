@@ -204,11 +204,9 @@ void	find_any_unevaluated(MAPDHASH &info) {
 
 bool	subresults_into(MAPSTACK stack, MAPDHASH *here, STRINGP &sval) {
 	bool	changed = false, everchanged = false;;
-	extern	FILE *gbl_dump;
 
-	if (STRING::npos != (sval->find("@$"))) {
-		if (gbl_dump)
-			fprintf(gbl_dump, "KVEVAL::Examining: %s\n", sval->c_str());
+	if (STRING::npos == (sval->find("@$"))) {
+		return everchanged;
 	}
 
 	do {
@@ -257,8 +255,6 @@ bool	subresults_into(MAPSTACK stack, MAPDHASH *here, STRINGP &sval) {
 			if (kylen > 0) {
 				STRING key = sval->substr(kystart, kylen),
 					*vstr;
-				if (gbl_dump)
-					fprintf(gbl_dump, "\tFound reference to: %s\n", key.c_str());
 				if ((fmt)&&(get_named_value(stack, *here,
 						key, value))) {
 					char	*tbuf, *fcpy;
@@ -272,20 +268,14 @@ bool	subresults_into(MAPSTACK stack, MAPDHASH *here, STRINGP &sval) {
 					delete[] tbuf;
 				} else if (NULL != (vstr = get_named_string(
 							stack, *here, key))) {
-					if (gbl_dump)
-						fprintf(gbl_dump, "\t\tFound string, %s\n", vstr->c_str());
 					sval->replace(sloc, endpos, *vstr);
-					fprintf(gbl_dump, "\t\tSTRING(%ld,%d): %s\n", sloc, endpos, sval->c_str());
 					changed = true;
 				}else if(get_named_value(stack,*here,key,value)){
 					char	buffer[64];
-					if (gbl_dump)
-						fprintf(gbl_dump, "\t\tFound value, 0x%08x\n", value);
 					STRING	tmp;
 					sprintf(buffer, "%d", value);
 					tmp = buffer;
 					sval->replace(sloc, endpos, tmp);
-					fprintf(gbl_dump, "\t\tVALUE(%ld,%d): %s\n", sloc, endpos, sval->c_str());
 					changed = true;
 				} else sloc++;
 			} else sloc++;

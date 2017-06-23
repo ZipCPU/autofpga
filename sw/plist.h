@@ -52,26 +52,35 @@ class	BUSINFO;
 //
 // A structure to contain information about lists of peripherals
 //
-typedef	struct PERIPH_S {
+class	PERIPH {
+public:
 	unsigned	p_base;		// In octets
 	unsigned	p_naddr;	// In words, given in file
 	unsigned	p_awid;		// Log_2 (octets)
 	unsigned	p_mask;		// Words.  Bit is true if relevant for address selection
-	//
-	unsigned	p_skipaddr;
-	unsigned	p_skipmask;
-	unsigned	p_sadrmask;
-	unsigned	p_skipnbits;
 	//
 	unsigned	p_sbaw;
 	STRINGP		p_name;
 	MAPDHASH	*p_phash;
 	BUSINFO		*p_slave_bus;
 	BUSINFO		*p_master_bus;
-} PERIPH, *PERIPHP;
+
+	virtual	bool	issingle(void);
+	virtual	bool	isdouble(void);
+	virtual	bool	isbus(void);
+	virtual	bool	ismemory(void);
+	virtual unsigned get_slave_address_width(void);
+};
+
+typedef	PERIPH *PERIPHP;
 
 class	PLIST : public std::vector<PERIPHP> {
+	bool	m_has_slist, m_has_dlist;
 public:
+	PLIST(void) {
+		m_has_slist = false;
+		m_has_dlist = false;
+	}
 	STRINGP	m_stype;
 	unsigned	m_address_width;
 
@@ -80,14 +89,17 @@ public:
 	// Add a peripheral to a given list of peripherals
 	int	add(MAPDHASH *phash);
 	int	add(PERIPHP p);
-	void	assign_addresses(void);
+	void	assign_addresses(unsigned dwidth, unsigned nullsz = 0);
 	bool	get_base_address(MAPDHASH *phash, unsigned &base);
-	unsigned	min_addr_size(unsigned, unsigned);
+	unsigned	min_addr_size_bytes(unsigned, unsigned, unsigned nullsz=0);
+	unsigned	min_addr_size_octets(unsigned, unsigned,
+				unsigned nullsz=0,
+				unsigned daddr=2);
 };
 
 // A pointer to a set of peripherals
 typedef	PLIST *PLISTP;
-extern	PLIST	plist, slist, dlist, mlist;
+// extern	PLIST	plist, slist, dlist, mlist;
 
 //
 // Count the number of peripherals that are children of this top level hash,
@@ -106,17 +118,6 @@ extern	int count_peripherals(MAPDHASH &info);
 extern	bool	compare_naddr(PERIPHP a, PERIPHP b);
 
 extern	bool	compare_address(PERIPHP a, PERIPHP b);
-
-/*
- * build_skiplist
- *
- * Prior to any address decoding, we can build a skip list.  This collects
- * all of the relevant bits necessary for peripheral address decoding among
- * all of the peripherals within the list.  The result is that address decoding
- * can take place with fewer bits that need to be checked.  The other result,
- * though, is that a peripheral may have many locations in the memory space.
- */
-extern	void	buildskip_plist(PLIST &plist, unsigned nulladdr);
 
 /*
  * build_plist

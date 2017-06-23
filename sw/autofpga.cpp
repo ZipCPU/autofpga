@@ -78,11 +78,7 @@
 #include "bldsim.h"
 #include "predicates.h"
 #include "businfo.h"
-
-int	gbl_err = 0;
-FILE	*gbl_dump = NULL;
-const bool	DELAY_ACK = true;
-
+#include "globals.h"
 
 //
 // The ILIST, a list of interrupt lines within the design
@@ -319,12 +315,13 @@ int count_pics(MAPDHASH &info) {
 // from.  The first address helps to insure that the NULL address creates a
 // proper error (as it should).
 //
+/*
 void assign_addresses(MAPDHASH &info, unsigned first_address = 0x400) {
 	unsigned	start_address = first_address;
 	MAPDHASH::iterator	kvpair;
 
 	int np = count_peripherals(info);
-	int baw = count_peripherals(info);	// log_2 octets
+	// int baw = count_peripherals(info);	// log_2 octets
 
 	if (np < 1) {
 		return;
@@ -332,231 +329,17 @@ void assign_addresses(MAPDHASH &info, unsigned first_address = 0x400) {
 
 	if (gbl_dump)
 		fprintf(gbl_dump, "// Assigning addresses to the S-LIST\n");
-	// Find the number of slist addresses
-	MAPDHASH	*sio_hash = NULL, *dio_hash = NULL;
-
-	if (slist.size() > 0) {
-		// Each has only the one address ...
-		int naddr = slist.size();
-		for(unsigned i=0; i<slist.size(); i++) {
-			slist[i]->p_base = start_address + 4*i;
-			if (gbl_dump)
-				fprintf(gbl_dump, "// Assigning %12s_... to %08x\n", slist[i]->p_name->c_str(), slist[i]->p_base);
-
-			setvalue(*slist[i]->p_phash, KYBASE, slist[i]->p_base);
-		}
-		start_address += (1<<(nextlg(naddr)+2));
-
-		for(unsigned i=0; i<slist.size(); i++) {
-			if (gbl_dump)
-			fprintf(gbl_dump, "Setting SLIST[%d] MASK to %08x\n", i,
-				((1<<baw)-1)&-4);
-			slist[i]->p_mask = (1<<(baw-2))-1;	// Words
-			setvalue(*slist[i]->p_phash, KYMASK, slist[i]->p_mask);
-		}
-
-		// Build an SIO peripheral
-		MAPT		elm;
-		elm.m_typ = MAPT_MAP;
-		elm.u.m_m = sio_hash = new MAPDHASH;
-		info.insert(KEYVALUE(KYSIO, elm));
-		elm.m_typ = MAPT_STRING;
-		elm.u.m_s = new STRING(KYSIO);
-		sio_hash->insert(KEYVALUE(KYPREFIX, elm));
-		elm.m_typ = MAPT_INT;
-		elm.u.m_v = (1<<(nextlg(naddr)));
-		sio_hash->insert(KEYVALUE(KYNADDR, elm));
-		setvalue(*sio_hash, KYREGS_N, 0);
-	}
-
-	// Assign double-peripheral bus addresses
-	if (dlist.size() > 1) {
-		if (gbl_dump)
-			fprintf(gbl_dump, "// Assigning addresses to the D-LIST, starting from %08x\n", start_address);
-		unsigned start = 0;
-		for(unsigned i=0; i<dlist.size(); i++) {
-			dlist[i]->p_base = 0;
-			dlist[i]->p_base = (start + ((1<<dlist[i]->p_awid)-1));
-			dlist[i]->p_base &= (-1<<(dlist[i]->p_awid));
-			// First valid next address is ...
-			start = dlist[i]->p_base + (1<<(dlist[i]->p_awid));
-		}
-
-		int dnaddr = (1<<nextlg(start));
-		start_address = (start_address + (dnaddr)-1)
-				& (~(dnaddr-1));
-
-		for(unsigned i=0; i<dlist.size(); i++) {
-			dlist[i]->p_base += start_address;
-			if (gbl_dump)
-				fprintf(gbl_dump,
-				"// Assigning %12s_... to %08x/%08x\n",
-				dlist[i]->p_name->c_str(), dlist[i]->p_base,
-				(-1<<(dlist[i]->p_awid)));
-
-			setvalue(*dlist[i]->p_phash, KYBASE, dlist[i]->p_base);
-			dlist[i]->p_mask = (-1<<(dlist[i]->p_awid-2));
-			setvalue(*dlist[i]->p_phash, KYMASK, dlist[i]->p_mask);
-		}
-
-		start_address = (start_address+dnaddr);
-
-		// Build an DIO peripheral
-		MAPT		elm;
-		elm.m_typ = MAPT_MAP;
-		elm.u.m_m = dio_hash = new MAPDHASH;
-		info.insert(KEYVALUE(KYDIO, elm));
-		elm.m_typ = MAPT_STRING;
-		elm.u.m_s = new STRING(KYDIO);
-		dio_hash->insert(KEYVALUE(KYPREFIX, elm));
-		elm.m_typ = MAPT_INT;
-		elm.u.m_v = dnaddr;
-		dio_hash->insert(KEYVALUE(KYNADDR, elm));
-		setvalue(*dio_hash, KYREGS_N, 0);
-	} else if (dlist.size() == 1) {
-		// dio_hash = dlist[0]->p_phash;
-		plist.push_back(dlist[0]);
-		dlist.pop_back();
-		dio_hash = NULL;
-	}
 
 	// Assign bus addresses to the more generic peripherals
 	if (gbl_dump) {
 		fprintf(gbl_dump, "// Assigning addresses to the P-LIST (all other addresses)\n");
 		fprintf(gbl_dump, "// Starting from %08x\n", start_address);
 	}
-	for(unsigned i=0; i<plist.size(); i++) {
-		if (plist[i]->p_naddr < 1)
-			continue;
-		// Make this address 32-bit aligned
-		plist[i]->p_base = (start_address + ((1<<plist[i]->p_awid)-1));
-		plist[i]->p_base &= (-1<<(plist[i]->p_awid));
-		if (gbl_dump)
-		fprintf(gbl_dump, "// assigning %12s_... to %08x/%08x\n",
-			plist[i]->p_name->c_str(),
-			plist[i]->p_base,
-			(-1<<(plist[i]->p_awid)));
-		start_address = plist[i]->p_base + (1<<(plist[i]->p_awid));
-		plist[i]->p_mask = (-1<<(plist[i]->p_awid-2));
 
-		setvalue(*plist[i]->p_phash, KYBASE, plist[i]->p_base);
-		setvalue(*plist[i]->p_phash, KYMASK, plist[i]->p_mask);
-	}
-
-	// Adjust the mask to find only those bits that are needed
-	unsigned	masteraddr = 0;
-	unusedmsk = 0xffffffff;
-	for(int bit=31; bit >= 0; bit--) {
-		unsigned	bmsk = (1<<bit), bvl;
-		bool	bset = false, onebit=true;
-
-		for(unsigned i=0; i<slist.size(); i++) {
-			if (bmsk & slist[i]->p_mask) {
-				if (!bset) {
-					bvl = bmsk & (slist[i]->p_base>>2);
-					bset = true;
-					onebit = true;
-				} else if ((slist[i]->p_base & bmsk)!=bvl) {
-					onebit = false;
-					break;
-				}
-			}
-		} if (!onebit)
-			continue;
-
-		for(unsigned i=0; i<dlist.size(); i++) {
-			if (bmsk & dlist[i]->p_mask) {
-				if (!bset) {
-					bvl = bmsk & (dlist[i]->p_base>>2);
-					bset = true;
-					onebit = true;
-				} else if ((dlist[i]->p_base & bmsk)!=bvl) {
-					onebit = false;
-					break;
-				}
-			}
-		} if (!onebit)
-			continue;
-
-		for(unsigned i=0; i<plist.size(); i++) {
-			if (bmsk & plist[i]->p_mask) {
-				if (!bset) {
-					bvl = bmsk & (plist[i]->p_base>>2);
-					bset = true;
-					onebit = true;
-				} else if ((plist[i]->p_base & bmsk)!=bvl) {
-					onebit = false;
-					break;
-				}
-			}
-		} if (!onebit)
-			continue;
-
-		unusedmsk &= (~bmsk);
-		masteraddr|= bvl;
-	}
-
-	// printf("// Pre Null Mask: %08x\n", unusedmsk);
-	if ((1u<<nextlg(first_address))==first_address) {
-		unusedmsk |= (first_address);
-	}
-
-	if (gbl_dump) {
-		fprintf(gbl_dump, "// Overall  Mask: %08x\n", unusedmsk);
-		fprintf(gbl_dump, "// SkipAddr Mask: %08x\n", ~unusedmsk);
-		fprintf(gbl_dump, "// Mask popcount: %08x\n", popc(unusedmsk));
-	}
-
-	setvalue(info, KYSKIPADDR, unusedmsk);		// octets
-	setvalue(info, KYSKIPNBITS,popc(unusedmsk));	// octets
-	// Now, go back and see if anything references this address
-	// or these masks
+	assign_addresses();
 	reeval(info);
-
-	unsigned	smask = 0, dmask = 0;
-	if (dio_hash) {
-		int dio_id = plist.add(dio_hash);
-		int	v;
-
-		assert(dio_id >= 0);
-		plist[dio_id]->p_base = dlist[0]->p_base;
-		assert(getvalue(*dio_hash, KYNADDR, v));
-		plist[dio_id]->p_naddr = v;
-		if (gbl_dump)
-			fprintf(gbl_dump, "DIO.NADDR = %08x\n", v);
-		plist[dio_id]->p_awid  = nextlg(plist[dio_id]->p_naddr);
-		if (gbl_dump)
-			fprintf(gbl_dump, "DIO.AWID  = %08x\n", plist[dio_id]->p_awid);
-		plist[dio_id]->p_mask = (-1<<(plist[dio_id]->p_awid-2));
-		dmask = plist[dio_id]->p_mask;
-		if (gbl_dump)
-			fprintf(gbl_dump, "DIO.MASK  = %08x\n", dmask);
-		setvalue(*dio_hash, KYBASE, plist[dio_id]->p_base);
-		setvalue(*dio_hash, KYMASK, plist[dio_id]->p_mask);
-	} if (sio_hash) {
-		int sio_id = plist.add(sio_hash);
-		int	v;
-
-		assert(sio_id >= 0);
-		plist[sio_id]->p_base = slist[0]->p_base;
-		getvalue(*sio_hash, KYNADDR, v);
-		plist[sio_id]->p_naddr = v;
-		plist[sio_id]->p_awid  = nextlg(plist[sio_id]->p_naddr);
-		plist[sio_id]->p_mask = (-1<<(plist[sio_id]->p_awid));
-		smask = plist[sio_id]->p_mask;
-		setvalue(*sio_hash, KYBASE, plist[sio_id]->p_base);
-		setvalue(*sio_hash, KYMASK, plist[sio_id]->p_mask);
-	}
-
-	// Let's build a minimal address for this component
-	if (gbl_dump) {
-		fprintf(gbl_dump, "SMASK = %08x\n", smask);
-		fprintf(gbl_dump, "DMASK = %08x\n", dmask);
-	}
-	buildskip_plist(slist, 0);
-	buildskip_plist(dlist, 0);
-	buildskip_plist(plist, 0x400);
 }
+*/
 
 void	assign_int_to_pics(const STRING &iname, MAPDHASH &ihash) {
 	STRINGP	picname;
@@ -787,13 +570,14 @@ void	build_board_h(    MAPDHASH &master, FILE *fp, STRING &fname) {
 
 void	build_board_ld(   MAPDHASH &master, FILE *fp, STRING &fname) {
 	MAPDHASH::iterator	kvpair;
-	STRINGP	strp;
-	int		reset_address;
-	PERIPHP		fastmem = NULL, bigmem = NULL;
+	// STRINGP	strp;
+	// int		reset_address;
+	// PERIPHP		fastmem = NULL, bigmem = NULL;
 
 	legal_notice(master, fp, fname, "/*******************************************************************************", "*");
 	fprintf(fp, "*/\n");
 
+/*
 	std::sort(mlist.begin(), mlist.end(), compare_naddr);
 
 	fprintf(fp, "ENTRY(_start)\n\n");
@@ -902,7 +686,7 @@ void	build_board_ld(   MAPDHASH &master, FILE *fp, STRING &fname) {
 				"\t\t} > %s\n",
 			bigmem->p_name->c_str());
 	}
-
+*/
 	fprintf(fp, "\t_top_of_heap = .;\n");
 	fprintf(fp, "}\n");
 }
@@ -1069,75 +853,25 @@ void	build_toplevel_v( MAPDHASH &master, FILE *fp, STRING &fname) {
 }
 
 
-void	mkselect(FILE *fp, MAPDHASH &master, PLIST &plist, const STRING &subsel,
-		const char *skipn) {
+void	mkselect(FILE *fp, MAPDHASH &master, const STRING &subsel) {
+/*
 	const	char	*addrbus = "wb_addr";
-	bool use_skipaddr = false;
-	int	v, sbaw;
-	unsigned	skipaddrw = 0, skipnbits;
+	int	sbaw;
 
-	use_skipaddr = getvalue(master, KYSKIPADDR, v);	// v in octets
+	BUSINFO	*bi = find_bus(new STRING("wb"));
+	plist = bi->m_plist;
+	sbaw  = bi->address_width();
+
 	// use_skipaddr = false;
 	sbaw = get_address_width(master) - 2;	// words
-	if (use_skipaddr) {
-		getvalue(*plist[0]->p_phash, KYSKIPDEFN, v);
-		skipaddrw = v>>2;
-		skipnbits = popc(skipaddrw);
-		sbaw = nextlg(skipaddrw);
-		fprintf(fp, "\twire	[%d:0]	%s; // bits %08x, sbaw=%d\n",
-			skipnbits-1, skipn, skipaddrw<<2, sbaw);
-		fprintf(fp, "\tassign\t%s = {\n", skipn);
-		for(int i=sbaw; i>=0; i--) {
-			unsigned bmsk = (1<<i);		// Words
-			if (bmsk & (skipaddrw)) {	// Words
-				if ((bmsk!=1)&&((bmsk>>1)&(skipaddrw))) {
-					int	j;
-					for(j=i-1; j>=0; j--) {
-						bmsk = (1<<j);
-						if ((bmsk & (skipaddrw))==0)
-							break;
-					}
-					fprintf(fp, "\t\t\twb_addr[%2d:%2d]%s\n", i,j+1,
-						(((1<<(j+1))-1)&(skipaddrw))?",":"");
-					i = j;
-				} else {
-					fprintf(fp, "\t\t\twb_addr[%d]%s\n", i,
-						(((1<<i)-1)&(skipaddrw))?",":"");
-				}
-			}
-		} fprintf(fp, "\t\t};\n");
-
-		addrbus = skipn;
-		sbaw = skipnbits;
-	}
 
 	for(unsigned i=0; i<plist.size(); i++) {
 		const char	*pfx = plist[i]->p_name->c_str();
-		int	awid = plist[i]->p_awid-2,	// words
-			relevant_bits = sbaw - awid,	// Octets-octets->unless
-			pmsk = plist[i]->p_mask,	// words
-			base = plist[i]->p_base>>2,	// words
-			offset = 2;			// bits
 
-		if (use_skipaddr) {
-			getvalue(*plist[i]->p_phash, KYSKIPADDR,  base); //alins
-			getvalue(*plist[i]->p_phash, KYSKIPMASK,  pmsk); //alins
-			getvalue(*plist[i]->p_phash, KYSKIPNBITS,relevant_bits);
-			offset = 0;
-		}
-
-		fprintf(fp, "\tassign\t%12s_sel = ", pfx);
-		if (subsel.size() > 0)
-			fprintf(fp, "(%s)&&", subsel.c_str());
-		fprintf(fp, "(%8s[%2d:%2d] == %2d\'b",
-			addrbus, sbaw-1, sbaw-relevant_bits, relevant_bits);
-		for(int j=0; j<relevant_bits; j++) {
-			int bit = (sbaw-1)-j;
-			fprintf(fp, ((base>>bit)&1)?"1":"0");
-			if (((bit+offset)&3)==0)
-				fprintf(fp, "_");
-		} fprintf(fp, ");\n");
+		fprintf(fp, "// \tassign\t%12s_sel = ", pfx);
+		fprintf(fp, ");\n");
 	}
+*/
 }
 
 void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
@@ -1232,18 +966,6 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 	fprintf(fp, "\twire\t[31:0]\twb_data;\n");
 	fprintf(fp, "\treg\t[31:0]\twb_idata;\n");
 	fprintf(fp, "\twire\t[3:0]\twb_sel;\n");
-	if (slist.size()>0) {
-		fprintf(fp, "\twire\tsio_sel, sio_stall;\n");
-		fprintf(fp, "\treg\tsio_ack;\n");
-		fprintf(fp, "\treg\t[31:0]\tsio_data;\n");
-	}
-	if (dlist.size()>0) {
-		fprintf(fp, "\twire\tdio_sel, dio_stall;\n");
-		fprintf(fp, "\treg\tdio_ack;\n");
-		fprintf(fp, "\treg\t\tpre_dio_ack;\n");
-		fprintf(fp, "\treg\t[31:0]\tdio_data;\n");
-	}
-
 
 	fprintf(fp, "\n\n");
 
@@ -1382,8 +1104,9 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 	"\t//\n"
 	"\t// Wishbone master wire declarations\n"
 	"\t//\n"
-	"\t// These are given for every configuration file with an @MTYPE\n"
-	"\t// tag, and the names are prefixed by whatever is in the @PREFIX tag.\n"
+	"\t// These are given for every configuration file with an\n"
+	"\t// @SLAVE.MASTER tag, and the names are prefixed by whatever\n"
+	"\t// is in the @PREFIX tag.\n"
 	"\t//\n"
 	"\n");
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
@@ -1432,20 +1155,22 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 	"\t//\n");
 	fprintf(fp, "\n");
 
-	if (slist.size() > 1)
-		mkselect(fp, master, slist, KYSIO_SEL, "sio_skip");
-	if (dlist.size() > 1)
-		mkselect(fp, master, dlist, KYDIO_SEL, "dio_skip");
-	mkselect(fp, master, plist, STRING(""), "wb_skip");
+	// mkselect(fp, master, plist, STRING(""), "wb_skip");
 
-	if (plist.size()>0) {
+	PLIST	*plist;
+	plist = find_bus(new STRING("wb"))->m_plist;
+
+	if (plist->size()>0) {
 		if (sellist == "")
-			sellist = (*plist[0]->p_name) + "_sel";
+			sellist = (*(*plist)[0]->p_name) + "_sel";
 		else
-			sellist = (*plist[0]->p_name) + "_sel, " + sellist;
-	} for(unsigned i=1; i<plist.size(); i++)
-		sellist = (*plist[i]->p_name)+"_sel, "+sellist;
-	nsel += plist.size();
+			sellist = (*(*plist)[0]->p_name) + "_sel, " + sellist;
+	} for(unsigned i=1; i<plist->size(); i++)
+		sellist = (*(*plist)[i]->p_name)+"_sel, "+sellist;
+	nsel += plist->size();
+
+	//
+	mkselect2(fp, master);
 
 	// Define none_sel
 	fprintf(fp, "\tassign\tnone_sel = (wb_stb)&&({ ");
@@ -1501,14 +1226,14 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 
 	// Build a list of ACK signals
 	acklist = ""; nacks = 0;
-	if (plist.size() > 0) {
+	if (plist->size() > 0) {
 		if (nacks > 0)
-			acklist = (*plist[0]->p_name) + "_ack, " + acklist;
+			acklist = (*(*plist)[0]->p_name) + "_ack, " + acklist;
 		else
-			acklist = (*plist[0]->p_name) + "_ack";
+			acklist = (*(*plist)[0]->p_name) + "_ack";
 		nacks++;
-	} for(unsigned i=1; i < plist.size(); i++) {
-		acklist = (*plist[i]->p_name) + "_ack, " + acklist;
+	} for(unsigned i=1; i < plist->size(); i++) {
+		acklist = (*(*plist)[i]->p_name) + "_ack, " + acklist;
 		nacks++;
 	}
 
@@ -1555,12 +1280,6 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 	"\t// together into sio_ack and dio_ack respectively, which will appear.\n"
 	"\t// ahead of any other device acks.\n"
 	"\t//\n");
-	if (slist.size() > 0)
-		fprintf(fp, "\talways @(posedge i_clk)\n\t\tsio_ack <= (wb_stb)&&(sio_sel);\n");
-	if (dlist.size() > 0) {
-		fprintf(fp, "\talways @(posedge i_clk)\n\t\tpre_dio_ack <= (wb_stb)&&(dio_sel);\n");
-		fprintf(fp, "\talways @(posedge i_clk)\n\t\tdio_ack <= pre_dio_ack;\n");
-	}
 
 	if (DELAY_ACK) {
 		fprintf(fp, "\talways @(posedge i_clk)\n\t\twb_ack <= "
@@ -1575,7 +1294,7 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 
 
 	// Define the stall line
-	if (plist.size() > 0) {
+	if (plist->size() > 0) {
 		fprintf(fp,
 	"\t//\n"
 	"\t// wb_stall\n"
@@ -1590,16 +1309,13 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 	"\t// here for simplicity.\n"
 	"\t//\n");
 
-		if (slist.size() > 0)
-			fprintf(fp, "\tassign\tsio_stall = 1\'b0;\n");
-		if (dlist.size() > 0)
-			fprintf(fp, "\tassign\tdio_stall = 1\'b0;\n");
 		fprintf(fp, "\tassign\twb_stall = \n"
 			"\t\t  (wb_stb)&&(%6s_sel)&&(%6s_stall)",
-			plist[0]->p_name->c_str(), plist[0]->p_name->c_str());
-		for(unsigned i=1; i<plist.size(); i++)
+			(*plist)[0]->p_name->c_str(), (*plist)[0]->p_name->c_str());
+		for(unsigned i=1; i<plist->size(); i++)
 			fprintf(fp, "\n\t\t||(wb_stb)&&(%6s_sel)&&(%6s_stall)",
-				plist[i]->p_name->c_str(), plist[i]->p_name->c_str());
+				(*plist)[i]->p_name->c_str(),
+				(*plist)[i]->p_name->c_str());
 		fprintf(fp, ";\n\n\n");
 	} else
 		fprintf(fp, "\tassign\twb_stall = 1\'b0;\n\n\n");
@@ -1825,62 +1541,17 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 	"\t// here.\n"
 	"\t//\n");
 
-	if (slist.size() > 0) {
-		fprintf(fp, "\talways @(posedge i_clk)\n");
-		fprintf(fp, "\tcasez({ ");
-		for(unsigned i=0; i<slist.size()-1; i++)
-			fprintf(fp, "%s_sel, ", slist[i]->p_name->c_str());
-		fprintf(fp, "%s_sel })\n", slist[slist.size()-1]->p_name->c_str());
-		for(unsigned i=0; i<slist.size(); i++) {
-			fprintf(fp, "\t\t%2ld\'b", slist.size());
-			for(unsigned j=0; j<slist.size(); j++) {
-				if (j < i)
-					fprintf(fp, "0");
-				else if (j==i)
-					fprintf(fp, "1");
-				else
-					fprintf(fp, "?");
-			}
-			fprintf(fp, ": sio_data <= %s_data;\n",
-				slist[i]->p_name->c_str());
-		} fprintf(fp, "\t\tdefault: sio_data <= 32\'h0;\n");
-		fprintf(fp, "\tendcase\n\n");
-	} else
-		fprintf(fp, "\tinitial\tsio_data = 32\'h0;\n"
-			"\talways @(posedge i_clk)\n\t\tsio_data = 32\'h0;\n");
-
-	if (dlist.size() > 0) {
-		fprintf(fp, "\talways @(posedge i_clk)\n");
-		fprintf(fp, "\tcasez({ ");
-		for(unsigned i=0; i<dlist.size()-1; i++)
-			fprintf(fp, "%s_ack, ", dlist[i]->p_name->c_str());
-		fprintf(fp, "%s_ack })\n", dlist[dlist.size()-1]->p_name->c_str());
-		for(unsigned i=0; i<dlist.size(); i++) {
-			fprintf(fp, "\t\t%2ld\'b", dlist.size());
-			for(unsigned j=0; j<dlist.size(); j++) {
-				if (j < i)
-					fprintf(fp, "0");
-				else if (j==i)
-					fprintf(fp, "1");
-				else
-					fprintf(fp, "?");
-			}
-			fprintf(fp, ": dio_data <= %s_data;\n",
-				dlist[i]->p_name->c_str());
-		} fprintf(fp, "\t\tdefault: dio_data <= 32\'h0;\n\tendcase\n");
-	}
-
 	if (DELAY_ACK) {
 		fprintf(fp, "\talways @(posedge i_clk)\n"
 			"\tbegin\n"
 			"\t\tcasez({ %s })\n", acklist.c_str());
-		for(unsigned i=0; i<plist.size(); i++) {
+		for(unsigned i=0; i<plist->size(); i++) {
 			fprintf(fp, "\t\t\t%d\'b", nacks);
 			for(unsigned j=0; j<nacks; j++)
 				fprintf(fp, (i==j)?"1":(i>j)?"0":"?");
-			if (i < plist.size())
+			if (i < plist->size())
 				fprintf(fp, ": wb_idata <= %s_data;\n",
-					plist[plist.size()-1-i]->p_name->c_str());
+					(*plist)[plist->size()-1-i]->p_name->c_str());
 			else	fprintf(fp, ": wb_idata <= 32\'h00;\n");
 		}
 		fprintf(fp, "\t\t\tdefault: wb_idata <= 32\'h0;\n");
@@ -1890,13 +1561,13 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 		fprintf(fp, "\talways @(*)\n"
 			"\tbegin\n"
 			"\t\tcasez({ %s })\n", acklist.c_str());
-		for(unsigned i=0; i<plist.size(); i++) {
+		for(unsigned i=0; i<plist->size(); i++) {
 			fprintf(fp, "\t\t\t%d\'b", nacks);
 				for(unsigned j=0; j<nacks; j++)
 				fprintf(fp, (i==j)?"1":(i>j)?"0":"?");
-			if (i < plist.size())
+			if (i < plist->size())
 				fprintf(fp, ": wb_idata = %s_data;\n",
-					plist[plist.size()-1-i]->p_name->c_str());
+					(*plist)[plist->size()-1-i]->p_name->c_str());
 			else	fprintf(fp, ": wb_idata = 32\'h00;\n");
 		}
 		fprintf(fp, "\t\t\tdefault: wb_idata = 32\'h0;\n");
@@ -1905,13 +1576,13 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 		fprintf(fp, "\talways @(*)\n"
 			"\tbegin\n"
 			"\t\tcasez({ %s })\n", acklist.c_str());
-		for(unsigned i=0; i<plist.size(); i++) {
+		for(unsigned i=0; i<plist->size(); i++) {
 			fprintf(fp, "\t\t\t%d\'b", nacks);
 			for(unsigned j=0; j<nacks; j++)
 				fprintf(fp, (i==j)?"1":(i>j)?"0":"?");
-			if (i < plist.size())
+			if (i < plist->size())
 				fprintf(fp, ": wb_idata <= %s_data;\n",
-					plist[plist.size()-1-i]->p_name->c_str());
+					(*plist)[plist->size()-1-i]->p_name->c_str());
 			else	fprintf(fp, ": wb_idata <= 32\'h00;\n");
 		}
 		fprintf(fp, "\t\t\tdefault: wb_idata <= 32\'h0;\n");
@@ -2396,6 +2067,8 @@ int	main(int argc, char **argv) {
 		fprintf(stderr, "ERR: No files given, no files written\n");
 		exit(EXIT_FAILURE);
 	}
+
+	gbl_hash = &master;
 
 	STRINGP	subd;
 	if (subdir) {

@@ -53,6 +53,7 @@
 #include "legalnotice.h"
 #include "plist.h"
 #include "bldregdefs.h"
+#include "businfo.h"
 
 extern	int	gbl_err;
 extern	FILE	*gbl_dump;
@@ -193,6 +194,7 @@ void	build_regdefs_h(  MAPDHASH &master, FILE *fp, STRING &fname) {
 	MAPDHASH::iterator	kvpair, kvaccess;
 	STRING	str;
 	STRINGP	strp;
+	PLIST	*plist;
 
 	legal_notice(master, fp, fname);
 
@@ -234,17 +236,18 @@ void	build_regdefs_h(  MAPDHASH &master, FILE *fp, STRING &fname) {
 
 	fprintf(fp, "//\n// Register address definitions, from @REGS.#d\n//\n");
 
-	unsigned	longest_defname = 0, ldef = 0;
+	unsigned	longest_defname = 0;
 
-	longest_defname = get_longest_defname(slist);
-	ldef = get_longest_defname(dlist);
-	longest_defname = (ldef > longest_defname) ? ldef : longest_defname;
-	ldef = get_longest_defname(plist);
-	longest_defname = (ldef > longest_defname) ? ldef : longest_defname;
+	// plist = getlist(KYDBGBUS);
+	strp = new STRING("wb");
+	BUSINFO	*bi = find_bus(strp);
+	delete strp;
 
-	write_regdefs(fp, slist, longest_defname);
-	write_regdefs(fp, dlist, longest_defname);
-	write_regdefs(fp, plist, longest_defname);
+	// Get the list of peripherals
+	plist = bi->m_plist;
+
+	longest_defname = get_longest_defname(*plist);
+	write_regdefs(fp, *plist, longest_defname);
 
 
 	fprintf(fp, "//\n");
@@ -420,6 +423,7 @@ void write_regnames(FILE *fp, PLIST &plist,
 void	build_regdefs_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 	STRINGP	strp;
 	STRING	str;
+	PLIST	*plist;
 
 	legal_notice(master, fp, fname);
 
@@ -436,35 +440,24 @@ void	build_regdefs_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 	fprintf(fp, "#include \"regdefs.h\"\n\n");
 	fprintf(fp, "const\tREGNAME\traw_bregs[] = {\n");
 
+	strp = new STRING("wb");
+	BUSINFO	*bi = find_bus(strp);
+	delete strp;
+
+	// Get the list of peripherals
+	plist = bi->m_plist;
+
 	// First, find out how long our longest definition name is.
 	// This will help to allow us to line things up later.
-	unsigned	longest_defname = 0, ldef = 0;
+	unsigned	longest_defname = 0;
 	unsigned	longest_uname = 0;
 
 	// Find the length of the longest register name
-	longest_defname = get_longest_defname(slist);
-	ldef = get_longest_defname(dlist);
-	longest_defname = (ldef > longest_defname) ? ldef : longest_defname;
-	ldef = get_longest_defname(plist);
-	longest_defname = (ldef > longest_defname) ? ldef : longest_defname;
-
+	longest_defname = get_longest_defname(*plist);
 	// Find the length of the longest user name string
-	longest_uname = get_longest_uname(slist);
-	ldef = get_longest_uname(dlist);
-	longest_uname = (ldef > longest_defname) ? ldef : longest_uname;
-	ldef = get_longest_uname(plist);
-	longest_uname = (ldef > longest_defname) ? ldef : longest_uname;
+	longest_uname = get_longest_uname(*plist);
 
-
-	if (slist.size() > 0) {
-		write_regnames(fp, slist, longest_defname, longest_uname);
-		if ((dlist.size() > 0)||(plist.size() > 0))
-			fprintf(fp, ",\n");
-	} if (dlist.size() > 0) {
-		write_regnames(fp, dlist, longest_defname, longest_uname);
-		if (plist.size() > 0)
-			fprintf(fp, ",\n");
-	} write_regnames(fp, plist, longest_defname, longest_uname);
+	write_regnames(fp, *plist, longest_defname, longest_uname);
 
 	fprintf(fp, "\n};\n\n");
 
