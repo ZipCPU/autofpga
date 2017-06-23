@@ -1,11 +1,10 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	bldtestb.h
+// Filename: 	clockinfo.h
 //
 // Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 //
-// Purpose:	To build a test framework that can be used with Verilator for
-//		handling multiple clocks.
+// Purpose:
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
@@ -36,15 +35,42 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 //
-#ifndef	BLDTESTB_H
-#define	BLDTESTB_H
+#ifndef	CLOCKINFO_H
+#define	CLOCKINFO_H
 
 #include "parser.h"
 #include "mapdhash.h"
-#include "clockinfo.h"
 
-// Build the test bench sim driver helper, that handles clocks and clock ticks.
-extern	void	build_testb_h(MAPDHASH &master, FILE *fp, STRING &fname);
 
-#endif	// BLDTESTB_H
+class	CLOCKINFO {
+	unsigned long	m_interval_ps;
+public:
+	STRINGP	m_name, m_wire;
+
+	CLOCKINFO(void) {
+		m_name = NULL;
+		m_wire = NULL;
+		m_interval_ps = 2ul;
+	}
+
+	unsigned long	interval_ps(void) {
+		return m_interval_ps;
+	}
+
+	void set(STRINGP name, STRINGP wire, unsigned long ps) {
+		m_name = name;
+		m_wire = wire;
+		m_interval_ps = ps;
+	}
+};
+typedef	std::vector<CLOCKINFO>	CLKLIST;
+
+
+// A list of all of the clocks found within this design
+extern	CLKLIST	cklist;
+
+// Search through the master hash looking for all of the clocks within it.
+extern	void	find_clocks(MAPDHASH &master);
+
+#endif	// CLOCKINFO_H
 
