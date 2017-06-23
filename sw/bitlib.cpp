@@ -47,7 +47,7 @@
 unsigned	nextlg(const unsigned vl) {
 	unsigned r;
 
-	for(r=0; (1u<<r)<vl; r+=1)
+	for(r=0; (1ul<<r)<(unsigned long)vl; r+=1)
 		;
 	return r;
 }
