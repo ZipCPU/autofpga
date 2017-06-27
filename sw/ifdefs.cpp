@@ -80,7 +80,7 @@ void	build_access_ifdefs_v(MAPDHASH &master, FILE *fp) {
 "// Here is a list of defines which may be used, post auto-design\n"
 "// (not post-build), to turn particular peripherals (and bus masters)\n"
 "// on and off.  In particular, to turn off support for a particular\n"
-"// design component, just comment out its respective define below\n"
+"// design component, just comment out its respective `define below.\n"
 "//\n"
 "// These lines are taken from the respective @ACCESS tags for each of our\n"
 "// components.  If a component doesn\'t have an @ACCESS tag, it will not\n"
@@ -125,7 +125,24 @@ void	build_access_ifdefs_v(MAPDHASH &master, FILE *fp) {
 	}
 
 	if (dephash.begin() != dephash.end()) {
-		fprintf(fp, "//\n//\n// Then, the list of those things that have dependencies\n//\n//\n");
+		fprintf(fp, "//\n//\n// The list of those things that have @DEPENDS tags\n//\n//\n");
+		fprintf(fp,
+"// Dependencies are listed within the @DEPENDS tag\n"
+"// Values prefixed by a !, yet with no spaces between the ! and the\n"
+"// dependency, are ifndef dependencies.  As an example, an\n"
+"// an access and depends tag such as:\n"
+"//\n"
+"// @ACCESS=  THIS_COMPONENT\n"
+"// @DEPENDS= MUST_HAVE_A !MUST_NOT_HAVE_B\n"
+"//\n"
+"// will turn into:\n"
+"//\n"
+"// `ifdef MUST_HAVE_A\n"
+"// `ifndef MUST_NOT_HAVE_B\n"
+"// `define THIS_COMPONENT\n"
+"// `endif // MUST_NOT_HAVE_B\n"
+"// `endif // MUST_HAVE_A\n"
+"//\n");
 
 		bool	done;
 		do {
@@ -150,7 +167,12 @@ void	build_access_ifdefs_v(MAPDHASH &master, FILE *fp) {
 
 				dependency = strtok(deplist, DELIMITERS);
 				while(dependency) {
-					STRING	mstr = STRING(" ")+STRING(dependency)
+					char	*rawdep;
+
+					rawdep = dependency;
+					if (dependency[0] == '!')
+						rawdep = &dependency[1];
+					STRING	mstr = STRING(" ")+STRING(rawdep)
 						+STRING(" ");
 					if (NULL == strstr(already_defined.c_str(),
 							mstr.c_str())) {
@@ -158,9 +180,14 @@ void	build_access_ifdefs_v(MAPDHASH &master, FILE *fp) {
 						break;
 					}
 
-					depstr += STRING("`ifdef\t")
-						+STRING(dependency)
-						+STRING("\n");
+					if (dependency[0] == '!')
+						depstr += STRING("`ifdef\t")
+							+STRING(rawdep)
+							+STRING("\n");
+					else
+						depstr += STRING("`ifndef\t")
+							+STRING(rawdep)
+							+STRING("\n");
 					endstr += STRING("`endif\n");
 					dependency = strtok(NULL, DELIMITERS);
 				}

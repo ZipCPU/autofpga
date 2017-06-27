@@ -87,6 +87,11 @@ DEPENDS	If the logic of one component is dependent upon another, set the
 	DEPENDS tag to be a list of ACCESS parameters upon which this component
 	depends upon.  The ACCESS item for this parameter will then be
 	turned off if it's dependencies are not met.
+
+	Dependencies beginning with a "!" are negative dependencies.  Hence, the
+	ACCESS tag will only be true if the dependency ifdef is *not* defined.
+	(No spaces are allowed between the ! and the dependency ID)
+
 NADDR	The number of uniquely addressable registers/ports this device has
 /*
 	Future: BUSTYPE, for now the default will be WB-B4/pipeline.
