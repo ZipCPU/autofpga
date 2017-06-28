@@ -1,0 +1,89 @@
+################################################################################
+##
+## Filename: 	wbdelay.txt
+##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+##
+## Purpose:	Delay a wishbone bus by one clock
+##
+## Creator:	Dan Gisselquist, Ph.D.
+##		Gisselquist Technology, LLC
+##
+################################################################################
+##
+## Copyright (C) 2017, Gisselquist Technology, LLC
+##
+## This program is free software (firmware): you can redistribute it and/or
+## modify it under the terms of  the GNU General Public License as published
+## by the Free Software Foundation, either version 3 of the License, or (at
+## your option) any later version.
+##
+## This program is distributed in the hope that it will be useful, but WITHOUT
+## ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY or
+## FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+## for more details.
+##
+## You should have received a copy of the GNU General Public License along
+## with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
+## target there if the PDF file isn't present.)  If not, see
+## <http://www.gnu.org/licenses/> for a copy.
+##
+## License:	GPL, v3, as defined and found on www.gnu.org,
+##		http://www.gnu.org/licenses/gpl.html
+##
+##
+################################################################################
+##
+##
+@PREFIX=wbdly
+@SLAVE.TYPE=bus
+@SLAVE.BUS=up
+@SLAVE.AWID=@$(MASTER.AWID)
+@SLAVE.WIDTH=@$(MASTER.WIDTH)
+@SLAVE.CLOCK=@$(MASTER.CLOCK)
+@MASTER.TYPE=bus
+@MASTER.BUS=dn
+@MAIN.DEFNS=
+@SLAVE.PREFIX=@$(SLAVE.BUS)_
+@MASTER.PREFIX=@$(MASTER.BUS)_
+#
+#
+@ACCESS=DELAY_@$(SLAVE.BUS)_@$(MASTER.BUS)
+@MAIN.INSERT=
+	busdelay #(@$SLAVE.AWID)	@$(SLAVE.PREFIX)@$(MASTER.PREFIX)dly(
+		@$(SLAVE.CLOCK),
+		@$(SLAVE.PREFIX)cyc,
+			@$(SLAVE.PREFIX)stb,
+			@$(SLAVE.PREFIX)we,
+			@$(SLAVE.PREFIX)addr,
+			@$(SLAVE.PREFIX)odata,
+			@$(SLAVE.PREFIX)sel,
+			//
+			@$(SLAVE.PREFIX)ack,
+			@$(SLAVE.PREFIX)stall,
+			@$(SLAVE.PREFIX)idata,
+			@$(SLAVE.PREFIX)err,
+		@$(MASTER.PREFIX)cyc,
+			@$(MASTER.PREFIX)stb,
+			@$(MASTER.PREFIX)we,
+			@$(MASTER.PREFIX)addr,
+			@$(MASTER.PREFIX)data,
+			@$(MASTER.PREFIX)sel,
+			@$(MASTER.PREFIX)ack,
+			@$(MASTER.PREFIX)stall,
+			@$(MASTER.PREFIX)idata,
+			@$(MASTER.PREFIX)err);
+@MAIN.ALT=
+	assign	@$(MASTER.PREFIX)cyc    = @$(SLAVE.PREFIX)cyc;
+	assign	@$(MASTER.PREFIX)stb    = @$(SLAVE.PREFIX)stb;
+	assign	@$(MASTER.PREFIX)we     = @$(SLAVE.PREFIX)we;
+	assign	@$(MASTER.PREFIX)addr   = @$(SLAVE.PREFIX)addr;
+	assign	@$(MASTER.PREFIX)data   = @$(SLAVE.PREFIX)odata;
+	assign	@$(MASTER.PREFIX)sel    = @$(SLAVE.PREFIX)sel;
+	assign	@$(SLAVE.PREFIX)ack   = @$(MASTER.PREFIX)ack;
+	assign	@$(SLAVE.PREFIX)stall = @$(MASTER.PREFIX)stall;
+	assign	@$(SLAVE.PREFIX)err   = @$(MASTER.PREFIX)err;
+	assign	@$(SLAVE.PREFIX)idata = @$(MASTER.PREFIX)idata;
+@RTL.MAKE.GROUP= BUSDLY
+@RTL.MAKE.FILES= busdelay.v
+@RTL.MAKE.SUBD=cpu

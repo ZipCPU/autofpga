@@ -67,19 +67,19 @@ module	toplevel(i_clk,
 		i_gps_3df,
 		// HDMI output EDID I2C ports
 		io_hdmi_out_scl, io_hdmi_out_sda,
-		// The GPS 1PPS signal port
-		i_gps_pps,
-		// HDMI input clock, and then data
-		i_hdmi_in_clk_n, i_hdmi_in_clk_p,
-		i_hdmi_in_p, i_hdmi_in_n,
 		// Top level Quad-SPI I/O ports
 		o_qspi_cs_n, io_qspi_dat,
+		// The GPS 1PPS signal port
+		i_gps_pps,
 		// The PS/2 Mouse
 		io_ps2_clk, io_ps2_data,
 		// HDMI input EDID I2C ports
 		io_hdmi_in_scl, io_hdmi_in_sda,
 		// UART/host to wishbone interface
 		i_host_uart_rx, o_host_uart_tx,
+		// HDMI input clock, and then data
+		i_hdmi_in_clk_n, i_hdmi_in_clk_p,
+		i_hdmi_in_p, i_hdmi_in_n,
 		// A reset wire for the ZipCPU
 		i_cpu_resetn,
 		// OLED control interface (roughly SPI)
@@ -125,20 +125,20 @@ module	toplevel(i_clk,
 	input	wire	i_gps_3df;
 	// HDMI output EDID I2C ports
 	inout	wire	io_hdmi_out_scl, io_hdmi_out_sda;
-	//The GPS Clock
-	input	wire		i_gps_pps;
-	// HDMI input clock
-	input	wire	i_hdmi_in_clk_n, i_hdmi_in_clk_p;
-	input	[2:0]	i_hdmi_in_p, i_hdmi_in_n;
 	// Quad SPI flash
 	output	wire		o_qspi_cs_n;
 	inout	wire	[3:0]	io_qspi_dat;
+	//The GPS Clock
+	input	wire		i_gps_pps;
 	inout	wire	io_ps2_clk, io_ps2_data;
 	// HDMI input EDID I2C ports
 	inout	wire	io_hdmi_in_scl, io_hdmi_in_sda;
 	// UART/host to wishbone interface
 	input	wire		i_host_uart_rx;
 	output	wire		o_host_uart_tx;
+	// HDMI input clock
+	input	wire	i_hdmi_in_clk_n, i_hdmi_in_clk_p;
+	input	[2:0]	i_hdmi_in_p, i_hdmi_in_n;
 	// A reset wire for the ZipCPU
 	input	wire		i_cpu_resetn;
 	// OLEDBW interface
@@ -177,17 +177,6 @@ module	toplevel(i_clk,
 	// These are used to determine if the bus wires are to be set to zero
 	// or not
 	wire		w_hdmi_out_scl, w_hdmi_out_sda;
-	wire		w_hdmi_in_logic_clk, w_hdmi_in_hsclk,
-			w_hdmi_in_clk_no_buf, w_hdmi_in_clk_no_delay,
-			w_hdmi_in_clk_raw;
-	wire	[1:0]	w_hdmi_in_hsclk_pn;
-	wire	[9:0]	w_hdmi_in_red, w_hdmi_in_green, w_hdmi_in_blue;
-	// HDMI input (sink) delay definition(s)
-	wire	[4:0]	w_hdmi_in_delay, w_hdmi_in_actual_delay_r,
-			w_hdmi_in_actual_delay_g, w_hdmi_in_actual_delay_b;
-	//
-	wire	s_clk_200mhz, s_clk_200mhz_unbuffered,
-		sysclk_locked, sysclk_feedback;
 	wire		w_qspi_sck, w_qspi_cs_n;
 	wire	[1:0]	qspi_bmod;
 	wire	[3:0]	qspi_dat;
@@ -207,6 +196,17 @@ module	toplevel(i_clk,
 	wire		tx_stb, tx_busy;
 
 	wire	w_ck_uart, w_uart_tx;
+	wire		w_hdmi_in_logic_clk, w_hdmi_in_hsclk,
+			w_hdmi_in_clk_no_buf, w_hdmi_in_clk_no_delay,
+			w_hdmi_in_clk_raw;
+	wire	[1:0]	w_hdmi_in_hsclk_pn;
+	wire	[9:0]	w_hdmi_in_red, w_hdmi_in_green, w_hdmi_in_blue;
+	// HDMI input (sink) delay definition(s)
+	wire	[4:0]	w_hdmi_in_delay, w_hdmi_in_actual_delay_r,
+			w_hdmi_in_actual_delay_g, w_hdmi_in_actual_delay_b;
+	//
+	wire	s_clk_200mhz, s_clk_200mhz_unbuffered,
+		sysclk_locked, sysclk_feedback;
 	wire		s_clk, s_reset;
 	wire		w_hdmi_out_hsclk, w_hdmi_out_logic_clk;
 	wire	[9:0]	w_hdmi_out_r, w_hdmi_out_g, w_hdmi_out_b;
@@ -238,8 +238,15 @@ module	toplevel(i_clk,
 		i_gpio, o_gpio,
 		// EDID port for the HDMI source
 		io_hdmi_out_scl, io_hdmi_out_sda, w_hdmi_out_scl, w_hdmi_out_sda,
+		// Quad SPI flash
+		w_qspi_cs_n, w_qspi_sck, qspi_dat, io_qspi_dat, qspi_bmod,
 		// The GPS 1PPS signal port
 		i_gps_pps,
+		// The PS/2 Mouse
+		{ io_ps2_clk, io_ps2_data }, w_ps2,
+	io_hdmi_in_scl, io_hdmi_in_sda, w_hdmi_in_scl, w_hdmi_in_sda,
+		// External USB-UART bus control
+		rx_stb, rx_data, tx_stb, tx_data, tx_busy,
 		// HDMI input clock
 		w_hdmi_in_logic_clk,
 		w_hdmi_in_red, w_hdmi_in_green, w_hdmi_in_blue,
@@ -247,13 +254,6 @@ module	toplevel(i_clk,
 		// HDMI input (sink) delay)
 		w_hdmi_in_actual_delay_r, w_hdmi_in_actual_delay_g,
 		w_hdmi_in_actual_delay_b, w_hdmi_in_delay,
-		// Quad SPI flash
-		w_qspi_cs_n, w_qspi_sck, qspi_dat, io_qspi_dat, qspi_bmod,
-		// The PS/2 Mouse
-		{ io_ps2_clk, io_ps2_data }, w_ps2,
-	io_hdmi_in_scl, io_hdmi_in_sda, w_hdmi_in_scl, w_hdmi_in_sda,
-		// External USB-UART bus control
-		rx_stb, rx_data, tx_stb, tx_data, tx_busy,
 		// Reset wire for the ZipCPU
 		(!i_cpu_resetn),
 		// OLED control interface (roughly SPI)
@@ -307,71 +307,6 @@ module	toplevel(i_clk,
 	// when trying to do so.  Otherwise we let it float (back) high.
 	assign	io_hdmi_out_scl = ((w_hdmi_bypass_scl)&&(w_hdmi_out_scl)) ? 1'bz : 1'b0;
 	assign	io_hdmi_out_sda = ((w_hdmi_bypass_sda)&&(w_hdmi_out_sda)) ? 1'bz : 1'b0;
-
-
-	// First, let's get our clock up and running
-	// 1. Convert from differential to single
-	IBUFDS	hdmi_in_clk_ibuf(
-			.I(i_hdmi_in_clk_p), .IB(i_hdmi_in_clk_n),
-			.O(w_hdmi_in_clk_raw));
-
-	BUFG	rawckbuf(.I(w_hdmi_in_clk_raw), .O(w_hdmi_in_clk_no_buf));
-
-	
-
-	// 3. Use that signal to generate a clock
-	xhdmiiclk xhclkin(s_clk, w_hdmi_in_clk_no_buf, o_hdmi_in_txen,
-			w_hdmi_in_hsclk_pn, w_hdmi_in_logic_clk);
-
-	// 4. Use the (non-inverted) clock as needed as w_hdmi_in_hsclk
-	assign	w_hdmi_in_hsclk = w_hdmi_in_hsclk_pn[1]; // P
-
-
-	xhdmiin xhin_r(w_hdmi_in_logic_clk, w_hdmi_in_hsclk_pn,
-		o_hdmi_in_txen,
-		w_hdmi_in_delay, w_hdmi_in_actual_delay_r,
-		{ i_hdmi_in_p[2], i_hdmi_in_n[2] }, w_hdmi_in_red);
-	xhdmiin	xhin_g(w_hdmi_in_logic_clk, w_hdmi_in_hsclk_pn,
-		o_hdmi_in_txen,
-		w_hdmi_in_delay, w_hdmi_in_actual_delay_g,
-		{ i_hdmi_in_p[1], i_hdmi_in_n[1] }, w_hdmi_in_green);
-	xhdmiin xhin_b(w_hdmi_in_logic_clk, w_hdmi_in_hsclk_pn,
-		o_hdmi_in_txen,
-		w_hdmi_in_delay, w_hdmi_in_actual_delay_b,
-		{ i_hdmi_in_p[0], i_hdmi_in_n[0] }, w_hdmi_in_blue);
-
-	// Xilinx requires an IDELAYCTRL to be added any time the IDELAY
-	// element is included in the design.  Strangely, this doesn't need
-	// to be conencted to the IDELAY in any fashion, it just needs to be
-	// provided with a clock.
-	//
-	// I should associate this delay with a delay group --- just haven't
-	// done that yet.
-	wire	delay_reset;
-	assign	delay_reset = 1'b0;
-	/*
-	always @(posedge s_clk)
-		delay_reset <= !sys_clk_locked;
-	*/
-	IDELAYCTRL dlyctrl(.REFCLK(s_clk_200mhz), .RDY(), .RST(delay_reset));
-
-	// But ... the delay controller requires a 200 MHz reference clock,
-	// so ... let's create one
-	PLLE2_BASE #(
-		.CLKFBOUT_MULT(8),
-		.CLKFBOUT_PHASE(0.0),
-		.CLKIN1_PERIOD(10),
-		.CLKOUT0_DIVIDE(4)) gen_sysclk(
-			.CLKIN1(s_clk),
-			.CLKOUT0(s_clk_200mhz_unbuffered),
-			.PWRDWN(1'b0), .RST(1'b0),
-			.CLKFBOUT(sysclk_feedback),
-			.CLKFBIN(sysclk_feedback),
-			.LOCKED(sysclk_locked));
-
-	BUFG	sysbuf(.I(s_clk_200mhz_unbuffered), .O(s_clk_200mhz));
-
-
 
 	//
 	//
@@ -463,6 +398,71 @@ module	toplevel(i_clk,
 				rx_stb, rx_data);
 	txuartlite	#(BUSUART) txv(s_clk,
 				tx_stb, tx_data, o_host_uart_tx, tx_busy);
+
+
+
+	// First, let's get our clock up and running
+	// 1. Convert from differential to single
+	IBUFDS	hdmi_in_clk_ibuf(
+			.I(i_hdmi_in_clk_p), .IB(i_hdmi_in_clk_n),
+			.O(w_hdmi_in_clk_raw));
+
+	BUFG	rawckbuf(.I(w_hdmi_in_clk_raw), .O(w_hdmi_in_clk_no_buf));
+
+	
+
+	// 3. Use that signal to generate a clock
+	xhdmiiclk xhclkin(s_clk, w_hdmi_in_clk_no_buf, o_hdmi_in_txen,
+			w_hdmi_in_hsclk_pn, w_hdmi_in_logic_clk);
+
+	// 4. Use the (non-inverted) clock as needed as w_hdmi_in_hsclk
+	assign	w_hdmi_in_hsclk = w_hdmi_in_hsclk_pn[1]; // P
+
+
+	xhdmiin xhin_r(w_hdmi_in_logic_clk, w_hdmi_in_hsclk_pn,
+		o_hdmi_in_txen,
+		w_hdmi_in_delay, w_hdmi_in_actual_delay_r,
+		{ i_hdmi_in_p[2], i_hdmi_in_n[2] }, w_hdmi_in_red);
+	xhdmiin	xhin_g(w_hdmi_in_logic_clk, w_hdmi_in_hsclk_pn,
+		o_hdmi_in_txen,
+		w_hdmi_in_delay, w_hdmi_in_actual_delay_g,
+		{ i_hdmi_in_p[1], i_hdmi_in_n[1] }, w_hdmi_in_green);
+	xhdmiin xhin_b(w_hdmi_in_logic_clk, w_hdmi_in_hsclk_pn,
+		o_hdmi_in_txen,
+		w_hdmi_in_delay, w_hdmi_in_actual_delay_b,
+		{ i_hdmi_in_p[0], i_hdmi_in_n[0] }, w_hdmi_in_blue);
+
+	// Xilinx requires an IDELAYCTRL to be added any time the IDELAY
+	// element is included in the design.  Strangely, this doesn't need
+	// to be conencted to the IDELAY in any fashion, it just needs to be
+	// provided with a clock.
+	//
+	// I should associate this delay with a delay group --- just haven't
+	// done that yet.
+	wire	delay_reset;
+	assign	delay_reset = 1'b0;
+	/*
+	always @(posedge s_clk)
+		delay_reset <= !sys_clk_locked;
+	*/
+	IDELAYCTRL dlyctrl(.REFCLK(s_clk_200mhz), .RDY(), .RST(delay_reset));
+
+	// But ... the delay controller requires a 200 MHz reference clock,
+	// so ... let's create one
+	PLLE2_BASE #(
+		.CLKFBOUT_MULT(8),
+		.CLKFBOUT_PHASE(0.0),
+		.CLKIN1_PERIOD(10),
+		.CLKOUT0_DIVIDE(4)) gen_sysclk(
+			.CLKIN1(s_clk),
+			.CLKOUT0(s_clk_200mhz_unbuffered),
+			.PWRDWN(1'b0), .RST(1'b0),
+			.CLKFBOUT(sysclk_feedback),
+			.CLKFBIN(sysclk_feedback),
+			.LOCKED(sysclk_locked));
+
+	BUFG	sysbuf(.I(s_clk_200mhz_unbuffered), .O(s_clk_200mhz));
+
 
 
 	assign	s_clk = i_clk;

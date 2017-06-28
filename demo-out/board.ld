@@ -40,19 +40,5 @@
 *
 *
 */
-ENTRY(_start)
-
-MEMORY
-{
-}
-
-SECTIONS
-{
-	.rocode 0x00000000 : ALIGN(4) {
-		_boot_address = .;
-		*(.start) *(.boot)
-	} > flash
-	_kernel_image_start = . ;
-	_kernel_image_end = . ;
 	_top_of_heap = .;
 }

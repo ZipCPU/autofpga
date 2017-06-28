@@ -36,10 +36,16 @@
 ##
 ##
 @PREFIX=dwb
+@SLAVE.TYPE=BUS
+@SLAVE.BUS=zip wbu
+@MASTER.TYPE=ARBITER
+@MASTER.BUS=wb
+@$AWID=@$(MASTER.BUS.AWID)
+@$NADDR=(1<<@$(MASTER.BUS.AWID))
 @MAIN.DEFNS=
 	// Bus arbiter's lines
 	wire		@$(PREFIX)_cyc, @$(PREFIX)_stb, @$(PREFIX)_we, @$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_err;
-	wire	[(@$BUS_ADDRESS_WIDTH-1):0]	@$(PREFIX)_addr;
+	wire	[(@$(AWID)-1):0]	@$(PREFIX)_addr;
 	wire	[31:0]	@$(PREFIX)_odata, @$(PREFIX)_idata;
 	wire	[3:0]	@$(PREFIX)_sel;
 @MAIN.INSERT=
@@ -49,13 +55,14 @@
 	// And an arbiter to decide who gets access to the bus
 	//
 	//
-	wbpriarbiter #(32,@$BUS_ADDRESS_WIDTH)	bus_arbiter(i_clk,
+	// Clock speed = @$(CLOCK.FREQUENCY)
+	wbpriarbiter #(32,@$(AWID))	bus_arbiter(i_clk,
 		// The Zip CPU bus master --- gets the priority slot
 		zip_cyc, zip_stb, zip_we, zip_addr, zip_data, zip_sel,
 			zip_ack, zip_stall, zip_err,
 		// The UART interface master
 		(wbu_cyc)&&(!wbu_zip_sel), (wbu_stb)&&(!wbu_zip_sel), wbu_we,
-			wbu_addr[(@$BUS_ADDRESS_WIDTH-1):0], wbu_data, wbu_sel,
+			wbu_addr[(@$(AWID)-1):0], wbu_data, wbu_sel,
 			wbu_ack, wbu_stall, wbu_err,
 		// Common bus returns
 		@$(PREFIX)_cyc, @$(PREFIX)_stb, @$(PREFIX)_we, @$(PREFIX)_addr, @$(PREFIX)_odata, @$(PREFIX)_sel,
@@ -83,7 +90,7 @@
 `endif
 `endif
 `ifdef	BUS_DELAY_NEEDED
-	busdelay #(@$BUS_ADDRESS_WIDTH)	@$(PREFIX)_delay(i_clk,
+	busdelay #(@$(AWID))	@$(PREFIX)_delay(i_clk,
 		@$(PREFIX)_cyc, @$(PREFIX)_stb, @$(PREFIX)_we, @$(PREFIX)_addr, @$(PREFIX)_odata, @$(PREFIX)_sel,
 			@$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_idata, @$(PREFIX)_err,
 		wb_cyc, wb_stb, wb_we, wb_addr, wb_data, wb_sel,

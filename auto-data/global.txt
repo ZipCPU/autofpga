@@ -42,7 +42,7 @@
 # spaces removed from either side) before being used
 # @KEYS.INTLIST is a list of all things that need to be converted to integers
 @KEYS.INTLIST= BUS_ADDRESS_WIDTH NADDR NPIC NSCOPES PIC.MAX REGS.N ID
-DEFAULT.BUS=wb
+@DEFAULT.BUS=wb
 @$RESET_ADDRESS=@$flash.BASE+(@$flash.NADDR)
 @RESET_ADDRESS.FORMAT=32'h%08x
 @VERILATOR_PREFIX=v
@@ -103,10 +103,9 @@ const	char *addrname(const unsigned v) {
 #include "design.h"
 #include "regdefs.h"
 #include "testb.h"
-@CLOCK.NAME=clk
-@CLOCK.FREQUENCY=100000000
 @PREFIX=wb
 @BUS.NAME=wb
-@BUS.TYPE=wb/p4
-@BUS.WIDTH=32
+@BUS.TYPE=wb/b4
+@$BUS.WIDTH=32
 @BUS.CLOCK=clk
+@$BUS.NULLSZ=0x400

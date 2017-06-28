@@ -55,31 +55,115 @@
 //
 // Register address definitions, from @REGS.#d
 //
-
-
-
-
+// WB-Microphone registers
+#define	R_MIC_DATA        	0x00400000	// 00400000, wbregs names: MICD
+#define	R_MIC_CTRL        	0x00400004	// 00400000, wbregs names: MICC
+// EDID/I2C Debug Scope
+#define	R_EDID_SCOPC      	0x00800000	// 00800000, wbregs names: ESCOPC, ESCOPE
+#define	R_EDID_SCOPD      	0x00800004	// 00800000, wbregs names: ESCOPD
+// Scope outputs, for the hdmi input values
+#define	R_SCOP_HDMIIN_CTRL	0x00c00000	// 00c00000, wbregs names: HINSCOPC, HINSCOPE
+#define	R_SCOP_HDMIIN_DATA	0x00c00004	// 00c00000, wbregs names: HINSCOPD
+// SDSPI Debugging scope
+#define	R_SDSPI_SCOPC     	0x01000000	// 01000000, wbregs names: SDSCOPC, SDSCOPE
+#define	R_SDSPI_SCOPD     	0x01000004	// 01000000, wbregs names: SDSCOPD
+// FLASH erase/program configuration registers
+#define	R_QSPI_EREG       	0x01400000	// 01400000, wbregs names: QSPIE
+#define	R_QSPI_CREG       	0x01400004	// 01400000, wbregs names: QSPIC
+#define	R_QSPI_SREG       	0x01400008	// 01400000, wbregs names: QSPIS
+#define	R_QSPI_IDREG      	0x0140000c	// 01400000, wbregs names: QSPII
+// GPS UART registers, similar to WBUART
+#define	R_GPSU_SETUP      	0x01800000	// 01800000, wbregs names: GPSSETUP
+#define	R_GPSU_FIFO       	0x01800004	// 01800000, wbregs names: GPSFIFO
+#define	R_GPSU_UARTRX     	0x01800008	// 01800000, wbregs names: GPSRX
+#define	R_GPSU_UARTTX     	0x0180000c	// 01800000, wbregs names: GPSTX
+// SD-SPI addresses
+#define	R_SDSPI_CTRL      	0x01c00000	// 01c00000, wbregs names: SDCARD
+#define	R_SDSPI_DATA      	0x01c00004	// 01c00000, wbregs names: SDDATA
+#define	R_SDSPI_FIFOA     	0x01c00008	// 01c00000, wbregs names: SDFIFOA, SDFIF0, SDFIFA
+#define	R_SDSPI_FIFOB     	0x01c0000c	// 01c00000, wbregs names: SDFIFOB, SDFIF1, SDFIFB
+// FPGA CONFIG REGISTERS: 0x4e0-0x4ff
+#define	R_CFG_CRC         	0x02000000	// 02000000, wbregs names: FPGACRC
+#define	R_CFG_FAR         	0x02000004	// 02000000, wbregs names: FPGAFAR
+#define	R_CFG_FDRI        	0x02000008	// 02000000, wbregs names: FPGAFDRI
+#define	R_CFG_FDRO        	0x0200000c	// 02000000, wbregs names: FPGAFDRO
+#define	R_CFG_CMD         	0x02000010	// 02000000, wbregs names: FPGACMD
+#define	R_CFG_CTL0        	0x02000014	// 02000000, wbregs names: FPGACTL0
+#define	R_CFG_MASK        	0x02000018	// 02000000, wbregs names: FPGAMASK
+#define	R_CFG_STAT        	0x0200001c	// 02000000, wbregs names: FPGASTAT
+#define	R_CFG_LOUT        	0x02000020	// 02000000, wbregs names: FPGALOUT
+#define	R_CFG_COR0        	0x02000024	// 02000000, wbregs names: FPGACOR0
+#define	R_CFG_MFWR        	0x02000028	// 02000000, wbregs names: FPGAMFWR
+#define	R_CFG_CBC         	0x0200002c	// 02000000, wbregs names: FPGACBC
+#define	R_CFG_IDCODE      	0x02000030	// 02000000, wbregs names: FPGAIDCODE
+#define	R_CFG_AXSS        	0x02000034	// 02000000, wbregs names: FPGAAXSS
+#define	R_CFG_COR1        	0x02000038	// 02000000, wbregs names: FPGACOR1
+#define	R_CFG_WBSTAR      	0x02000040	// 02000000, wbregs names: WBSTAR
+#define	R_CFG_TIMER       	0x02000044	// 02000000, wbregs names: CFGTIMER
+#define	R_CFG_BOOTSTS     	0x02000058	// 02000000, wbregs names: BOOTSTS
+#define	R_CFG_CTL1        	0x02000060	// 02000000, wbregs names: FPGACTL1
+#define	R_CFG_BSPI        	0x0200007c	// 02000000, wbregs names: FPGABSPI
+// Ethernet configuration (MDIO) port
+#define	R_MDIO_BMCR       	0x02400000	// 02400000, wbregs names: BMCR
+#define	R_MDIO_BMSR       	0x02400004	// 02400000, wbregs names: BMSR
+#define	R_MDIO_PHYIDR1    	0x02400008	// 02400000, wbregs names: PHYIDR1
+#define	R_MDIO_PHYIDR2    	0x0240000c	// 02400000, wbregs names: PHYIDR2
+#define	R_MDIO_ANAR       	0x02400010	// 02400000, wbregs names: ANAR
+#define	R_MDIO_ANLPAR     	0x02400014	// 02400000, wbregs names: ANLPAR
+#define	R_MDIO_ANER       	0x02400018	// 02400000, wbregs names: ANER
+#define	R_MDIO_ANNPTR     	0x0240001c	// 02400000, wbregs names: ANNPTR
+#define	R_MDIO_PHYSTS     	0x02400040	// 02400000, wbregs names: PHYSYTS
+#define	R_MDIO_FCSCR      	0x02400050	// 02400000, wbregs names: FCSCR
+#define	R_MDIO_RECR       	0x02400054	// 02400000, wbregs names: RECR
+#define	R_MDIO_PCSR       	0x02400058	// 02400000, wbregs names: PCSR
+#define	R_MDIO_RBR        	0x0240005c	// 02400000, wbregs names: RBR
+#define	R_MDIO_LEDCR      	0x02400060	// 02400000, wbregs names: LEDCR
+#define	R_MDIO_PHYCR      	0x02400064	// 02400000, wbregs names: PHYCR
+#define	R_MDIO_BTSCR      	0x02400068	// 02400000, wbregs names: BTSCR
+#define	R_MDIO_CDCTRL     	0x0240006c	// 02400000, wbregs names: CDCTRL
+#define	R_MDIO_EDCR       	0x02400074	// 02400000, wbregs names: EDCR
+#define	BKRAM             	0x03000000	// 03000000, wbregs names: RAM
+#define	FLASHMEM          	0x04000000	// 04000000, wbregs names: FLASH
 
 
 //
 // The @REGDEFS.H.DEFNS tag
 //
 // @REGDEFS.H.DEFNS for masters
-#define	FLASHBASE	@$.BASE
-#define	FLASHLEN	0x01000000
-#define	FLASHLGLEN	24
-#define	BKRAMBASE	@$BASE
-#define	BKRAMLEN	0x00100000
 #define	R_ZIPCTRL	@$.ZIP_ADDRESS
 #define	R_ZIPDATA	@$.ZIP_DBGDATA
 #define	CLKFREQHZ	100000000
 // @REGDEFS.H.DEFNS for peripherals
+#define	BKRAMBASE	50331648
+#define	BKRAMLEN	0x00100000
+#define	FLASHBASE	67108864
+#define	FLASHLEN	0x01000000
+#define	FLASHLGLEN	24
 // @REGDEFS.H.DEFNS at the top level
 // End of definitions from REGDEFS.H.DEFNS
 //
 // The @REGDEFS.H.INSERT tag
 //
 // @REGDEFS.H.INSERT for masters
+
+#define	CPU_GO		0x0000
+#define	CPU_RESET	0x0040
+#define	CPU_INT		0x0080
+#define	CPU_STEP	0x0100
+#define	CPU_STALL	0x0200
+#define	CPU_HALT	0x0400
+#define	CPU_CLRCACHE	0x0800
+#define	CPU_sR0		0x0000
+#define	CPU_sSP		0x000d
+#define	CPU_sCC		0x000e
+#define	CPU_sPC		0x000f
+#define	CPU_uR0		0x0010
+#define	CPU_uSP		0x001d
+#define	CPU_uCC		0x001e
+#define	CPU_uPC		0x001f
+
+
+// @REGDEFS.H.INSERT for peripherals
 // Flash control constants
 #define	ERASEFLAG	0x80000000
 #define	DISABLEWP	0x10000000
@@ -102,25 +186,6 @@
 #define	ISPIF_EN	0x80040004
 #define	ISPIF_DIS	0x00040004
 #define	ISPIF_CLR	0x00000004
-
-#define	CPU_GO		0x0000
-#define	CPU_RESET	0x0040
-#define	CPU_INT		0x0080
-#define	CPU_STEP	0x0100
-#define	CPU_STALL	0x0200
-#define	CPU_HALT	0x0400
-#define	CPU_CLRCACHE	0x0800
-#define	CPU_sR0		0x0000
-#define	CPU_sSP		0x000d
-#define	CPU_sCC		0x000e
-#define	CPU_sPC		0x000f
-#define	CPU_uR0		0x0010
-#define	CPU_uSP		0x001d
-#define	CPU_uCC		0x001e
-#define	CPU_uPC		0x001f
-
-
-// @REGDEFS.H.INSERT for peripherals
 // @REGDEFS.H.INSERT from the top level
 typedef	struct {
 	unsigned	m_addr;

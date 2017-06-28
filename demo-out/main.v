@@ -45,43 +45,59 @@
 // Here is a list of defines which may be used, post auto-design
 // (not post-build), to turn particular peripherals (and bus masters)
 // on and off.  In particular, to turn off support for a particular
-// design component, just comment out its respective define below
+// design component, just comment out its respective `define below.
 //
 // These lines are taken from the respective @ACCESS tags for each of our
 // components.  If a component doesn't have an @ACCESS tag, it will not
 // be listed here.
 //
 // First, the independent access fields for any bus masters
+`define	WBUBUS_MASTER
+`define	INCLUDE_ZIPCPU
+// And then for the independent peripherals
 `define	SDSPI_ACCESS
 `define	RTC_ACCESS
 `define	MICROPHONE_ACCESS
 `define	GPIO_ACCESS
 `define	HDMI_OUT_EDID_ACCESS
-`define	GPS_CLOCK
-`define	HDMIIN_ACCESS
-`define	FLASH_ACCESS
-`define	FLASH_ACCESS
 `define	BKRAM_ACCESS
+`define	FLASH_ACCESS
+`define	FLASH_ACCESS
+`define	GPS_CLOCK
 `define	MOUSE_ACCESS
 `define	HDMI_IN_EDID_ACCESS
-`define	WBUBUS_MASTER
-`define	INCLUDE_ZIPCPU
+`define	HDMIIN_ACCESS
 `define	OLEDBW_ACCESS
 `define	CFG_ACCESS
 `define	BUSPIC_ACCESS
 `define	GPSUART_ACCESS
 `define	NETCTRL_ACCESS
 `define	SPIO_ACCESS
-// And then for the independent peripherals
 //
 //
-// Then, the list of those things that have dependencies
+// The list of those things that have @DEPENDS tags
 //
 //
-`ifdef	RTC_ACCESS
+// Dependencies are listed within the @DEPENDS tag
+// Values prefixed by a !, yet with no spaces between the ! and the
+// dependency, are ifndef dependencies.  As an example, an
+// an access and depends tag such as:
+//
+// @ACCESS=  THIS_COMPONENT
+// @DEPENDS= MUST_HAVE_A !MUST_NOT_HAVE_B
+//
+// will turn into:
+//
+// `ifdef MUST_HAVE_A
+// `ifndef MUST_NOT_HAVE_B
+// `define THIS_COMPONENT
+// `endif // MUST_NOT_HAVE_B
+// `endif // MUST_HAVE_A
+//
+`ifndef	RTC_ACCESS
 `define	RTCDATE_ACCESS
 `endif
-`ifdef	SDSPI_ACCESS
+`ifndef	SDSPI_ACCESS
 `define	SDSPI_SCOPE
 `endif
 //
@@ -105,17 +121,10 @@ module	main(i_clk, i_reset,
 		i_gpio, o_gpio,
 		// HDMI out (source) EDID I2C ports
 		i_hdmi_out_scl, i_hdmi_out_sda, o_hdmi_out_scl, o_hdmi_out_sda,
-		// The GPS 1PPS signal port
-		i_gps_pps,
-		// HDMI input ports
-		i_hdmi_in_clk,
-		i_hdmi_in_r, i_hdmi_in_g, i_hdmi_in_b,
-		i_hdmi_in_hsclk, i_clk_200mhz,
-		// HDMI input delay control
-		i_hdmi_in_actual_delay_r, i_hdmi_in_actual_delay_g,
-		i_hdmi_in_actual_delay_b, o_hdmi_in_delay,
 		// The QSPI Flash
 		o_qspi_cs_n, o_qspi_sck, o_qspi_dat, i_qspi_dat, o_qspi_mod,
+		// The GPS 1PPS signal port
+		i_gps_pps,
 		// The PS/2 Mouse
 		i_ps2, o_ps2,
 		// HDMI input EDID I2C ports
@@ -123,6 +132,13 @@ module	main(i_clk, i_reset,
 		// Command and Control port
 		i_host_rx_stb, i_host_rx_data,
 		o_host_tx_stb, o_host_tx_data, i_host_tx_busy,
+		// HDMI input ports
+		i_hdmi_in_clk,
+		i_hdmi_in_r, i_hdmi_in_g, i_hdmi_in_b,
+		i_hdmi_in_hsclk, i_clk_200mhz,
+		// HDMI input delay control
+		i_hdmi_in_actual_delay_r, i_hdmi_in_actual_delay_g,
+		i_hdmi_in_actual_delay_b, o_hdmi_in_delay,
 		i_cpu_reset,
 		// OLED control interface (roughly SPI)
 		o_oled_sck, o_oled_mosi, o_oled_dcn,
@@ -152,7 +168,7 @@ module	main(i_clk, i_reset,
 	//
 	// A 32-bit address indicating where teh ZipCPU should start running
 	// from
-	localparam	RESET_ADDRESS = @$RESET_ADDRESS;
+	localparam	RESET_ADDRESS = 32'h04400000;
 	//
 	// The number of valid bits on the bus
 	localparam	ZIP_ADDRESS_WIDTH = 30;	// Zip-CPU address width
@@ -184,22 +200,13 @@ module	main(i_clk, i_reset,
 	// HDMI input EDID I2C ports
 	input	wire		i_hdmi_out_scl, i_hdmi_out_sda;
 	output	wire		o_hdmi_out_scl, o_hdmi_out_sda;
-	//The GPS Clock
-	input	wire		i_gps_pps;
-	// HDMI input ports
-	input	wire		i_hdmi_in_clk;
-	input	wire	[9:0]	i_hdmi_in_r, i_hdmi_in_g, i_hdmi_in_b;
-	input	wire		i_hdmi_in_hsclk, i_clk_200mhz;
-	// Sub-pixel delay control
-	input	wire	[4:0]	i_hdmi_in_actual_delay_r;
-	input	wire	[4:0]	i_hdmi_in_actual_delay_g;
-	input	wire	[4:0]	i_hdmi_in_actual_delay_b;
-	output	wire	[4:0]	o_hdmi_in_delay;
 	// The QSPI flash
 	output	wire		o_qspi_cs_n, o_qspi_sck;
 	output	wire	[3:0]	o_qspi_dat;
 	input	wire	[3:0]	i_qspi_dat;
 	output	wire	[1:0]	o_qspi_mod;
+	//The GPS Clock
+	input	wire		i_gps_pps;
 	// The PS/2 Mouse
 	input		[1:0]	i_ps2;
 	output	wire	[1:0]	o_ps2;
@@ -211,6 +218,15 @@ module	main(i_clk, i_reset,
 	output	wire		o_host_tx_stb;
 	output	wire	[7:0]	o_host_tx_data;
 	input	wire		i_host_tx_busy;
+	// HDMI input ports
+	input	wire		i_hdmi_in_clk;
+	input	wire	[9:0]	i_hdmi_in_r, i_hdmi_in_g, i_hdmi_in_b;
+	input	wire		i_hdmi_in_hsclk, i_clk_200mhz;
+	// Sub-pixel delay control
+	input	wire	[4:0]	i_hdmi_in_actual_delay_r;
+	input	wire	[4:0]	i_hdmi_in_actual_delay_g;
+	input	wire	[4:0]	i_hdmi_in_actual_delay_b;
+	output	wire	[4:0]	o_hdmi_in_delay;
 	input	wire		i_cpu_reset;
 	// OLEDBW interface
 	output	wire		o_oled_sck, o_oled_mosi,
@@ -232,19 +248,6 @@ module	main(i_clk, i_reset,
 
 
 	//
-	// Declaring wishbone master bus data
-	//
-	wire		wb_cyc, wb_stb, wb_we, wb_stall, wb_err;
-	reg	wb_ack;	// ACKs delayed by extra clock
-	wire	[(30-1):0]	wb_addr;
-	wire	[31:0]	wb_data;
-	reg	[31:0]	wb_idata;
-	wire	[3:0]	wb_sel;
-
-
-
-
-	//
 	// Declaring interrupt lines
 	//
 	// These declarations come from the various components values
@@ -254,13 +257,14 @@ module	main(i_clk, i_reset,
 	wire	rtc_int;	// rtc.INT.RTC.WIRE
 	wire	pmic_int;	// pmic.INT.MIC.WIRE
 	wire	gpio_int;	// gpio.INT.GPIO.WIRE
-	wire	scop_hdmiin_int;	// scope_hdmiin.INT.HINSCOPE.WIRE
 	wire	edid_out_int;	// edout.INT.EDID.WIRE
-	wire	ck_pps;	// gck.INT.PPS.WIRE
-	wire	hdmiin_int;	// hdmiin.INT.VSYNC.WIRE
+	wire	scop_edid_int;	// scop_edid.INT.SCOPE.WIRE
 	wire	flash_interrupt;	// flash.INT.FLASH.WIRE
+	wire	ck_pps;	// gck.INT.PPS.WIRE
+	wire	scop_hdmiin_int;	// scope_hdmiin.INT.HINSCOPE.WIRE
 	wire	mous_interrupt;	// mous.INT.MOUSE.WIRE
 	wire	scope_sdcard_int;	// scope_sdcard.INT.SDSCOPE.WIRE
+	wire	hdmiin_int;	// hdmiin.INT.VSYNC.WIRE
 	wire	zip_cpu_int;	// zip.INT.ZIP.WIRE
 	wire	oled_int;	// oled.INT.OLED.WIRE
 	wire	w_bus_int;	// buspic.INT.BUS.WIRE
@@ -269,90 +273,6 @@ module	main(i_clk, i_reset,
 	wire	gpsurx_int;	// gpsu.INT.GPSRX.WIRE
 	wire	gpsurxf_int;	// gpsu.INT.GPSRXF.WIRE
 	wire	spio_int;	// spio.INT.SPIO.WIRE
-	wire	scop_edid_int;	// scop_edid.INT.SCOPE.WIRE
-
-
-	//
-	// Declaring Bus-Master data, internal wires and registers
-	//
-	// These declarations come from the various components values
-	// given under the @MAIN.DEFNS key, for those components with
-	// an MTYPE flag.
-	//
-
-
-	//
-	// Declaring Peripheral data, internal wires and registers
-	//
-	// These declarations come from the various components values
-	// given under the @MAIN.DEFNS key, for those components with a
-	// PTYPE key but no MTYPE key.
-	//
-
-
-	//
-	// Declaring other data, internal wires and registers
-	//
-	// These declarations come from the various components values
-	// given under the @MAIN.DEFNS key, but which have neither PTYPE
-	// nor MTYPE keys.
-	//
-	wire[31:0]	sdspi_debug;
-	// Definitions in support of the GPS driven RTC
-	wire	rtc_ppd, rtc_pps;
-	reg	r_rtc_ack;
-`include "builddate.v"
-	localparam	NGPI = 16, NGPO=16;
-	// GPIO ports
-	input		[(NGPI-1):0]	i_gpio;
-	output	wire	[(NGPO-1):0]	o_gpio;
-	reg	r_sysclk_ack;
-	wire	[31:0]	hdmi_in_data;
-	reg	r_clkhdmiin_ack;
-	wire	[31:0]	edido_dbg;
-	reg	[31:0]	r_pwrcount_data;
-	wire	gps_pps, gps_led, gps_locked, gps_tracking;
-	wire	[63:0]	gps_now, gps_err, gps_step;
-	wire	[1:0]	gps_dbg_tick;
-	wire	[31:0]	hin_dbg_scope;
-	wire	[29:0]	hin_pixels;
-	wire	[9:0]	hdmi_in_r;
-	wire	[9:0]	hdmi_in_g;
-	wire	[9:0]	hdmi_in_b;
-	// scrn_mouse is a 32-bit field containing 16-bits of x-position and
-	// 16-bits of y position, limited to the size of the screen.
-	wire	[31:0]	scrn_mouse;
-	wire	[31:0]	edid_dbg;
-	wire	scope_sdcard_trigger,
-		scope_sdcard_ce;
-	// Definitions for the WB-UART converter.  We really only need one
-	// (more) non-bus wire--one to use to select if we are interacting
-	// with the ZipCPU or not.
-	wire		wbu_zip_sel;
-	wire	[0:0]	wbubus_dbg;
-`ifndef	INCLUDE_ZIPCPU
-	wire		zip_dbg_ack, zip_dbg_stall;
-	wire	[31:0]	zip_dbg_data;
-`endif
-	// ZipSystem/ZipCPU connection definitions
-	// All we define here is a set of scope wires
-	wire	[31:0]	zip_debug;
-	wire		zip_trigger;
-	wire		zip_dbg_ack, zip_dbg_stall;
-	wire	[31:0]	zip_dbg_data;
-	wire	[15:0] zip_int_vector;
-	// Bus arbiter's lines
-	wire		dwb_cyc, dwb_stb, dwb_we, dwb_ack, dwb_stall, dwb_err;
-	wire	[(30-1):0]	dwb_addr;
-	wire	[31:0]	dwb_odata, dwb_idata;
-	wire	[3:0]	dwb_sel;
-	wire	w_gpsu_cts_n, w_gpsu_rts_n;
-	assign	w_gpsu_cts_n=1'b1;
-	wire	tb_pps;
-	reg	r_clkhdmiout_ack;
-	wire	[4:0]	w_btn;
-	wire		edid_scope_trigger;
-	wire	[30:0]	edid_scope_data;
 
 
 	//
@@ -364,67 +284,163 @@ module	main(i_clk, i_reset,
 	wire	[14:0]	sys_int_vector;
 	wire	[14:0]	alt_int_vector;
 	wire	[14:0]	bus_int_vector;
+//
+//
+// Define bus wires
+//
+//
+	wire		wb_cyc, wb_stb, wb_we, wb_stall, wb_err;
+	wire		wb_none_sel, wb_many_ack;
+	wire	[31:0]	wb_data, wb_idata;
 
-	// Declare those signals necessary to build the bus, and detect
-	// bus errors upon it.
-	//
-	wire	none_sel;
-	reg	many_sel, many_ack;
-	reg	[31:0]	r_bus_err;
+	wire	[3:0]	wb_sel;
+
+	reg		wb_ack;
+
+	wire		pmic_ack, pmic_stall;
+	wire	[31:0]	pmic_data;
+
+	wire		scop_edid_ack, scop_edid_stall;
+	wire	[31:0]	scop_edid_data;
+
+	wire		scope_hdmiin_ack, scope_hdmiin_stall;
+	wire	[31:0]	scope_hdmiin_data;
+
+	wire		scope_sdcard_ack, scope_sdcard_stall;
+	wire	[31:0]	scope_sdcard_data;
+
+	wire		flctl_ack, flctl_stall;
+	wire	[31:0]	flctl_data;
+
+	wire		gpsu_ack, gpsu_stall;
+	wire	[31:0]	gpsu_data;
+
+	wire		sdcard_ack, sdcard_stall;
+	wire	[31:0]	sdcard_data;
+
+	wire		cfg_ack, cfg_stall;
+	wire	[31:0]	cfg_data;
+
+	wire		mdio_ack, mdio_stall;
+	wire	[31:0]	mdio_data;
+
+	wire		_wb_sio_ack, _wb_sio_stall;
+	wire	[31:0]	_wb_sio_data;
+
+	wire		_wb_dio_ack, _wb_dio_stall;
+	wire	[31:0]	_wb_dio_data;
+
+	wire		bkram_ack, bkram_stall;
+	wire	[31:0]	bkram_data;
+
+	wire		flash_ack, flash_stall;
+	wire	[31:0]	flash_data;
+
+	wire		wbu_cyc, wbu_stb, wbu_we, wbu_stall, wbu_err;
+	wire		wbu_none_sel, wbu_many_ack;
+	wire	[-1:0]	wbu_data, wbu_idata;
+
+	wire	[-1:0]	wbu_sel;
+
+	reg		wbu_ack;
+
+	wire		dwb_ack, dwb_stall;
+	wire	[-1:0]	dwb_data;
+
+	wire		zip_cyc, zip_stb, zip_we, zip_stall, zip_err;
+	wire		zip_none_sel, zip_many_ack;
+	wire	[31:0]	zip_data, zip_idata;
+
+	wire	[3:0]	zip_sel;
+
+	reg		zip_ack;
+
+	wire		dwb_ack, dwb_stall;
+	wire	[31:0]	dwb_data;
+
 
 	//
-	// Wishbone master wire declarations
+	// Peripheral address decoding
 	//
-	// These are given for every configuration file with an @MTYPE
-	// tag, and the names are prefixed by whatever is in the @PREFIX tag.
+	//
+	//
+	//
+	// Select lines for bus wb
+	//
+	//
+	
+	assign	      buserr_sel = ((_wb_sio_sel)&&(wb_addr[ 6: 3] ==  4'h0));
+	assign	      buspic_sel = ((_wb_sio_sel)&&(wb_addr[ 6: 3] ==  4'h1));
+	assign	   clkhdmiin_sel = ((_wb_sio_sel)&&(wb_addr[ 6: 3] ==  4'h2));
+	assign	  clkhdmiout_sel = ((_wb_sio_sel)&&(wb_addr[ 6: 3] ==  4'h3));
+	assign	        date_sel = ((_wb_sio_sel)&&(wb_addr[ 6: 3] ==  4'h4));
+	assign	        gpio_sel = ((_wb_sio_sel)&&(wb_addr[ 6: 3] ==  4'h5));
+	assign	    pwrcount_sel = ((_wb_sio_sel)&&(wb_addr[ 6: 3] ==  4'h6));
+	assign	        spio_sel = ((_wb_sio_sel)&&(wb_addr[ 6: 3] ==  4'h7));
+	assign	      sysclk_sel = ((_wb_sio_sel)&&(wb_addr[ 6: 3] ==  4'h8));
+	assign	     version_sel = ((_wb_sio_sel)&&(wb_addr[ 6: 3] ==  4'h9));
+	assign	         gck_sel = ((_wb_dio_sel)&&((wb_addr[ 9: 5] &  5'h1f) ==  5'h00));
+	assign	        mous_sel = ((_wb_dio_sel)&&((wb_addr[ 9: 5] &  5'h1f) ==  5'h01));
+	assign	        oled_sel = ((_wb_dio_sel)&&((wb_addr[ 9: 5] &  5'h1f) ==  5'h02));
+	assign	         rtc_sel = ((_wb_dio_sel)&&((wb_addr[ 9: 5] &  5'h1f) ==  5'h03));
+	assign	         gtb_sel = ((_wb_dio_sel)&&((wb_addr[ 9: 5] &  5'h1f) ==  5'h04));
+	assign	      hdmiin_sel = ((_wb_dio_sel)&&((wb_addr[ 9: 5] &  5'h1e) ==  5'h06));
+	assign	        edin_sel = ((_wb_dio_sel)&&((wb_addr[ 9: 5] &  5'h18) ==  5'h08));
+	assign	       edout_sel = ((_wb_dio_sel)&&((wb_addr[ 9: 5] &  5'h10) ==  5'h10));
+	assign	        pmic_sel = ((wb_addr[24:20] &  5'h1f) ==  5'h01);
+	assign	   scop_edid_sel = ((wb_addr[24:20] &  5'h1f) ==  5'h02);
+	assign	scope_hdmiin_sel = ((wb_addr[24:20] &  5'h1f) ==  5'h03);
+	assign	scope_sdcard_sel = ((wb_addr[24:20] &  5'h1f) ==  5'h04);
+	assign	       flctl_sel = ((wb_addr[24:20] &  5'h1f) ==  5'h05);
+	assign	        gpsu_sel = ((wb_addr[24:20] &  5'h1f) ==  5'h06);
+	assign	      sdcard_sel = ((wb_addr[24:20] &  5'h1f) ==  5'h07);
+	assign	         cfg_sel = ((wb_addr[24:20] &  5'h1f) ==  5'h08);
+	assign	        mdio_sel = ((wb_addr[24:20] &  5'h1f) ==  5'h09);
+	assign	     _wb_sio_sel = ((wb_addr[24:20] &  5'h1f) ==  5'h0a);
+//x2	Was a master bus as well
+	assign	     _wb_dio_sel = ((wb_addr[24:20] &  5'h1f) ==  5'h0b);
+//x2	Was a master bus as well
+	assign	       bkram_sel = ((wb_addr[24:20] &  5'h1f) ==  5'h0c);
+	assign	       flash_sel = ((wb_addr[24:20] &  5'h10) ==  5'h10);
 	//
 
-
 	//
-	// Wishbone slave wire declarations
 	//
-	// These are given for every configuration file with a @PTYPE
-	// tag, and the names are given by the @PREFIX tag.
 	//
-
-
-	// Wishbone peripheral address decoding
-	// This particular address decoder decodes addresses for all
-	// peripherals (components with a @PTYPE tag), based upon their
-	// NADDR (number of addresses required) tag
+	// Select lines for bus wbu
+	//
+	//
+	
+	assign	         dwb_sel = ((wbu_addr[26: 0] & 27'h0) == 27'h0000000);
 	//
 
-	assign	none_sel = (wb_stb)&&({ } == 0);
 	//
-	// many_sel
 	//
-	// This should *never* be true .... unless the address decoding logic
-	// is somehow broken.  Given that a computer is generating the
-	// addresses, that should never happen.  However, since it has
-	// happened to me before (without the computer), I test/check for it
-	// here.
 	//
-	// Devices are placed here as a natural result of the address
-	// decoding logic.  Thus, any device with a sel_ line will be
-	// tested here.
+	// Select lines for bus zip
 	//
-`ifdef	VERILATOR
+	//
+	
+	assign	         dwb_sel = ((zip_addr[24: 0] & 25'h0) == 25'h0000000);
+	//
 
-	always @(*)
-		case({})
-			0'h0: many_sel = 1'b0;
-			default: many_sel = (wb_stb);
-		endcase
-
-`else	// VERILATOR
-
-	always @(*)
-		case({})
-			0'h0: many_sel <= 1'b0;
-			default: many_sel <= (wb_stb);
-		endcase
-
-`endif	// VERILATOR
+	//
+	// BUS-LOGIC for wb
+	//
+	assign	wb_none_sel = (wb_stb)&&({
+				pmic,
+				scop_edid,
+				scope_hdmiin,
+				scope_sdcard,
+				flctl,
+				gpsu,
+				sdcard,
+				cfg,
+				mdio,
+				_wb_sio,
+				_wb_dio,
+				bkram,
+				flash} == 0);
 
 	//
 	// many_ack
@@ -442,79 +458,270 @@ module	main(i_clk, i_reset,
 	// immediately one after the other.
 	//
 	always @(posedge i_clk)
-		case({})
-			0'h0: many_ack <= 1'b0;
-		default: many_ack <= (wb_cyc);
+		case({		pmic,
+				scop_edid,
+				scope_hdmiin,
+				scope_sdcard,
+				flctl,
+				gpsu,
+				sdcard,
+				cfg,
+				mdio,
+				_wb_sio,
+				_wb_dio,
+				bkram,
+				flash})
+			13'b0000000000000: wb_many_ack <= 1'b0;
+			13'b1000000000000: wb_many_ack <= 1'b0;
+			13'b0100000000000: wb_many_ack <= 1'b0;
+			13'b0010000000000: wb_many_ack <= 1'b0;
+			13'b0001000000000: wb_many_ack <= 1'b0;
+			13'b0000100000000: wb_many_ack <= 1'b0;
+			13'b0000010000000: wb_many_ack <= 1'b0;
+			13'b0000001000000: wb_many_ack <= 1'b0;
+			13'b0000000100000: wb_many_ack <= 1'b0;
+			13'b0000000010000: wb_many_ack <= 1'b0;
+			13'b0000000001000: wb_many_ack <= 1'b0;
+			13'b0000000000100: wb_many_ack <= 1'b0;
+			13'b0000000000010: wb_many_ack <= 1'b0;
+			13'b0000000000001: wb_many_ack <= 1'b0;
+			default: wb_many_ack <= (wb_cyc);
 		endcase
+
+	assign	_wb_sio_stall = 1'b0;
+	initial _r_wb_sio_ack = 1'b0;
+	always	@(posedge i_clk)
+		_r_wb_sio_ack <= (wb_stb)&&(_wb_sio_sel);
+	assign	_wb_sio_ack = _r_wb_sio_ack;
+	reg	_r_wb_sio_ack;
+	always	@(posedge i_clk)
+		// mask        = 00000078
+		// lgdw        = 2
+		// unused_lsbs = 3
+		casez( wb_addr[6:3] )
+			4'h0: _wb_sio_idata <= buserr_data;
+			4'h1: _wb_sio_idata <= buspic_data;
+			4'h2: _wb_sio_idata <= clkhdmiin_data;
+			4'h3: _wb_sio_idata <= clkhdmiout_data;
+			4'h4: _wb_sio_idata <= date_data;
+			4'h5: _wb_sio_idata <= gpio_data;
+			4'h6: _wb_sio_idata <= pwrcount_data;
+			4'h7: _wb_sio_idata <= spio_data;
+			4'h8: _wb_sio_idata <= sysclk_data;
+			default: wb_idata <= version_data;
+		endcase
+
+	assign	_wb_dio_stall = 1'b0;
+	reg	[1:0]	_r_wb_dio_ack;
+	always	@(posedge i_clk)
+		_rwb_ack <= { _r_wb_dio_ack[0], (wb_stb)&&(_r_wb_dio_sel) };
+	assign	_wb_dio_ack = _r_wb_dio_ack[1];
+	always	@(posedge i_clk)
+		casez({
+				gck,
+				mous,
+				oled,
+				rtc,
+				gtb,
+				hdmiin,
+				edin	}) // edout default
+			7'b1??????: wb_idata <= gck_data;
+			7'b01?????: wb_idata <= mous_data;
+			7'b001????: wb_idata <= oled_data;
+			7'b0001???: wb_idata <= rtc_data;
+			7'b00001??: wb_idata <= gtb_data;
+			7'b000001?: wb_idata <= hdmiin_data;
+			7'b0000001: wb_idata <= edin_data;
+			default: wb_idata <= edout_data;
+
+		endcase
+
+	//
+	// Finally, determine what the response is from the wb bus
+	// bus
+	//
+	//
 	//
 	// wb_ack
 	//
 	// The returning wishbone ack is equal to the OR of every component that
-	// might possibly produce an acknowledgement, gated by the CYC line.  To
-	// add new components, OR their acknowledgements in here.
+	// might possibly produce an acknowledgement, gated by the CYC line.
 	//
-	// To return an ack here, a component must have a @PTYPE.  Acks from
-	// any @PTYPE SINGLE and DOUBLE components have been collected
-	// together into sio_ack and dio_ack respectively, which will appear.
-	// ahead of any other device acks.
+	// To return an ack here, a component must have a @SLAVE.TYPE tag.
+	// Acks from any @SLAVE.TYPE of SINGLE and DOUBLE components have been
+	// collected together (above) into _wb_sio_ack and _wb_dio_ack
+	// respectively, which will appear ahead of any other device acks.
 	//
 	always @(posedge i_clk)
-		wb_ack <= (wb_cyc)&&(|{});
-
-
-	assign	wb_stall = 1'b0;
-
-
+		wb_ack <= (wb_cyc)&&(|{ pmic_ack,
+				scop_edid_ack,
+				scope_hdmiin_ack,
+				scope_sdcard_ack,
+				flctl_ack,
+				gpsu_ack,
+				sdcard_ack,
+				cfg_ack,
+				mdio_ack,
+				_wb_sio_ack,
+				_wb_dio_ack,
+				bkram_ack,
+				flash_ack });
 	//
-	// wb_err
+	// wb_idata
 	//
-	// This is the bus error signal.  It should never be true, but practice
-	// teaches us otherwise.  Here, we allow for three basic errors:
+	// This is the data returned on the bus.  Here, we select between a
+	// series of bus sources to select what data to return.  The basic
+	// logic is simply this: the data we return is the data for which the
+	// ACK line is high.
 	//
-	// 1. STB is true, but no devices are selected
+	// The last item on the list is chosen by default if no other ACK's are
+	// true.  Although we might choose to return zeros in that case, by
+	// returning something we can skimp a touch on the logic.
 	//
-	//	This is the null pointer reference bug.  If you try to access
-	//	something on the bus, at an address with no mapping, the bus
-	//	should produce an error--such as if you try to access something
-	//	at zero.
+	// Any peripheral component with a @SLAVE.TYPE value will be listed
+	// here.
 	//
-	// 2. STB is true, and more than one device is selected
-	//
-	//	(This can be turned off, if you design this file well.  For
-	//	this line to be true means you have a design flaw.)
-	//
-	// 3. If more than one ACK is every true at any given time.
-	//
-	//	This is a bug of bus usage, combined with a subtle flaw in the
-	//	WB pipeline definition.  You can issue bus requests, one per
-	//	clock, and if you cross device boundaries with your requests,
-	//	you may have things come back out of order (not detected here)
-	//	or colliding on return (detected here).  The solution to this
-	//	problem is to make certain that any burst request does not cross
-	//	device boundaries.  This is a requirement of whoever (or
-	//	whatever) drives the bus.
-	//
-	assign	wb_err = ((wb_stb)&&(none_sel || many_sel))
-				|| ((wb_cyc)&&(many_ack));
-
 	always @(posedge i_clk)
-		if (wb_err)
-			r_bus_err <= { wb_addr, 2'b00 };
+	begin
+		casez({	pmic_ack,
+				scop_edid_ack,
+				scope_hdmiin_ack,
+				scope_sdcard_ack,
+				flctl_ack,
+				gpsu_ack,
+				sdcard_ack,
+				cfg_ack,
+				mdio_ack,
+				_wb_sio_ack,
+				_wb_dio_ack,
+				bkram_ack,
+				flash_ack	})
+			12'b1???????????: wb_idata <= pmic_data;
+			12'b01??????????: wb_idata <= scop_edid_data;
+			12'b001?????????: wb_idata <= scope_hdmiin_data;
+			12'b0001????????: wb_idata <= scope_sdcard_data;
+			12'b00001???????: wb_idata <= flctl_data;
+			12'b000001??????: wb_idata <= gpsu_data;
+			12'b0000001?????: wb_idata <= sdcard_data;
+			12'b00000001????: wb_idata <= cfg_data;
+			12'b000000001???: wb_idata <= mdio_data;
+			12'b0000000001??: wb_idata <= _wb_sio_data;
+			12'b00000000001?: wb_idata <= _wb_dio_data;
+			12'b000000000001: wb_idata <= bkram_data;
+			default: wb_idata <= flash_data;
+		endcase
+	end
+	//
+	// BUS-LOGIC for wbu
+	//
+	assign	wbu_none_sel = (wbu_stb)&&({
+				dwb} == 0);
 
-	//Now we turn to defining all of the parts and pieces of what
-	// each of the various peripherals does, and what logic it needs.
+	initial wbu_many_ack = 1'b0;
+	always @(posedge i_clk)
+		wbu_many_ack <= 1'b0;
 	//
-	// This information comes from the @MAIN.INSERT and @MAIN.ALT tags.
-	// If an @ACCESS tag is available, an ifdef is created to handle
-	// having the access and not.  If the @ACCESS tag is `defined above
-	// then the @MAIN.INSERT code is executed.  If not, the @MAIN.ALT
-	// code is exeucted, together with any other cleanup settings that
-	// might need to take place--such as returning zeros to the bus,
-	// or making sure all of the various interrupt wires are set to
-	// zero if the component is not included.
+	// Finally, determine what the response is from the wbu bus
+	// bus
 	//
+	//
+	//
+	// wbu_ack
+	//
+	// The returning wishbone ack is equal to the OR of every component that
+	// might possibly produce an acknowledgement, gated by the CYC line.
+	//
+	// To return an ack here, a component must have a @SLAVE.TYPE tag.
+	// Acks from any @SLAVE.TYPE of SINGLE and DOUBLE components have been
+	// collected together (above) into _wbu_sio_ack and _wbu_dio_ack
+	// respectively, which will appear ahead of any other device acks.
+	//
+	always @(posedge i_clk)
+		wbu_ack <= (wbu_cyc)&&(|{ dwb_ack });
+	//
+	// wbu_idata
+	//
+	// This is the data returned on the bus.  Here, we select between a
+	// series of bus sources to select what data to return.  The basic
+	// logic is simply this: the data we return is the data for which the
+	// ACK line is high.
+	//
+	// The last item on the list is chosen by default if no other ACK's are
+	// true.  Although we might choose to return zeros in that case, by
+	// returning something we can skimp a touch on the logic.
+	//
+	// Any peripheral component with a @SLAVE.TYPE value will be listed
+	// here.
+	//
+	always @(posedge i_clk)
+	begin
+		casez({	dwb_ack
+					})
+			default: wbu_idata <= dwb_data;
+		endcase
+	end
+	//
+	// BUS-LOGIC for zip
+	//
+	assign	zip_none_sel = (zip_stb)&&({
+				dwb} == 0);
+
+	initial zip_many_ack = 1'b0;
+	always @(posedge i_clk)
+		zip_many_ack <= 1'b0;
+	//
+	// Finally, determine what the response is from the zip bus
+	// bus
+	//
+	//
+	//
+	// zip_ack
+	//
+	// The returning wishbone ack is equal to the OR of every component that
+	// might possibly produce an acknowledgement, gated by the CYC line.
+	//
+	// To return an ack here, a component must have a @SLAVE.TYPE tag.
+	// Acks from any @SLAVE.TYPE of SINGLE and DOUBLE components have been
+	// collected together (above) into _zip_sio_ack and _zip_dio_ack
+	// respectively, which will appear ahead of any other device acks.
+	//
+	always @(posedge i_clk)
+		zip_ack <= (zip_cyc)&&(|{ dwb_ack });
+	//
+	// zip_idata
+	//
+	// This is the data returned on the bus.  Here, we select between a
+	// series of bus sources to select what data to return.  The basic
+	// logic is simply this: the data we return is the data for which the
+	// ACK line is high.
+	//
+	// The last item on the list is chosen by default if no other ACK's are
+	// true.  Although we might choose to return zeros in that case, by
+	// returning something we can skimp a touch on the logic.
+	//
+	// Any peripheral component with a @SLAVE.TYPE value will be listed
+	// here.
+	//
+	always @(posedge i_clk)
+	begin
+		casez({	dwb_ack
+					})
+			default: zip_idata <= dwb_data;
+		endcase
+	end
 	//
 	// Declare the interrupt busses
+	//
+	// Interrupt busses are defined by anything with a @PIC tag.
+	// The @PIC.BUS tag defines the name of the wire bus below,
+	// while the @PIC.MAX tag determines the size of the bus width.
+	//
+	// For your peripheral to be assigned to this bus, it must have an
+	// @INT.NAME.WIRE= tag to define the wire name of the interrupt line,
+	// and an @INT.NAME.PIC= tag matching the @PIC.BUS tag of the bus
+	// your interrupt will be assigned to.  If an @INT.NAME.ID tag also
+	// exists, then your interrupt will be assigned to the position given
+	// by the ID# in that tag.
 	//
 	assign	sys_int_vector = {
 		1'b0,
@@ -560,13 +767,29 @@ module	main(i_clk, i_reset,
 		1'b0,
 		1'b0,
 		1'b0,
-		scop_edid_int,
 		spio_int,
 		mous_interrupt,
-		flash_interrupt,
 		scop_hdmiin_int,
+		flash_interrupt,
+		scop_edid_int,
 		sdcard_int
 	};
+
+
+	//
+	//
+	// Now we turn to defining all of the parts and pieces of what
+	// each of the various peripherals does, and what logic it needs.
+	//
+	// This information comes from the @MAIN.INSERT and @MAIN.ALT tags.
+	// If an @ACCESS tag is available, an ifdef is created to handle
+	// having the access and not.  If the @ACCESS tag is `defined above
+	// then the @MAIN.INSERT code is executed.  If not, the @MAIN.ALT
+	// code is exeucted, together with any other cleanup settings that
+	// might need to take place--such as returning zeros to the bus,
+	// or making sure all of the various interrupt wires are set to
+	// zero if the component is not included.
+	//
 `ifdef	SDSPI_ACCESS
 	// SPI mapping
 	wire	w_sd_cs_n, w_sd_mosi, w_sd_miso;
@@ -588,6 +811,12 @@ module	main(i_clk, i_reset,
 	assign	o_sd_sck   = 1'b1;
 	assign	o_sd_cmd   = 1'b1;
 	assign	o_sd_data  = 4'hf;
+	reg	_r_sdcard_ack;
+	initial	_r_sdcard_ack = 1'b0;
+	always @(posedge i_clk)	_r_sdcard_ack <= sdcard_sel;
+	assign	sdcard_ack   = _r_sdcard_ack;
+	assign	sdcard_stall = 0;
+	assign	sdcard_data  = 0;
 	assign	sdcard_int = 1'b0;	// sdcard.INT.SDCARD.WIRE
 `endif	// SDSPI_ACCESS
 
@@ -602,6 +831,12 @@ module	main(i_clk, i_reset,
 	assign	rtc_ack = r_rtc_ack;
 `else	// RTC_ACCESS
 	assign	rtc_pps = 1'b0;
+	reg	_r_rtc_ack;
+	initial	_r_rtc_ack = 1'b0;
+	always @(posedge i_clk)	_r_rtc_ack <= rtc_sel;
+	assign	rtc_ack   = _r_rtc_ack;
+	assign	rtc_stall = 0;
+	assign	rtc_data  = 0;
 	assign	rtc_int = 1'b0;	// rtc.INT.RTC.WIRE
 `endif	// RTC_ACCESS
 
@@ -618,6 +853,12 @@ module	main(i_clk, i_reset,
 `else	// MICROPHONE_ACCESS
 	assign	o_mic_csn    = 1'b1;
 	assign	o_mic_sck    = 1'b1;
+	reg	_r_pmic_ack;
+	initial	_r_pmic_ack = 1'b0;
+	always @(posedge i_clk)	_r_pmic_ack <= pmic_sel;
+	assign	pmic_ack   = _r_pmic_ack;
+	assign	pmic_stall = 0;
+	assign	pmic_data  = 0;
 	assign	pmic_int = 1'b0;	// pmic.INT.MIC.WIRE
 `endif	// MICROPHONE_ACCESS
 
@@ -635,6 +876,12 @@ module	main(i_clk, i_reset,
 		gpioi(i_clk, 1'b1, (wb_stb)&&(gpio_sel), 1'b1,
 			wb_data, gpio_data, i_gpio, o_gpio, gpio_int);
 `else	// GPIO_ACCESS
+	reg	_r_gpio_ack;
+	initial	_r_gpio_ack = 1'b0;
+	always @(posedge i_clk)	_r_gpio_ack <= gpio_sel;
+	assign	gpio_ack   = _r_gpio_ack;
+	assign	gpio_stall = 0;
+	assign	gpio_data  = 0;
 	assign	gpio_int = 1'b0;	// gpio.INT.GPIO.WIRE
 `endif	// GPIO_ACCESS
 
@@ -643,14 +890,6 @@ module	main(i_clk, i_reset,
 		r_sysclk_ack <= (wb_stb)&&(sysclk_sel);
 	assign	sysclk_ack   = r_sysclk_ack;
 	assign	sysclk_stall = 1'b0;
-
-	wbscope #(.LGMEM(5'd14), .SYNCHRONOUS(0)
-		) copyhdmiin(i_hdmi_in_clk, 1'b1, hin_dbg_scope[31], hin_dbg_scope,
-		i_clk, wb_cyc, (wb_stb)&&(scope_hdmiin_sel), wb_we, wb_addr[0],
-				wb_data,
-			scope_hdmiin_ack, scope_hdmiin_stall,
-			scope_hdmiin_data,
-		scop_hdmiin_int);
 	clkcounter clkclkhdmiinctr(i_clk, ck_pps, i_clk, clkhdmiin_data);
 	always @(posedge i_clk)
 		r_clkhdmiin_ack <= (wb_stb)&&(clkhdmiin_sel);
@@ -666,6 +905,12 @@ module	main(i_clk, i_reset,
 `else	// HDMI_OUT_EDID_ACCESS
 	assign	o_hdmi_out_scl = 1'b1;
 	assign	o_hdmi_out_sda = 1'b1;
+	reg	_r_edout_ack;
+	initial	_r_edout_ack = 1'b0;
+	always @(posedge i_clk)	_r_edout_ack <= edout_sel;
+	assign	edout_ack   = _r_edout_ack;
+	assign	edout_stall = 0;
+	assign	edout_data  = 0;
 	assign	edid_out_int = 1'b0;	// edout.INT.EDID.WIRE
 `endif	// HDMI_OUT_EDID_ACCESS
 
@@ -673,13 +918,65 @@ module	main(i_clk, i_reset,
 	assign	o_hdmi_out_g = hdmi_in_g;
 	assign	o_hdmi_out_b = hdmi_in_b;
 
-	initial	r_pwrcount_data = 32'h0;
-	always @(posedge i_clk)
-	if (r_pwrcount_data[31])
-		r_pwrcount_data[30:0] <= r_pwrcount_data[30:0] + 1'b1;
-	else
-		r_pwrcount_data[31:0] <= r_pwrcount_data[31:0] + 1'b1;
-	assign	pwrcount_data = r_pwrcount_data;
+	assign	edid_scope_trigger = edido_dbg[31];
+	assign	edid_scope_data    = edido_dbg[30:0];
+	wbscopc	#(.LGMEM(5'hb), .MAX_STEP(31'h10000)) theicscop(i_clk, 1'b1,
+			edid_scope_trigger, edid_scope_data,
+			i_clk, wb_cyc, (wb_stb)&&(scop_edid_sel), wb_we, wb_addr[0], wb_data,
+			scop_edid_ack, scop_edid_stall, scop_edid_data,
+			scop_edid_int);
+`ifdef	BKRAM_ACCESS
+	memdev #(.LGMEMSZ(20), .EXTRACLOCK(1))
+		bkrami(i_clk,
+			(wb_cyc), (wb_stb)&&(bkram_sel), wb_we,
+				wb_addr[(20-3):0], wb_data, wb_sel,
+				bkram_ack, bkram_stall, bkram_data);
+`else	// BKRAM_ACCESS
+	reg	_r_bkram_ack;
+	initial	_r_bkram_ack = 1'b0;
+	always @(posedge i_clk)	_r_bkram_ack <= bkram_sel;
+	assign	bkram_ack   = _r_bkram_ack;
+	assign	bkram_stall = 0;
+	assign	bkram_data  = 0;
+`endif	// BKRAM_ACCESS
+
+`ifdef	FLASH_ACCESS
+	// The Flash control interface result comes back together with the
+	// flash interface itself.  Hence, we always return zero here.
+	assign	flctl_ack   = 1'b0;
+	assign	flctl_stall = 1'b0;
+	assign	flctl_data  = 0;
+`else	// FLASH_ACCESS
+	reg	_r_flctl_ack;
+	initial	_r_flctl_ack = 1'b0;
+	always @(posedge i_clk)	_r_flctl_ack <= flctl_sel;
+	assign	flctl_ack   = _r_flctl_ack;
+	assign	flctl_stall = 0;
+	assign	flctl_data  = 0;
+`endif	// FLASH_ACCESS
+
+`ifdef	FLASH_ACCESS
+	wbqspiflash #(24)
+		flashmem(i_clk,
+			(wb_cyc), (wb_stb)&&(flash_sel), (wb_stb)&&(flctl_sel),wb_we,
+			wb_addr[(24-3):0], wb_data,
+			flash_ack, flash_stall, flash_data,
+			o_qspi_sck, o_qspi_cs_n, o_qspi_mod, o_qspi_dat, i_qspi_dat,
+			flash_interrupt);
+`else	// FLASH_ACCESS
+	assign	o_qspi_sck  = 1'b1;
+	assign	o_qspi_cs_n = 1'b1;
+	assign	o_qspi_mod  = 2'b01;
+	assign	o_qspi_dat  = 4'b1111;
+	reg	_r_flash_ack;
+	initial	_r_flash_ack = 1'b0;
+	always @(posedge i_clk)	_r_flash_ack <= flash_sel;
+	assign	flash_ack   = _r_flash_ack;
+	assign	flash_stall = 0;
+	assign	flash_data  = 0;
+	assign	flash_interrupt = 1'b0;	// flash.INT.FLASH.WIRE
+`endif	// FLASH_ACCESS
+
 `ifdef	GPS_CLOCK
 	wire	[1:0]	ck_dbg;
 
@@ -702,66 +999,23 @@ module	main(i_clk, i_reset,
 	assign	gps_led    = 1'b0;
 	assign	gps_locked = 1'b0;
 
+	reg	_r_gck_ack;
+	initial	_r_gck_ack = 1'b0;
+	always @(posedge i_clk)	_r_gck_ack <= gck_sel;
+	assign	gck_ack   = _r_gck_ack;
+	assign	gck_stall = 0;
+	assign	gck_data  = 0;
 	assign	ck_pps = 1'b0;	// gck.INT.PPS.WIRE
 `endif	// GPS_CLOCK
 
-`ifdef	HDMIIN_ACCESS
-	// HDMI input processor
-	hdmiin	thehdmmiin(i_clk, i_hdmi_in_clk, ck_pps,
-			//
-			i_hdmi_in_actual_delay_r,
-			i_hdmi_in_actual_delay_g,
-			i_hdmi_in_actual_delay_b,
-			o_hdmi_in_delay,
-			//
-			i_hdmi_in_r, i_hdmi_in_g, i_hdmi_in_b,
-			wb_cyc, (wb_stb)&&(hdmiin_sel), wb_we, wb_addr[3:0],
-				wb_data, wb_sel,
-			hdmiin_ack, hdmiin_stall, hdmiin_data,
-			hdmiin_int,
-			hin_pixels, hin_dbg_scope);
 
-	assign	hdmi_in_r = hin_pixels[29:20];
-	assign	hdmi_in_g = hin_pixels[19:10];
-	assign	hdmi_in_b = hin_pixels[ 9: 0];
-`else	// HDMIIN_ACCESS
-	assign	hdmiin_int = 1'b0;	// hdmiin.INT.VSYNC.WIRE
-`endif	// HDMIIN_ACCESS
-
-`ifdef	FLASH_ACCESS
-	// The Flash control interface result comes back together with the
-	// flash interface itself.  Hence, we always return zero here.
-	assign	flctl_ack   = 1'b0;
-	assign	flctl_stall = 1'b0;
-	assign	flctl_data  = 0;
-`else	// FLASH_ACCESS
-`endif	// FLASH_ACCESS
-
-`ifdef	FLASH_ACCESS
-	wbqspiflash #(24)
-		flashmem(i_clk,
-			(wb_cyc), (wb_stb)&&(flash_sel), (wb_stb)&&(flctl_sel),wb_we,
-			wb_addr[(24-3):0], wb_data,
-			flash_ack, flash_stall, flash_data,
-			o_qspi_sck, o_qspi_cs_n, o_qspi_mod, o_qspi_dat, i_qspi_dat,
-			flash_interrupt);
-`else	// FLASH_ACCESS
-	assign	o_qspi_sck  = 1'b1;
-	assign	o_qspi_cs_n = 1'b1;
-	assign	o_qspi_mod  = 2'b01;
-	assign	o_qspi_dat  = 4'b1111;
-	assign	flash_interrupt = 1'b0;	// flash.INT.FLASH.WIRE
-`endif	// FLASH_ACCESS
-
-`ifdef	BKRAM_ACCESS
-	memdev #(.LGMEMSZ(20), .EXTRACLOCK(1))
-		bkrami(i_clk,
-			(wb_cyc), (wb_stb)&&(bkram_sel), wb_we,
-				wb_addr[(20-3):0], wb_data, wb_sel,
-				bkram_ack, bkram_stall, bkram_data);
-`else	// BKRAM_ACCESS
-`endif	// BKRAM_ACCESS
-
+	wbscope #(.LGMEM(5'd14), .SYNCHRONOUS(0)
+		) copyhdmiin(i_hdmi_in_clk, 1'b1, hin_dbg_scope[31], hin_dbg_scope,
+		i_clk, wb_cyc, (wb_stb)&&(scope_hdmiin_sel), wb_we, wb_addr[0],
+				wb_data,
+			scope_hdmiin_ack, scope_hdmiin_stall,
+			scope_hdmiin_data,
+		scop_hdmiin_int);
 `ifdef	MOUSE_ACCESS
 	wbmouse themouse(i_clk,
 		(wb_cyc), (wb_stb)&&(mous_sel), wb_we, wb_addr[1:0], wb_data,
@@ -772,6 +1026,12 @@ module	main(i_clk, i_reset,
 	// If there is no mouse, declare mouse types of things to be .. absent
 	assign	scrn_mouse     = 32'h00;
 	assign	o_ps2          = 2'b11;
+	reg	_r_mous_ack;
+	initial	_r_mous_ack = 1'b0;
+	always @(posedge i_clk)	_r_mous_ack <= mous_sel;
+	assign	mous_ack   = _r_mous_ack;
+	assign	mous_stall = 0;
+	assign	mous_data  = 0;
 	assign	mous_interrupt = 1'b0;	// mous.INT.MOUSE.WIRE
 `endif	// MOUSE_ACCESS
 
@@ -787,6 +1047,12 @@ module	main(i_clk, i_reset,
 `else	// HDMI_IN_EDID_ACCESS
 	assign	o_hdmi_in_scl = 1'b1;
 	assign	o_hdmi_in_sda = 1'b1;
+	reg	_r_edin_ack;
+	initial	_r_edin_ack = 1'b0;
+	always @(posedge i_clk)	_r_edin_ack <= edin_sel;
+	assign	edin_ack   = _r_edin_ack;
+	assign	edin_stall = 0;
+	assign	edin_data  = 0;
 `endif	// HDMI_IN_EDID_ACCESS
 
 `ifdef	SDSPI_SCOPE
@@ -807,12 +1073,18 @@ module	main(i_clk, i_reset,
 			scope_sdcard_int);
 
 `else	// SDSPI_SCOPE
+	reg	_r_scope_sdcard_ack;
+	initial	_r_scope_sdcard_ack = 1'b0;
+	always @(posedge i_clk)	_r_scope_sdcard_ack <= scope_sdcard_sel;
+	assign	scope_sdcard_ack   = _r_scope_sdcard_ack;
+	assign	scope_sdcard_stall = 0;
+	assign	scope_sdcard_data  = 0;
 	assign	scope_sdcard_int = 1'b0;	// scope_sdcard.INT.SDSCOPE.WIRE
 `endif	// SDSPI_SCOPE
 
 `ifdef	WBUBUS_MASTER
 `ifdef	INCLUDE_ZIPCPU
-	assign	wbu_zip_sel   = wbu_addr[29];
+	assign	wbu_zip_sel   = wbu_addr[@$.ZIP_ADDRESS_BIT];
 `else
 	assign	wbu_zip_sel   = 1'b0;
 	assign	zip_dbg_ack   = 1'b0;
@@ -834,9 +1106,45 @@ module	main(i_clk, i_reset,
 			o_host_tx_stb, o_host_tx_data, i_host_tx_busy,
 			wbubus_dbg[0]);
 	assign	wbu_sel = 4'hf;
-	assign	wbu_addr = wbu_tmp_addr[(30-1):0];
+	assign	wbu_addr = wbu_tmp_addr[(@$BUS_ADDRESS_WIDTH-1):0];
 `else	// WBUBUS_MASTER
 `endif	// WBUBUS_MASTER
+
+	initial	r_pwrcount_data = 32'h0;
+	always @(posedge i_clk)
+	if (r_pwrcount_data[31])
+		r_pwrcount_data[30:0] <= r_pwrcount_data[30:0] + 1'b1;
+	else
+		r_pwrcount_data[31:0] <= r_pwrcount_data[31:0] + 1'b1;
+	assign	pwrcount_data = r_pwrcount_data;
+`ifdef	HDMIIN_ACCESS
+	// HDMI input processor
+	hdmiin	thehdmmiin(i_clk, i_hdmi_in_clk, ck_pps,
+			//
+			i_hdmi_in_actual_delay_r,
+			i_hdmi_in_actual_delay_g,
+			i_hdmi_in_actual_delay_b,
+			o_hdmi_in_delay,
+			//
+			i_hdmi_in_r, i_hdmi_in_g, i_hdmi_in_b,
+			wb_cyc, (wb_stb)&&(hdmiin_sel), wb_we, wb_addr[3:0],
+				wb_data, wb_sel,
+			hdmiin_ack, hdmiin_stall, hdmiin_data,
+			hdmiin_int,
+			hin_pixels, hin_dbg_scope);
+
+	assign	hdmi_in_r = hin_pixels[29:20];
+	assign	hdmi_in_g = hin_pixels[19:10];
+	assign	hdmi_in_b = hin_pixels[ 9: 0];
+`else	// HDMIIN_ACCESS
+	reg	_r_hdmiin_ack;
+	initial	_r_hdmiin_ack = 1'b0;
+	always @(posedge i_clk)	_r_hdmiin_ack <= hdmiin_sel;
+	assign	hdmiin_ack   = _r_hdmiin_ack;
+	assign	hdmiin_stall = 0;
+	assign	hdmiin_data  = 0;
+	assign	hdmiin_int = 1'b0;	// hdmiin.INT.VSYNC.WIRE
+`endif	// HDMIIN_ACCESS
 
 `ifdef	INCLUDE_ZIPCPU
 	//
@@ -881,6 +1189,12 @@ module	main(i_clk, i_reset,
 	assign	o_oled_panel_en= 1'b0;
 	assign	o_oled_logic_en= 1'b0;
 
+	reg	_r_oled_ack;
+	initial	_r_oled_ack = 1'b0;
+	always @(posedge i_clk)	_r_oled_ack <= oled_sel;
+	assign	oled_ack   = _r_oled_ack;
+	assign	oled_stall = 0;
+	assign	oled_data  = 0;
 	assign	oled_int = 1'b0;	// oled.INT.OLED.WIRE
 `endif	// OLEDBW_ACCESS
 
@@ -899,6 +1213,12 @@ module	main(i_clk, i_reset,
 			cfg_ack, cfg_stall, cfg_data);
 `endif
 `else	// CFG_ACCESS
+	reg	_r_cfg_ack;
+	initial	_r_cfg_ack = 1'b0;
+	always @(posedge i_clk)	_r_cfg_ack <= cfg_sel;
+	assign	cfg_ack   = _r_cfg_ack;
+	assign	cfg_stall = 0;
+	assign	cfg_data  = 0;
 `endif	// CFG_ACCESS
 
 `ifdef	RTCDATE_ACCESS
@@ -909,6 +1229,12 @@ module	main(i_clk, i_reset,
 		(wb_stb)&&(date_sel), wb_we, wb_data,
 			date_ack, date_stall, date_data);
 `else	// RTCDATE_ACCESS
+	reg	_r_date_ack;
+	initial	_r_date_ack = 1'b0;
+	always @(posedge i_clk)	_r_date_ack <= date_sel;
+	assign	date_ack   = _r_date_ack;
+	assign	date_stall = 0;
+	assign	date_data  = 0;
 `endif	// RTCDATE_ACCESS
 
 	assign	buserr_data = r_bus_err;
@@ -918,13 +1244,14 @@ module	main(i_clk, i_reset,
 	// And an arbiter to decide who gets access to the bus
 	//
 	//
-	wbpriarbiter #(32,30)	bus_arbiter(i_clk,
+	// Clock speed = @$(CLOCK.FREQUENCY)
+	wbpriarbiter #(32,27)	bus_arbiter(i_clk,
 		// The Zip CPU bus master --- gets the priority slot
 		zip_cyc, zip_stb, zip_we, zip_addr, zip_data, zip_sel,
 			zip_ack, zip_stall, zip_err,
 		// The UART interface master
 		(wbu_cyc)&&(!wbu_zip_sel), (wbu_stb)&&(!wbu_zip_sel), wbu_we,
-			wbu_addr[(30-1):0], wbu_data, wbu_sel,
+			wbu_addr[(27-1):0], wbu_data, wbu_sel,
 			wbu_ack, wbu_stall, wbu_err,
 		// Common bus returns
 		dwb_cyc, dwb_stb, dwb_we, dwb_addr, dwb_odata, dwb_sel,
@@ -952,7 +1279,7 @@ module	main(i_clk, i_reset,
 `endif
 `endif
 `ifdef	BUS_DELAY_NEEDED
-	busdelay #(30)	dwb_delay(i_clk,
+	busdelay #(@$BUS_ADDRESS_WIDTH)	dwb_delay(i_clk,
 		dwb_cyc, dwb_stb, dwb_we, dwb_addr, dwb_odata, dwb_sel,
 			dwb_ack, dwb_stall, dwb_idata, dwb_err,
 		wb_cyc, wb_stb, wb_we, wb_addr, wb_data, wb_sel,
@@ -974,4 +1301,109 @@ module	main(i_clk, i_reset,
 	assign	dwb_idata = wb_idata;
 `endif
 	assign	wbu_idata = dwb_idata;
-`i
+`ifdef	INCLUDE_ZIPCPU
+	assign	zip_idata = dwb_idata;
+`endif
+`ifdef	BUSPIC_ACCESS
+	//
+	// The BUS Interrupt controller
+	//
+	icontrol #(15)	buspici(i_clk, 1'b0, (wb_stb)&&(buspic_sel),
+			wb_data, buspic_data, bus_int_vector, w_bus_int);
+`else	// BUSPIC_ACCESS
+	reg	_r_buspic_ack;
+	initial	_r_buspic_ack = 1'b0;
+	always @(posedge i_clk)	_r_buspic_ack <= buspic_sel;
+	assign	buspic_ack   = _r_buspic_ack;
+	assign	buspic_stall = 0;
+	assign	buspic_data  = 0;
+	assign	w_bus_int = 1'b0;	// buspic.INT.BUS.WIRE
+`endif	// BUSPIC_ACCESS
+
+`ifdef	GPSUART_ACCESS
+	wbuart #(.INITIAL_SETUP(31'h000028b0))
+ 		gpsu_uart(i_clk, 1'b0,
+ 			wb_cyc, (wb_stb)&&(gpsu_sel), wb_we,
+				wb_addr[1:0], wb_data,
+ 			gpsu_ack, gpsu_stall, gpsu_data,
+ 			i_gpsu_rx, o_gpsu_tx, w_gpsu_cts_n, w_gpsu_rts_n,
+			gpsurx_int, gpsutx_int,
+			gpsurxf_int, gpsutxf_int);
+`else	// GPSUART_ACCESS
+	assign	o_gpsu_tx    = 1'b1;
+	assign	w_gpsu_rts_n = 1'b0;
+	reg	_r_gpsu_ack;
+	initial	_r_gpsu_ack = 1'b0;
+	always @(posedge i_clk)	_r_gpsu_ack <= gpsu_sel;
+	assign	gpsu_ack   = _r_gpsu_ack;
+	assign	gpsu_stall = 0;
+	assign	gpsu_data  = 0;
+	assign	 = 1'b0;	// gpsu.INT.UARTTXF.WIRE
+	assign	 = 1'b0;	// gpsu.INT.UARTRXF.WIRE
+	assign	 = 1'b0;	// gpsu.INT.UARTTX.WIRE
+	assign	 = 1'b0;	// gpsu.INT.UARTRX.WIRE
+	assign	gpsutx_int = 1'b0;	// gpsu.INT.GPSTX.WIRE
+	assign	gpsutxf_int = 1'b0;	// gpsu.INT.GPSTXF.WIRE
+	assign	gpsurx_int = 1'b0;	// gpsu.INT.GPSRX.WIRE
+	assign	gpsurxf_int = 1'b0;	// gpsu.INT.GPSRXF.WIRE
+`endif	// GPSUART_ACCESS
+
+`ifdef	GPS_CLOCK
+	gpsclock_tb ppstb(i_clk, ck_pps, tb_pps,
+			(wb_stb)&&(gtb_sel), wb_we, wb_addr[2:0], wb_data,
+				gtb_ack, gtb_stall, gtb_data,
+			gps_err, gps_now, gps_step);
+
+`ifdef	GPSTB
+	assign	gps_pps = tb_pps;
+`else
+	assign	gps_pps = i_gps_pps;
+`endif
+
+`endif
+
+`ifdef	NETCTRL_ACCESS
+	wire[31:0]	mdio_debug;
+	enetctrl #(2)
+		mdio(i_clk, i_reset, wb_cyc, (wb_stb)&&(mdio_sel), wb_we,
+				wb_addr[4:0], wb_data[15:0],
+			mdio_ack, mdio_stall, mdio_data,
+			o_mdclk, o_mdio, i_mdio, o_mdwe, mdio_debug);
+`else	// NETCTRL_ACCESS
+	assign	o_mdclk = 1'b1;
+	assign	o_mdio  = 1'b1;
+	assign	o_mdwe  = 1'b0;;
+	reg	_r_mdio_ack;
+	initial	_r_mdio_ack = 1'b0;
+	always @(posedge i_clk)	_r_mdio_ack <= mdio_sel;
+	assign	mdio_ack   = _r_mdio_ack;
+	assign	mdio_stall = 0;
+	assign	mdio_data  = 0;
+`endif	// NETCTRL_ACCESS
+
+	clkcounter clkclkhdmioutctr(i_clk, ck_pps, i_clk, clkhdmiout_data);
+	always @(posedge i_clk)
+		r_clkhdmiout_ack <= (wb_stb)&&(clkhdmiout_sel);
+	assign	clkhdmiout_ack   = r_clkhdmiout_ack;
+	assign	clkhdmiout_stall = 1'b0;
+`ifdef	SPIO_ACCESS
+	assign	w_btn = { i_btnc, i_btnd, i_btnl, i_btnr, i_btnu };
+	spio #(.NBTN(5), .NLEDS(8)) thespio(i_clk,
+		wb_cyc, (wb_stb)&&(spio_sel), wb_we, wb_data, wb_sel,
+			spio_ack, spio_stall, spio_data,
+		i_sw, w_btn, o_led, spio_int);
+`else	// SPIO_ACCESS
+	assign	w_btn    = h0;
+	assign	o_led_cs_n    = 8'h0;
+	reg	_r_spio_ack;
+	initial	_r_spio_ack = 1'b0;
+	always @(posedge i_clk)	_r_spio_ack <= spio_sel;
+	assign	spio_ack   = _r_spio_ack;
+	assign	spio_stall = 0;
+	assign	spio_data  = 0;
+	assign	spio_int = 1'b0;	// spio.INT.SPIO.WIRE
+`endif	// SPIO_ACCESS
+
+
+
+endmodule // main.v

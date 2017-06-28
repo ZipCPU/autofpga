@@ -37,8 +37,8 @@
 ##
 @PREFIX= flash
 @$LGFLASHSZ.EXPR=24
-@$NADDR=(1<<(@$.LGFLASHSZ-2))
-@$NBYTES=(1<<@$.LGFLASHSZ)
+@$NADDR=(1<<(@$LGFLASHSZ-2))
+@$NBYTES=(1<<@$LGFLASHSZ)
 @NBYTES.FORMAT=0x%08x
 @ACCESS= FLASH_ACCESS
 @SLAVE.TYPE=MEMORY
@@ -46,11 +46,11 @@
 @LD.PERM=rx
 @INT.FLASH.WIRE= flash_interrupt
 @INT.FLASH.PIC= buspic
-@$ISPIF_EN.EXPR=@$.ISPIF_DIS|0x80000000
+@$ISPIF_EN.EXPR=@$ISPIF_DIS|0x80000000
 @ISPIF_EN.FORMAT=0x%08x
-@$ISPIF_DIS.EXPR=(@$.ISPIF_CLR)|((@$.ISPIF_CLR)<<16)
+@$ISPIF_DIS.EXPR=(@$ISPIF_CLR)|((@$ISPIF_CLR)<<16)
 @ISPIF_DIS.FORMAT=0x%08x
-@$ISPIF_CLR.EXPR=(1<<(@$.INT.FLASH.buspic.ID))
+@$ISPIF_CLR.EXPR=(1<<(@$INT.FLASH.buspic.ID))
 @ISPIF_CLR.FORMAT=0x%08x
 @TOP.PORTLIST=
 		// Top level Quad-SPI I/O ports
@@ -147,10 +147,10 @@
 	input	wire	[3:0]	i_qspi_dat;
 	output	wire	[1:0]	o_qspi_mod;
 @MAIN.INSERT=
-	wbqspiflash #(@$.LGFLASHSZ)
+	wbqspiflash #(@$LGFLASHSZ)
 		flashmem(i_clk,
 			(wb_cyc), (wb_stb)&&(flash_sel), (wb_stb)&&(flctl_sel),wb_we,
-			wb_addr[(@$.LGFLASHSZ-3):0], wb_data,
+			wb_addr[(@$LGFLASHSZ-3):0], wb_data,
 			flash_ack, flash_stall, flash_data,
 			o_qspi_sck, o_qspi_cs_n, o_qspi_mod, o_qspi_dat, i_qspi_dat,
 			flash_interrupt);
@@ -163,9 +163,9 @@
 @MEM.ACCESS = rx
 @REGS.N= 1
 @REGDEFS.H.DEFNS=
-#define	FLASHBASE	@$.BASE
-#define	FLASHLEN	@$.NBYTES
-#define	FLASHLGLEN	@$.LGFLASHSZ
+#define	FLASHBASE	@$BASE
+#define	FLASHLEN	@$NBYTES
+#define	FLASHLGLEN	@$LGFLASHSZ
 @REGS.0= 0 FLASHMEM FLASH
 @BDEF.OSDEF=_BOARD_HAS_FLASH
 @BDEF.OSVAL=extern char _flash[@$NBYTES];
@@ -176,9 +176,9 @@ _flash=ORIGIN(flash);
 @REGDEFS.H.INSERT=
 
 #define	R_ICONTROL	R_PIC
-#define	ISPIF_EN	@$.ISPIF_EN
-#define	ISPIF_DIS	@$.ISPIF_DIS
-#define	ISPIF_CLR	@$.ISPIF_CLR
+#define	ISPIF_EN	@$ISPIF_EN
+#define	ISPIF_DIS	@$ISPIF_DIS
+#define	ISPIF_CLR	@$ISPIF_CLR
 @SIM.INCLUDE+=
 #include "qspiflashsim.h"
 @SIM.DEFNS+=

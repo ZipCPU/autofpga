@@ -39,9 +39,9 @@
 ################################################################################
 ##
 ##
-FLASH:= wbqspiflash.v llqspi.v flash_config.v
-
 BKRAM:= memdev.v
+
+FLASH:= wbqspiflash.v llqspi.v flash_config.v
 
 WBMOUSE:= wbmouse.v llps2.v
 
@@ -60,5 +60,5 @@ BUSPICD := cpu
 BUSPIC  := $(addprefix $(BUSPICD)/,icontrol.v)
 WBUART:= wbuart.v ufifo.v rxuart.v txuart.v
 
-VFLIST :=  $(FLASH) $(BKRAM) $(WBMOUSE) $(SDSPI) $(ZIPCPU) $(RTCDATE) $(BUSDLY) $(BUSPIC) $(WBUART)
+VFLIST := main.v  $(BKRAM) $(FLASH) $(WBMOUSE) $(SDSPI) $(ZIPCPU) $(RTCDATE) $(BUSDLY) $(BUSPIC) $(WBUART)
 AUTOVDIRS :=  -y $(ZIPCPUD)  -y $(BUSDLYD)  -y $(BUSPICD) 
