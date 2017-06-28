@@ -54,6 +54,7 @@
 #include "plist.h"
 #include "bldregdefs.h"
 #include "businfo.h"
+#include "subbus.h"
 
 extern	int	gbl_err;
 extern	FILE	*gbl_dump;
@@ -70,11 +71,25 @@ int	get_longest_defname(PLIST &plist) {
 		MAPDHASH::iterator	kvp;
 		int	nregs = 0;
 
-		if (!getvalue(*plist[i]->p_phash, KYREGS_N, nregs))
+		if (plist[i]->isbus()) {
+			SUBBUS	*sbp;
+			sbp = (SUBBUS *)(plist[i]);
+			assert(sbp->p_slave_bus);
+			assert(sbp->p_master_bus);
+			if (!sbp->p_slave_bus->need_translator(sbp->p_master_bus)) {
+				unsigned k = get_longest_defname(*sbp->p_master_bus->m_plist);
+				if (k > longest_defname)
+					longest_defname = k;
+			}
+		}
+
+
+		if (!getvalue(plist[i]->p_phash, KYREGS_N, nregs))
 			continue;
 
 		for(int j=0; j<nregs; j++) {
 			char	nstr[32];
+
 			sprintf(nstr, "%d", j);
 			kvp = findkey(*plist[i]->p_phash,str=STRING("REGS.")+nstr);
 			if (kvp == plist[i]->p_phash->end()) {
@@ -133,8 +148,9 @@ void write_regdefs(FILE *fp, PLIST &plist, unsigned longest_defname) {
 
 		// Walk through each of the defined registers.  There will be
 		// @REGS.N registers defined.
-		if (!getvalue(*plist[i]->p_phash, KYREGS_N, nregs)) {
-			fprintf(stderr, "WARNING: REGS.N not found in %s\n", plist[i]->p_name->c_str());
+		if ((gbl_dump)
+			&&(!getvalue(*plist[i]->p_phash, KYREGS_N, nregs))) {
+			fprintf(gbl_dump, "REGS.N not found in %s\n", plist[i]->p_name->c_str());
 			continue;
 		}
 
@@ -241,11 +257,13 @@ void	build_regdefs_h(  MAPDHASH &master, FILE *fp, STRING &fname) {
 	// plist = getlist(KYDBGBUS);
 	strp = new STRING("wb");
 	BUSINFO	*bi = find_bus(strp);
+	assert(bi);
 	delete strp;
 
 	// Get the list of peripherals
 	plist = bi->m_plist;
 
+	assert(plist);
 	longest_defname = get_longest_defname(*plist);
 	write_regdefs(fp, *plist, longest_defname);
 
@@ -333,6 +351,18 @@ unsigned	get_longest_uname(PLIST &plist) {
 
 	for(unsigned i=0; i<plist.size(); i++) {
 		MAPDHASH::iterator	kvp;
+
+		if (plist[i]->isbus()) {
+			SUBBUS	*sbp;
+			sbp = (SUBBUS *)(plist[i]);
+			assert(sbp->p_slave_bus);
+			assert(sbp->p_master_bus);
+			if (!sbp->p_slave_bus->need_translator(sbp->p_master_bus)) {
+				unsigned k = get_longest_uname(*sbp->p_master_bus->m_plist);
+				if (k > longest_uname)
+					longest_uname = k;
+			}
+		}
 
 		int nregs = 0;
 		if (!getvalue(*plist[i]->p_phash, KYREGS_N, nregs))
@@ -442,6 +472,7 @@ void	build_regdefs_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 
 	strp = new STRING("wb");
 	BUSINFO	*bi = find_bus(strp);
+	assert(bi);
 	delete strp;
 
 	// Get the list of peripherals
@@ -453,6 +484,7 @@ void	build_regdefs_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 	unsigned	longest_uname = 0;
 
 	// Find the length of the longest register name
+	assert(plist);
 	longest_defname = get_longest_defname(*plist);
 	// Find the length of the longest user name string
 	longest_uname = get_longest_uname(*plist);

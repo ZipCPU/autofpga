@@ -60,9 +60,6 @@
 extern	int	gbl_err;
 extern	FILE	*gbl_dump;
 
-// PLIST	plist, slist, dlist, mlist;
-
-
 
 extern	bool	isperipheral(MAPT &pmap);
 extern	bool	isperipheral(MAPDHASH &phash);
@@ -116,43 +113,33 @@ bool	PERIPH::ismemory(void) {
 }
 
 unsigned PERIPH::get_slave_address_width(void) {
+	/*
+	MAPDHASH::iterator	kvbus, kvvalue;
+	kvbus = findkey(*p_phash, KYMASTER_BUS);
+	if ((kvbus != p_phash->end())&&(kvbus->second.m_typ == MAPT_MAP)) {
+		if (getstring(kvbus->
+	}
+	*/
+	if (p_awid != nextlg(naddr()))
+		p_awid = nextlg(naddr());
 	return p_awid;
 }
 
-//
-// Count the number of peripherals that are children of this top level hash,
-// and count them by type as well.
-//
-int count_peripherals(MAPDHASH &info) {
-	MAPDHASH::iterator	kvpair, kvptype;
-	kvpair = info.find(KYNP);
-	if ((kvpair != info.end())&&((*kvpair).second.m_typ == MAPT_INT)) {
-		return (*kvpair).second.u.m_v;
-	}
-
-	unsigned	count = 0, np_single=0, np_double=0, np_memory=0;
-	for(kvpair = info.begin(); kvpair != info.end(); kvpair++) {
-		STRINGP	strp;
-		if (isperipheral(kvpair->second)) {
-			count++;
-
-			// Let see what type of peripheral this is
-			strp = getstring(kvpair->second, KYSLAVE_TYPE);
-			if (KYSINGLE == *strp) {
-				np_single++;
-			} else if (KYDOUBLE == *strp) {
-				np_double++;
-			} else if (KYMEMORY == *strp)
-				np_memory++;
+unsigned PERIPH::naddr(void) {
+	int	value;
+	if (getvalue(*p_phash, KYNADDR, value)) {
+		if (0 == p_naddr) {
+			p_naddr = value;
+			p_awid  = nextlg(p_naddr);
+		} else if ((int)p_naddr != value) {
+			fprintf(stderr,
+				"WARNING: %s's number of addresses changed\n",
+				p_name->c_str());
+			p_naddr = value;
+			p_awid  = nextlg(p_naddr);
 		}
 	}
-
-	setvalue(info, KYNP, count);
-	setvalue(info, KYNPSINGLE, np_single);
-	setvalue(info, KYNPDOUBLE, np_double);
-	setvalue(info, KYNPMEMORY, np_memory);
-
-	return count;
+	return p_naddr;
 }
 
 //
@@ -206,57 +193,29 @@ int	PLIST::add(MAPDHASH *phash) {
 	}
 
 	if (!getvalue(*phash, KYNADDR, naddr)) {
+		/*
 		fprintf(stderr,
 		"WARNING: Skipping peripheral %s with no addresses\n",
 			pname->c_str());
 		return -1;
+		*/
+		naddr = 0;
 	}
 	PERIPHP p = new PERIPH;
 	p->p_base = 0;
 	p->p_naddr = naddr;
-	p->p_awid  = nextlg(p->p_naddr);
+	p->p_awid  = (0 == naddr) ? nextlg(p->p_naddr) : 0;
 	p->p_phash = phash;
 	p->p_name  = pname;
 	p->p_slave_bus  = NULL;
 	p->p_master_bus = NULL;
 
 	push_back(p);
-	if (p->issingle())
-		m_has_slist = true;
-	else if (p->isdouble())
-		m_has_dlist = true;
 	return size()-1;
 }
 int	PLIST::add(PERIPHP p) {
 	push_back(p);
 	return size()-1;
-}
-
-/*
- * build_plist
- *
- * Collect our peripherals into one of four lists.  This allows us to have
- * ordered access through the peripherals later.
- */
-PLIST plist;
-void	build_plist(MAPDHASH &info) {
-	MAPDHASH::iterator	kvpair;
-
-	int np = count_peripherals(info);
-
-	if (np < 1) {
-		if (gbl_dump)
-			fprintf(gbl_dump, "Only %d peripherals\n", np);
-		return;
-	}
-
-	for(kvpair = info.begin(); kvpair != info.end(); kvpair++) {
-		if (isperipheral(kvpair->second)) {
-			MAPDHASH	*phash = kvpair->second.u.m_m;
-
-			plist.add(phash);
-		}
-	}
 }
 
 bool	PLIST::get_base_address(MAPDHASH *phash, unsigned &base) {
@@ -308,65 +267,6 @@ unsigned	PLIST::min_addr_size_octets(unsigned np,
 
 void	PLIST::assign_addresses(unsigned dwidth, unsigned nullsz) {
 	unsigned daddr_abits = nextlg(dwidth/8);
-
-	/*
-	if ((m_has_slist)||(m_has_dlist)) {
-		unsigned	ns, nd;
-		PLIST	*slist, *dlist;
-
-		sname = new STRING(*m_slave_bus->m_name + STRING("_sio"));
-		dname = new STRING(*m_slave_bus->m_name + STRING("_dio"));
-
-		if (gbl_hash->find(sname)==NULL) {
-			gbl_hash->insert(sname, shash = genhash(sname));
-		}
-
-		if (gbl_hash->find(dname)==NULL) {
-			gbl_hash->insert(dname, dhash = genhash(dname));
-		}
-
-		slist = new SUBBUS(info, name, BUSINFO *subbus);
-		dlist = new SUBBUS();
-
-		for(int i=0; i<size(); i++) {
-			if ((*this)[i]->issingle()) {
-				slist->add((*this)[i]->p_phash);
-				ns++;
-			}
-		} for(int i=0; i<size(); i++) {
-			if ((*this)[i]->isdouble()) {
-				slist->add((*this)[i]->p_phash);
-				nd++;
-			}
-		}
-
-		if ((ns > 2)&&(ns != size())) {
-			for(iterator k=begin(); k!= end(); k++)
-				if ((*k)->issingle()) {
-					slist->add(*k);
-					erase(k);
-					k = begin();
-				}
-
-			add(new SUBBUS(slist, STRING("sio")));
-		} else {
-			delete slist;
-		}
-
-		if ((nd > 2)&&(nd != size())) {
-			for(iterator k=begin(); k!= end(); k++)
-				if ((*k)->issingle()) {
-					dlist->add(*k);
-					erase(k);
-					k = begin();
-				}
-
-			add(new SUBBUS(slist, STRING("dio")));
-		} else {
-			delete dlist;
-		}
-	}
-	*/
 
 	// Use daddr_abits to convert our addresses between bus addresses and
 	// byte addresses.  The address width involved is in bus words,
@@ -469,14 +369,14 @@ void	PLIST::assign_addresses(unsigned dwidth, unsigned nullsz) {
 				fprintf(gbl_dump, "  %20s -> %08x & 0x%08x\n",
 					(*this)[i]->p_name->c_str(),
 					(*this)[i]->p_base,
-					(*this)[i]->p_mask);
+					(*this)[i]->p_mask << daddr_abits);
 				fflush(gbl_dump);
 			}
 
 			if ((*this)[i]->p_phash) {
 				MAPDHASH	*ph = (*this)[i]->p_phash;
 				setvalue(*ph, KYBASE, (*this)[i]->p_base);
-				setvalue(*ph, KYMASK, (*this)[i]->p_mask);
+				setvalue(*ph, KYMASK, (*this)[i]->p_mask << daddr_abits);
 			}
 		} m_address_width = nextlg(start_address);
 	}

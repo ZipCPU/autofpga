@@ -68,7 +68,7 @@ extern	FILE	*gbl_dump;
 // To be a bus master, it must have a @MTYPE field.
 //
 bool	isbusmaster(MAPDHASH &phash) {
-	return (phash.end() != phash.find(KYMASTER_TYPE));
+	return (NULL != getstring(phash, KYMASTER_TYPE));
 }
 
 //

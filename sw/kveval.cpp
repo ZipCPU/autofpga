@@ -314,11 +314,8 @@ bool	resolve_ast_expressions(MAPDHASH &exmap) {
 
 	if (kvstr != exmap.end())
 		return false;
-
-	if (kvexpr == exmap.end()) {
-		printf("No-Expr found\n");
+	if (kvexpr == exmap.end())
 		return false;
-	}
 
 	if ((kvval != exmap.end())&&(kvval->second.m_typ == MAPT_INT)) {
 		if((kvfmt != exmap.end())&&(kvfmt->second.m_typ == MAPT_STRING))

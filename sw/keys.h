@@ -48,7 +48,7 @@ extern const	STRING	KYCMDLINE;
 extern const	STRING	KYSUBD;	// Output subdirectory
 extern const	STRING	KYPATH;
 extern const	STRING	KYSUBD;
-extern const	STRING	KYBUS_ADDRESS_WIDTH;
+// extern const	STRING	KYBUS_ADDRESS_WIDTH;
 extern const	STRING	KYSKIPADDR;
 extern const	STRING	KYRESET_ADDRESS;
 // For subclassing
@@ -72,7 +72,9 @@ extern const	STRING	KYDEPENDS;
 extern const	STRING	KYSLAVE;
 extern const	STRING	KYSLAVE_TYPE;
 extern const	STRING	KYSLAVE_BUS;
+extern const	STRING	KYMASTER;
 extern const	STRING	KYMASTER_TYPE;
+extern const	STRING	KYMASTER_BUS;
 //
 extern const	STRING	KYBASE;
 extern const	STRING	KYMASK;
@@ -172,6 +174,7 @@ extern	const	STRING	KYBUS,
 			KYBUS_NULLSZ,
 			KY_TYPE,
 			KY_WIDTH,
+			KY_AWID,
 			KY_CLOCK,
 			KY_NULLSZ,
 			KYDEFAULT_BUS;

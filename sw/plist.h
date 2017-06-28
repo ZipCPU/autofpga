@@ -70,18 +70,16 @@ public:
 	virtual	bool	isbus(void);
 	virtual	bool	ismemory(void);
 	virtual unsigned get_slave_address_width(void);
+		unsigned awid(void) { return get_slave_address_width(); }
+		unsigned naddr(void);
 };
 
 typedef	PERIPH *PERIPHP;
 
 class	PLIST : public std::vector<PERIPHP> {
-	bool	m_has_slist, m_has_dlist;
 public:
-	PLIST(void) {
-		m_has_slist = false;
-		m_has_dlist = false;
-	}
-	STRINGP	m_stype;
+	PLIST(void) {}
+	STRINGP		m_stype;
 	unsigned	m_address_width;
 
 	void	set_stype(STRING &stype);
@@ -91,7 +89,8 @@ public:
 	int	add(PERIPHP p);
 	void	assign_addresses(unsigned dwidth, unsigned nullsz = 0);
 	bool	get_base_address(MAPDHASH *phash, unsigned &base);
-	unsigned	min_addr_size_bytes(unsigned, unsigned, unsigned nullsz=0);
+	unsigned	min_addr_size_bytes(unsigned, unsigned,
+				unsigned nullsz=0);
 	unsigned	min_addr_size_octets(unsigned, unsigned,
 				unsigned nullsz=0,
 				unsigned daddr=2);
@@ -99,7 +98,6 @@ public:
 
 // A pointer to a set of peripherals
 typedef	PLIST *PLISTP;
-// extern	PLIST	plist, slist, dlist, mlist;
 
 //
 // Count the number of peripherals that are children of this top level hash,

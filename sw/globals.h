@@ -45,6 +45,5 @@
 extern	int		gbl_err;
 extern	FILE		*gbl_dump;
 extern	MAPDHASH	*gbl_hash;
-extern	const bool	DELAY_ACK;
 
 #endif // GLOBALS_H

@@ -40,6 +40,7 @@
 #include "businfo.h"
 #include "subbus.h"
 #include "bitlib.h"
+#include "globals.h"
 
 SUBBUS::SUBBUS(MAPDHASH *info, STRINGP subname, BUSINFO *subbus) {
 	p_base = 0;
@@ -50,7 +51,6 @@ SUBBUS::SUBBUS(MAPDHASH *info, STRINGP subname, BUSINFO *subbus) {
 	p_sbaw  = 0;
 	p_name  = subname;
 	p_phash = info;
-	p_phash = NULL;
 	p_master_bus = subbus;
 }
 
@@ -84,6 +84,13 @@ unsigned SUBBUS::get_base_address(MAPDHASH *phash) {
 void	SUBBUS::assign_addresses(void) {
 	assert(p_master_bus);
 	assert(p_master_bus != p_slave_bus);
+	fprintf(gbl_dump, "SUBBUS::Assign-addresses\n");
 	p_master_bus->assign_addresses();
+	fprintf(gbl_dump, "SUBBUS::Assign-addresses ---- done\n");
 }
 
+bool	SUBBUS::need_translator(void) {
+	assert(p_slave_bus);
+	assert(p_master_bus);
+	return p_slave_bus->need_translator(p_master_bus);
+}

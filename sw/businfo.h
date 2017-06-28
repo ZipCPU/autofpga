@@ -47,75 +47,85 @@
 #include "parser.h"
 #include "mapdhash.h"
 #include "plist.h"
+#include "clockinfo.h"
 
 class	BUSINFO {
 	bool	m_addresses_assigned;
 public:
-	PLISTP    m_plist;
+	PLISTP    m_plist, m_slist, m_dlist;
 	STRINGP   m_name, m_prefix, m_type;
-	MAPDHASH *m_clock; // , *m_bhash;
+	CLOCKINFO *m_clock; // , *m_bhash;
 	int	m_data_width, m_address_width, m_nullsz;
+	int	m_num_single, m_num_double;
 	bool	m_has_slist, m_has_dlist;
+	MAPDHASH	*m_hash;
 
 	BUSINFO(void) { // MAPDHASH *hash) {
 		// m_bhash  = hash;
 		m_plist  = NULL;
+		m_slist  = NULL;
+		m_dlist  = NULL;
 		m_name   = NULL;
 		m_prefix = NULL;
 		m_type   = NULL;
 		m_clock  = NULL;
+		m_hash   = NULL;
 		m_nullsz = 0;
 		m_data_width = 0;
 		m_addresses_assigned = false;
 		m_address_width = 0;
+		m_num_single = 0;
+		m_num_double = 0;
 	}
 
 	bool	get_base_address(MAPDHASH *phash, unsigned &base);
 	void	assign_addresses(void);
 	int	address_width(void);
 	unsigned	min_addr_size(unsigned np, unsigned mina);
-	PERIPH *add(PERIPHP p) {
-		int	pi;
+	void	add(void);
+	PERIPH *add(PERIPHP p);
+	PERIPH *add(MAPDHASH *phash);
+	PLIST	*create_sio(void);
+	PLIST	*create_dio(void);
 
-		if (!m_plist)
-			m_plist = new PLIST();
-		pi = m_plist->add(p);
-		p = (*m_plist)[pi];
-		p->p_slave_bus = this;
+	void	countsio(MAPDHASH *phash);
 
-		return p;
-	}
-	PERIPH *add(MAPDHASH *phash) {
-		PERIPH	*p;
-		int	pi;
-
-		if (!m_plist)
-			m_plist = new PLIST();
-		pi = m_plist->add(phash);
-		p = (*m_plist)[pi];
-		p->p_slave_bus = this;
-
-		return p;
-	}
 	bool	need_translator(BUSINFO *b);
+	void	writeout_bus_slave_defns_v(FILE *fp);
+	void	writeout_bus_master_defns_v(FILE *fp);
+	void	writeout_bus_defns_v(FILE *fp);
+	void	writeout_bus_select_v(FILE *fp);
+	void	writeout_bus_logic_v(FILE *fp);
+
+	void	writeout_no_slave_v(FILE *fp, STRINGP prefix);
+	void	writeout_no_master_v(FILE *fp, STRINGP prefix);
+	bool	ismember_of(MAPDHASH *phash);
 };
 
 class	BUSLIST : public std::vector<BUSINFO *>	{
 public:
 	BUSINFO *find_bus(STRINGP name);
+	BUSINFO *find_bus(MAPDHASH *hash);
 	unsigned	get_base_address(MAPDHASH *phash);
 	void	addperipheral(MAPDHASH *phash);
 	void	addperipheral(MAPT &map);
 
-	void	adddefault(STRINGP defname);
+	void	adddefault(MAPDHASH &master, STRINGP defname);
 
-	void	addbus(MAPDHASH *phash);
-	void	addbus(MAPT &map);
+	void	addbus(MAPDHASH &master, MAPDHASH *phash);
+	void	addbus(MAPDHASH &master, MAPT &map);
+	void	countsio(MAPDHASH *phash);
+	void	countsio(MAPT &map);
+	BUSINFO *find_bus_of_peripheral(MAPDHASH *phash);
 };
 
 extern	void	build_bus_list(MAPDHASH &master);
-extern	void	mkselect2(FILE *, MAPDHASH &master);
+extern	BUSINFO *find_bus_of_peripheral(MAPDHASH *phash);
+extern	BUSINFO *find_bus(MAPDHASH *hash);
 extern	BUSINFO *find_bus(STRINGP name);
 extern	bool	need_translator(BUSINFO *a, BUSINFO *b);
+extern	void	writeout_bus_defns_v(FILE *fp);
+extern	void	writeout_bus_select_v(FILE *fp);
+extern	void	writeout_bus_logic_v(FILE *fp);
 
 #endif	// BUSINFO_H

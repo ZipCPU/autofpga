@@ -42,6 +42,7 @@
 #include "businfo.h"
 
 class	SUBBUS : public PERIPH {
+public:
 	SUBBUS(MAPDHASH *info, STRINGP subname, BUSINFO *subbus);
 	virtual	bool	isbus(void);
 	virtual	unsigned	get_slave_address_width(void);
@@ -55,6 +56,7 @@ class	SUBBUS : public PERIPH {
 	unsigned get_base_address(MAPDHASH *phash);
 
 	void	assign_addresses(void);
+	bool	need_translator(void);
 };
 
 #endif

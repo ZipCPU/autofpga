@@ -564,8 +564,10 @@ MAPDHASH::iterator findkey_aux(MAPDHASH &master, const STRING &ky, const STRING 
 			subfm = (*subloc).second;
 
 			if (subfm.m_typ != MAPT_MAP) {
+				/*
 				fprintf(stderr, "ERR: MAP[%s.%s] isnt a map\n",
 					pre.c_str(), mkey.c_str());
+				*/
 				// assert(subfm->m_typ == MAPT_MAP)
 				return master.end();
 			}
@@ -599,6 +601,11 @@ MAPDHASH *getmap(MAPDHASH &master, const STRING &ky) {
 	else if (r->second.m_typ != MAPT_MAP)
 		return NULL;
 	return r->second.u.m_m;
+}
+
+MAPDHASH *getmap(MAPDHASH *mp, const STRING &ky) {
+	assert(mp);
+	return getmap(*mp, ky);
 }
 
 STRINGP getstring(MAPDHASH &m) {
@@ -636,6 +643,11 @@ STRINGP getstring(MAPDHASH &master, const STRING &ky) {
 		return NULL;
 	}
 	return r->second.u.m_s;
+}
+
+STRINGP getstring(MAPDHASH *m, const STRING &ky) {
+	assert(m);
+	return getstring(*m, ky);
 }
 
 STRINGP getstring(MAPT &m, const STRING &ky) {
@@ -691,6 +703,20 @@ void setstring(MAPDHASH &master, const STRING &ky, STRINGP strp) {
 	} else if (kvpair->second.m_typ == MAPT_STRING) {
 		kvpair->second.u.m_s = strp;
 	}
+}
+
+void setstring(MAPDHASH &master, const STRING &ky, STRING &str) {
+	return setstring(master, ky, new STRING(str));
+}
+
+void setstring(MAPDHASH *mp, const STRING &ky, STRINGP strp) {
+	assert(mp);
+	return setstring(*mp, ky, strp);
+}
+
+void setstring(MAPDHASH *mp, const STRING &ky, STRING &str) {
+	assert(mp);
+	return setstring(*mp, ky, new STRING(str));
 }
 
 void	setstring(MAPT &m, const STRING &ky, STRINGP strp) {
@@ -759,6 +785,11 @@ bool getvalue(MAPDHASH &master, const STRING &ky, int &value) {
 	}
 	value = r->second.u.m_v;
 	return true;
+}
+
+bool getvalue(MAPDHASH *mp, const STRING &ky, int &value) {
+	assert(mp);
+	return getvalue(*mp, ky, value);
 }
 
 void	setvalue(MAPDHASH &master, const STRING &ky, int value) {

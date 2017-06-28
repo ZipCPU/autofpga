@@ -271,21 +271,6 @@ typedef	std::vector<PICP>	PICLIST;
 PICLIST	piclist;
 unsigned	unusedmsk;
 
-
-// Look up the number of bits in the address bus of the given hash
-int	get_address_width(MAPDHASH &info) {
-	MAPDHASH::iterator	kvpair;
-	const int DEFAULT_BUS_ADDRESS_WIDTH = 30;	// In log_2 octets
-	int	baw = DEFAULT_BUS_ADDRESS_WIDTH;
-
-	if (getvalue(info, KYBUS_ADDRESS_WIDTH, baw))
-		return baw;
-
-	setvalue(info, KYBUS_ADDRESS_WIDTH, DEFAULT_BUS_ADDRESS_WIDTH);
-	reeval(info);
-	return DEFAULT_BUS_ADDRESS_WIDTH;
-}
-
 // Return the number of interrupt controllers within this design.  If no such
 // field/tag exists, count the number and add it to the hash.
 int count_pics(MAPDHASH &info) {
@@ -307,39 +292,6 @@ int count_pics(MAPDHASH &info) {
 	return npics;
 }
 
-
-//
-// assign_addresses
-//
-// Assign addresses to all of our peripherals, given a first address to start
-// from.  The first address helps to insure that the NULL address creates a
-// proper error (as it should).
-//
-/*
-void assign_addresses(MAPDHASH &info, unsigned first_address = 0x400) {
-	unsigned	start_address = first_address;
-	MAPDHASH::iterator	kvpair;
-
-	int np = count_peripherals(info);
-	// int baw = count_peripherals(info);	// log_2 octets
-
-	if (np < 1) {
-		return;
-	}
-
-	if (gbl_dump)
-		fprintf(gbl_dump, "// Assigning addresses to the S-LIST\n");
-
-	// Assign bus addresses to the more generic peripherals
-	if (gbl_dump) {
-		fprintf(gbl_dump, "// Assigning addresses to the P-LIST (all other addresses)\n");
-		fprintf(gbl_dump, "// Starting from %08x\n", start_address);
-	}
-
-	assign_addresses();
-	reeval(info);
-}
-*/
 
 void	assign_int_to_pics(const STRING &iname, MAPDHASH &ihash) {
 	STRINGP	picname;
@@ -591,14 +543,14 @@ void	build_board_ld(   MAPDHASH &master, FILE *fp, STRING &fname) {
 			name = mlist[i]->p_name;
 		fprintf(fp,"\t%8s(%2s) : ORIGIN = 0x%08x, LENGTH = 0x%08x\n",
 			name->c_str(), (perm)?(perm->c_str()):"r",
-			mlist[i]->p_base, (mlist[i]->p_naddr<<2));
+			mlist[i]->p_base, (mlist[i]->naddr()<<2));
 
 		// Find our bigest and fastest memories
 		if (tolower(perm->c_str()[0]) != 'w')
 			continue;
 		if (!bigmem)
 			bigmem = mlist[i];
-		else if ((bigmem)&&(mlist[i]->p_naddr > bigmem->p_naddr)) {
+		else if ((bigmem)&&(mlist[i]->naddr() > bigmem->naddr())) {
 			bigmem = mlist[i];
 		}
 	}
@@ -852,36 +804,12 @@ void	build_toplevel_v( MAPDHASH &master, FILE *fp, STRING &fname) {
 
 }
 
-
-void	mkselect(FILE *fp, MAPDHASH &master, const STRING &subsel) {
-/*
-	const	char	*addrbus = "wb_addr";
-	int	sbaw;
-
-	BUSINFO	*bi = find_bus(new STRING("wb"));
-	plist = bi->m_plist;
-	sbaw  = bi->address_width();
-
-	// use_skipaddr = false;
-	sbaw = get_address_width(master) - 2;	// words
-
-	for(unsigned i=0; i<plist.size(); i++) {
-		const char	*pfx = plist[i]->p_name->c_str();
-
-		fprintf(fp, "// \tassign\t%12s_sel = ", pfx);
-		fprintf(fp, ");\n");
-	}
-*/
-}
-
 void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 	MAPDHASH::iterator	kvpair, kvaccess, kvsearch;
 	STRING	str, astr, sellist, acklist, siosel_str, diosel_str;
 	int		first;
-	unsigned	nsel = 0, nacks = 0, baw;
 
 	legal_notice(master, fp, fname);
-	baw = get_address_width(master);
 
 	// Include a legal notice
 	// Build a set of ifdefs to turn things on or off
@@ -953,22 +881,6 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 			fprintf(fp, "%s", strp->c_str());
 	}
 
-	// Declare Bus master data
-	fprintf(fp, "\n\n");
-	fprintf(fp, "\t//\n\t// Declaring wishbone master bus data\n\t//\n");
-	fprintf(fp, "\twire\t\twb_cyc, wb_stb, wb_we, wb_stall, wb_err;\n");
-	if (DELAY_ACK) {
-		fprintf(fp, "\treg\twb_ack;\t// ACKs delayed by extra clock\n");
-	} else {
-		fprintf(fp, "\twire\twb_ack;\n");
-	}
-	fprintf(fp, "\twire\t[(%d-1):0]\twb_addr;\n", baw);
-	fprintf(fp, "\twire\t[31:0]\twb_data;\n");
-	fprintf(fp, "\treg\t[31:0]\twb_idata;\n");
-	fprintf(fp, "\twire\t[3:0]\twb_sel;\n");
-
-	fprintf(fp, "\n\n");
-
 	fprintf(fp,
 	"\n\n"
 	"\t//\n\t// Declaring interrupt lines\n\t//\n"
@@ -1009,60 +921,6 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 	}
 
 
-	// Declare bus-master data
-	fprintf(fp,
-	"\n\n"
-	"\t//\n\t// Declaring Bus-Master data, internal wires and registers\n\t//\n"
-	"\t// These declarations come from the various components values\n"
-	"\t// given under the @MAIN.DEFNS key, for those components with\n"
-	"\t// an MTYPE flag.\n\t//\n");
-	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
-		STRINGP	defnstr;
-		if (!isbusmaster(kvpair->second))
-			continue;
-		defnstr = getstring(*kvpair->second.u.m_m, KYMAIN_DEFNS);
-		if (defnstr)
-			fprintf(fp, "%s", defnstr->c_str());
-	}
-
-	// Declare peripheral data
-	fprintf(fp,
-	"\n\n"
-	"\t//\n\t// Declaring Peripheral data, internal wires and registers\n\t//\n"
-	"\t// These declarations come from the various components values\n"
-	"\t// given under the @MAIN.DEFNS key, for those components with a\n"
-	"\t// PTYPE key but no MTYPE key.\n\t//\n");
-	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
-		STRINGP	defnstr;
-		if (isbusmaster(kvpair->second))
-			continue;
-		if (!isperipheral(kvpair->second))
-			continue;
-		defnstr = getstring(*kvpair->second.u.m_m, KYMAIN_DEFNS);
-		if (defnstr)
-			fprintf(fp, "%s", defnstr->c_str());
-	}
-
-	// Declare other data
-	fprintf(fp,
-	"\n\n"
-	"\t//\n\t// Declaring other data, internal wires and registers\n\t//\n"
-	"\t// These declarations come from the various components values\n"
-	"\t// given under the @MAIN.DEFNS key, but which have neither PTYPE\n"
-	"\t// nor MTYPE keys.\n\t//\n");
-	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
-		STRINGP	defnstr;
-		if (isbusmaster(kvpair->second))
-			continue;
-		if (isperipheral(kvpair->second))
-			continue;
-		if (kvpair->second.m_typ != MAPT_MAP)
-			continue;
-		defnstr = getstring(*kvpair->second.u.m_m, KYMAIN_DEFNS);
-		if (defnstr)
-			fprintf(fp, "%s", defnstr->c_str());
-	}
-
 	// Declare interrupt vector wires.
 	fprintf(fp,
 	"\n\n"
@@ -1092,291 +950,29 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 		}
 	}
 
-	// Declare wishbone lines
-	fprintf(fp, "\n"
-	"\t// Declare those signals necessary to build the bus, and detect\n"
-	"\t// bus errors upon it.\n"
-	"\t//\n"
-	"\twire\tnone_sel;\n"
-	"\treg\tmany_sel, many_ack;\n"
-	"\treg\t[31:0]\tr_bus_err;\n");
-	fprintf(fp, "\n"
-	"\t//\n"
-	"\t// Wishbone master wire declarations\n"
-	"\t//\n"
-	"\t// These are given for every configuration file with an\n"
-	"\t// @SLAVE.MASTER tag, and the names are prefixed by whatever\n"
-	"\t// is in the @PREFIX tag.\n"
-	"\t//\n"
-	"\n");
-	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
-		if (!isbusmaster(kvpair->second))
-			continue;
-
-		STRINGP	strp = getstring(*kvpair->second.u.m_m, KYPREFIX);
-		const char	*pfx = strp->c_str();
-
-		fprintf(fp, "\twire\t\t%s_cyc, %s_stb, %s_we, %s_ack, %s_stall, %s_err;\n",
-			pfx, pfx, pfx, pfx, pfx, pfx);
-		fprintf(fp, "\twire\t[(%d-1):0]\t%s_addr;\n", baw, pfx);
-		fprintf(fp, "\twire\t[31:0]\t%s_data, %s_idata;\n", pfx, pfx);
-		fprintf(fp, "\twire\t[3:0]\t%s_sel;\n", pfx);
-		fprintf(fp, "\n");
-	}
-
-	fprintf(fp, "\n"
-	"\t//\n"
-	"\t// Wishbone slave wire declarations\n"
-	"\t//\n"
-	"\t// These are given for every configuration file with a @PTYPE\n"
-	"\t// tag, and the names are given by the @PREFIX tag.\n"
-	"\t//\n"
-	"\n");
-	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
-		if (kvpair->second.m_typ != MAPT_MAP)
-			continue;
-		if (!isperipheral(*kvpair->second.u.m_m))
-			continue;
-
-		STRINGP	strp = getstring(*kvpair->second.u.m_m, KYPREFIX);
-		const char	*pfx = strp->c_str();
-
-		fprintf(fp, "\twire\t%s_ack, %s_stall, %s_sel;\n", pfx, pfx, pfx);
-		fprintf(fp, "\twire\t[31:0]\t%s_data;\n", pfx);
-		fprintf(fp, "\n");
-	}
+	writeout_bus_defns_v(fp);
 
 	// Define the select lines
 	fprintf(fp, "\n"
-	"\t// Wishbone peripheral address decoding\n"
-	"\t// This particular address decoder decodes addresses for all\n"
-	"\t// peripherals (components with a @PTYPE tag), based upon their\n"
-	"\t// NADDR (number of addresses required) tag\n"
-	"\t//\n");
-	fprintf(fp, "\n");
-
-	// mkselect(fp, master, plist, STRING(""), "wb_skip");
-
-	PLIST	*plist;
-	plist = find_bus(new STRING("wb"))->m_plist;
-
-	if (plist->size()>0) {
-		if (sellist == "")
-			sellist = (*(*plist)[0]->p_name) + "_sel";
-		else
-			sellist = (*(*plist)[0]->p_name) + "_sel, " + sellist;
-	} for(unsigned i=1; i<plist->size(); i++)
-		sellist = (*(*plist)[i]->p_name)+"_sel, "+sellist;
-	nsel += plist->size();
-
-	//
-	mkselect2(fp, master);
-
-	// Define none_sel
-	fprintf(fp, "\tassign\tnone_sel = (wb_stb)&&({ ");
-	fprintf(fp, "%s", sellist.c_str());
-	fprintf(fp, "} == 0);\n");
-
-	fprintf(fp, ""
 	"\t//\n"
-	"\t// many_sel\n"
-	"\t//\n"
-	"\t// This should *never* be true .... unless the address decoding logic\n"
-	"\t// is somehow broken.  Given that a computer is generating the\n"
-	"\t// addresses, that should never happen.  However, since it has\n"
-	"\t// happened to me before (without the computer), I test/check for it\n"
-	"\t// here.\n"
-	"\t//\n"
-	"\t// Devices are placed here as a natural result of the address\n"
-	"\t// decoding logic.  Thus, any device with a sel_ line will be\n"
-	"\t// tested here.\n"
-	"\t//\n");
-	fprintf(fp, "`ifdef\tVERILATOR\n\n");
+	"\t// Peripheral address decoding\n\t//\n");
 
-	fprintf(fp, "\talways @(*)\n");
-	fprintf(fp, "\t\tcase({%s})\n", sellist.c_str());
-	fprintf(fp, "\t\t\t%d\'h0: many_sel = 1\'b0;\n", nsel);
-	for(unsigned i=0; i<nsel; i++) {
-		fprintf(fp, "\t\t\t%d\'b", nsel);
-		for(unsigned j=0; j<nsel; j++)
-			fprintf(fp, (i==j)?"1":"0");
-		fprintf(fp, ": many_sel = 1\'b0;\n");
-	}
-	fprintf(fp, "\t\t\tdefault: many_sel = (wb_stb);\n");
-	fprintf(fp, "\t\tendcase\n");
+	writeout_bus_select_v(fp);
 
-	fprintf(fp, "\n`else\t// VERILATOR\n\n");
+	writeout_bus_logic_v(fp);
 
-	fprintf(fp, "\talways @(*)\n");
-	fprintf(fp, "\t\tcase({%s})\n", sellist.c_str());
-	fprintf(fp, "\t\t\t%d\'h0: many_sel <= 1\'b0;\n", nsel);
-	for(unsigned i=0; i<nsel; i++) {
-		fprintf(fp, "\t\t\t%d\'b", nsel);
-		for(unsigned j=0; j<nsel; j++)
-			fprintf(fp, (i==j)?"1":"0");
-		fprintf(fp, ": many_sel <= 1\'b0;\n");
-	}
-	fprintf(fp, "\t\t\tdefault: many_sel <= (wb_stb);\n");
-	fprintf(fp, "\t\tendcase\n");
-
-	fprintf(fp, "\n`endif\t// VERILATOR\n\n");
-
-
-
-
-	// Build a list of ACK signals
-	acklist = ""; nacks = 0;
-	if (plist->size() > 0) {
-		if (nacks > 0)
-			acklist = (*(*plist)[0]->p_name) + "_ack, " + acklist;
-		else
-			acklist = (*(*plist)[0]->p_name) + "_ack";
-		nacks++;
-	} for(unsigned i=1; i < plist->size(); i++) {
-		acklist = (*(*plist)[i]->p_name) + "_ack, " + acklist;
-		nacks++;
-	}
-
-	fprintf(fp, ""
-	"\t//\n"
-	"\t// many_ack\n"
-	"\t//\n"
-	"\t// It is also a violation of the bus protocol to produce multiply\n"
-	"\t// acks at once and on the same clock.  In that case, the bus\n"
-	"\t// can\'t decide which result to return.  Worse, if someone is waiting\n"
-	"\t// for a return value, that value will never come since another ack\n"
-	"\t// masked it.\n"
-	"\t//\n"
-	"\t// The other error that isn\'t tested for here, no would I necessarily\n"
-	"\t// know how to test for it, is when peripherals return values out of\n"
-	"\t// order.  Instead, I propose keeping that from happening by\n"
-	"\t// guaranteeing, in software, that two peripherals are not accessed\n"
-	"\t// immediately one after the other.\n"
-	"\t//\n");
-	{
-		fprintf(fp, "\talways @(posedge i_clk)\n");
-		fprintf(fp, "\t\tcase({%s})\n", acklist.c_str());
-		fprintf(fp, "\t\t\t%d\'h0: many_ack <= 1\'b0;\n", nacks);
-		for(unsigned i=0; i<nacks; i++) {
-			fprintf(fp, "\t\t\t%d\'b", nacks);
-			for(unsigned j=0; j<nacks; j++)
-				fprintf(fp, (i==j)?"1":"0");
-			fprintf(fp, ": many_ack <= 1\'b0;\n");
-		}
-		fprintf(fp, "\t\tdefault: many_ack <= (wb_cyc);\n");
-		fprintf(fp, "\t\tendcase\n");
-	}
-
-	fprintf(fp, ""
-	"\t//\n"
-	"\t// wb_ack\n"
-	"\t//\n"
-	"\t// The returning wishbone ack is equal to the OR of every component that\n"
-	"\t// might possibly produce an acknowledgement, gated by the CYC line.  To\n"
-	"\t// add new components, OR their acknowledgements in here.\n"
-	"\t//\n"
-	"\t// To return an ack here, a component must have a @PTYPE.  Acks from\n"
-	"\t// any @PTYPE SINGLE and DOUBLE components have been collected\n"
-	"\t// together into sio_ack and dio_ack respectively, which will appear.\n"
-	"\t// ahead of any other device acks.\n"
-	"\t//\n");
-
-	if (DELAY_ACK) {
-		fprintf(fp, "\talways @(posedge i_clk)\n\t\twb_ack <= "
-			"(wb_cyc)&&(|{%s});\n\n\n", acklist.c_str());
-	} else {
-		if (acklist.size() > 0) {
-			fprintf(fp, "\tassign\twb_ack = (wb_cyc)&&(|{%s});\n\n\n",
-				acklist.c_str());
-		} else
-			fprintf(fp, "\tassign\twb_ack = 1\'b0;\n\n\n");
-	}
-
-
-	// Define the stall line
-	if (plist->size() > 0) {
-		fprintf(fp,
-	"\t//\n"
-	"\t// wb_stall\n"
-	"\t//\n"
-	"\t// The returning wishbone stall line really depends upon what device\n"
-	"\t// is requested.  Thus, if a particular device is selected, we return \n"
-	"\t// the stall line for that device.\n"
-	"\t//\n"
-	"\t// Stall lines come from any component with a @PTYPE key and a\n"
-	"\t// @NADDR > 0.  Since those components of @PTYPE SINGLE or DOUBLE\n"
-	"\t// are not allowed to stall, they have been removed from this list\n"
-	"\t// here for simplicity.\n"
-	"\t//\n");
-
-		fprintf(fp, "\tassign\twb_stall = \n"
-			"\t\t  (wb_stb)&&(%6s_sel)&&(%6s_stall)",
-			(*plist)[0]->p_name->c_str(), (*plist)[0]->p_name->c_str());
-		for(unsigned i=1; i<plist->size(); i++)
-			fprintf(fp, "\n\t\t||(wb_stb)&&(%6s_sel)&&(%6s_stall)",
-				(*plist)[i]->p_name->c_str(),
-				(*plist)[i]->p_name->c_str());
-		fprintf(fp, ";\n\n\n");
-	} else
-		fprintf(fp, "\tassign\twb_stall = 1\'b0;\n\n\n");
-
-	// Define the bus error
-	fprintf(fp, ""
-	"\t//\n"
-	"\t// wb_err\n"
-	"\t//\n"
-	"\t// This is the bus error signal.  It should never be true, but practice\n"
-	"\t// teaches us otherwise.  Here, we allow for three basic errors:\n"
-	"\t//\n"
-	"\t// 1. STB is true, but no devices are selected\n"
-	"\t//\n"
-	"\t//	This is the null pointer reference bug.  If you try to access\n"
-	"\t//	something on the bus, at an address with no mapping, the bus\n"
-	"\t//	should produce an error--such as if you try to access something\n"
-	"\t//	at zero.\n"
-	"\t//\n"
-	"\t// 2. STB is true, and more than one device is selected\n"
-	"\t//\n"
-	"\t//	(This can be turned off, if you design this file well.  For\n"
-	"\t//	this line to be true means you have a design flaw.)\n"
-	"\t//\n"
-	"\t// 3. If more than one ACK is every true at any given time.\n"
-	"\t//\n"
-	"\t//	This is a bug of bus usage, combined with a subtle flaw in the\n"
-	"\t//	WB pipeline definition.  You can issue bus requests, one per\n"
-	"\t//	clock, and if you cross device boundaries with your requests,\n"
-	"\t//	you may have things come back out of order (not detected here)\n"
-	"\t//	or colliding on return (detected here).  The solution to this\n"
-	"\t//	problem is to make certain that any burst request does not cross\n"
-	"\t//	device boundaries.  This is a requirement of whoever (or\n"
-	"\t//	whatever) drives the bus.\n"
-	"\t//\n"
-	"\tassign	wb_err = ((wb_stb)&&(none_sel || many_sel))\n"
-				"\t\t\t\t|| ((wb_cyc)&&(many_ack));\n\n");
-
-	if (baw < 30) {
-		fprintf(fp, "\talways @(posedge i_clk)\n\t\tif (wb_err)\n\t\t\tr_bus_err <= { {(%d){1\'b0}}, wb_addr, 2\'b00 };\n\n", 30-baw);
-	} else if (baw == 30) {
-		fprintf(fp, "\talways @(posedge i_clk)\n\t\tif (wb_err)\n\t\t\tr_bus_err <= { wb_addr, 2\'b00 };\n\n");
-	} else if (baw == 31)
-		fprintf(fp, "\talways @(posedge i_clk)\n\t\tif (wb_err)\n\t\t\tr_bus_err <= { wb_addr, 1\'b0 };\n\n");
-	else
-		fprintf(fp, "\talways @(posedge i_clk)\n\t\tif (wb_err)\n\t\t\tr_bus_err <= wb_addr;\n\n");
-
-	fprintf(fp, "\t//Now we turn to defining all of the parts and pieces of what\n"
-	"\t// each of the various peripherals does, and what logic it needs.\n"
-	"\t//\n"
-	"\t// This information comes from the @MAIN.INSERT and @MAIN.ALT tags.\n"
-	"\t// If an @ACCESS tag is available, an ifdef is created to handle\n"
-	"\t// having the access and not.  If the @ACCESS tag is `defined above\n"
-	"\t// then the @MAIN.INSERT code is executed.  If not, the @MAIN.ALT\n"
-	"\t// code is exeucted, together with any other cleanup settings that\n"
-	"\t// might need to take place--such as returning zeros to the bus,\n"
-	"\t// or making sure all of the various interrupt wires are set to\n"
-	"\t// zero if the component is not included.\n"
-	"\t//\n");
-
-	fprintf(fp, "\t//\n\t// Declare the interrupt busses\n\t//\n");
+	fprintf(fp, "\t//\n\t// Declare the interrupt busses\n\t//\n"
+"\t// Interrupt busses are defined by anything with a @PIC tag.\n"
+"\t// The @PIC.BUS tag defines the name of the wire bus below,\n"
+"\t// while the @PIC.MAX tag determines the size of the bus width.\n"
+"\t//\n"
+"\t// For your peripheral to be assigned to this bus, it must have an\n"
+"\t// @INT.NAME.WIRE= tag to define the wire name of the interrupt line,\n"
+"\t// and an @INT.NAME.PIC= tag matching the @PIC.BUS tag of the bus\n"
+"\t// your interrupt will be assigned to.  If an @INT.NAME.ID tag also\n"
+"\t// exists, then your interrupt will be assigned to the position given\n"
+"\t// by the ID# in that tag.\n"
+"\t//\n");
 	for(unsigned picid=0; picid < piclist.size(); picid++) {
 		STRINGP	defnstr, vecstr;
 		MAPDHASH *picmap;
@@ -1415,6 +1011,21 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 		}
 		fprintf(fp, "\t};\n");
 	}
+
+	fprintf(fp, "\n\n\t//\n");
+	fprintf(fp, "\t//\n\t// Now we turn to defining all of the parts and pieces of what\n"
+	"\t// each of the various peripherals does, and what logic it needs.\n"
+	"\t//\n"
+	"\t// This information comes from the @MAIN.INSERT and @MAIN.ALT tags.\n"
+	"\t// If an @ACCESS tag is available, an ifdef is created to handle\n"
+	"\t// having the access and not.  If the @ACCESS tag is `defined above\n"
+	"\t// then the @MAIN.INSERT code is executed.  If not, the @MAIN.ALT\n"
+	"\t// code is exeucted, together with any other cleanup settings that\n"
+	"\t// might need to take place--such as returning zeros to the bus,\n"
+	"\t// or making sure all of the various interrupt wires are set to\n"
+	"\t// zero if the component is not included.\n"
+	"\t//\n");
+
 
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
 	// MAPDHASH::iterator	kvpair, kvaccess, kvsearch;
@@ -1458,35 +1069,17 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 				STRINGP	pfx = getstring(*kvpair->second.u.m_m,
 							KYPREFIX);
 				if (pfx) {
-					fprintf(fp, "\n");
-					fprintf(fp, "\tassign\t%s_cyc = 1\'b0;\n", pfx->c_str());
-					fprintf(fp, "\tassign\t%s_stb = 1\'b0;\n", pfx->c_str());
-					fprintf(fp, "\tassign\t%s_we  = 1\'b0;\n", pfx->c_str());
-					fprintf(fp, "\tassign\t%s_sel = 4\'b0000;\n", pfx->c_str());
-					fprintf(fp, "\tassign\t%s_addr = 0;\n", pfx->c_str());
-					fprintf(fp, "\tassign\t%s_data = 0;\n", pfx->c_str());
-					fprintf(fp, "\n");
+					// get_bus_of(pfx)
+					// writeout_no_master_v(fp, pfx->c_str());
 				}
 			}
 
 			if (isperipheral(kvpair->second)) {
+				BUSINFO *bi = find_bus_of_peripheral(kvpair->second.u.m_m);
 				STRINGP	pfx = getstring(*kvpair->second.u.m_m,
 							KYPREFIX);
-				if (pfx) {
-					fprintf(fp, "\n");
-					fprintf(fp, "\treg\tr_%s_ack;\n", pfx->c_str());
-					fprintf(fp, "\talways @(posedge i_clk)\n\t\tr_%s_ack <= (wb_stb)&&(%s_sel);\n",
-						pfx->c_str(),
-						pfx->c_str());
-					fprintf(fp, "\n");
-					fprintf(fp, "\tassign\t%s_ack   = r_%s_ack;\n",
-						pfx->c_str(),
-						pfx->c_str());
-					fprintf(fp, "\tassign\t%s_stall = 1\'b0;\n",
-						pfx->c_str());
-					fprintf(fp, "\tassign\t%s_data  = 32\'h0;\n",
-						pfx->c_str());
-					fprintf(fp, "\n");
+				if ((bi)&&(pfx)) {
+					bi->writeout_no_slave_v(fp, pfx);
 				}
 			}
 			kvint    = kvpair->second.u.m_m->find(KY_INT);
@@ -1517,78 +1110,6 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 		}
 	}
 
-	fprintf(fp, ""
-	"\t//\n"
-	"\t// Finally, determine what the response is from the wishbone\n"
-	"\t// bus\n"
-	"\t//\n"
-	"\t//\n");
-
-	fprintf(fp, ""
-	"\t//\n"
-	"\t// wb_idata\n"
-	"\t//\n"
-	"\t// This is the data returned on the bus.  Here, we select between a\n"
-	"\t// series of bus sources to select what data to return.  The basic\n"
-	"\t// logic is simply this: the data we return is the data for which the\n"
-	"\t// ACK line is high.\n"
-	"\t//\n"
-	"\t// The last item on the list is chosen by default if no other ACK's are\n"
-	"\t// true.  Although we might choose to return zeros in that case, by\n"
-	"\t// returning something we can skimp a touch on the logic.\n"
-	"\t//\n"
-	"\t// Any peripheral component with a @PTYPE value will be listed\n"
-	"\t// here.\n"
-	"\t//\n");
-
-	if (DELAY_ACK) {
-		fprintf(fp, "\talways @(posedge i_clk)\n"
-			"\tbegin\n"
-			"\t\tcasez({ %s })\n", acklist.c_str());
-		for(unsigned i=0; i<plist->size(); i++) {
-			fprintf(fp, "\t\t\t%d\'b", nacks);
-			for(unsigned j=0; j<nacks; j++)
-				fprintf(fp, (i==j)?"1":(i>j)?"0":"?");
-			if (i < plist->size())
-				fprintf(fp, ": wb_idata <= %s_data;\n",
-					(*plist)[plist->size()-1-i]->p_name->c_str());
-			else	fprintf(fp, ": wb_idata <= 32\'h00;\n");
-		}
-		fprintf(fp, "\t\t\tdefault: wb_idata <= 32\'h0;\n");
-		fprintf(fp, "\t\tendcase\n\tend\n");
-	} else {
-		fprintf(fp, "`ifdef\tVERILATOR\n\n");
-		fprintf(fp, "\talways @(*)\n"
-			"\tbegin\n"
-			"\t\tcasez({ %s })\n", acklist.c_str());
-		for(unsigned i=0; i<plist->size(); i++) {
-			fprintf(fp, "\t\t\t%d\'b", nacks);
-				for(unsigned j=0; j<nacks; j++)
-				fprintf(fp, (i==j)?"1":(i>j)?"0":"?");
-			if (i < plist->size())
-				fprintf(fp, ": wb_idata = %s_data;\n",
-					(*plist)[plist->size()-1-i]->p_name->c_str());
-			else	fprintf(fp, ": wb_idata = 32\'h00;\n");
-		}
-		fprintf(fp, "\t\t\tdefault: wb_idata = 32\'h0;\n");
-		fprintf(fp, "\t\tendcase\n\tend\n");
-		fprintf(fp, "\n`else\t// VERILATOR\n\n");
-		fprintf(fp, "\talways @(*)\n"
-			"\tbegin\n"
-			"\t\tcasez({ %s })\n", acklist.c_str());
-		for(unsigned i=0; i<plist->size(); i++) {
-			fprintf(fp, "\t\t\t%d\'b", nacks);
-			for(unsigned j=0; j<nacks; j++)
-				fprintf(fp, (i==j)?"1":(i>j)?"0":"?");
-			if (i < plist->size())
-				fprintf(fp, ": wb_idata <= %s_data;\n",
-					(*plist)[plist->size()-1-i]->p_name->c_str());
-			else	fprintf(fp, ": wb_idata <= 32\'h00;\n");
-		}
-		fprintf(fp, "\t\t\tdefault: wb_idata <= 32\'h0;\n");
-		fprintf(fp, "\t\tendcase\n\tend\n");
-		fprintf(fp, "`endif\t// VERILATOR\n");
-	}
 
 	fprintf(fp, "\n\nendmodule // main.v\n");
 
@@ -2120,9 +1641,8 @@ int	main(int argc, char **argv) {
 
 	reeval(master);
 
-	count_peripherals(master);
-	build_plist(master);
 	assign_interrupts(master);
+	find_clocks(master);
 	// assign_scopes(    master);
 	build_bus_list(master);
 	// assign_addresses( master);
@@ -2155,7 +1675,9 @@ int	main(int argc, char **argv) {
 	str = subd->c_str(); str += "/main.v";
 	fp = fopen(str.c_str(), "w");
 	if (fp) { build_main_v(  master, fp, str);
-		mkselect2(fp, master);
+		// fprintf(fp, "//\n//\n//\n//\n//\n//\n");
+		// writeout_bus_defns_v(fp);
+		// writeout_bus_logic_v(fp);
 		fclose(fp); }
 
 	str = subd->c_str(); str += "/rtl.make.inc";
