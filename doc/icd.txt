@@ -262,7 +262,10 @@ BUS.TYPE	One of WB, (b4 assumed), WB/B4, WB/B3, WB/C(lassic), or AXI
 BUS.WIDTH	32 (common), could also be 8, 16, 64, 128, 256, etc.
 
 BUS.AWID	Width of the address bus, also known as the number of
-		address lines used to address items on this bus
+		address lines used to address items on this bus.  The bus
+		can address (2^BUS.AWID)*(BUS.WIDTH/8) bytes of memory.
+
+BUS.NULLSZ	The number of addresses consumed by the null pointer address
 
 BUS.CLOCK	The name of a previously defined clock from which this bus
 		runs on
