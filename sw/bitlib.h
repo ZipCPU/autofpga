@@ -45,7 +45,7 @@
 //
 // This is basically ceil(log_2(vl))
 //
-unsigned	nextlg(const unsigned vl);
+unsigned	nextlg(const unsigned long vl);
 
 //
 // popc

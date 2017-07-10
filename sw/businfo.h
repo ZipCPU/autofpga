@@ -81,7 +81,6 @@ public:
 	bool	get_base_address(MAPDHASH *phash, unsigned &base);
 	void	assign_addresses(void);
 	int	address_width(void);
-	unsigned	min_addr_size(unsigned np, unsigned mina);
 	void	add(void);
 	PERIPH *add(PERIPHP p);
 	PERIPH *add(MAPDHASH *phash);

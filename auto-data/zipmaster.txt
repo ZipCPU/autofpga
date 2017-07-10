@@ -434,3 +434,7 @@
 #
 #
 #
+@PREFIX=zip_dbg
+@SLAVE.TYPE=OTHER
+@SLAVE.BUS=wbu
+@NADDR=2

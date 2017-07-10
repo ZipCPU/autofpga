@@ -287,7 +287,7 @@ public:
 	bool	load(uint32_t addr, const char *buf, uint32_t len) {
 		uint32_t	start, offset, wlen, base, naddr;
 
-		base  = 0x03000000;
+		base  = 0x03800000;
 		naddr = 0x00040000;
 
 		if ((addr >= base)&&(addr < base + naddr)) {

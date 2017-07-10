@@ -54,10 +54,10 @@ class	BUSINFO;
 //
 class	PERIPH {
 public:
-	unsigned	p_base;		// In octets
-	unsigned	p_naddr;	// In words, given in file
+	unsigned long	p_base;		// In octets
+	unsigned long	p_naddr;	// In words, given in file
 	unsigned	p_awid;		// Log_2 (octets)
-	unsigned	p_mask;		// Words.  Bit is true if relevant for address selection
+	unsigned long	p_mask;		// Words.  Bit is true if relevant for address selection
 	//
 	unsigned	p_sbaw;
 	STRINGP		p_name;
@@ -77,10 +77,10 @@ public:
 typedef	PERIPH *PERIPHP;
 
 class	PLIST : public std::vector<PERIPHP> {
+	unsigned	m_address_width;
 public:
 	PLIST(void) {}
 	STRINGP		m_stype;
-	unsigned	m_address_width;
 
 	void	set_stype(STRING &stype);
 	//
@@ -94,6 +94,9 @@ public:
 	unsigned	min_addr_size_octets(unsigned, unsigned,
 				unsigned nullsz=0,
 				unsigned daddr=2);
+	unsigned get_address_width(void) {
+		return m_address_width;
+	}
 };
 
 // A pointer to a set of peripherals

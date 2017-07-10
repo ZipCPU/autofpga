@@ -44,7 +44,7 @@
 //
 // This is basically ceil(log_2(vl))
 //
-unsigned	nextlg(const unsigned vl) {
+unsigned	nextlg(const unsigned long vl) {
 	unsigned r;
 
 	for(r=0; (1ul<<r)<(unsigned long)vl; r+=1)

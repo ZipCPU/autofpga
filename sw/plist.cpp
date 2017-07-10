@@ -56,13 +56,10 @@
 #include "plist.h"
 #include "bitlib.h"
 #include "businfo.h"
+#include "predicates.h"
+#include "subbus.h"
+#include "globals.h"
 
-extern	int	gbl_err;
-extern	FILE	*gbl_dump;
-
-
-extern	bool	isperipheral(MAPT &pmap);
-extern	bool	isperipheral(MAPDHASH &phash);
 
 bool	PERIPH::issingle(void) {
 	STRINGP	str;
@@ -201,14 +198,31 @@ int	PLIST::add(MAPDHASH *phash) {
 		*/
 		naddr = 0;
 	}
-	PERIPHP p = new PERIPH;
+	PERIPHP p;
+	if (isbusmaster(*phash)) {
+		BUSINFO		*bi;
+		STRINGP		strp;
+		strp = getstring(phash, KYMASTER_BUS);
+		if (NULL != strp)
+			bi = find_bus(strp);
+		else {
+			MAPDHASH	*mapp;
+			mapp = getmap(phash, KYMASTER_BUS);
+			assert(NULL != mapp);
+			bi = find_bus(mapp);
+			assert(bi);
+		}
+		p = new SUBBUS(phash, bi->m_name, bi);
+	} else {
+		p = new PERIPH;
+		p->p_master_bus = NULL;
+	}
 	p->p_base = 0;
 	p->p_naddr = naddr;
 	p->p_awid  = (0 == naddr) ? nextlg(p->p_naddr) : 0;
 	p->p_phash = phash;
 	p->p_name  = pname;
 	p->p_slave_bus  = NULL;
-	p->p_master_bus = NULL;
 
 	push_back(p);
 	return size()-1;
@@ -290,8 +304,8 @@ void	PLIST::assign_addresses(unsigned dwidth, unsigned nullsz) {
 		// in to the minimum number of bits required gives us a little
 		// bit of flexibility while also attempting to keep our bus
 		// width to a minimum.
-		unsigned start_address = nullsz;
-		unsigned min_awd, min_asz;
+		unsigned long start_address = nullsz;
+		unsigned long min_awd, min_asz;
 
 		// Sort our peripherals by the number of address lines they
 		// will be using.  At the end of this, we'll know that we'll
@@ -317,8 +331,8 @@ void	PLIST::assign_addresses(unsigned dwidth, unsigned nullsz) {
 		// Our goal will be to do better than this
 
 
-		unsigned	min_relevant = 30;
-		for(unsigned mina = daddr_abits+1; mina < 30; mina++) {
+		unsigned	min_relevant = 32-daddr_abits;
+		for(unsigned mina = daddr_abits+1; mina < 32-daddr_abits; mina++) {
 			//
 			unsigned	total_address_width,
 					relevant_address_bits;
@@ -350,12 +364,14 @@ void	PLIST::assign_addresses(unsigned dwidth, unsigned nullsz) {
 			pa += daddr_abits;
 
 			// p_base is in octets
-			(*this)[i]->p_base = start_address + ((1<<pa)-1);
-			(*this)[i]->p_base &= (-1<<pa);
-			start_address = (*this)[i]->p_base + (1<<pa);
+			(*this)[i]->p_base = start_address + ((1ul<<pa)-1);
+			(*this)[i]->p_base &= (-1l<<pa);
+			start_address = (*this)[i]->p_base + (1ul<<pa);
 
 			(*this)[i]->p_mask = (-1)<<(pa-daddr_abits);
+			assert((*this)[i]->p_mask != 0);
 		}
+		assert(start_address != 0);
 
 		unsigned master_mask = nextlg(start_address);
 		master_mask = (1u << (master_mask-daddr_abits))-1;

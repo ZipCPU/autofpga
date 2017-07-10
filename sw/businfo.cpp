@@ -76,26 +76,16 @@ bool	BUSINFO::get_base_address(MAPDHASH *phash, unsigned &base) {
 	return m_plist->get_base_address(phash, base);
 }
 
-unsigned	BUSINFO::min_addr_size(unsigned np, unsigned mina) {
-	unsigned	start = 0, pa, base;
-
-	for(unsigned i=0; i<np; i++) {
-		pa = (*m_plist)[i]->p_awid;
-		if ((*m_plist)[i]->p_awid < mina)
-			pa = mina;
-		base = (start + ((1<<pa)-1));
-		base &= (-1<<pa);
-		// First valid next address is ...
-		start = base + (1<<pa);
-	} return nextlg(start);
-}
-
 void	BUSINFO::assign_addresses(void) {
 	if ((!m_plist)||(m_plist->size() < 1)) {
 		m_address_width = 0;
 	} else if (!m_addresses_assigned) {
+		if (m_slist)
+			m_slist->assign_addresses(m_data_width, 0);
+		if (m_dlist)
+			m_dlist->assign_addresses(m_data_width, 0);
 		m_plist->assign_addresses(m_data_width, m_nullsz);
-		m_address_width = m_plist->m_address_width;
+		m_address_width = m_plist->get_address_width();
 		if (m_hash)
 			setvalue(*m_hash, KY_AWID, m_address_width);
 	} m_addresses_assigned = true;
@@ -224,24 +214,24 @@ PERIPH *BUSINFO::add(MAPDHASH *phash) {
 
 void	BUSINFO::countsio(MAPDHASH *phash) {
 	STRINGP	strp;
+	unsigned	total = 0;
 
 	strp = getstring(phash, KYSLAVE_TYPE);
-	fprintf(gbl_dump, "BUSINFO::COUNTSIO BUS %s", m_name->c_str());
-	fflush(gbl_dump);
-	fprintf(gbl_dump, ", SLAVE %s", 
-		(NULL != getstring(phash, KYPREFIX))
-		? getstring(phash, KYPREFIX)->c_str()
-		: "(No-name)"); fflush(gbl_dump);
-	fprintf(gbl_dump, ", SLAVE.TYPE %s\n",
-		(strp == NULL) ? "(No-type)" : strp->c_str()); fflush(gbl_dump);
 	if (NULL != strp) {
 		if (strp->compare(KYSINGLE)) {
 			m_num_single++;
 		} else if (strp->compare(KYDOUBLE)) {
 			m_num_double++;
-		}
+		} total++;
 		// else if (str->compare(KYMEMORY))
 		//	m_num_memory++;
+	}
+
+	if (total == (unsigned)m_num_single + (unsigned)m_num_double) {
+		m_num_double = 0;
+	} if (total + m_num_single + m_num_double < 8) {
+		m_num_single = 0;
+		m_num_double = 0;
 	}
 }
 
@@ -390,11 +380,14 @@ void	BUSLIST::countsio(MAPT &map) {
 
 
 void	BUSLIST::addperipheral(MAPDHASH *phash) {
+	STRINGP	pname;
 	BUSINFO	*bi;
 
 	// Ignore everything that isn't a bus slave
 	if (NULL == getmap(*phash, KYSLAVE))
 		return;
+	if (NULL == (pname = getstring(*phash, KYPREFIX)))
+		pname = new STRING("(Unnamed-P)");
 
 	// Insist on the existence of a default bus
 	assert((*this)[0]);
@@ -409,10 +402,15 @@ void	BUSLIST::addperipheral(MAPDHASH *phash) {
 		bi = find_bus(kvpair->second.u.m_s);
 		// Insist, though, that the named bus exist already
 		assert(bi);
+		fprintf(gbl_dump,
+			"ADD-PERIPHERAL: Bus found for %s by string name, %s\n",
+			pname->c_str(), kvpair->second.u.m_s->c_str());
 	} else if (kvpair->second.m_typ == MAPT_MAP) {
 		bi = find_bus(kvpair->second.u.m_m);
+		fprintf(gbl_dump, "ADD-PERIPHERAL: Looking up bus by map for %s%s%s\n", pname->c_str(), (bi != NULL)?" -- FOUND, ":"", (bi != NULL)?bi->m_name->c_str():"");
 		if (bi == NULL) {
 			MAPDHASH	*blmap = kvpair->second.u.m_m;
+			fprintf(gbl_dump, "ADD-PERIPHERAL: Looking for multiple busses by map for %s\n", pname->c_str());
 			for(kvbus = blmap->begin(); kvbus != blmap->end();
 					kvbus++) {
 				if (kvbus->second.m_typ != MAPT_MAP)
@@ -420,6 +418,7 @@ void	BUSLIST::addperipheral(MAPDHASH *phash) {
 				bi = find_bus(kvbus->second.u.m_m);
 				if (NULL == bi)
 					continue;
+			fprintf(gbl_dump, "ADD-PERIPHERAL: Bus %s found\n", bi->m_name->c_str());
 				bi->add(phash);
 			}
 			return;
@@ -643,14 +642,18 @@ void	BUSINFO::writeout_bus_slave_defns_v(FILE *fp) {
 }
 
 void	BUSINFO::writeout_bus_master_defns_v(FILE *fp) {
+	unsigned aw = address_width();
 	fprintf(fp, "\twire\t\t%s_cyc, %s_stb, %s_we, %s_stall, %s_err;\n"
 			"\twire\t\t%s_none_sel, %s_many_ack;\n"
+			"\twire\t[%d:0]\t%s_addr\n"
 			"\twire\t[%d:0]\t%s_data, %s_idata;\n\n"
 			"\twire\t[%d:0]\t%s_sel;\n\n"
 			"\treg\t\t%s_ack;\n\n",
 			m_name->c_str(), m_name->c_str(), m_name->c_str(),
-			m_name->c_str(), m_name->c_str(),
-			m_name->c_str(), m_name->c_str(),
+			m_name->c_str(), m_name->c_str(), m_name->c_str(),
+			m_name->c_str(),
+			aw-1,
+			m_name->c_str(),
 			m_data_width-1,
 			m_name->c_str(), m_name->c_str(),
 			(m_data_width/8)-1,
@@ -678,14 +681,18 @@ void	BUSINFO::writeout_bus_select_v(FILE *fp) {
 
 	fprintf(fp, "\t//\n\t//\n\t//\n\t// Select lines for bus %s\n\t//\n\t//\n\t\n", m_name->c_str());
 	if (m_slist) {
-		sbaw = m_slist->m_address_width;
+		sbaw = m_slist->get_address_width();
 		mask = 0; unused_lsbs = 0;
 		for(unsigned i=0; i<m_slist->size(); i++)
 			mask |= (*m_slist)[i]->p_mask;
 		for(unsigned tmp=mask; ((tmp)&&((tmp&1)==0)); tmp>>=1)
 			unused_lsbs++;
+	fprintf(gbl_dump, "// SLIST.SBAW = %d\n// SLIST.DALINES = %d\n// SLIST.UNUSED_LSBS = %d\n", sbaw, dalines, unused_lsbs);
+	fflush(gbl_dump);
 		for(unsigned i=0; i<m_slist->size(); i++) {
-			fprintf(fp, "\tassign\t%12s_sel = ((_%s_sio_sel)&&(%s_addr[%2d:%2d] == %2d\'h%0*x));\n",
+			assert(sbaw > dalines + unused_lsbs);
+			assert(sbaw > 0);
+			fprintf(fp, "\tassign\t%12s_sel = ((_%s_sio_sel)&&(%s_addr[%2d:%2d] == %2d\'h%0*lx));\n",
 				(*m_slist)[i]->p_name->c_str(), m_name->c_str(),
 				m_name->c_str(),
 				sbaw-dalines-1, unused_lsbs,
@@ -695,15 +702,19 @@ void	BUSINFO::writeout_bus_select_v(FILE *fp) {
 		}
 			
 	} if (m_dlist) {
-		sbaw = m_dlist->m_address_width;
+		sbaw = m_dlist->get_address_width();
 		mask = 0; unused_lsbs = 0;
 		for(unsigned i=0; i<m_dlist->size(); i++)
 			mask |= (*m_dlist)[i]->p_mask;
 		for(unsigned tmp=mask; ((tmp)&&((tmp&1)==0)); tmp>>=1)
 			unused_lsbs++;
+	fprintf(gbl_dump, "// DLIST.SBAW = %d\n// DLIST.DALINES = %d\n// DLIST.UNUSED_LSBS = %d\n", sbaw, dalines, unused_lsbs);
+	fflush(gbl_dump);
 		for(unsigned i=0; i<m_dlist->size(); i++) {
+			assert(sbaw > dalines + unused_lsbs);
+			assert(sbaw > 0);
 			fprintf(fp, "\tassign\t%12s_sel "
-					"= ((_%s_dio_sel)&&((%s[%2d:%2d] & %2d\'h%x) == %2d\'h%0*x));\n",
+					"= ((_%s_dio_sel)&&((%s[%2d:%2d] & %2d\'h%lx) == %2d\'h%0*lx));\n",
 				(*m_dlist)[i]->p_name->c_str(),
 				m_name->c_str(),
 				addrbus.c_str(),
@@ -724,10 +735,14 @@ void	BUSINFO::writeout_bus_select_v(FILE *fp) {
 	for(unsigned tmp=mask; ((tmp)&&((tmp&1)==0)); tmp>>=1)
 		unused_lsbs++;
 
+	fprintf(gbl_dump, "// SBAW = %d\n// DALINES = %d\n// UNUSED_LSBS = %d\n", sbaw, dalines, unused_lsbs);
+	fflush(gbl_dump);
 	for(unsigned i=0; i< m_plist->size(); i++) {
 		if ((*m_plist)[i]->p_name) {
+			assert(sbaw > dalines + unused_lsbs);
+			assert(sbaw > 0);
 			fprintf(fp, "\tassign\t%12s_sel "
-					"= ((%s[%2d:%2d] & %2d\'h%x) == %2d\'h%0*x);\n",
+					"= ((%s[%2d:%2d] & %2d\'h%lx) == %2d\'h%0*lx);\n",
 				(*m_plist)[i]->p_name->c_str(),
 				addrbus.c_str(),
 				sbaw-dalines-1,
@@ -799,14 +814,34 @@ void	BUSINFO::writeout_bus_logic_v(FILE *fp) {
 
 	if (m_plist->size() == 0) {
 		fprintf(fp, 
-			"\t\tassign\t%s_err   = 1'b0;\n"
-			"\t\tassign\t%s_stall = 1'b0;\n"
-			"\t\tinitial\t%s_ack   = 1'b0;\n"
-			"\t\talways @(posedge %s)\n\t\t\t%s_ack   <= 1'b0;\n"
-			"\t\tassign\t%s_idata = 1'b0;\n",
+			"\t\tassign\t%s_err   = 1\'b0;\n"
+			"\t\tassign\t%s_stall = 1\'b0;\n"
+			"\t\tinitial\t%s_ack   = 1\'b0;\n"
+			"\t\talways @(posedge %s)\n\t\t\t%s_ack   <= 1\'b0;\n"
+			"\t\tassign\t%s_idata = 1\'b0;\n",
 			m_name->c_str(), m_name->c_str(), m_name->c_str(),
 			m_clock->m_name->c_str(),
 			m_name->c_str(), m_name->c_str());
+		return;
+	} else if (m_plist->size() == 1) {
+		fprintf(fp,
+			"\tassign\t%s_none_sel = 1\'b0;\n"
+			"\tassign\t%s_many_sel = 1\'b0;\n"
+			"\tinitial\t%s_many_ack = 1\'b0;\n"
+			"\talways @(*)\n\t\t%s_many_ack = 1\'b0;\n",
+			m_name->c_str(), m_name->c_str(), m_name->c_str(),
+			m_name->c_str());
+		fprintf(fp,
+			"\tassign\t%s_err = 1\'b0;\n"
+			"\tassign\t%s_stall = %s_stall;\n"
+			"\tinitial\t%s_ack = 1\'b0;\n"
+			"\talways @(*)\n\t\t%s_ack = %s_ack;\n"
+			"\talways @(*)\n\t\t%s_idata = %s_data;\n",
+			m_name->c_str(),
+			m_name->c_str(), (*m_plist)[0]->p_name->c_str(),
+			m_name->c_str(),
+			m_name->c_str(), (*m_plist)[0]->p_name->c_str(),
+			m_name->c_str(), (*m_plist)[0]->p_name->c_str());
 		return;
 	}
 
@@ -902,7 +937,7 @@ void	BUSINFO::writeout_bus_logic_v(FILE *fp) {
 				m_name->c_str(),
 				nextlg(mask)-1, unused_lsbs);
 		for(unsigned j=0; j<m_slist->size()-1; j++) {
-			fprintf(fp, "\t\t\t%d'h%x: _%s_sio_idata <= %s_data;\n",
+			fprintf(fp, "\t\t\t%d'h%lx: _%s_sio_idata <= %s_data;\n",
 				nextlg(mask)-unused_lsbs,
 				((*m_slist)[j]->p_base) >> (unused_lsbs + lgdw),
 				m_name->c_str(),
