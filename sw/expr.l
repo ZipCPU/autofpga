@@ -61,6 +61,15 @@ extern "C" int	yywrap() { return 1;}
 			yylval.u_id  = strdup(yytext);
 		return IDENTIFIER;
 	}
+@[$]?\([/.^+]?[_A-Za-z][._a-zA-Z0-9]*\)  {
+		if (yytext[1]=='$')
+			yylval.u_id = strdup(yytext+3);
+		else
+			yylval.u_id = strdup(yytext+2);
+		// Remove the trailing parenthesis
+		yylval.u_id[strlen(yylval.u_id)-1]='\0';
+		return IDENTIFIER;
+	}
 0[xX][0-9A-Fa-f]+   { yylval.u_ival = strtoul(yytext,NULL,16);return INT;}
 0[0-7]+		{ yylval.u_ival = strtoul(yytext,NULL, 8);return INT;}
 [1-9][0-9]*	  	{ yylval.u_ival = strtoul(yytext,NULL,10);return INT;}

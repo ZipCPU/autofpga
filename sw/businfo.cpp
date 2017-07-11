@@ -440,8 +440,7 @@ void	BUSLIST::adddefault(MAPDHASH &master, STRINGP defname) {
 	BUSINFO	*bi;
 
 	if (size() == 0) {
-		push_back(new BUSINFO());
-		bi = (*this)[0];
+		push_back(bi = new BUSINFO());
 		bi->m_name = defname;
 		bi->m_hash = new MAPDHASH();
 		setstring(*bi->m_hash, KY_NAME, defname);
@@ -495,8 +494,7 @@ void	BUSLIST::addbus(MAPDHASH &master, MAPDHASH *phash) {
 	if (NULL == pname)
 		pname = new  STRING("(Null/No name)");
 
-	fprintf(gbl_dump, "ADDBUS request for %s ...",
-		pname->c_str());
+	fprintf(gbl_dump, "ADDBUS request for %s ...", pname->c_str());
 	if (isbusmaster(*phash))
 		fprintf(gbl_dump, "MASTER");
 	if (isperipheral(*phash))
@@ -504,34 +502,22 @@ void	BUSLIST::addbus(MAPDHASH &master, MAPDHASH *phash) {
 	fprintf(gbl_dump, "\n");
 
 	bp = getmap(*phash, KYBUS);
-	if (!bp)
+	if (!bp) {
+		fprintf(gbl_dump, "No bus found\n");
 		return;
+	}
 
 	str = getstring(*bp, KY_NAME);
 	if (str) {
 		bi = find_bus(str);
 		if (!bi) {
 			MAPDHASH::iterator	kvpair;
-			STRINGP	busname;
 
-			busname = new STRING(STRING("B[")+(*str) + STRING("]"));
 			bi = new BUSINFO();
 			push_back(bi);
 			bi->m_name = str;
-
-			if ((kvpair = findkey(master,*busname))!=master.end()) {
-				if (kvpair->second.m_typ != MAPT_MAP) {
-					gbl_err++;
-					fprintf(stderr, "ERR: @%s is not a map!\n", str->c_str());
-					bi->m_hash = new MAPDHASH();
-				} else
-					bi->m_hash = kvpair->second.u.m_m;
-				delete busname;
-			} else {
-				bi->m_hash = new MAPDHASH();;
-			}
-
-			setstring(*bi->m_hash, KY_NAME, str);
+			bi->m_hash = bp;
+			// setstring(*bi->m_hash, KY_NAME, str);
 		}
 	} else if (size() > 0) {
 		bi = (*this)[0];
@@ -545,73 +531,85 @@ void	BUSLIST::addbus(MAPDHASH &master, MAPDHASH *phash) {
 		bi->m_hash = NULL;
 	}
 
-	if (NULL != (str = getstring(*bp, KY_TYPE))) {
-		if (bi->m_type == NULL) {
-			bi->m_type = str;
-			elm.m_typ = MAPT_STRING;
-			elm.u.m_s = str;
-			if (NULL == bi->m_hash) {
-				gbl_err++;
-				fprintf(stderr, "ERR: Undefined bus as a part of %s (no name given?)\n",
-					(NULL == getstring(*phash, KYPREFIX))
-					?"(Null-name)"
-					:(getstring(*phash, KYPREFIX)->c_str()));
-			} else
-				bi->m_hash->insert(KEYVALUE(KY_TYPE, elm));
-mapdump(gbl_dump, master);
-		} else if (bi->m_type->compare(*str) != 0) {
-			fprintf(stderr, "ERR: Conflicting bus types "
-					"for %s\n",bi->m_name->c_str());
-			gbl_err++;
-		}
-	}
-
-	if (NULL != (str = getstring(*bp, KY_CLOCK))) {
-		bi->m_clock = getclockinfo(str);
-		if (bi->m_clock == NULL) {
-			fprintf(stderr, "ERR: Clock %s not defined for %s\n",
-				str->c_str(), bi->m_name->c_str());
-			gbl_err++;
-		} else {
-			MAPDHASH::iterator	clktag;
-			clktag = findkey(*bp, KY_CLOCK);
-			if (clktag != bp->end()) {
-				clktag->second.m_typ = MAPT_MAP;
-				clktag->second.u.m_m = bi->m_clock->m_hash;
-fprintf(gbl_dump, "Adding clock hash for %s\n", str->c_str());
-			}
-
-			elm.m_typ = MAPT_MAP;
-			elm.u.m_m = bi->m_clock->m_hash;
-			bi->m_hash->insert(KEYVALUE(KY_CLOCK, elm));
-		}
-
-		mapdump(gbl_dump, *phash);
-	}
-
-	if (getvalue(*bp, KY_WIDTH, value)) {
-		if (bi->m_data_width <= 0) {
-			bi->m_data_width = value;
-			bi->m_type = str;
+	for(MAPDHASH::iterator kvpair=bp->begin(); kvpair != bp->end();
+				kvpair++) {
+		if ((0 == KY_WIDTH.compare(kvpair->first))
+				&&(getvalue(*bp, KY_WIDTH, value))) {
+				if (bi->m_data_width <= 0) {
+					bi->m_data_width = value;
+					bi->m_type = str;
+					//
+					elm.m_typ = MAPT_INT;
+					elm.u.m_v = value;
+					bi->m_hash->insert(KEYVALUE(KY_WIDTH, elm));
+				} else if (bi->m_data_width != value) {
+					fprintf(stderr, "ERR: Conflicting bus width definitions for %s\n", bi->m_name->c_str());
+					gbl_err++;
+				}
+				continue;
+		} if ((0== KY_NULLSZ.compare(kvpair->first))
+				&&(getvalue(*bp, KY_NULLSZ, value))) {
+			bi->m_nullsz = value;
+			// bi->m_addresses_assigned = false;
 			//
 			elm.m_typ = MAPT_INT;
 			elm.u.m_v = value;
-			bi->m_hash->insert(KEYVALUE(KY_WIDTH, elm));
-mapdump(gbl_dump, master);
-		} else if (bi->m_data_width != value) {
-			fprintf(stderr, "ERR: Conflicting bus width definitions for %s\n", bi->m_name->c_str());
-			gbl_err++;
-		}
-	}
+			bi->m_hash->insert(KEYVALUE(KY_NULLSZ, elm));
 
-	if (getvalue(*bp, KY_NULLSZ, value)) {
-		bi->m_nullsz = value;
-		// bi->m_addresses_assigned = false;
-		//
-		elm.m_typ = MAPT_INT;
-		elm.u.m_v = value;
-		bi->m_hash->insert(KEYVALUE(KY_NULLSZ, elm));
-mapdump(gbl_dump, master);
+			continue;
+		}
+
+		if (kvpair->second.m_typ == MAPT_STRING) {
+			str = kvpair->second.u.m_s;
+			if (KY_TYPE.compare(kvpair->first)==0) {
+				if (bi->m_type == NULL) {
+					bi->m_type = str;
+					elm.m_typ = MAPT_STRING;
+					elm.u.m_s = str;
+					if (NULL == bi->m_hash) {
+						gbl_err++;
+						fprintf(stderr, "ERR: Undefined bus as a part of %s (no name given?)\n",
+							(NULL == getstring(*phash, KYPREFIX))
+							?"(Null-name)"
+							:(getstring(*phash, KYPREFIX)->c_str()));
+					} else
+						bi->m_hash->insert(KEYVALUE(KY_TYPE, elm));
+				} else if (bi->m_type->compare(*str) != 0) {
+					fprintf(stderr,
+						"ERR: Conflicting bus types "
+						"for %s\n",bi->m_name->c_str());
+					gbl_err++;
+				}
+				continue;
+			} else if ((KY_CLOCK.compare(kvpair->first)==0)
+					&&(NULL == bi->m_clock)) {
+				bi->m_clock = getclockinfo(str);
+				if (bi->m_clock == NULL) {
+					fprintf(stderr, "ERR: Clock %s not defined for %s\n",
+						str->c_str(), bi->m_name->c_str());
+					gbl_err++;
+				} else {
+					/*
+					MAPDHASH::iterator	clktag;
+					clktag = findkey(*bp, KY_CLOCK);
+					if (clktag != bp->end()) {
+						clktag->second.m_typ = MAPT_MAP;
+						clktag->second.u.m_m = bi->m_clock->m_hash;
+fprintf(gbl_dump, "Adding clock hash for %s\n", str->c_str());
+					}
+					*/
+
+					elm.m_typ = MAPT_MAP;
+					elm.u.m_m = bi->m_clock->m_hash;
+					bi->m_hash->insert(KEYVALUE(KY_CLOCK, elm));
+				}
+				continue;
+			}
+		}
+
+		if ((bp != bi->m_hash)&&(bi->m_hash->end()
+				!= findkey(*bi->m_hash, kvpair->first)))
+			bi->m_hash->insert(*kvpair);
 	}
 }
 
@@ -1108,8 +1106,13 @@ void	assign_bus_slave(MAPDHASH &master, MAPDHASH *bus_slave) {
 		free(cstr);
 		if ((tok)&&(!nxt)) {
 			bi = gbl_blist->find_bus(strp);
-			sbus->second.m_typ = MAPT_MAP;
-			sbus->second.u.m_m = bi->m_hash;
+			if (NULL == bi) {
+				fprintf(stderr, "ERR: BUS %s not found\n", tok);
+				gbl_err++;
+			} else {
+				sbus->second.m_typ = MAPT_MAP;
+				sbus->second.u.m_m = bi->m_hash;
+			}
 		} else if (tok) {
 			sbus->second.m_typ = MAPT_MAP;
 			sbus->second.u.m_m = new MAPDHASH();
@@ -1243,15 +1246,23 @@ else { if (gbl_dump) fprintf(gbl_dump, "NO default bus found\n"); }
 fflush(gbl_dump);
 
 	//
-	if (refbus(master))
+	if (refbus(master)) {
+		fprintf(gbl_dump, "Adding a refbus (master)\n");
 		bl->addbus(master, &master);
+	}
 	//
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
+		MAPDHASH	*mp;
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
-		if (NULL != getstring(*kvpair->second.u.m_m, KYBUS))
+		if (NULL == (mp = getmap(*kvpair->second.u.m_m, KYBUS)))
 			continue;
 		bl->addbus(master, kvpair->second);
+	}
+	for(BUSLIST::iterator bp=bl->begin(); bp != bl->end(); bp++) {
+fprintf(gbl_dump, "Checking %s for a hash\n",
+			(*bp)->m_name->c_str()); fflush(gbl_dump);
+		assert((*bp)->m_hash);
 	}
 
 fprintf(gbl_dump, "POST-ADD-BUS-------------------------------\n");
@@ -1275,6 +1286,7 @@ mapdump(gbl_dump, master);
 	for(BUSLIST::iterator bp=bl->begin(); bp != bl->end(); bp++) {
 		if (NULL == (*bp)->m_clock) {
 			(*bp)->m_clock = getclockinfo(NULL);
+			assert((*bp)->m_hash);
 			setstring((*bp)->m_hash, KYCLOCK, (*bp)->m_clock->m_name);
 		}
 	}

@@ -63,7 +63,7 @@
 #define	R_HDMI_OUTCLK     	0x00800000	// 00800000, wbregs names: HCLKOUT
 #define	R_DATE            	0x00a00000	// 00a00000, wbregs names: RTCDATE, DATE
 #define	R_GPIO            	0x00c00000	// 00c00000, wbregs names: GPIO, GPI, GPO
-#define	PWCOUNT           	0x00e00000	// 00e00000, wbregs names: PWRCOUNT
+#define	R_PWRCOUNT        	0x00e00000	// 00e00000, wbregs names: PWRCOUNT
 #define	R_SPIO            	0x01000000	// 01000000, wbregs names: SPIO
 // SYSCLK Clock Counter (measures clock speed)
 #define	R_SYSCLK          	0x01200000	// 01200000, wbregs names: SYSCLK

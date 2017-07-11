@@ -59,11 +59,15 @@ CLOCKINFO::CLOCKINFO(void) {
 }
 
 unsigned long CLOCKINFO::setfrequency(unsigned long frequency_hz) {
-	unsigned long ps;
-	setvalue(*m_hash, KY_FREQUENCY, (int)frequency_hz);
-	ps = PICOSECONDS_PER_SECOND / (unsigned long)frequency_hz;
-	m_interval_ps = ps;
-	return m_interval_ps;
+	if (frequency_hz != 0l) {
+		unsigned long ps;
+		setvalue(*m_hash, KY_FREQUENCY, (int)frequency_hz);
+		ps = PICOSECONDS_PER_SECOND / (unsigned long)frequency_hz;
+		m_interval_ps = ps;
+		return m_interval_ps;
+	} else if (m_interval_ps != UNKNOWN_PS)
+		return m_interval_ps;
+	return 0l;
 }
 
 void	CLOCKINFO::setname(STRINGP name) {
@@ -98,6 +102,7 @@ void	CLOCKINFO::setwire(STRINGP wire) {
 
 void	add_to_clklist(MAPDHASH *ckmap) {
 	const	char	DELIMITERS[] = " \t\n,";
+	int	ifreq;
 
 	STRINGP	sname, swire, sfreq;
 	char	*dname, *dwire, *dfreq;
@@ -106,35 +111,68 @@ void	add_to_clklist(MAPDHASH *ckmap) {
 
 	sname = getstring(*ckmap, KY_NAME);
 	swire = getstring(*ckmap, KY_WIRE);
-	sfreq = getstring(*ckmap, KY_FREQUENCY);
 
 	// strtok requires a writable string
 	if (sname) dname = strdup(sname->c_str());
 	else	  dname = NULL;
 	if (swire) dwire = strdup(swire->c_str());
 	else	  dwire = NULL;
-	if (sfreq) dfreq = strdup(sfreq->c_str());
-	else	  dfreq = NULL;
+
+	{
+		MAPDHASH::iterator	kvfreq;
+
+		sfreq = NULL;
+		dfreq = NULL;
+		ifreq = 0;
+
+		kvfreq = findkey(*ckmap, KY_FREQUENCY);
+		if (kvfreq != ckmap->end()) switch(kvfreq->second.m_typ) {
+		case MAPT_STRING:
+			sfreq = kvfreq->second.u.m_s;
+			dfreq = strdup(sfreq->c_str());
+			break;
+		case MAPT_INT: case MAPT_AST: case MAPT_MAP:
+		default:
+			if (!getvalue(*ckmap, KY_FREQUENCY, ifreq)) {
+				gbl_err++;
+				fprintf(gbl_dump, "Could not evaluate the "
+					"frequency of clock %s\n",
+					(sname)?(sname->c_str())
+						: "(Unnamed-clock)");
+			} break;
+		}
+	}
 
 	pname = (dname) ? strtok_r(dname, DELIMITERS, &tname) : NULL;
 	pwire = (dwire) ? strtok_r(dwire, DELIMITERS, &twire) : NULL;
 	pfreq = (dfreq) ? strtok_r(dfreq, DELIMITERS, &tfreq) : NULL;
 
-	while((pname)&&(pfreq)) {
+	if (!pname)
+		fprintf(stderr, "ERR: CLOCK has no name!\n");
+	// if ((!pfreq)&&(ifreq == 0))
+		// fprintf(stderr, "ERR: CLOCK has no frequency\n");
+
+	while(pname) {
 		unsigned	id = cklist.size();
 		unsigned long	clocks_per_second;
 		STRINGP		wname;
 		bool		already_defined = false;
 
-		if (gbl_dump) {
+		if (gbl_dump)
 			fprintf(gbl_dump, "Examining clock: %s %s %s\n",
-				pname, pwire, pfreq);
-		}
+				pname, (pwire)?pwire:"(Unspec)",
+				(pfreq)?pfreq:"(Unspec)");
 
 		for(unsigned i=0; i<id; i++) {
 			if (cklist[i].m_name->compare(pname)==0) {
 				already_defined = true;
-				fprintf(gbl_dump, "Clock %s is already defined: %s %ld\n", cklist[i].m_name->c_str(), cklist[i].m_wire->c_str(), cklist[i].m_interval_ps);
+				fprintf(gbl_dump,
+					"Clock %s is already defined: %s %ld\n",
+						cklist[i].m_name->c_str(),
+						(cklist[i].m_wire)
+						  ? cklist[i].m_wire->c_str()
+						  : "(Unspec)",
+						cklist[i].m_interval_ps);
 				if ((pwire)&&(cklist[i].m_wire == NULL)) {
 					cklist[i].m_wire = new STRING(pwire);
 					fprintf(gbl_dump, "Clock %s\'s wire set to %s\n", pname, pwire);
@@ -144,9 +182,15 @@ void	add_to_clklist(MAPDHASH *ckmap) {
 				}
 
 				if ((pfreq)&&(cklist[i].interval_ps()==CLOCKINFO::UNKNOWN_PS)) {
-					fprintf(gbl_dump, "Setting %s clock frequency to %ld\n", pname, strtoul(pfreq, NULL, 0));
-					cklist[id].setfrequency(
+					clocks_per_second = strtoul(pfreq, NULL, 0);
+					fprintf(gbl_dump, "Setting %s clock frequency to %ld\n", pname, clocks_per_second);
+					cklist[i].setfrequency(
 							clocks_per_second);
+				} else if ((ifreq)&&(cklist[i].interval_ps() == CLOCKINFO::UNKNOWN_PS)) {
+					fprintf(gbl_dump, "Setting %s clock frequency to %u\n", pname, ifreq);
+					cklist[i].setfrequency(
+							(unsigned long)
+							((unsigned)ifreq));
 				}
 
 				break;
@@ -162,20 +206,34 @@ void	add_to_clklist(MAPDHASH *ckmap) {
 			else
 				wname = new STRING(STRING("i_")+STRING(pname));
 			cki->setwire(wname);
-			clocks_per_second = strtoul(pfreq, NULL, 0);
-			cki->setfrequency(clocks_per_second);
-
-			if (gbl_dump) {
-				fprintf(gbl_dump, "ADDING CLOCK: %s, %s, at %lu Hz\n",
-					pname, wname->c_str(), clocks_per_second);
+			clocks_per_second = (unsigned)ifreq;
+			if (pfreq) {
+				clocks_per_second = strtoul(pfreq, NULL, 0);
+				cki->setfrequency(clocks_per_second);
+			} else if (ifreq != 0) {
+				// clocks_per_second = (unsigned)ifreq;
+				cki->setfrequency(clocks_per_second);
 			}
-			printf("ADDING CLOCK: %s, %s, at %lu Hz\n",
-					pname, wname->c_str(), clocks_per_second);
+
+			char	outstr[256];
+
+			sprintf(outstr, "ADDING CLOCK: %s, %s",
+					pname, wname->c_str());
+			if (clocks_per_second != 0)
+				sprintf(outstr, "%s, at %lu Hz\n", outstr,
+						clocks_per_second);
+			else
+				strcat(outstr, "\n");
+
+			if (gbl_dump)
+				fputs(outstr, gbl_dump);
+			fputs(outstr, stdout);
 		}
 
 		if (pname) pname = strtok_r(NULL, DELIMITERS, &tname);
 		if (pwire) pwire = strtok_r(NULL, DELIMITERS, &twire);
 		if (pfreq) pfreq = strtok_r(NULL, DELIMITERS, &tfreq);
+		ifreq = 0;
 	}
 
 	free(dname);
@@ -205,6 +263,34 @@ CLOCKINFO	*getclockinfo(STRINGP clock_name) {
 	return getclockinfo(*clock_name);
 }
 
+void	expand_clock(MAPDHASH &info) {
+	MAPDHASH::iterator	kyclock;
+	MAPDHASH	*ckmap;
+	CLOCKINFO	*cki;
+	STRINGP		sname;
+
+	kyclock = findkey(info, KYCLOCK);
+	if (info.end() == kyclock)
+		return;
+	if (kyclock->second.m_typ != MAPT_MAP)
+		return;
+	ckmap = kyclock->second.u.m_m;
+	sname = getstring(ckmap, KY_NAME);
+
+	// This will fail if multiple clocks are defined on the same line
+	cki = getclockinfo(sname);
+
+	if (cki) {
+		if (cki->m_hash != kyclock->second.u.m_m)
+			kyclock->second.u.m_m = cki->m_hash;
+	}
+}
+
+void	expand_clock(MAPT &elm) {
+	if(elm.m_typ == MAPT_MAP)
+		expand_clock(*elm.u.m_m);
+}
+
 void	find_clocks(MAPDHASH &master) {
 	MAPDHASH	*ckkey;
 	MAPDHASH::iterator	kypair;
@@ -228,9 +314,8 @@ void	find_clocks(MAPDHASH &master) {
 			continue;
 
 		p = kypair->second.u.m_m;
-		if (NULL != (ckkey = getmap(*p, KYCLOCK))) {
+		if (NULL != (ckkey = getmap(*p, KYCLOCK)))
 			add_to_clklist(ckkey);
-		}
 	}
 
 	CLOCKINFO	*cki;
@@ -244,5 +329,9 @@ void	find_clocks(MAPDHASH &master) {
 	} else
 		delete sclk;
 
-}
+	expand_clock(master);
+	for(kypair = master.begin(); kypair != master.end(); kypair++)
+		expand_clock(kypair->second);
 
+	fprintf(stderr, "All clocks enumeratod\n");
+}

@@ -1573,8 +1573,7 @@ int	main(int argc, char **argv) {
 			if (NULL == path) {
 				path = new STRING(".");
 				setstring(master, KYPATH, path);
-			}
-			fhash = parsefile(argv[argn], *path);
+			} fhash = parsefile(argv[argn], *path);
 			if (fhash) {
 				mergemaps(master, *fhash);
 				delete fhash;
@@ -1640,8 +1639,8 @@ int	main(int argc, char **argv) {
 	cvtintbykeylist(master, KYKEYS_INTLIST);
 
 	reeval(master);
-
 	assign_interrupts(master);
+	reeval(master);
 	find_clocks(master);
 	// assign_scopes(    master);
 	build_bus_list(master);

@@ -48,7 +48,7 @@
 @ACCESS=SDSPI_ACCESS
 @SLAVE.TYPE=OTHER
 @SLAVE.BUS=wb
-@BUS.PREFIX=wb
+@BUS.NAME=wb
 # @SCOPE.TRIGGER=sd_debug[31]
 # @SCOPE.DATA=sd_debug
 @INT.SDCARD.WIRE= @$(PREFIX)_int
@@ -97,11 +97,11 @@
 	wire	w_sd_cs_n, w_sd_mosi, w_sd_miso;
 
 	sdspi	@$(PREFIX)i(i_clk,
-		@$(BUS.PREFIX)_cyc,
-			(@$(BUS.PREFIX)_stb)&&(@$(PREFIX)_sel),
-			@$(BUS.PREFIX)_we,
-			@$(BUS.PREFIX)_addr[1:0],
-			@$(BUS.PREFIX)_data,
+		@$(BUS.NAME)_cyc,
+			(@$(BUS.NAME)_stb)&&(@$(PREFIX)_sel),
+			@$(BUS.NAME)_we,
+			@$(BUS.NAME)_addr[1:0],
+			@$(BUS.NAME)_data,
 			@$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_data,
 		w_sd_cs_n, o_sd_sck, w_sd_mosi, w_sd_miso,
 		@$(PREFIX)_int, 1'b1, sdspi_debug);
@@ -204,8 +204,6 @@ typedef	struct @$(DEVID)_S {
 #define	sd_use_fifo	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__r_use_fifo
 #define	sd_fifo_wr	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__r_fifo_wr
 
-@SIM.DBGCONDITION=
-			writeout = true;
 @SIM.DEBUG=
 			/*
 			printf(" SDSPI[%d,%d(%d),(%d)]",
@@ -267,7 +265,7 @@ typedef	struct @$(DEVID)_S {
 @SLAVE.BUS=wb
 @DEVID=SDSPI
 @NADDR=2
-@BUS.PREFIX=wb
+@BUS.NAME=wb
 @ACCESS=SDSPI_SCOPE
 @DEPENDS=SDSPI_ACCESS
 @INT.SDSCOPE.WIRE=@$(PREFIX)_int
@@ -276,17 +274,17 @@ typedef	struct @$(DEVID)_S {
 	wire	@$(PREFIX)_trigger,
 		@$(PREFIX)_ce;
 @MAIN.INSERT=
-	assign	@$(PREFIX)_trigger = (@$(BUS.PREFIX)_stb)
-				&&(sdcard_sel)&&(@$(BUS.PREFIX)_we);
+	assign	@$(PREFIX)_trigger = (@$(BUS.NAME)_stb)
+				&&(sdcard_sel)&&(@$(BUS.NAME)_we);
 	assign	@$(PREFIX)_ce = 1'b1;
 	wbscope #(5'h9) sdspiscope(i_clk, @$(PREFIX)_ce,
 			@$(PREFIX)_trigger,
 			sdspi_debug,
-			i_clk, @$(BUS.PREFIX)_cyc,
-			(@$(BUS.PREFIX)_stb)&&(@$(PREFIX)_sel),
-			@$(BUS.PREFIX)_we,
-			@$(BUS.PREFIX)_addr[0],
-			@$(BUS.PREFIX)_data,
+			i_clk, @$(BUS.NAME)_cyc,
+			(@$(BUS.NAME)_stb)&&(@$(PREFIX)_sel),
+			@$(BUS.NAME)_we,
+			@$(BUS.NAME)_addr[0],
+			@$(BUS.NAME)_data,
 			@$(PREFIX)_ack,
 			@$(PREFIX)_stall,
 			@$(PREFIX)_data,

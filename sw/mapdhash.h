@@ -76,6 +76,7 @@ extern	bool	splitkey(const STRING &ky, STRING &mkey, STRING &subky);
 extern	void	addtomap(MAPDHASH &fm, const STRING ky, STRING vl);
 extern	void	mapdump(MAPDHASH &fm);
 extern	void	mapdump(FILE *fp, MAPDHASH &fm);
+extern	void	mapdump(FILE *fp, MAPT &elm);
 extern	void	mergemaps(MAPDHASH &master, MAPDHASH &sub);
 extern	void	flatten(MAPDHASH &master);
 extern	void	trimall(MAPDHASH &mp, const STRING &sky);

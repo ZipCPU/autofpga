@@ -99,6 +99,8 @@ runme.sh: autofpga $(addprefix ../auto-data/,$(VDATA))
 	@echo >> $@
 	@echo >> $@
 	@echo ./autofpga -o ../demo-out -I ../auto-data $(VDATA)  >> $@
+	@echo >> $@
+	@echo "echo \"exit code \" \$$?" >> $@
 
 define	mk-objdir
 	@bash -c "if [ ! -e $(OBJDIR) ]; then mkdir -p $(OBJDIR); fi"

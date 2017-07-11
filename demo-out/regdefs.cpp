@@ -55,7 +55,7 @@ const	REGNAME	raw_bregs[] = {
 	{ R_GPIO            ,	"GPIO"         	},
 	{ R_GPIO            ,	"GPI"          	},
 	{ R_GPIO            ,	"GPO"          	},
-	{ PWCOUNT           ,	"PWRCOUNT"     	},
+	{ R_PWRCOUNT        ,	"PWRCOUNT"     	},
 	{ R_SPIO            ,	"SPIO"         	},
 	{ R_SYSCLK          ,	"SYSCLK"       	},
 	{ R_VERSION         ,	"VERSION"      	},

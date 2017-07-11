@@ -199,24 +199,6 @@ typedef	struct	HDMI_IN_S {
 #define	SYSPIC(A)	(1<<(A))
 
 
-// Definitions to interact with the OLED device
-#define	OLED_LOGICEN		0x0010001
-#define	OLED_LOGICEN_OFF	0x0010000
-#define	OLED_IOPWR		OLED_PMODEN
-#define	OLED_DPWREN		0x0020002 // Was VCC
-#define	OLED_DPWR_DISABLE	0x0020000
-#define	OLED_RESET		0x0040000
-#define	OLED_RESET_CLR		0x0040004
-#define	OLED_FULLPOWER		(OLED_PMODEN|OLED_VCCEN|OLED_RESET_CLR)
-#define	OLED_POWER_DOWN		(OLED_PMODEN_OFF|OLED_VCCEN|OLED_RESET_CLR)
-#define	OLED_BUSY(dev)		(dev.o_ctrl & 1)
-#define	OLED_DISPLAYON		0x0af	// To be sent over the control channel
-typedef	struct OLEDBW_S {
-	unsigned	o_ctrl, o_a, o_b, o_data;
-} OLEDBW;
-
-
-
 // Offsets for the ICAPE2 interface
 #define	CFG_CRC		0
 #define	CFG_FAR		1
@@ -238,6 +220,24 @@ typedef	struct OLEDBW_S {
 #define	CFG_BOOTSTS	22
 #define	CFG_CTL1	24
 #define	CFG_BSPI	31
+
+
+// Definitions to interact with the OLED device
+#define	OLED_LOGICEN		0x0010001
+#define	OLED_LOGICEN_OFF	0x0010000
+#define	OLED_IOPWR		OLED_PMODEN
+#define	OLED_DPWREN		0x0020002 // Was VCC
+#define	OLED_DPWR_DISABLE	0x0020000
+#define	OLED_RESET		0x0040000
+#define	OLED_RESET_CLR		0x0040004
+#define	OLED_FULLPOWER		(OLED_PMODEN|OLED_VCCEN|OLED_RESET_CLR)
+#define	OLED_POWER_DOWN		(OLED_PMODEN_OFF|OLED_VCCEN|OLED_RESET_CLR)
+#define	OLED_BUSY(dev)		(dev.o_ctrl & 1)
+#define	OLED_DISPLAYON		0x0af	// To be sent over the control channel
+typedef	struct OLEDBW_S {
+	unsigned	o_ctrl, o_a, o_b, o_data;
+} OLEDBW;
+
 
 
 #define	ALTPIC(A)	(1<<(A))
@@ -363,18 +363,18 @@ static volatile WBSCOPE *const _scope_sdcard = ((WBSCOPE *)29360128);
 #define	_BOARD_HAS_HDMI_IN
 static volatile HDMI_IN *const _hin = ((HDMI_IN *)48234496);
 #endif	// HDMIIN_ACCESS
-#ifdef	OLEDBW_ACCESS
-#define	_BOARD_HAS_OLEDBW
-static volatile OLEDBW *const _oledbw = ((OLEDBW *)39845888);
-#endif	// OLEDBW_ACCESS
-#ifdef	CFG_ACCESS
-#define	_BOARD_HAS_ICAPTETWO
-static volatile unsigned *const _icape = ((unsigned *)50331648);
-#endif	// CFG_ACCESS
 #ifdef	RTCDATE_ACCESS
 #define	_BOARD_HAS_RTCDATE
 static volatile unsigned *const _date = ((unsigned *)10485760);
 #endif	// RTCDATE_ACCESS
+#ifdef	CFG_ACCESS
+#define	_BOARD_HAS_ICAPTETWO
+static volatile unsigned *const _icape = ((unsigned *)50331648);
+#endif	// CFG_ACCESS
+#ifdef	OLEDBW_ACCESS
+#define	_BOARD_HAS_OLEDBW
+static volatile OLEDBW *const _oledbw = ((OLEDBW *)39845888);
+#endif	// OLEDBW_ACCESS
 #define	_BOARD_HAS_BUSERR
 static volatile unsigned *const _buserr = ((unsigned *)2097152);
 #ifdef	BUSPIC_ACCESS

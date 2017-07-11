@@ -49,9 +49,9 @@
 	wire	rtc_ppd, rtc_pps;
 	reg	r_rtc_ack;
 @MAIN.INSERT=
-	rtcgps	#(@$.CLKSTEP) thertc(i_clk,
-		wb_cyc, (wb_stb)&&(rtc_sel), wb_we, wb_addr[1:0], wb_data,
-		rtc_data, rtc_int, rtc_ppd,
+	rtcgps	#(@$CLKSTEP) the@$(PREFIX)(i_clk,
+		wb_cyc, (wb_stb)&&(@$(PREFIX)_sel), wb_we, wb_addr[1:0], wb_data,
+		@$(PREFIX)_data, @$(PREFIX)_int, @$(PREFIX)_ppd,
 		gps_tracking, ck_pps, gps_step[47:16], rtc_pps);
 	initial	r_rtc_ack = 1'b0;
 	always @(posedge i_clk)
@@ -69,9 +69,9 @@
 typedef	struct	RTCLIGHT_S	{
 	unsigned	r_clock, r_stopwatch, r_timer, r_alarm;
 } RTCLIGHT;
-@BDEF.IONAME=io_rtc
+@BDEF.IONAME=_rtc
 @BDEF.IOTYPE=RTCLIGHT
 @BDEF.OSDEF=_BOARD_HAS_RTCLIGHT
-@BDEF.OSVAL=static volatile @$.BDEF.IOTYPE *const _rtc = ((@$.BDEF.IOTYPE *)@$.BASE);
+@BDEF.OSVAL=static volatile @$BDEF.IOTYPE *const @$(BDEF.IONAME) = ((@$BDEF.IOTYPE *)@$BASE);
 #
 #

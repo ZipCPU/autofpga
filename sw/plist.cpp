@@ -201,15 +201,15 @@ int	PLIST::add(MAPDHASH *phash) {
 	PERIPHP p;
 	if (isbusmaster(*phash)) {
 		BUSINFO		*bi;
-		STRINGP		strp;
-		strp = getstring(phash, KYMASTER_BUS);
-		if (NULL != strp)
-			bi = find_bus(strp);
-		else {
-			MAPDHASH	*mapp;
-			mapp = getmap(phash, KYMASTER_BUS);
-			assert(NULL != mapp);
-			bi = find_bus(mapp);
+		MAPDHASH::iterator	kvmbus;
+
+		kvmbus = findkey(*phash, KYMASTER_BUS);
+		if (kvmbus != phash->end()) {
+			bi = NULL;
+			if (kvmbus->second.m_typ == MAPT_STRING)
+				bi = find_bus(kvmbus->second.u.m_s);
+			else if (kvmbus->second.m_typ == MAPT_MAP)
+				bi = find_bus(kvmbus->second.u.m_m);
 			assert(bi);
 		}
 		p = new SUBBUS(phash, bi->m_name, bi);
@@ -382,7 +382,7 @@ void	PLIST::assign_addresses(unsigned dwidth, unsigned nullsz) {
 			(*this)[i]->p_mask &= master_mask;
 
 			if (gbl_dump) {
-				fprintf(gbl_dump, "  %20s -> %08x & 0x%08x\n",
+				fprintf(gbl_dump, "  %20s -> %08lx & 0x%08lx\n",
 					(*this)[i]->p_name->c_str(),
 					(*this)[i]->p_base,
 					(*this)[i]->p_mask << daddr_abits);

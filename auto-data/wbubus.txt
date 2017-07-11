@@ -58,7 +58,7 @@
 	// UART interface
 	//
 	//
-	localparam [23:0] BUSUART = @$.SETUP;	// @$.BAUDRATE baud
+	localparam [23:0] BUSUART = @$SETUP;	// @$BAUDRATE baud
 	wire	[7:0]	rx_data, tx_data;
 	wire		rx_break, rx_parity_err, rx_frame_err, rx_stb;
 	wire		tx_stb, tx_busy;
@@ -101,7 +101,7 @@
 @ZIP_DBGDATA.FORMAT= 0x%08x
 @MAIN.INSERT=
 `ifdef	INCLUDE_ZIPCPU
-	assign	wbu_zip_sel   = wbu_addr[@$.ZIP_ADDRESS_BIT];
+	// assign	wbu_zip_sel   = wbu_addr[@$.ZIP_ADDRESS_BIT];
 `else
 	assign	wbu_zip_sel   = 1'b0;
 	assign	zip_dbg_ack   = 1'b0;

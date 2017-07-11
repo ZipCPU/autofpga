@@ -50,4 +50,4 @@
 		r_pwrcount_data[31:0] <= r_pwrcount_data[31:0] + 1'b1;
 	assign	pwrcount_data = r_pwrcount_data;
 @REGS.N=1
-@REGS.0= 0 PWCOUNT PWRCOUNT
+@REGS.0= 0 R_PWRCOUNT PWRCOUNT

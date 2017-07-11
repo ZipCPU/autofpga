@@ -60,15 +60,15 @@
 `define	MICROPHONE_ACCESS
 `define	GPIO_ACCESS
 `define	HDMI_OUT_EDID_ACCESS
-`define	BKRAM_ACCESS
 `define	FLASH_ACCESS
+`define	BKRAM_ACCESS
 `define	FLASH_ACCESS
 `define	GPS_CLOCK
 `define	MOUSE_ACCESS
 `define	HDMI_IN_EDID_ACCESS
 `define	HDMIIN_ACCESS
-`define	OLEDBW_ACCESS
 `define	CFG_ACCESS
+`define	OLEDBW_ACCESS
 `define	BUSPIC_ACCESS
 `define	GPSUART_ACCESS
 `define	NETCTRL_ACCESS
@@ -161,6 +161,7 @@ module	main(i_clk, i_reset,
 // be best to use localparam over parameter, but here we don't
 // check
 	localparam [31:0] GPSCLOCK_DEFAULT_STEP = 32'haabcc771;
+	localparam	ICAPE_LGDIV=3;
 	//
 	//
 	// Variables/definitions needed by the ZipCPU BUS master
@@ -180,7 +181,6 @@ module	main(i_clk, i_reset,
 	//
 	// A boolean, indicating whether or not the ZipCPU be halted on startup?
 	localparam	ZIP_START_HALTED=1'b1;
-	localparam	ICAPE_LGDIV=3;
 //
 // The next step is to declare all of the various ports that were just
 // listed above.  
@@ -1021,21 +1021,6 @@ module	main(i_clk, i_reset,
 		r_clkhdmiout_ack <= (wb_stb)&&(clkhdmiout_sel);
 	assign	clkhdmiout_ack   = r_clkhdmiout_ack;
 	assign	clkhdmiout_stall = 1'b0;
-`ifdef	BKRAM_ACCESS
-	memdev #(.LGMEMSZ(20), .EXTRACLOCK(1))
-		bkrami(i_clk,
-			(wb_cyc), (wb_stb)&&(bkram_sel), wb_we,
-				wb_addr[(20-3):0], wb_data, wb_sel,
-				bkram_ack, bkram_stall, bkram_data);
-`else	// BKRAM_ACCESS
-	reg	_r_bkram_ack;
-	initial	_r_bkram_ack = 1'b0;
-	always @(posedge i_clk)	_r_bkram_ack <= bkram_sel;
-	assign	bkram_ack   = _r_bkram_ack;
-	assign	bkram_stall = 0;
-	assign	bkram_data  = 0;
-`endif	// BKRAM_ACCESS
-
 `ifdef	FLASH_ACCESS
 	// The Flash control interface result comes back together with the
 	// flash interface itself.  Hence, we always return zero here.
@@ -1050,6 +1035,21 @@ module	main(i_clk, i_reset,
 	assign	flctl_stall = 0;
 	assign	flctl_data  = 0;
 `endif	// FLASH_ACCESS
+
+`ifdef	BKRAM_ACCESS
+	memdev #(.LGMEMSZ(20), .EXTRACLOCK(1))
+		bkrami(i_clk,
+			(wb_cyc), (wb_stb)&&(bkram_sel), wb_we,
+				wb_addr[(20-3):0], wb_data, wb_sel,
+				bkram_ack, bkram_stall, bkram_data);
+`else	// BKRAM_ACCESS
+	reg	_r_bkram_ack;
+	initial	_r_bkram_ack = 1'b0;
+	always @(posedge i_clk)	_r_bkram_ack <= bkram_sel;
+	assign	bkram_ack   = _r_bkram_ack;
+	assign	bkram_stall = 0;
+	assign	bkram_data  = 0;
+`endif	// BKRAM_ACCESS
 
 `ifdef	FLASH_ACCESS
 	wbqspiflash #(24)
@@ -1180,7 +1180,7 @@ module	main(i_clk, i_reset,
 
 `ifdef	WBUBUS_MASTER
 `ifdef	INCLUDE_ZIPCPU
-	assign	wbu_zip_sel   = wbu_addr[@$.ZIP_ADDRESS_BIT];
+	// assign	wbu_zip_sel   = wbu_addr[@$.ZIP_ADDRESS_BIT];
 `else
 	assign	wbu_zip_sel   = 1'b0;
 	assign	zip_dbg_ack   = 1'b0;
@@ -1242,6 +1242,45 @@ module	main(i_clk, i_reset,
 	assign	hdmiin_int = 1'b0;	// hdmiin.INT.VSYNC.WIRE
 `endif	// HDMIIN_ACCESS
 
+`ifdef	RTCDATE_ACCESS
+	//
+	// The Calendar DATE
+	//
+	rtcdate	thedate(i_clk, rtc_ppd,
+		(wb_stb)&&(date_sel), wb_we, wb_data,
+			date_ack, date_stall, date_data);
+`else	// RTCDATE_ACCESS
+	reg	_r_date_ack;
+	initial	_r_date_ack = 1'b0;
+	always @(posedge i_clk)	_r_date_ack <= date_sel;
+	assign	date_ack   = _r_date_ack;
+	assign	date_stall = 0;
+	assign	date_data  = 0;
+`endif	// RTCDATE_ACCESS
+
+`ifdef	CFG_ACCESS
+	wire[31:0]	cfg_debug;
+`ifdef	VERILATOR
+	reg	r_cfg_ack;
+	always @(posedge i_clk)
+		r_cfg_ack <= (wb_stb)&&(cfg_sel);
+	assign	cfg_stall = 1'b0;
+	assign	cfg_data  = 32'h00;
+`else
+	wbicapetwo #(ICAPE_LGDIV)
+		cfgport(i_clk, wb_cyc, (wb_stb)&&(cfg_sel), wb_we,
+			wb_addr[4:0], wb_data,
+			cfg_ack, cfg_stall, cfg_data);
+`endif
+`else	// CFG_ACCESS
+	reg	_r_cfg_ack;
+	initial	_r_cfg_ack = 1'b0;
+	always @(posedge i_clk)	_r_cfg_ack <= cfg_sel;
+	assign	cfg_ack   = _r_cfg_ack;
+	assign	cfg_stall = 0;
+	assign	cfg_data  = 0;
+`endif	// CFG_ACCESS
+
 `ifdef	INCLUDE_ZIPCPU
 	//
 	//
@@ -1294,45 +1333,6 @@ module	main(i_clk, i_reset,
 	assign	oled_int = 1'b0;	// oled.INT.OLED.WIRE
 `endif	// OLEDBW_ACCESS
 
-`ifdef	CFG_ACCESS
-	wire[31:0]	cfg_debug;
-`ifdef	VERILATOR
-	reg	r_cfg_ack;
-	always @(posedge i_clk)
-		r_cfg_ack <= (wb_stb)&&(cfg_sel);
-	assign	cfg_stall = 1'b0;
-	assign	cfg_data  = 32'h00;
-`else
-	wbicapetwo #(ICAPE_LGDIV)
-		cfgport(i_clk, wb_cyc, (wb_stb)&&(cfg_sel), wb_we,
-			wb_addr[4:0], wb_data,
-			cfg_ack, cfg_stall, cfg_data);
-`endif
-`else	// CFG_ACCESS
-	reg	_r_cfg_ack;
-	initial	_r_cfg_ack = 1'b0;
-	always @(posedge i_clk)	_r_cfg_ack <= cfg_sel;
-	assign	cfg_ack   = _r_cfg_ack;
-	assign	cfg_stall = 0;
-	assign	cfg_data  = 0;
-`endif	// CFG_ACCESS
-
-`ifdef	RTCDATE_ACCESS
-	//
-	// The Calendar DATE
-	//
-	rtcdate	thedate(i_clk, rtc_ppd,
-		(wb_stb)&&(date_sel), wb_we, wb_data,
-			date_ack, date_stall, date_data);
-`else	// RTCDATE_ACCESS
-	reg	_r_date_ack;
-	initial	_r_date_ack = 1'b0;
-	always @(posedge i_clk)	_r_date_ack <= date_sel;
-	assign	date_ack   = _r_date_ack;
-	assign	date_stall = 0;
-	assign	date_data  = 0;
-`endif	// RTCDATE_ACCESS
-
 	assign	buserr_data = r_bus_err;
 `ifdef	INCLUDE_ZIPCPU
 	//
@@ -1340,7 +1340,7 @@ module	main(i_clk, i_reset,
 	// And an arbiter to decide who gets access to the bus
 	//
 	//
-	// Clock speed = @$(CLOCK.FREQUENCY)
+	// Clock speed = 100000000
 	wbpriarbiter #(32,27)	bus_arbiter(i_clk,
 		// The Zip CPU bus master --- gets the priority slot
 		zip_cyc, zip_stb, zip_we, zip_addr, zip_data, zip_sel,

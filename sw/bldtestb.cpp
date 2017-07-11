@@ -73,19 +73,24 @@ void	build_testb_h(MAPDHASH &master, FILE *fp, STRING &fname) {
 "	VerilatedVcdC*	m_trace;\n"
 "	unsigned long	m_time_ps;\n");
 
-	if (cklist.size() > 1) {
-		for(unsigned i=0; i<cklist.size(); i++) {
-			fprintf(fp, "\tTBCLOCK\tm_%s;\n",
-				cklist[i].m_name->c_str());
-		}
-	}
+	for(unsigned i=0; i<cklist.size(); i++)
+		fprintf(fp, "\tTBCLOCK\tm_%s;\n", cklist[i].m_name->c_str());
 
 	fprintf(fp, "\n"
 "	TESTB(void) {\n"
 "		m_core = new VA;\n"
 "		m_time_ps  = 0ul;\n"
 "		m_trace    = NULL;\n"
-"		Verilated::traceEverOn(true);\n"
+"		Verilated::traceEverOn(true);\n");
+	for(unsigned i=0; i<cklist.size(); i++) {
+		double	freq;
+		fprintf(fp, "\t\tm_%s.init(%ld);", cklist[i].m_name->c_str(),
+			cklist[i].interval_ps());
+		freq = 1e6 / cklist[i].interval_ps();
+		fprintf(fp, "\t//%8.2f MHz\n", freq);
+	}
+
+	fprintf(fp,
 "	}\n"
 "	virtual ~TESTB(void) {\n"
 "		if (m_trace) m_trace->close();\n"

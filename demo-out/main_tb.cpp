@@ -166,7 +166,8 @@ public:
 	}
 
 
-	virtual	void	sim_hdmi_in_clk_tick(void) {
+	virtual	void	sim_clk_tick(void) {
+		// Default clock tick
 		bool	writeout;
 
 		// SIM.TICK from sdcard
@@ -211,7 +212,6 @@ public:
 #endif
 
 		writeout = false;
-			writeout = true;
 		if (writeout) {
 			//    SIM.DEBUG from sdcard
 			/*
@@ -269,15 +269,15 @@ public:
 		}
 	}
 
+	virtual	void	sim_hdmi_in_clk_tick(void) {
+		m_changed = false;
+	}
+
 	virtual	void	sim_hdmi_in_hsclk_tick(void) {
 		m_changed = false;
 	}
 
 	virtual	void	sim_clk_200mhz_tick(void) {
-		m_changed = false;
-	}
-
-	virtual	void	sim_clk_tick(void) {
 		m_changed = false;
 	}
 

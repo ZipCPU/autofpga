@@ -53,10 +53,10 @@ public:
 	bool		m_changed;
 	VerilatedVcdC*	m_trace;
 	unsigned long	m_time_ps;
+	TBCLOCK	m_clk;
 	TBCLOCK	m_hdmi_in_clk;
 	TBCLOCK	m_hdmi_in_hsclk;
 	TBCLOCK	m_clk_200mhz;
-	TBCLOCK	m_clk;
 	TBCLOCK	m_hdmi_out_clk;
 
 	TESTB(void) {
@@ -64,6 +64,11 @@ public:
 		m_time_ps  = 0ul;
 		m_trace    = NULL;
 		Verilated::traceEverOn(true);
+		m_clk.init(10000);	//  100.00 MHz
+		m_hdmi_in_clk.init(6734);	//  148.50 MHz
+		m_hdmi_in_hsclk.init(673);	// 1485.88 MHz
+		m_clk_200mhz.init(5000);	//  200.00 MHz
+		m_hdmi_out_clk.init(6734);	//  148.50 MHz
 	}
 	virtual ~TESTB(void) {
 		if (m_trace) m_trace->close();
@@ -95,16 +100,16 @@ public:
 	}
 
 	virtual	void	tick(void) {
-		unsigned	mintime = m_hdmi_in_clk.time_to_tick();
+		unsigned	mintime = m_clk.time_to_tick();
+
+		if (m_hdmi_in_clk.time_to_tick() < mintime)
+			mintime = m_hdmi_in_clk.time_to_tick();
 
 		if (m_hdmi_in_hsclk.time_to_tick() < mintime)
 			mintime = m_hdmi_in_hsclk.time_to_tick();
 
 		if (m_clk_200mhz.time_to_tick() < mintime)
 			mintime = m_clk_200mhz.time_to_tick();
-
-		if (m_clk.time_to_tick() < mintime)
-			mintime = m_clk.time_to_tick();
 
 		if (m_hdmi_out_clk.time_to_tick() < mintime)
 			mintime = m_hdmi_out_clk.time_to_tick();
@@ -114,10 +119,10 @@ public:
 		eval();
 		if (m_trace) m_trace->dump(m_time_ps+1);
 
+		m_core->i_clk = m_clk.advance(mintime);
 		m_core->i_hdmi_in_clk = m_hdmi_in_clk.advance(mintime);
 		m_core->i_hdmi_in_hsclk = m_hdmi_in_hsclk.advance(mintime);
 		m_core->i_clk_200mhz = m_clk_200mhz.advance(mintime);
-		m_core->i_clk = m_clk.advance(mintime);
 		m_core->i_hdmi_out_clk = m_hdmi_out_clk.advance(mintime);
 
 		eval();
@@ -125,6 +130,10 @@ public:
 
 
 		m_time_ps += mintime;
+		if (m_clk.falling_edge()) {
+			m_changed = true;
+			sim_clk_tick();
+		}
 		if (m_hdmi_in_clk.falling_edge()) {
 			m_changed = true;
 			sim_hdmi_in_clk_tick();
@@ -137,20 +146,16 @@ public:
 			m_changed = true;
 			sim_clk_200mhz_tick();
 		}
-		if (m_clk.falling_edge()) {
-			m_changed = true;
-			sim_clk_tick();
-		}
 		if (m_hdmi_out_clk.falling_edge()) {
 			m_changed = true;
 			sim_hdmi_out_clk_tick();
 		}
 	}
 
+	virtual	void	sim_clk_tick(void) {}
 	virtual	void	sim_hdmi_in_clk_tick(void) {}
 	virtual	void	sim_hdmi_in_hsclk_tick(void) {}
 	virtual	void	sim_clk_200mhz_tick(void) {}
-	virtual	void	sim_clk_tick(void) {}
 	virtual	void	sim_hdmi_out_clk_tick(void) {}
 	virtual	void	reset(void) {
 		m_core->i_reset = 1;

@@ -44,6 +44,7 @@
 #include "keys.h"
 #include "ast.h"
 #include "kveval.h"
+#include "globals.h"
 
 MAPT	operator+(MAPT a, MAPT b) {
 	char	*sbuf;
@@ -348,6 +349,24 @@ void	mapdump(MAPDHASH &fm) {
 	mapdump_aux(stdout, fm, 0);
 }
 
+void	mapdump(FILE *fp, MAPT &elm) {
+fprintf(fp, "DUMP-REQ\n");
+	switch(elm.m_typ) {
+	case MAPT_STRING:
+		fprintf(fp, "DUMP: %s\n", elm.u.m_s->c_str()); fflush(fp);
+		break;
+	case MAPT_INT:
+		fprintf(fp, "DUMP: %d\n", elm.u.m_v); fflush(fp);
+		break;
+	case MAPT_AST:
+		fprintf(fp, "(AST)\n"); fflush(fp);
+		break;
+	case MAPT_MAP:
+		mapdump_aux(fp, *elm.u.m_m, 0); fflush(fp);
+		break;
+	}
+}
+
 //
 // Merge two maps, a master and a sub
 //
@@ -628,16 +647,16 @@ STRINGP getstring(MAPDHASH &master, const STRING &ky) {
 	if (r == master.end())
 		return NULL;
 	else if (r->second.m_typ == MAPT_MAP) {
-		MAPDHASH	*m = r->second.u.m_m;
+		// MAPDHASH	*m = r->second.u.m_m;
+		STRINGP		strp;
 
-		// Check for a .STR key within this
-		r = m->find(KYSTR);
-		if (r == m->end()) {
-			return getstring(master);
-		} if (r->second.m_typ != MAPT_STRING) {
+		// Check for a .STR key within this node
+		strp = getstring(master);
+		if (NULL == strp) {
 			fprintf(stderr, "ERR: STRING expression isnt a string!! (KEY=%s)\n", ky.c_str());
-			return NULL;
+			fprintf(gbl_dump, "ERR: STRING expression isnt a string!! (KEY=%s)\n", ky.c_str());
 		}
+		return strp;
 	} else if (r->second.m_typ != MAPT_STRING) {
 		fprintf(stderr, "ERR: STRING expression isnt a string!! (KEY=%s)\n", ky.c_str());
 		return NULL;

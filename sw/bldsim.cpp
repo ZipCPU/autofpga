@@ -94,7 +94,7 @@ bool	tb_same_clock(MAPDHASH &info, STRINGP ckname) {
 		return result;
 	}
 
-	if ((cklist.size() > 0)&&(ckname == cklist[0].m_name))
+	if ((cklist.size() > 0)&&(ckname->compare(*cklist[0].m_name)==0))
 		return true;
 	return false;
 }
@@ -309,6 +309,9 @@ void	build_main_tb_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 
 			fprintf(fp, "\n\tvirtual\tvoid\tsim_%s_tick(void) {\n",
 				cklist[i].m_name->c_str());
+			if (0 == i)
+				fprintf(fp, "\t\t// Default clock tick\n");
+
 			if ((have_debug)&&(have_condition))
 				fprintf(fp, "\t\tbool\twriteout;\n\n");
 			tb_tick(master, cklist[i].m_name, fp);

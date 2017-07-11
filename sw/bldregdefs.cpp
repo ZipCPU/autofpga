@@ -182,10 +182,10 @@ void write_regdefs(FILE *fp, PLIST &plist, unsigned longest_defname) {
 
 			// 2. Get the C name
 			rname = strtok(nxtp, " \t\n,");
-			fprintf(fp, "#define\t%-*s\t0x%08x", longest_defname,
+			fprintf(fp, "#define\t%-*s\t0x%08lx", longest_defname,
 				rname, (roff<<2)+plist[i]->p_base);
 
-			fprintf(fp, "\t// %08x, wbregs names: ", plist[i]->p_base);
+			fprintf(fp, "\t// %08lx, wbregs names: ", plist[i]->p_base);
 			int	first = 1;
 			// 3. Get the various user names
 			while(NULL != (rv = strtok(NULL, " \t\n,"))) {
