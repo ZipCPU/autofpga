@@ -45,6 +45,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <verilated_vcd_c.h>
+#include "tbclock.h"
 #include <tbclock.h>
 
 template <class VA>	class TESTB {
@@ -52,6 +53,7 @@ public:
 	VA	*m_core;
 	bool		m_changed;
 	VerilatedVcdC*	m_trace;
+	bool		m_done;
 	unsigned long	m_time_ps;
 	TBCLOCK	m_clk;
 	TBCLOCK	m_hdmi_in_clk;
@@ -63,6 +65,7 @@ public:
 		m_core = new VA;
 		m_time_ps  = 0ul;
 		m_trace    = NULL;
+		m_done     = false;
 		Verilated::traceEverOn(true);
 		m_clk.init(10000);	//  100.00 MHz
 		m_hdmi_in_clk.init(6734);	//  148.50 MHz
@@ -157,6 +160,16 @@ public:
 	virtual	void	sim_hdmi_in_hsclk_tick(void) {}
 	virtual	void	sim_clk_200mhz_tick(void) {}
 	virtual	void	sim_hdmi_out_clk_tick(void) {}
+	virtual bool	done(void) {
+		if (m_done)
+			return true;
+
+		if (Verilated::gotFinish())
+			m_done = true;
+
+		return m_done;
+	}
+
 	virtual	void	reset(void) {
 		m_core->i_reset = 1;
 		tick();

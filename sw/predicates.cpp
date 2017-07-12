@@ -133,12 +133,11 @@ bool	ismemory(MAPT &pmap) {
 // Does this component have a bus definition within it, or does it reference
 // a bus?
 bool	refbus(MAPDHASH &phash) {
-	STRINGP	strp;
 
-	strp = getstring(phash, KYBUS);
-	if (!strp)
-		return false;
-	return true;
+	if (NULL != getstring(phash, KYBUS))
+		return true;
+	// else if (NULL != getmap(phash, KYBUS)) return true;
+	return false;
 }
 
 bool	refbus(MAPT &pmap) {

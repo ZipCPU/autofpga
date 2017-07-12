@@ -522,45 +522,54 @@ void	build_board_h(    MAPDHASH &master, FILE *fp, STRING &fname) {
 
 void	build_board_ld(   MAPDHASH &master, FILE *fp, STRING &fname) {
 	MAPDHASH::iterator	kvpair;
-	// STRINGP	strp;
-	// int		reset_address;
-	// PERIPHP		fastmem = NULL, bigmem = NULL;
+	STRINGP		strp;
+	int		reset_address;
+	PERIPHP		fastmem = NULL, bigmem = NULL;
+	BUSINFO		*defbus;
 
 	legal_notice(master, fp, fname, "/*******************************************************************************", "*");
 	fprintf(fp, "*/\n");
 
-/*
-	std::sort(mlist.begin(), mlist.end(), compare_naddr);
+	defbus = find_bus((STRINGP)NULL);
 
 	fprintf(fp, "ENTRY(_start)\n\n");
 
 	fprintf(fp, "MEMORY\n{\n");
-	for(unsigned i=0; i<mlist.size(); i++) {
-		STRINGP	name = getstring(*mlist[i]->p_phash, KYLD_NAME),
-			perm = getstring(*mlist[i]->p_phash, KYLD_PERM);
+	for(unsigned i=0; i<defbus->size(); i++) {
+		PERIPHP	p = (*defbus)[i];
+		STRINGP	name = getstring(*p->p_phash, KYLD_NAME),
+			perm = getstring(*p->p_phash, KYLD_PERM);
+
+		if (!ismemory(*p->p_phash))
+			continue;
 
 		if (NULL == name)
-			name = mlist[i]->p_name;
-		fprintf(fp,"\t%8s(%2s) : ORIGIN = 0x%08x, LENGTH = 0x%08x\n",
+			name = p->p_name;
+		fprintf(fp,"\t%8s(%2s) : ORIGIN = 0x%08lx, LENGTH = 0x%08x\n",
 			name->c_str(), (perm)?(perm->c_str()):"r",
-			mlist[i]->p_base, (mlist[i]->naddr()<<2));
+			p->p_base, (p->naddr()*(defbus->data_width()/8)));
 
 		// Find our bigest and fastest memories
 		if (tolower(perm->c_str()[0]) != 'w')
 			continue;
 		if (!bigmem)
-			bigmem = mlist[i];
-		else if ((bigmem)&&(mlist[i]->naddr() > bigmem->naddr())) {
-			bigmem = mlist[i];
+			bigmem = p;
+		else if ((bigmem)&&(p->naddr() > bigmem->naddr())) {
+			bigmem = p;
 		}
 	}
 	fprintf(fp, "}\n\n");
 
 	// Define pointers to these memories
-	for(unsigned i=0; i<mlist.size(); i++) {
-		STRINGP	name = getstring(*mlist[i]->p_phash, KYLD_NAME);
+	for(unsigned i=0; i<defbus->size(); i++) {
+		PERIPHP	p = (*defbus)[i];
+		STRINGP	name = getstring(*p->p_phash, KYLD_NAME);
+
+		if (!ismemory(*p->p_phash))
+			continue;
+
 		if (NULL == name)
-			name = mlist[i]->p_name;
+			name = p->p_name;
 
 		fprintf(fp, "_%-8s = ORIGIN(%s);\n",
 			name->c_str(), name->c_str());
@@ -583,12 +592,15 @@ void	build_board_ld(   MAPDHASH &master, FILE *fp, STRING &fname) {
 				break;
 			}
 		} if (!found) {
-			for(unsigned i=0; i<mlist.size(); i++) {
-				STRINGP	name = getstring(*mlist[i]->p_phash, KYLD_NAME);
+			for(unsigned i=0; i<defbus->size(); i++) {
+				PERIPHP	p = (*defbus)[i];
+				if (!ismemory(*p->p_phash))
+					continue;
+				STRINGP	name = getstring(*p->p_phash, KYLD_NAME);
 				if (NULL == name)
-					name = mlist[i]->p_name;
-				if (KYFLASH == *name) {
-					reset_address = mlist[i]->p_base;
+					name = p->p_name;
+				if (KYFLASH.compare(*name) == 0) {
+					reset_address = p->p_base;
 					found = true;
 					break;
 				}
@@ -638,7 +650,7 @@ void	build_board_ld(   MAPDHASH &master, FILE *fp, STRING &fname) {
 				"\t\t} > %s\n",
 			bigmem->p_name->c_str());
 	}
-*/
+
 	fprintf(fp, "\t_top_of_heap = .;\n");
 	fprintf(fp, "}\n");
 }
@@ -870,7 +882,7 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 //	same order.
 //
 	// External declarations (input/output) for our various ports
-	fprintf(fp, "\tinput\twire\t\ti_clk, i_reset;\n");
+	fprintf(fp, "\tinput\twire\t\ti_clk;\n// verilator lint_off UNUSED\n\tinput\twire\t\ti_reset;\n\t// verilator lint_on UNUSED\n");
 	str = "MAIN.IODECL";
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
 		STRINGP	strp;
@@ -880,6 +892,12 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 		if (strp)
 			fprintf(fp, "%s", strp->c_str());
 	}
+
+	fprintf(fp,
+"\t// Make Verilator happy ... defining bus wires for lots of components\n"
+"\t// often ends up with unused wires lying around.  We'll turn off\n"
+"\t// Verilator\'s lint warning here that checks for unused wires.\n"
+"\t// verilator lint_off UNUSED\n\n");
 
 	fprintf(fp,
 	"\n\n"
@@ -920,6 +938,12 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 		}
 	}
 
+	fprintf(fp,
+	"\n\n"
+	"\t//\n\t// Component declarations\n\t//\n"
+	"\t// These declarations come from the @MAIN.DEFNS keys found in the\n"
+	"\t// various components comprising the design.\n\t//\n");
+	writeout(fp, master, KYMAIN_DEFNS);
 
 	// Declare interrupt vector wires.
 	fprintf(fp,

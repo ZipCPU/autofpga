@@ -77,7 +77,7 @@
 	localparam	RESET_ADDRESS = @$RESET_ADDRESS;
 	//
 	// The number of valid bits on the bus
-	localparam	ZIP_ADDRESS_WIDTH = 30;	// Zip-CPU address width
+	localparam	ZIP_ADDRESS_WIDTH = @$(MASTER.BUS.AWID);	// Zip-CPU address width
 	//
 	// Number of ZipCPU interrupts
 	localparam	ZIP_INTS = 16;
@@ -91,8 +91,6 @@
 	// All we define here is a set of scope wires
 	wire	[31:0]	zip_debug;
 	wire		zip_trigger;
-	wire		zip_dbg_ack, zip_dbg_stall;
-	wire	[31:0]	zip_dbg_data;
 	wire	[15:0] zip_int_vector;
 @MAIN.INSERT=
 	//
@@ -100,10 +98,6 @@
 	// The ZipCPU/ZipSystem BUS master
 	//
 	//
-`ifndef	WBUBUS_MASTER
-	wire	wbu_zip_sel;
-	assign	wbu_zip_sel = 1'b0;
-`endif
 	assign	zip_int_vector = { alt_int_vector[14:8], sys_int_vector[14:6] };
 	zipsystem #(RESET_ADDRESS,ZIP_ADDRESS_WIDTH,10,ZIP_START_HALTED,ZIP_INTS)
 		swic(i_clk, i_cpu_reset,
@@ -112,8 +106,8 @@
 					zip_ack, zip_stall, zip_idata, zip_err,
 			zip_int_vector, zip_cpu_int,
 			// Debug wishbone interface
-			((wbu_cyc)&&(wbu_zip_sel)),
-			((wbu_stb)&&(wbu_zip_sel)),wbu_we, wbu_addr[0],
+			(wbu_cyc), ((wbu_stb)&&(zip_dbg_sel)),wbu_we,
+			wbu_addr[0],
 			wbu_data, zip_dbg_ack, zip_dbg_stall, zip_dbg_data,
 			zip_debug);
 	assign	zip_trigger = zip_debug[0];
@@ -437,4 +431,5 @@
 @PREFIX=zip_dbg
 @SLAVE.TYPE=OTHER
 @SLAVE.BUS=wbu
+@SLAVE.ORDER=1000000
 @NADDR=2

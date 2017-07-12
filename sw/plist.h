@@ -56,7 +56,7 @@ class	PERIPH {
 public:
 	unsigned long	p_base;		// In octets
 	unsigned long	p_naddr;	// In words, given in file
-	unsigned	p_awid;		// Log_2 (octets)
+	unsigned	p_awid;		// Log_2 (words)
 	unsigned long	p_mask;		// Words.  Bit is true if relevant for address selection
 	//
 	unsigned	p_sbaw;

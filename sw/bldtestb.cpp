@@ -60,7 +60,8 @@ void	build_testb_h(MAPDHASH &master, FILE *fp, STRING &fname) {
 "\n"
 "#include <stdio.h>\n"
 "#include <stdint.h>\n"
-"#include <verilated_vcd_c.h>\n");
+"#include <verilated_vcd_c.h>\n"
+"#include \"tbclock.h\"\n");
 
 	if (cklist.size() > 1)
 		fprintf(fp, "#include <tbclock.h>\n");
@@ -71,6 +72,7 @@ void	build_testb_h(MAPDHASH &master, FILE *fp, STRING &fname) {
 "	VA	*m_core;\n"
 "	bool		m_changed;\n"
 "	VerilatedVcdC*	m_trace;\n"
+"	bool		m_done;\n"
 "	unsigned long	m_time_ps;\n");
 
 	for(unsigned i=0; i<cklist.size(); i++)
@@ -81,6 +83,7 @@ void	build_testb_h(MAPDHASH &master, FILE *fp, STRING &fname) {
 "		m_core = new VA;\n"
 "		m_time_ps  = 0ul;\n"
 "		m_trace    = NULL;\n"
+"		m_done     = false;\n"
 "		Verilated::traceEverOn(true);\n");
 	for(unsigned i=0; i<cklist.size(); i++) {
 		double	freq;
@@ -207,6 +210,17 @@ void	build_testb_h(MAPDHASH &master, FILE *fp, STRING &fname) {
 			"\t\t}\n",
 			cklist[0].m_name->c_str());
 	}
+
+	fprintf(fp, ""
+"\tvirtual bool	done(void) {\n"
+"\t\tif (m_done)\n"
+"\t\t\treturn true;\n"
+"\n"
+"\t\tif (Verilated::gotFinish())\n"
+"\t\t\tm_done = true;\n"
+"\n"
+"\t\treturn m_done;\n"
+"\t}\n\n");
 
 	fprintf(fp, ""
 "	virtual	void	reset(void) {\n"

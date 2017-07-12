@@ -311,6 +311,8 @@ void	mapdump_aux(FILE *fp, MAPDHASH &fm, int offset) {
 	MAPDHASH::iterator	kvpair;
 
 	for(kvpair = fm.begin(); kvpair != fm.end(); kvpair++) {
+		if (offset == 0)
+			fprintf(fp, "\n");
 		fprintf(fp, "%*s%s: ", offset, "", (*kvpair).first.c_str());
 		if ((*kvpair).second.m_typ == MAPT_MAP) {
 			fprintf(fp, "\n");
@@ -341,7 +343,7 @@ void	mapdump_aux(FILE *fp, MAPDHASH &fm, int offset) {
 }
 
 void	mapdump(FILE *fp, MAPDHASH &fm) {
-	fprintf(fp, "\n\nDUMPING!!\n\n");
+	fprintf(fp, "\n================\nFULL HASH DUMP!!\n================\n");
 	mapdump_aux(fp, fm, 0);
 }
 
@@ -623,7 +625,8 @@ MAPDHASH *getmap(MAPDHASH &master, const STRING &ky) {
 }
 
 MAPDHASH *getmap(MAPDHASH *mp, const STRING &ky) {
-	assert(mp);
+	if (!mp)
+		return NULL;
 	return getmap(*mp, ky);
 }
 
@@ -665,7 +668,8 @@ STRINGP getstring(MAPDHASH &master, const STRING &ky) {
 }
 
 STRINGP getstring(MAPDHASH *m, const STRING &ky) {
-	assert(m);
+	if (!m)
+		return NULL;
 	return getstring(*m, ky);
 }
 
@@ -807,7 +811,8 @@ bool getvalue(MAPDHASH &master, const STRING &ky, int &value) {
 }
 
 bool getvalue(MAPDHASH *mp, const STRING &ky, int &value) {
-	assert(mp);
+	if (!mp)
+		return false;
 	return getvalue(*mp, ky, value);
 }
 

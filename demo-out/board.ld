@@ -40,5 +40,36 @@
 *
 *
 */
+ENTRY(_start)
+
+MEMORY
+{
+	   bkram(wx) : ORIGIN = 0x00c00000, LENGTH = 0x00100000
+	   flash(rx) : ORIGIN = 0x01000000, LENGTH = 0x01000000
+}
+
+_bkram    = ORIGIN(bkram);
+_flash    = ORIGIN(flash);
+SECTIONS
+{
+	.rocode 0x01400000 : ALIGN(4) {
+		_boot_address = .;
+		*(.start) *(.boot)
+	} > flash
+	_kernel_image_start = . ;
+	_kernel_image_end = . ;
+	_ram_image_start = . ;
+	.ramcode : ALIGN_WITH_INPUT {
+		*(.kernel)
+		*(.text.startup)
+		*(.text*)
+		*(.rodata*) *(.strings)
+		*(.data) *(COMMON)
+		}> bkram AT> flash
+	_ram_image_end = . ;
+	.bss : ALIGN_WITH_INPUT {
+		*(.bss)
+		_bss_image_end = . ;
+		} > bkram
 	_top_of_heap = .;
 }

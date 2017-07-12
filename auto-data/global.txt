@@ -105,7 +105,7 @@ const	char *addrname(const unsigned v) {
 #include "testb.h"
 @PREFIX=wb
 @BUS.NAME=wb
-@BUS.TYPE=wb/b4
+@BUS.TYPE=wb
 @$BUS.WIDTH=32
 @BUS.CLOCK=clk
 @$BUS.NULLSZ=0x400

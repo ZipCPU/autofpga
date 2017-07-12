@@ -108,7 +108,6 @@
 
 class	MAINTB : public PARENT {
 public:
-	bool	m_done;
 // Looking for string: SIM.DEFNS
 #ifdef	SDSPI_ACCESS
 	SDSPISIM	m_sdcard;
@@ -121,7 +120,6 @@ public:
 	UARTSIM	*m_gpsu;
 #endif
 	MAINTB(void) {
-		m_done = false;
 		// From sdcard
 #ifdef	SDSPI_ACCESS
 		m_sdcard.debug(false);
@@ -160,7 +158,7 @@ public:
 	}
 
 	void	tick(void) {
-		if (m_done)
+		if (done())
 			return;
 		PARENT::tick();
 	}
@@ -287,7 +285,7 @@ public:
 	bool	load(uint32_t addr, const char *buf, uint32_t len) {
 		uint32_t	start, offset, wlen, base, naddr;
 
-		base  = 0x03800000;
+		base  = 0x00c00000;
 		naddr = 0x00040000;
 
 		if ((addr >= base)&&(addr < base + naddr)) {
@@ -317,7 +315,7 @@ public:
 #endif	// BKRAM_ACCESS
 		}
 
-		base  = 0x04000000;
+		base  = 0x01000000;
 		naddr = 0x00400000;
 
 		if ((addr >= base)&&(addr < base + naddr)) {
@@ -490,7 +488,5 @@ public:
 		} fflush(stdout);
 	}
 
-	bool	done(void) { return m_done; }
 
 };
-

@@ -69,6 +69,9 @@ module	toplevel(i_clk,
 		io_hdmi_out_scl, io_hdmi_out_sda,
 		// Top level Quad-SPI I/O ports
 		o_qspi_cs_n, io_qspi_dat,
+		// OLED control interface (roughly SPI)
+		o_oled_sck, o_oled_mosi, o_oled_dcn,
+		o_oled_reset_n, o_oled_panel_en, o_oled_logic_en,
 		// The GPS 1PPS signal port
 		i_gps_pps,
 		// The PS/2 Mouse
@@ -82,9 +85,8 @@ module	toplevel(i_clk,
 		i_hdmi_in_p, i_hdmi_in_n,
 		// A reset wire for the ZipCPU
 		i_cpu_resetn,
-		// OLED control interface (roughly SPI)
-		o_oled_sck, o_oled_mosi, o_oled_dcn,
-		o_oled_reset_n, o_oled_panel_en, o_oled_logic_en,
+		// SPIO interface
+		i_sw, i_btnc, i_btnd, i_btnl, i_btnr, i_btnu, o_led,
 		// HDMI output clock
 		o_hdmi_out_clk_n, o_hdmi_out_clk_p,
 		// HDMI output pixels
@@ -92,9 +94,7 @@ module	toplevel(i_clk,
 		// The GPS-UART
 		i_gpsu_rx, o_gpsu_tx,
 		// Toplevel ethernet MDIO ports
-		o_eth_mdclk, io_eth_mdio,
-		// SPIO interface
-		i_sw, i_btnc, i_btnd, i_btnl, i_btnr, i_btnu, o_led);
+		o_eth_mdclk, io_eth_mdio);
 	//
 	// Declaring our input and output ports.  We listed these above,
 	// now we are declaring them here.
@@ -128,6 +128,10 @@ module	toplevel(i_clk,
 	// Quad SPI flash
 	output	wire		o_qspi_cs_n;
 	inout	wire	[3:0]	io_qspi_dat;
+	// OLEDBW interface
+	output	wire		o_oled_sck, o_oled_mosi,
+				o_oled_dcn, o_oled_reset_n, o_oled_panel_en,
+				o_oled_logic_en;
 	//The GPS Clock
 	input	wire		i_gps_pps;
 	inout	wire	io_ps2_clk, io_ps2_data;
@@ -141,10 +145,10 @@ module	toplevel(i_clk,
 	input	[2:0]	i_hdmi_in_p, i_hdmi_in_n;
 	// A reset wire for the ZipCPU
 	input	wire		i_cpu_resetn;
-	// OLEDBW interface
-	output	wire		o_oled_sck, o_oled_mosi,
-				o_oled_dcn, o_oled_reset_n, o_oled_panel_en,
-				o_oled_logic_en;
+	// SPIO interface
+	input	wire	[7:0]	i_sw;
+	input	wire		i_btnc, i_btnd, i_btnl, i_btnr, i_btnu;
+	output	wire	[7:0]	o_led;
 	// HDMI output clock
 	output	wire	o_hdmi_out_clk_n, o_hdmi_out_clk_p;
 	// HDMI output pixels
@@ -153,10 +157,6 @@ module	toplevel(i_clk,
 	output	wire		o_gpsu_tx;
 	// Ethernet control (MDIO)
 	output	wire		o_eth_mdclk, io_eth_mdio;
-	// SPIO interface
-	input	wire	[7:0]	i_sw;
-	input	wire		i_btnc, i_btnd, i_btnl, i_btnr, i_btnu;
-	output	wire	[7:0]	o_led;
 
 
 	//
@@ -240,6 +240,9 @@ module	toplevel(i_clk,
 		io_hdmi_out_scl, io_hdmi_out_sda, w_hdmi_out_scl, w_hdmi_out_sda,
 		// Quad SPI flash
 		w_qspi_cs_n, w_qspi_sck, qspi_dat, io_qspi_dat, qspi_bmod,
+		// OLED control interface (roughly SPI)
+		o_oled_sck, o_oled_mosi, o_oled_dcn,
+		o_oled_reset_n, o_oled_panel_en, o_oled_logic_en,
 		// The GPS 1PPS signal port
 		i_gps_pps,
 		// The PS/2 Mouse
@@ -256,18 +259,15 @@ module	toplevel(i_clk,
 		w_hdmi_in_actual_delay_b, w_hdmi_in_delay,
 		// Reset wire for the ZipCPU
 		(!i_cpu_resetn),
-		// OLED control interface (roughly SPI)
-		o_oled_sck, o_oled_mosi, o_oled_dcn,
-		o_oled_reset_n, o_oled_panel_en, o_oled_logic_en,
+		// SPIO interface
+		i_sw, i_btnc, i_btnd, i_btnl, i_btnr, i_btnu, o_led,
 		// HDMI output ports
 		w_hdmi_out_logic_clk,
 		// HDMI output pixels, set within the main module
 		w_hdmi_out_r, w_hdmi_out_g, w_hdmi_out_b,
 		// The GPS-UART
 		i_gpsu_rx, o_gpsu_tx,
-		o_eth_mdclk, w_mdio, w_mdwe, io_eth_mdio,
-		// SPIO interface
-		i_sw, i_btnc, i_btnd, i_btnl, i_btnr, i_btnu, o_led);
+		o_eth_mdclk, w_mdio, w_mdwe, io_eth_mdio);
 
 
 	//

@@ -39,7 +39,7 @@
 ################################################################################
 ##
 ##
-FLASH:= wbqspiflash.v llqspi.v flash_config.v
+FLASH:= wbqspiflash.v llqspi.v flashconfig.v
 
 BKRAM:= memdev.v
 

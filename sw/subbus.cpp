@@ -60,11 +60,19 @@ unsigned	SUBBUS::get_slave_address_width(void) {
 	assert(p_master_bus != p_slave_bus);
 
 	p_awid = p_master_bus->address_width();
-	if (p_master_bus->m_data_width != p_slave_bus->m_data_width) {
-		p_awid <<= nextlg(p_master_bus->m_data_width/8);
-		p_awid >>= nextlg(p_slave_bus->m_data_width/8);
+fprintf(gbl_dump, "SUBBUS::GET-SLAVE-ADDRESS-WIDTH: master (%s), width (%d)\n",
+		((!p_master_bus)||(!p_master_bus->m_name))?"(Null)":p_master_bus->m_name->c_str(),
+		p_awid);
+	if (p_master_bus->data_width() != p_slave_bus->data_width()) {
+		p_awid += nextlg(p_master_bus->data_width()/8);
+		p_awid -= nextlg(p_slave_bus->data_width()/8);
 	}
 	p_naddr = (1u<<p_awid);
+
+fprintf(gbl_dump, "SUBBUS::GET-SLAVE-ADDRESS-WIDTH: << %d >> %d\n",
+		nextlg(p_master_bus->data_width()/8),
+		nextlg(p_slave_bus->data_width()/8));
+fprintf(gbl_dump, "SUBBUS::GET-SLAVE-ADDRESS-WIDTH: -----> %d\n", p_awid);
 
 	return p_awid;
 }
@@ -72,13 +80,18 @@ unsigned	SUBBUS::get_slave_address_width(void) {
 unsigned SUBBUS::get_base_address(MAPDHASH *phash) {
 	unsigned base;
 
+fprintf(gbl_dump, "SUBBUS::GET-SLAVE-ADDRESS: ");
+
 	assert(p_master_bus);
 	assert(p_master_bus != p_slave_bus);
 
 	if (p_master_bus->get_base_address(phash, base)) {
 		base += p_base;
+fprintf(gbl_dump, "%08x (true)\n", base);
 		return true;
-	} return false;
+	}
+fprintf(gbl_dump, "%08x (false)\n", base);
+	return false;
 }
 
 void	SUBBUS::assign_addresses(void) {

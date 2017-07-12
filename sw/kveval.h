@@ -41,7 +41,9 @@
 
 #include <vector>
 #include "mapdhash.h"
+#include "globals.h"
 
+#define	REHASH	do { fprintf(gbl_dump, "REEVAL %s:%d\n", __FILE__, __LINE__); reeval(gbl_hash); mapdump(gbl_dump, *gbl_hash); } while(0)
 typedef	std::vector<MAPDHASH *>	MAPSTACK;
 
 bool	get_named_kvpair(MAPSTACK &stack, MAPDHASH &here, STRING &key,
@@ -52,5 +54,6 @@ STRINGP	get_named_string(MAPSTACK &stack, MAPDHASH &here, STRING &key);
 
 extern	bool	resolve_ast_expressions(MAPDHASH &info);
 extern	void	reeval(MAPDHASH &info);
+extern	void	reeval(MAPDHASH *info);
 
 #endif

@@ -69,21 +69,18 @@ extern const	STRING	KYDIO_SEL;
 extern const	STRING	KYPREFIX;
 extern const	STRING	KYACCESS;
 extern const	STRING	KYDEPENDS;
-extern const	STRING	KYSLAVE;
-extern const	STRING	KYSLAVE_TYPE;
-extern const	STRING	KYSLAVE_BUS;
-extern const	STRING	KYMASTER;
-extern const	STRING	KYMASTER_TYPE;
-extern const	STRING	KYMASTER_BUS;
+extern const	STRING	KYERROR_WIRE;
+extern const	STRING	KYSLAVE,
+			KYSLAVE_TYPE,
+			KYSLAVE_BUS,
+			KYSLAVE_ORDER;
+extern const	STRING	KYMASTER,
+			KYMASTER_TYPE,
+			KYMASTER_BUS;
 //
 extern const	STRING	KYBASE;
 extern const	STRING	KYMASK;
 extern const	STRING	KYNADDR;
-// extern const	STRING	KYSKIPADDR;	// Already defined for top level
-extern const	STRING	KYSKIPMASK;
-extern const	STRING	KYSKIPNBITS;
-extern const	STRING	KYSKIPAWID;
-extern const	STRING	KYSKIPDEFN;
 //
 extern const	STRING	KYEXPR;
 extern const	STRING	KYVAL;

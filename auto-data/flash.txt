@@ -245,4 +245,4 @@ typedef struct FLASHCTL_S {
 
 @BDEF.IONAME= io_flctl
 @RTL.MAKE.GROUP= FLASH
-@RTL.MAKE.FILES= wbqspiflash.v llqspi.v flash_config.v
+@RTL.MAKE.FILES= wbqspiflash.v llqspi.v flashconfig.v

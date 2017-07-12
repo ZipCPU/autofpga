@@ -210,7 +210,7 @@ void	build_main_tb_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 	writeout(fp, master, KYSIM_DEFINES);
 
 	// Class definitions
-	fprintf(fp, "class\tMAINTB : public PARENT {\npublic:\n\tbool\tm_done;\n");
+	fprintf(fp, "class\tMAINTB : public PARENT {\npublic:\n");
 	writeout(fp, master, KYSIM_DEFNS);
 
 
@@ -243,7 +243,6 @@ void	build_main_tb_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 	} fprintf(fp, "\t{\n");
 */
 
-	fprintf(fp, "\t\tm_done = false;\n");
 	str = getstring(master, KYSIM_INIT);
 	if (NULL != str) {
 		fprintf(fp, "\t%s", str->c_str());
@@ -288,7 +287,7 @@ void	build_main_tb_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 
 	fprintf(fp,
 "	void	tick(void) {\n"
-"		if (m_done)\n"
+"		if (done())\n"
 "			return;\n");
 
 	if (cklist.size() > 1) {
@@ -400,7 +399,6 @@ void	build_main_tb_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 
 	writeout(fp, master, KYSIM_METHODS);
 
-	fprintf(fp, "\tbool	done(void) { return m_done; }\n\n");
-	fprintf(fp, "};\n\n");
+	fprintf(fp, "\n};\n");
 }
 

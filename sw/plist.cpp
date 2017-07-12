@@ -117,6 +117,7 @@ unsigned PERIPH::get_slave_address_width(void) {
 		if (getstring(kvbus->
 	}
 	*/
+fprintf(gbl_dump, "NADDR() = %d, AWID = %d\n", naddr(), nextlg(naddr()));
 	if (p_awid != nextlg(naddr()))
 		p_awid = nextlg(naddr());
 	return p_awid;
@@ -153,6 +154,20 @@ bool	compare_naddr(PERIPHP a, PERIPHP b) {
 	else if (!b)
 		return true;
 
+	// Unordered items come before ordered items.
+
+	bool		have_order = false;
+	int		aorder, border;
+
+	have_order = getvalue(*a->p_phash, KYSLAVE_ORDER, aorder);
+	if (have_order) {
+		have_order = getvalue(*b->p_phash, KYSLAVE_ORDER, border);
+		if (have_order)
+			return (aorder < border);
+		return false;
+	} else if (getvalue(*b->p_phash, KYSLAVE_ORDER, border))
+		return true;
+		
 	unsigned	anaddr, bnaddr;
 
 	anaddr = a->get_slave_address_width();
@@ -253,6 +268,10 @@ unsigned	PLIST::min_addr_size_bytes(const unsigned np,
 
 	for(unsigned i=0; i<np; i++) {
 		pa = (*this)[i]->get_slave_address_width();
+		if (pa <= 0)
+			continue;
+fprintf(gbl_dump, "Checking min address size of %s: %d (!octets)\n",
+	(*this)[i]->p_name->c_str(), pa);
 		if (pa < mina_bytes)
 			pa = mina_bytes;
 		base_bytes = (start + ((1<<pa)-1));
@@ -282,6 +301,8 @@ unsigned	PLIST::min_addr_size_octets(unsigned np,
 void	PLIST::assign_addresses(unsigned dwidth, unsigned nullsz) {
 	unsigned daddr_abits = nextlg(dwidth/8);
 
+fprintf(gbl_dump, "PLIST::ASSIGN-ADDRESSES(%d, %d)\n", dwidth, nullsz);
+
 	// Use daddr_abits to convert our addresses between bus addresses and
 	// byte addresses.  The address width involved is in bus words,
 	// whereeas the base address needs to be in octets.  NullSz is also
@@ -295,7 +316,15 @@ void	PLIST::assign_addresses(unsigned dwidth, unsigned nullsz) {
 	} else if ((size() < 2)&&(nullsz == 0)) {
 		(*this)[0]->p_base = 0;
 		(*this)[0]->p_mask = 0;
+fprintf(gbl_dump, "PLIST::ASSIGN-ADDRESSES, one component, awid = %d\n",
+	(*this)[0]->get_slave_address_width());
 		m_address_width = (*this)[0]->get_slave_address_width();
+fprintf(gbl_dump, "PLIST::SINGLE-COMPONENT assigned (%d)\n", m_address_width);
+		if (m_address_width <= 0) {
+			gbl_err++;
+			fprintf(stderr, "ERR: Slave %s has zero NADDR (now address assigned\n",
+				(*this)[0]->p_name->c_str());
+		}
 	} else {
 
 		// We'll need a minimum of nextlg(p->size()) bits to address
@@ -330,9 +359,18 @@ void	PLIST::assign_addresses(unsigned dwidth, unsigned nullsz) {
 				nullsz, daddr_abits);
 		// Our goal will be to do better than this
 
+		for(iterator p=begin(); p!=end(); p++) {
+			if ((*p)->naddr() <= 0) {
+				gbl_err++;
+				fprintf(stderr, "ERR: Slave %s has zero "
+					"NADDR (now address assigned\n",
+					(*p)->p_name->c_str());
+			}
+		}
 
 		unsigned	min_relevant = 32-daddr_abits;
-		for(unsigned mina = daddr_abits+1; mina < 32-daddr_abits; mina++) {
+		for(unsigned mina = daddr_abits+1; mina < 32-daddr_abits;
+						mina++) {
 			//
 			unsigned	total_address_width,
 					relevant_address_bits;
@@ -358,18 +396,23 @@ void	PLIST::assign_addresses(unsigned dwidth, unsigned nullsz) {
 
 			// Number of address lines ... were the bus to be
 			// done in octets
-			pa = (*this)[i]->get_slave_address_width() + daddr_abits;
-			if (pa < min_awd)
-				pa = min_awd;
-			pa += daddr_abits;
+			pa = (*this)[i]->get_slave_address_width()+daddr_abits;
+			if (pa <= 0) {
+				// p_base is in octets
+				(*this)[i]->p_base = start_address;
+				(*this)[i]->p_mask = 0;
+			} else {
+				if (pa < min_awd)
+					pa = min_awd;
 
-			// p_base is in octets
-			(*this)[i]->p_base = start_address + ((1ul<<pa)-1);
-			(*this)[i]->p_base &= (-1l<<pa);
-			start_address = (*this)[i]->p_base + (1ul<<pa);
+				// p_base is in octets
+				(*this)[i]->p_base = start_address + ((1ul<<pa)-1);
+				(*this)[i]->p_base &= (-1l<<pa);
+				start_address = (*this)[i]->p_base + (1ul<<pa);
 
-			(*this)[i]->p_mask = (-1)<<(pa-daddr_abits);
-			assert((*this)[i]->p_mask != 0);
+				(*this)[i]->p_mask = (-1)<<(pa-daddr_abits);
+				assert((*this)[i]->p_mask != 0);
+			}
 		}
 		assert(start_address != 0);
 
@@ -394,6 +437,6 @@ void	PLIST::assign_addresses(unsigned dwidth, unsigned nullsz) {
 				setvalue(*ph, KYBASE, (*this)[i]->p_base);
 				setvalue(*ph, KYMASK, (*this)[i]->p_mask << daddr_abits);
 			}
-		} m_address_width = nextlg(start_address);
+		} m_address_width = nextlg(start_address)-daddr_abits;
 	}
 }

@@ -131,26 +131,40 @@ int	get_longest_defname(PLIST &plist) {
 // name definition, which we use to try to line things up in a prettier fashion
 // than we could without it.
 //
-void write_regdefs(FILE *fp, PLIST &plist, unsigned longest_defname) {
+void write_regdefs(FILE *fp, PLIST *slist, PLIST *dlist, PLIST *plist,
+		unsigned longest_defname) {
 	STRING	str;
+	std::vector<PERIPHP>	alist;
+
+	if (slist)
+		for(unsigned k=0; k<slist->size(); k++)
+			alist.push_back((*slist)[k]);
+	if (dlist)
+		for(unsigned k=0; k<dlist->size(); k++)
+			alist.push_back((*dlist)[k]);
+	if (plist)
+		for(unsigned k=0; k<plist->size(); k++)
+			alist.push_back((*plist)[k]);
+
+	sort(alist.begin(), alist.end(), compare_address);
 
 	// Walk through this peripheral list one peripheral at a time
-	for(unsigned i=0; i<plist.size(); i++) {
+	for(unsigned i=0; i<alist.size(); i++) {
 		MAPDHASH::iterator	kvp;
 		int	nregs = 0;
 
 		// If there is a note key for this peripheral, place it into
 		// the output without modifications.
-		kvp = findkey(*plist[i]->p_phash,KYREGS_NOTE);
-		if ((kvp != plist[i]->p_phash->end())&&(kvp->second.m_typ == MAPT_STRING))
+		kvp = findkey(*alist[i]->p_phash,KYREGS_NOTE);
+		if ((kvp != alist[i]->p_phash->end())&&(kvp->second.m_typ == MAPT_STRING))
 			fprintf(fp, "%s\n", kvp->second.u.m_s->c_str());
 
 
 		// Walk through each of the defined registers.  There will be
 		// @REGS.N registers defined.
 		if ((gbl_dump)
-			&&(!getvalue(*plist[i]->p_phash, KYREGS_N, nregs))) {
-			fprintf(gbl_dump, "REGS.N not found in %s\n", plist[i]->p_name->c_str());
+			&&(!getvalue(*alist[i]->p_phash, KYREGS_N, nregs))) {
+			fprintf(gbl_dump, "REGS.N not found in %s\n", alist[i]->p_name->c_str());
 			continue;
 		}
 
@@ -162,7 +176,7 @@ void write_regdefs(FILE *fp, PLIST &plist, unsigned longest_defname) {
 			// Look for a @REGS.%d tag, defining each of the named
 			// registers within this set.
 			sprintf(nstr, "%d", j);
-			strp = getstring(*plist[i]->p_phash, str=STRING("REGS.")+nstr);
+			strp = getstring(*alist[i]->p_phash, str=STRING("REGS.")+nstr);
 			if (!strp) {
 				fprintf(stderr, "%s not found\n", str.c_str());
 				continue;
@@ -183,9 +197,9 @@ void write_regdefs(FILE *fp, PLIST &plist, unsigned longest_defname) {
 			// 2. Get the C name
 			rname = strtok(nxtp, " \t\n,");
 			fprintf(fp, "#define\t%-*s\t0x%08lx", longest_defname,
-				rname, (roff<<2)+plist[i]->p_base);
+				rname, (roff<<2)+alist[i]->p_base);
 
-			fprintf(fp, "\t// %08lx, wbregs names: ", plist[i]->p_base);
+			fprintf(fp, "\t// %08lx, wbregs names: ", alist[i]->p_base);
 			int	first = 1;
 			// 3. Get the various user names
 			while(NULL != (rv = strtok(NULL, " \t\n,"))) {
@@ -210,7 +224,7 @@ void	build_regdefs_h(  MAPDHASH &master, FILE *fp, STRING &fname) {
 	MAPDHASH::iterator	kvpair, kvaccess;
 	STRING	str;
 	STRINGP	strp;
-	PLIST	*plist;
+	PLIST	*plist, *slist, *dlist;
 
 	legal_notice(master, fp, fname);
 
@@ -252,7 +266,7 @@ void	build_regdefs_h(  MAPDHASH &master, FILE *fp, STRING &fname) {
 
 	fprintf(fp, "//\n// Register address definitions, from @REGS.#d\n//\n");
 
-	unsigned	longest_defname = 0;
+	unsigned	longest_defname = 0, ldef;
 
 	// plist = getlist(KYDBGBUS);
 	strp = new STRING("wb");
@@ -261,11 +275,24 @@ void	build_regdefs_h(  MAPDHASH &master, FILE *fp, STRING &fname) {
 	delete strp;
 
 	// Get the list of peripherals
+	slist = bi->m_slist;
+	dlist = bi->m_dlist;
 	plist = bi->m_plist;
 
 	assert(plist);
 	longest_defname = get_longest_defname(*plist);
-	write_regdefs(fp, *plist, longest_defname);
+	if (slist) {
+		ldef = get_longest_defname(*slist);
+		if (longest_defname < ldef)
+			longest_defname = ldef;
+	}
+	if (dlist) {
+		ldef = get_longest_defname(*dlist);
+		if (longest_defname < ldef)
+			longest_defname = ldef;
+	}
+
+	write_regdefs(fp, slist, dlist, plist, longest_defname);
 
 
 	fprintf(fp, "//\n");
@@ -402,22 +429,35 @@ unsigned	get_longest_uname(PLIST &plist) {
 // write_regnames
 //
 //
-void write_regnames(FILE *fp, PLIST &plist,
+void write_regnames(FILE *fp, PLIST *slist, PLIST *dlist, PLIST *plist,
 		unsigned longest_defname, unsigned longest_uname) {
 	STRING	str;
 	STRINGP	strp;
 	int	first = 1;
+	std::vector<PERIPHP>	alist;
 
-	for(unsigned i=0; i<plist.size(); i++) {
+	if (slist)
+		for(unsigned k=0; k<slist->size(); k++)
+			alist.push_back((*slist)[k]);
+	if (dlist)
+		for(unsigned k=0; k<dlist->size(); k++)
+			alist.push_back((*dlist)[k]);
+	if (plist)
+		for(unsigned k=0; k<plist->size(); k++)
+			alist.push_back((*plist)[k]);
+
+	sort(alist.begin(), alist.end(), compare_address);
+
+	for(unsigned i=0; i<alist.size(); i++) {
 		int nregs = 0;
 
-		if (!getvalue(*plist[i]->p_phash, KYREGS_N, nregs))
+		if (!getvalue(*alist[i]->p_phash, KYREGS_N, nregs))
 			continue;
 
 		for(int j=0; j<nregs; j++) {
 			char	nstr[32];
 			sprintf(nstr, "%d", j);
-			strp = getstring(*plist[i]->p_phash,str=STRING("REGS.")+nstr);
+			strp = getstring(*alist[i]->p_phash,str=STRING("REGS.")+nstr);
 			STRING	scpy = *strp;
 
 			char	*nxtp, *rname, *rv;
@@ -453,7 +493,7 @@ void write_regnames(FILE *fp, PLIST &plist,
 void	build_regdefs_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 	STRINGP	strp;
 	STRING	str;
-	PLIST	*plist;
+	PLIST	*plist, *slist, *dlist;
 
 	legal_notice(master, fp, fname);
 
@@ -476,20 +516,43 @@ void	build_regdefs_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 	delete strp;
 
 	// Get the list of peripherals
+	slist = bi->m_slist;
+	dlist = bi->m_dlist;
 	plist = bi->m_plist;
 
 	// First, find out how long our longest definition name is.
 	// This will help to allow us to line things up later.
-	unsigned	longest_defname = 0;
+	unsigned	longest_defname = 0, ldef;
 	unsigned	longest_uname = 0;
 
 	// Find the length of the longest register name
 	assert(plist);
 	longest_defname = get_longest_defname(*plist);
+	if (slist) {
+		ldef = get_longest_defname(*slist);
+		if (longest_defname < ldef)
+			longest_defname = ldef;
+	}
+	if (dlist) {
+		ldef = get_longest_defname(*dlist);
+		if (longest_defname < ldef)
+			longest_defname = ldef;
+	}
+
 	// Find the length of the longest user name string
 	longest_uname = get_longest_uname(*plist);
+	if (slist) {
+		ldef = get_longest_uname(*slist);
+		if (longest_uname < ldef)
+			longest_uname = ldef;
+	}
+	if (dlist) {
+		ldef = get_longest_uname(*dlist);
+		if (longest_uname < ldef)
+			longest_uname = ldef;
+	}
 
-	write_regnames(fp, *plist, longest_defname, longest_uname);
+	write_regnames(fp, slist, dlist, plist, longest_defname, longest_uname);
 
 	fprintf(fp, "\n};\n\n");
 

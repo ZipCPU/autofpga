@@ -87,9 +87,11 @@
 	// SD-Card declarations
 	output	wire		o_sd_sck, o_sd_cmd;
 	output	wire	[3:0]	o_sd_data;
+	// verilator lint_off UNUSED
 	input	wire		i_sd_cmd;
 	input	wire	[3:0]	i_sd_data;
 	input	wire		i_sd_detect;
+	// verilator lint_on  UNUSED
 @MAIN.DEFNS=
 	wire[31:0]	sdspi_debug;
 @MAIN.INSERT=

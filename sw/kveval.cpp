@@ -92,6 +92,7 @@ bool	get_named_kvpair(MAPSTACK &stack, MAPDHASH &here, STRING &key,
 bool	get_named_value(MAPSTACK &stack, MAPDHASH &here, STRING &key,
 		int &value){
 	MAPDHASH::iterator	kvpair;
+
 	if (get_named_kvpair(stack, here, key, kvpair)) {
 		if (kvpair->second.m_typ == MAPT_INT) {
 			value = kvpair->second.u.m_v;
@@ -402,4 +403,9 @@ void	reeval(MAPDHASH &info) {
 		find_any_unevaluated(info);
 		// Then, substitute their results back in as necessary
 	} while(substitute_any_results(info));
+}
+
+void	reeval(MAPDHASH *info) {
+	assert(info);
+	reeval(*info);
 }

@@ -50,17 +50,19 @@
 #include "clockinfo.h"
 
 class	BUSINFO {
+protected:
 	bool	m_addresses_assigned;
+	int	m_data_width, m_address_width;
 public:
 	PLISTP    m_plist, m_slist, m_dlist;
 	STRINGP   m_name, m_prefix, m_type;
 	CLOCKINFO *m_clock; // , *m_bhash;
-	int	m_data_width, m_address_width, m_nullsz;
-	int	m_num_single, m_num_double;
+	int	m_nullsz;
+	int	m_num_single, m_num_double, m_num_total;
 	bool	m_has_slist, m_has_dlist;
 	MAPDHASH	*m_hash;
 
-	BUSINFO(void) { // MAPDHASH *hash) {
+	BUSINFO(void) { // MAPDHASH *hash)
 		// m_bhash  = hash;
 		m_plist  = NULL;
 		m_slist  = NULL;
@@ -76,20 +78,24 @@ public:
 		m_address_width = 0;
 		m_num_single = 0;
 		m_num_double = 0;
+		m_num_total  = 0;
 	}
 
 	bool	get_base_address(MAPDHASH *phash, unsigned &base);
 	void	assign_addresses(void);
 	int	address_width(void);
+	int	data_width(void);
 	void	add(void);
 	PERIPH *add(PERIPHP p);
 	PERIPH *add(MAPDHASH *phash);
 	PLIST	*create_sio(void);
 	PLIST	*create_dio(void);
 
+	void	post_countsio(void);
 	void	countsio(MAPDHASH *phash);
 
 	bool	need_translator(BUSINFO *b);
+	void	writeout_slave_defn_v(FILE *fp, const char *name, const char *errwire = NULL, const char *btyp="");
 	void	writeout_bus_slave_defns_v(FILE *fp);
 	void	writeout_bus_master_defns_v(FILE *fp);
 	void	writeout_bus_defns_v(FILE *fp);
@@ -99,6 +105,10 @@ public:
 	void	writeout_no_slave_v(FILE *fp, STRINGP prefix);
 	void	writeout_no_master_v(FILE *fp, STRINGP prefix);
 	bool	ismember_of(MAPDHASH *phash);
+
+	PERIPHP operator[](unsigned i);
+	unsigned size(void);
+	void	init(MAPDHASH *phash, MAPDHASH *bp);
 };
 
 class	BUSLIST : public std::vector<BUSINFO *>	{
@@ -111,8 +121,8 @@ public:
 
 	void	adddefault(MAPDHASH &master, STRINGP defname);
 
-	void	addbus(MAPDHASH &master, MAPDHASH *phash);
-	void	addbus(MAPDHASH &master, MAPT &map);
+	void	addbus(MAPDHASH *phash);
+	void	addbus(MAPT &map);
 	void	countsio(MAPDHASH *phash);
 	void	countsio(MAPT &map);
 	BUSINFO *find_bus_of_peripheral(MAPDHASH *phash);
