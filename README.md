@@ -209,6 +209,29 @@ In detail:
 
 - The LaTeX specification table building isn't there ... yet.
 
+**20170714 Update**: A *lot* of changes have been made that haven't yet been
+checked in.  These changes have been made to autofpga for the purpose of:
+
+1. Adding a multiple clock capability, and
+
+2. Adding the capability to support multiple busses. 
+
+The specific test case I'm trying to support is one that will build a system
+for a Nexys-4 Video, with not only a 100MHz ZipCPU on board accessing a 32-bit
+wishbone bus, but also a 200MHz DDR3 SDRAM existing on its own 128-bit wide
+wishbone bus, together with two HDMI components that will also write to and
+then read from this 128-bit bus.  The DDR3 wishbone bus will then go through
+a bridge to become an AXI4 bus.  The video test case I am hoping to support is
+1080p at 60Hz, which should use up about 25% of the memory bandwidth on the
+device.
+
+My initial goal was to make these interface changes take place automatically
+under the hood.  I've now backed off of that goal, and I'm just hoping to
+get this support running in the first place.
+
+These changes have not yet (as of this writing) been checked back in to 
+GitHub.
+
 # Sample component files
 
 Component files now exist for many of the components I've been using regularly.
