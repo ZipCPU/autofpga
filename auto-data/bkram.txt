@@ -54,9 +54,9 @@
 				wb_addr[(@$THIS.LGMEMSZ-3):0], wb_data, wb_sel,
 				@$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_data);
 @REGS.N=1
-@REGS.0= 0 @$(DEVID) RAM
+@REGS.0= 0 R_@$(DEVID) RAM
 @REGDEFS.H.DEFNS=
-#define	@$(DEVID)BASE	@$BASE
+#define	@$(DEVID)BASE	@$(BASEHX)
 #define	@$(DEVID)LEN	@$NBYTES
 @BDEF.OSDEF=_BOARD_HAS_@$(DEVID)
 @MEM.NAME= @$(PREFIX)
@@ -67,7 +67,7 @@
 _@$(MEM.NAME) = ORIGIN(@$(MEM.NAME))
 @RTL.MAKE.GROUP= @$(DEVID)
 @RTL.MAKE.FILES= memdev.v
-@$BASEHX = @$BASE
+@$BASEHX = @$REGBASE
 @BASEHX.FORMAT= 0x%08x
 @$NADDRHX = @$NADDR
 @NADDRHX.FORMAT= 0x%x

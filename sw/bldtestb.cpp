@@ -148,11 +148,12 @@ void	build_testb_h(MAPDHASH &master, FILE *fp, STRING &fname) {
 				cklist[i].m_wire->c_str(),
 				cklist[i].m_name->c_str());
 
+		fprintf(fp, "\n\t\tm_time_ps += mintime;\n");
+
 		fprintf(fp, "\n\t\teval();\n"
 			"\t\tif (m_trace) m_trace->dump(m_time_ps+1);\n\n");
 
 
-		fprintf(fp, "\n\t\tm_time_ps += mintime;\n");
 		for(unsigned i=0; i<cklist.size(); i++)
 			fprintf(fp, "\t\tif (m_%s.falling_edge()) {\n"
 				"\t\t\tm_changed = true;\n"
@@ -164,7 +165,12 @@ void	build_testb_h(MAPDHASH &master, FILE *fp, STRING &fname) {
 		fprintf(fp, "\t}\n\n");
 
 		for(unsigned i=0; i<cklist.size(); i++) {
-			fprintf(fp, "\tvirtual	void	sim_%s_tick(void) {}\n",
+fprintf(fp, "\tvirtual	void	sim_%s_tick(void) {\n"
+		"\t\t\t// Your test fixture should over-ride this method.\n"
+		"\t\t\t// If you change any of the inputs to the design\n"
+		"\t\t\t// (i.e. w/in main.v), then set m_changed to true.\n"
+		"\t\t\tm_changed = false;\n"
+		"\t\t}\n",
 				cklist[i].m_name->c_str());
 		}
 	} else {

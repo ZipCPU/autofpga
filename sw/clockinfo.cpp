@@ -70,6 +70,11 @@ unsigned long CLOCKINFO::setfrequency(unsigned long frequency_hz) {
 	return 0l;
 }
 
+unsigned	CLOCKINFO::frequency(void) {
+	double	v = 1e12 / m_interval_ps;
+	return (unsigned)v;
+}
+
 void	CLOCKINFO::setname(STRINGP name) {
 	STRINGP	strp;
 
@@ -333,5 +338,5 @@ void	find_clocks(MAPDHASH &master) {
 	for(kypair = master.begin(); kypair != master.end(); kypair++)
 		expand_clock(kypair->second);
 
-	fprintf(stderr, "All clocks enumeratod\n");
+	fprintf(stderr, "All clocks enumerated\n");
 }

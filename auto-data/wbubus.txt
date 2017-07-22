@@ -47,46 +47,37 @@
 @$SETUP=@$CLKFREQHZ / @$.BAUDRATE
 @SETUP.FORMAT=24'h%x
 @$BUS_ADDRESS_WIDTH=@$(MASTER.BUS.AWID)
-@TOP.PORTLIST=
-		// UART/host to wishbone interface
-		i_host_uart_rx, o_host_uart_tx
-@TOP.IODECL=
-	// UART/host to wishbone interface
+# @TOP.PORTLIST=
+# 		// UART/host to wishbone interface
+# 		i_host_uart_rx, o_host_uart_tx
+# @TOP.IODECL=
+# 	// UART/host to wishbone interface
+# 	input	wire		i_host_uart_rx;
+# 	output	wire		o_host_uart_tx;
+# @TOP.MAIN=
+# 		// External USB-UART bus control
+# 		i_host_uart_rx, o_host_uart_tx
+@MAIN.PORTLIST=
+ 		// UART/host to wishbone interface
+ 		i_host_uart_rx, o_host_uart_tx
+@MAIN.IODECL=
 	input	wire		i_host_uart_rx;
 	output	wire		o_host_uart_tx;
-@TOP.DEFNS=
+@MAIN.DEFNS=
 	//
 	//
 	// UART interface
 	//
 	//
 	localparam [23:0] BUSUART = @$SETUP;	// @$BAUDRATE baud
-	wire	[7:0]	rx_data, tx_data;
-	wire		rx_break, rx_parity_err, rx_frame_err, rx_stb;
-	wire		tx_stb, tx_busy;
-
+	//
 	wire	w_ck_uart, w_uart_tx;
-@TOP.INSERT=
-	// The Host USB interface, to be used by the WB-UART bus
-	rxuartlite	#(BUSUART) rcv(s_clk, i_host_uart_rx,
-				rx_stb, rx_data);
-	txuartlite	#(BUSUART) txv(s_clk,
-				tx_stb, tx_data, o_host_uart_tx, tx_busy);
-
-@TOP.MAIN=
-		// External USB-UART bus control
-		rx_stb, rx_data, tx_stb, tx_data, tx_busy
-@MAIN.PORTLIST=
-		// Command and Control port
-		i_host_rx_stb, i_host_rx_data,
-		o_host_tx_stb, o_host_tx_data, i_host_tx_busy
-@MAIN.IODECL=
-	input	wire		i_host_rx_stb;
-	input	wire	[7:0]	i_host_rx_data;
-	output	wire		o_host_tx_stb;
-	output	wire	[7:0]	o_host_tx_data;
-	input	wire		i_host_tx_busy;
-@MAIN.DEFNS=
+	wire		rx_host_stb;
+	wire	[7:0]	rx_host_data;
+	wire		tx_host_stb;
+	wire	[7:0]	tx_host_data;
+	wire		tx_host_busy;
+	//
 	// Definitions for the WB-UART converter.  We really only need one
 	// (more) non-bus wire--one to use to select if we are interacting
 	// with the ZipCPU or not.
@@ -102,6 +93,12 @@
 @$ZIP_DBGDATA=4+@$.ZIP_ADDRESS
 @ZIP_DBGDATA.FORMAT= 0x%08x
 @MAIN.INSERT=
+	// The Host USB interface, to be used by the WB-UART bus
+	rxuartlite	#(BUSUART) rcv(s_clk, i_host_uart_rx,
+				rx_host_stb, rx_host_data);
+	txuartlite	#(BUSUART) txv(s_clk, tx_host_stb, tx_host_data,
+				o_host_uart_tx, tx_host_busy);
+
 `ifdef	INCLUDE_ZIPCPU
 	// assign	wbu_zip_sel   = wbu_addr[@$.ZIP_ADDRESS_BIT];
 `else
@@ -130,3 +127,6 @@
 #define	R_ZIPCTRL	@$.ZIP_ADDRESS
 #define	R_ZIPDATA	@$.ZIP_DBGDATA
 #
+SIM.CLOCK=clk
+SIM.TICK=
+		m_core->i_host_uart_rx = (*m_dbgbus)(m_core->o_host_uart_tx);

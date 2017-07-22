@@ -54,7 +54,7 @@ class	BUSINFO;
 //
 class	PERIPH {
 public:
-	unsigned long	p_base;		// In octets
+	unsigned long	p_base, p_regbase;	// In octets
 	unsigned long	p_naddr;	// In words, given in file
 	unsigned	p_awid;		// Log_2 (words)
 	unsigned long	p_mask;		// Words.  Bit is true if relevant for address selection
@@ -72,6 +72,7 @@ public:
 	virtual unsigned get_slave_address_width(void);
 		unsigned awid(void) { return get_slave_address_width(); }
 		unsigned naddr(void);
+	virtual	void	integrity_check(void);
 };
 
 typedef	PERIPH *PERIPHP;
@@ -97,6 +98,7 @@ public:
 	unsigned get_address_width(void) {
 		return m_address_width;
 	}
+	void	integrity_check(void);
 };
 
 // A pointer to a set of peripherals
@@ -118,7 +120,23 @@ extern	int count_peripherals(MAPDHASH &info);
 //
 extern	bool	compare_naddr(PERIPHP a, PERIPHP b);
 
+//
+// compare_address
+//
+// This is another means of sorting peripherals, this time by their address
+// within their bus.
+//
 extern	bool	compare_address(PERIPHP a, PERIPHP b);
+
+//
+// compare_regaddr
+//
+// When examining registers that are accessed across busses, it becomes
+// important to be able to sort peripherals from the point of view of a master
+// that might be able to reach them.  This is the purpose of the REGBASE
+// address.  This compare sorts with respect to that address
+//
+extern	bool	compare_regaddr(PERIPHP a, PERIPHP b);
 
 /*
  * build_plist

@@ -78,15 +78,13 @@ module	toplevel(i_clk,
 		io_ps2_clk, io_ps2_data,
 		// HDMI input EDID I2C ports
 		io_hdmi_in_scl, io_hdmi_in_sda,
-		// UART/host to wishbone interface
-		i_host_uart_rx, o_host_uart_tx,
+ 		// UART/host to wishbone interface
+ 		i_host_uart_rx, o_host_uart_tx,
 		// HDMI input clock, and then data
 		i_hdmi_in_clk_n, i_hdmi_in_clk_p,
 		i_hdmi_in_p, i_hdmi_in_n,
 		// A reset wire for the ZipCPU
 		i_cpu_resetn,
-		// SPIO interface
-		i_sw, i_btnc, i_btnd, i_btnl, i_btnr, i_btnu, o_led,
 		// HDMI output clock
 		o_hdmi_out_clk_n, o_hdmi_out_clk_p,
 		// HDMI output pixels
@@ -94,7 +92,9 @@ module	toplevel(i_clk,
 		// The GPS-UART
 		i_gpsu_rx, o_gpsu_tx,
 		// Toplevel ethernet MDIO ports
-		o_eth_mdclk, io_eth_mdio);
+		o_eth_mdclk, io_eth_mdio,
+		// SPIO interface
+		i_sw, i_btnc, i_btnd, i_btnl, i_btnr, i_btnu, o_led);
 	//
 	// Declaring our input and output ports.  We listed these above,
 	// now we are declaring them here.
@@ -137,7 +137,6 @@ module	toplevel(i_clk,
 	inout	wire	io_ps2_clk, io_ps2_data;
 	// HDMI input EDID I2C ports
 	inout	wire	io_hdmi_in_scl, io_hdmi_in_sda;
-	// UART/host to wishbone interface
 	input	wire		i_host_uart_rx;
 	output	wire		o_host_uart_tx;
 	// HDMI input clock
@@ -145,10 +144,6 @@ module	toplevel(i_clk,
 	input	[2:0]	i_hdmi_in_p, i_hdmi_in_n;
 	// A reset wire for the ZipCPU
 	input	wire		i_cpu_resetn;
-	// SPIO interface
-	input	wire	[7:0]	i_sw;
-	input	wire		i_btnc, i_btnd, i_btnl, i_btnr, i_btnu;
-	output	wire	[7:0]	o_led;
 	// HDMI output clock
 	output	wire	o_hdmi_out_clk_n, o_hdmi_out_clk_p;
 	// HDMI output pixels
@@ -157,6 +152,10 @@ module	toplevel(i_clk,
 	output	wire		o_gpsu_tx;
 	// Ethernet control (MDIO)
 	output	wire		o_eth_mdclk, io_eth_mdio;
+	// SPIO interface
+	input	wire	[7:0]	i_sw;
+	input	wire		i_btnc, i_btnd, i_btnl, i_btnr, i_btnu;
+	output	wire	[7:0]	o_led;
 
 
 	//
@@ -185,17 +184,6 @@ module	toplevel(i_clk,
 	// These are used to determine if the bus wires are to be set to zero
 	// or not
 	wire		w_hdmi_in_scl, w_hdmi_in_sda;
-	//
-	//
-	// UART interface
-	//
-	//
-	localparam [23:0] BUSUART = 24'h64;	// 1000000 baud
-	wire	[7:0]	rx_data, tx_data;
-	wire		rx_break, rx_parity_err, rx_frame_err, rx_stb;
-	wire		tx_stb, tx_busy;
-
-	wire	w_ck_uart, w_uart_tx;
 	wire		w_hdmi_in_logic_clk, w_hdmi_in_hsclk,
 			w_hdmi_in_clk_no_buf, w_hdmi_in_clk_no_delay,
 			w_hdmi_in_clk_raw;
@@ -248,8 +236,8 @@ module	toplevel(i_clk,
 		// The PS/2 Mouse
 		{ io_ps2_clk, io_ps2_data }, w_ps2,
 	io_hdmi_in_scl, io_hdmi_in_sda, w_hdmi_in_scl, w_hdmi_in_sda,
-		// External USB-UART bus control
-		rx_stb, rx_data, tx_stb, tx_data, tx_busy,
+ 		// UART/host to wishbone interface
+ 		i_host_uart_rx, o_host_uart_tx,
 		// HDMI input clock
 		w_hdmi_in_logic_clk,
 		w_hdmi_in_red, w_hdmi_in_green, w_hdmi_in_blue,
@@ -259,15 +247,15 @@ module	toplevel(i_clk,
 		w_hdmi_in_actual_delay_b, w_hdmi_in_delay,
 		// Reset wire for the ZipCPU
 		(!i_cpu_resetn),
-		// SPIO interface
-		i_sw, i_btnc, i_btnd, i_btnl, i_btnr, i_btnu, o_led,
 		// HDMI output ports
 		w_hdmi_out_logic_clk,
 		// HDMI output pixels, set within the main module
 		w_hdmi_out_r, w_hdmi_out_g, w_hdmi_out_b,
 		// The GPS-UART
 		i_gpsu_rx, o_gpsu_tx,
-		o_eth_mdclk, w_mdio, w_mdwe, io_eth_mdio);
+		o_eth_mdclk, w_mdio, w_mdwe, io_eth_mdio,
+		// SPIO interface
+		i_sw, i_btnc, i_btnd, i_btnl, i_btnr, i_btnu, o_led);
 
 
 	//
@@ -393,13 +381,6 @@ module	toplevel(i_clk,
 	assign	io_hdmi_in_scl = (w_hdmi_in_scl) ? 1'bz : 1'b0;
 	assign	io_hdmi_in_sda = (w_hdmi_in_sda) ? 1'bz : 1'b0;
 
-	// The Host USB interface, to be used by the WB-UART bus
-	rxuartlite	#(BUSUART) rcv(s_clk, i_host_uart_rx,
-				rx_stb, rx_data);
-	txuartlite	#(BUSUART) txv(s_clk,
-				tx_stb, tx_data, o_host_uart_tx, tx_busy);
-
-
 
 	// First, let's get our clock up and running
 	// 1. Convert from differential to single
@@ -461,7 +442,9 @@ module	toplevel(i_clk,
 			.CLKFBIN(sysclk_feedback),
 			.LOCKED(sysclk_locked));
 
-	BUFG	sysbuf(.I(s_clk_200mhz_unbuffered), .O(s_clk_200mhz));
+`ifndef	SDRAM_ACCESS
+//	BUFG	sysbuf(.I(s_clk_200mhz_unbuffered), .O(s_clk_200mhz));
+`endif
 
 
 

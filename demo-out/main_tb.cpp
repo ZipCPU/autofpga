@@ -56,6 +56,9 @@
 #include "zipelf.h"
 
 #include "uartsim.h"
+//
+// SIM.DEFINES
+//
 // Looking for string: SIM.DEFINES
 #define	sd_cmd_busy	v__DOT__sdcardi__DOT__r_cmd_busy
 #define	sd_clk		v__DOT__sdcardi__DOT__r_sdspi_clk
@@ -106,8 +109,9 @@
 #define	cpu_new_pc	v__DOT__swic__DOT__thecpu__DOT__new_pc
 #define	cpu_sim_immv	v__DOT__swic__DOT__thecpu__DOT__op_sim_immv
 
-class	MAINTB : public PARENT {
+class	MAINTB : public TESTB<Vmain> {
 public:
+		// SIM.DEFNS
 // Looking for string: SIM.DEFNS
 #ifdef	SDSPI_ACCESS
 	SDSPISIM	m_sdcard;
@@ -160,7 +164,7 @@ public:
 	void	tick(void) {
 		if (done())
 			return;
-		PARENT::tick();
+		TESTB<Vmain>::tick();
 	}
 
 
@@ -268,18 +272,22 @@ public:
 	}
 
 	virtual	void	sim_hdmi_in_clk_tick(void) {
+		// No SIM.TICK tags defined
 		m_changed = false;
 	}
 
 	virtual	void	sim_hdmi_in_hsclk_tick(void) {
+		// No SIM.TICK tags defined
 		m_changed = false;
 	}
 
 	virtual	void	sim_clk_200mhz_tick(void) {
+		// No SIM.TICK tags defined
 		m_changed = false;
 	}
 
 	virtual	void	sim_hdmi_out_clk_tick(void) {
+		// No SIM.TICK tags defined
 		m_changed = false;
 	}
 	bool	load(uint32_t addr, const char *buf, uint32_t len) {
@@ -340,6 +348,9 @@ public:
 		return false;
 	}
 
+	//
+	// KYSIM.METHODS
+	//
 // Looking for string: SIM.METHODS
 #ifdef	SDSPI_ACCESS
 	void	setsdcard(const char *fn) {

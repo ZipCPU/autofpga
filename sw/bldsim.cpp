@@ -102,12 +102,13 @@ bool	tb_same_clock(MAPDHASH &info, STRINGP ckname) {
 bool	tb_tick(MAPDHASH &info, STRINGP ckname, FILE *fp) {
 	MAPDHASH::iterator	kvpair;
 	bool	result = false;
+	const STRING *ky = &KYSIM_TICK;
 
 	if (tb_same_clock(info, ckname)) {
-		STRINGP	tick = getstring(info, KYSIM_TICK);
+		STRINGP	tick = getstring(info, *ky);
 		if (tick) {
 			if (fp) {
-				fprintf(fp, "\t\t// SIM.TICK from master\n");
+				fprintf(fp, "\t\t// %s from master\n", ky->c_str());
 				fprintf(fp, "%s", tick->c_str());
 			}
 			result = true;
@@ -120,10 +121,10 @@ bool	tb_tick(MAPDHASH &info, STRINGP ckname, FILE *fp) {
 		MAPDHASH	*p = kvpair->second.u.m_m;
 		if (!tb_same_clock(*p, ckname))
 			continue;
-		STRINGP	tick = getstring(*p, KYSIM_TICK);
+		STRINGP	tick = getstring(*p, *ky);
 		if (tick) {
 			if (fp) {
-				fprintf(fp, "\t\t// SIM.TICK from %s\n",
+				fprintf(fp, "\t\t// %s from %s\n", ky->c_str(),
 					kvpair->first.c_str());
 				fprintf(fp, "%s", tick->c_str());
 			}
@@ -131,18 +132,21 @@ bool	tb_tick(MAPDHASH &info, STRINGP ckname, FILE *fp) {
 		}
 	}
 
+	if ((fp)&&(!result))
+		fprintf(fp, "\t\t// No %s tags defined\n", ky->c_str());
 	return result;
 }
 
 bool	tb_dbg_condition(MAPDHASH &info, STRINGP ckname, FILE *fp) {
 	MAPDHASH::iterator	kvpair;
 	bool	result = true;
+	const STRING *ky = &KYSIM_DBGCONDITION;
 
 	if (tb_same_clock(info, ckname)) {
-		STRINGP	tick = getstring(info, KYSIM_DBGCONDITION);
+		STRINGP	tick = getstring(info, *ky);
 		if (tick) {
 			if (fp) {
-				fprintf(fp, "\t\t// SIM.DBGCONDITION from master\n");
+				fprintf(fp, "\t\t// %s from master\n", ky->c_str());
 				fprintf(fp, "%s", tick->c_str());
 			}
 			result= true;
@@ -155,7 +159,7 @@ bool	tb_dbg_condition(MAPDHASH &info, STRINGP ckname, FILE *fp) {
 		MAPDHASH	*p = kvpair->second.u.m_m;
 		if (!tb_same_clock(*p, ckname))
 			continue;
-		STRINGP	tick = getstring(*p, KYSIM_DBGCONDITION);
+		STRINGP	tick = getstring(*p, *ky);
 		if (tick) {
 			if (fp) {
 				fprintf(fp, "%s", tick->c_str());
@@ -163,18 +167,22 @@ bool	tb_dbg_condition(MAPDHASH &info, STRINGP ckname, FILE *fp) {
 		}
 	}
 
+	if ((fp)&&(!result))
+		fprintf(fp, "\t\t// No %s tags defined\n", ky->c_str());
+
 	return result;
 }
 
 bool	tb_debug(MAPDHASH &info, STRINGP ckname, FILE *fp) {
 	MAPDHASH::iterator	kvpair;
 	bool	result = false;
+	const STRING *ky = &KYSIM_DEBUG;
 
 	if (tb_same_clock(info, ckname)) {
-		STRINGP	tick = getstring(info, KYSIM_DEBUG);
+		STRINGP	tick = getstring(info, *ky);
 		if (tick) {
 			if (fp) {
-				fprintf(fp, "\t\t// SIM.DEBUG from master\n");
+				fprintf(fp, "\t\t// %s from master\n", ky->c_str());
 				fprintf(fp, "%s", tick->c_str());
 			}
 			result = true;
@@ -190,13 +198,18 @@ bool	tb_debug(MAPDHASH &info, STRINGP ckname, FILE *fp) {
 		STRINGP	tick = getstring(*p, KYSIM_DEBUG);
 		if (tick) {
 			if (fp) {
-				fprintf(fp, "\t\t\t//    SIM.DEBUG from %s\n",
+				fprintf(fp, "\t\t\t//    %s from %s\n",
+					ky->c_str(),
 					kvpair->first.c_str());
 				fprintf(fp, "%s", tick->c_str());
 			}
 			result = true;
 		}
-	} return result;
+	}
+
+	if ((fp)&&(!result))
+		fprintf(fp, "\t\t// No %s tags defined\n", ky->c_str());
+	return result;
 }
 
 void	build_main_tb_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
@@ -207,10 +220,12 @@ void	build_main_tb_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 
 	fprintf(fp, "//\n// SIM.INCLUDE\n//\n");
 	writeout(fp, master, KYSIM_INCLUDE);
+	fprintf(fp, "//\n// SIM.DEFINES\n//\n");
 	writeout(fp, master, KYSIM_DEFINES);
 
 	// Class definitions
-	fprintf(fp, "class\tMAINTB : public PARENT {\npublic:\n");
+	fprintf(fp, "class\tMAINTB : public TESTB<Vmain> {\npublic:\n");
+	fprintf(fp, "\t\t// SIM.DEFNS\n");
 	writeout(fp, master, KYSIM_DEFNS);
 
 
@@ -291,7 +306,7 @@ void	build_main_tb_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 "			return;\n");
 
 	if (cklist.size() > 1) {
-		fprintf(fp, "\t\tPARENT::tick();\n\t}\n\n");
+		fprintf(fp, "\t\tTESTB<Vmain>::tick();\n\t}\n\n");
 
 		for(unsigned i=0; i<cklist.size(); i++) {
 			bool	have_sim_tick = false, have_debug = false,
@@ -332,13 +347,16 @@ void	build_main_tb_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 	} else {
 		writeout(fp, master, KYSIM_TICK);
 
-		fprintf(fp, "\t\tPARENT::tick();\n\n");
+		fprintf(fp, "\t\tTESTB<Vmain>::tick();\n\n");
 		fprintf(fp, "\t\tbool\twriteout = false;\n\n");
+		fprintf(fp, "\t\t\t// KYSIM.DBGCONDITION tags\n");
 		writeout(fp, master, KYSIM_DBGCONDITION);
-		fprintf(fp, "\n\t\tif (writeout) {\n");
+		fprintf(fp, "\n\t\t\tif (writeout) {\n");
+		fprintf(fp, "\t\t\t\t\t// KYSIM.DEBUG tags\n");
 		writeout(fp, master, KYSIM_DEBUG);
 		fprintf(fp, "\t\t}\n");
 		
+		fprintf(fp, "\t\t// KYSIM.TICK tags\n");
 		writeout(fp, master, KYSIM_TICK);
 		//
 		fprintf(fp, "\t}\n\n");
@@ -397,6 +415,7 @@ void	build_main_tb_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 	fprintf(fp, "\t\treturn false;\n");
 	fprintf(fp, "\t}\n\n");
 
+	fprintf(fp, "\t//\n\t// KYSIM.METHODS\n\t//\n");
 	writeout(fp, master, KYSIM_METHODS);
 
 	fprintf(fp, "\n};\n");

@@ -117,7 +117,6 @@ unsigned PERIPH::get_slave_address_width(void) {
 		if (getstring(kvbus->
 	}
 	*/
-fprintf(gbl_dump, "NADDR() = %d, AWID = %d\n", naddr(), nextlg(naddr()));
 	if (p_awid != nextlg(naddr()))
 		p_awid = nextlg(naddr());
 	return p_awid;
@@ -125,6 +124,8 @@ fprintf(gbl_dump, "NADDR() = %d, AWID = %d\n", naddr(), nextlg(naddr()));
 
 unsigned PERIPH::naddr(void) {
 	int	value;
+
+	assert(p_phash);
 	if (getvalue(*p_phash, KYNADDR, value)) {
 		if (0 == p_naddr) {
 			p_naddr = value;
@@ -159,6 +160,16 @@ bool	compare_naddr(PERIPHP a, PERIPHP b) {
 	bool		have_order = false;
 	int		aorder, border;
 
+	if (a->p_phash == NULL) {
+		fflush(gbl_dump);
+		fprintf(stderr, "ERR: Peripheral %s has a null hash!\n", a->p_name->c_str());
+		assert(a->p_phash != NULL);
+	} if (b->p_phash == NULL) {
+		fflush(gbl_dump);
+		fprintf(stderr, "ERR: Peripheral %s has a null hash!\n", b->p_name->c_str());
+		assert(b->p_phash != NULL);
+	}
+
 	have_order = getvalue(*a->p_phash, KYSLAVE_ORDER, aorder);
 	if (have_order) {
 		have_order = getvalue(*b->p_phash, KYSLAVE_ORDER, border);
@@ -190,6 +201,10 @@ bool	compare_address(PERIPHP a, PERIPHP b) {
 	else if (!b)
 		return true;
 	return (a->p_base < b->p_base);
+}
+
+bool	compare_regaddr(PERIPHP a, PERIPHP b) {
+	return (a->p_regbase < b->p_regbase);
 }
 
 //
@@ -232,16 +247,59 @@ int	PLIST::add(MAPDHASH *phash) {
 		p = new PERIPH;
 		p->p_master_bus = NULL;
 	}
+
 	p->p_base = 0;
 	p->p_naddr = naddr;
 	p->p_awid  = (0 == naddr) ? nextlg(p->p_naddr) : 0;
 	p->p_phash = phash;
 	p->p_name  = pname;
-	p->p_slave_bus  = NULL;
+
+	{
+		BUSINFO		*bi;
+		MAPDHASH::iterator	kvsbus;
+
+		kvsbus = findkey(*phash, KYSLAVE_BUS);
+		if (kvsbus != phash->end()) {
+			bi = NULL;
+			if (kvsbus->second.m_typ == MAPT_STRING) {
+				bi = find_bus(kvsbus->second.u.m_s);
+				kvsbus->second.m_typ = MAPT_MAP;
+				kvsbus->second.u.m_m = bi->m_hash;
+			} else if (kvsbus->second.m_typ == MAPT_MAP)
+				bi = find_bus(kvsbus->second.u.m_m);
+			assert(bi);
+		} else {
+			MAPT	elm;
+			bi = find_bus((STRINGP)NULL);
+			assert(NULL != bi);
+			assert(NULL != bi->m_hash);
+			elm.m_typ = MAPT_MAP;
+			elm.u.m_m = bi->m_hash;
+			assert(bi->m_hash);
+			phash->insert(KEYVALUE(KYSLAVE_BUS, elm));
+		}
+		p->p_slave_bus = bi;
+	}
+
 
 	push_back(p);
 	return size()-1;
 }
+
+void	PERIPH::integrity_check(void) {
+	assert(NULL != p_name);
+	assert(NULL != p_phash);
+	assert(NULL != p_slave_bus);
+}
+
+void	PLIST::integrity_check(void) {
+	assert(NULL != this);
+	for(unsigned k=0; k<size(); k++) {
+		PERIPHP	pp = (*this)[k];
+		pp->integrity_check();
+	}
+}
+
 int	PLIST::add(PERIPHP p) {
 	push_back(p);
 	return size()-1;
@@ -270,8 +328,6 @@ unsigned	PLIST::min_addr_size_bytes(const unsigned np,
 		pa = (*this)[i]->get_slave_address_width();
 		if (pa <= 0)
 			continue;
-fprintf(gbl_dump, "Checking min address size of %s: %d (!octets)\n",
-	(*this)[i]->p_name->c_str(), pa);
 		if (pa < mina_bytes)
 			pa = mina_bytes;
 		base_bytes = (start + ((1<<pa)-1));
@@ -301,8 +357,6 @@ unsigned	PLIST::min_addr_size_octets(unsigned np,
 void	PLIST::assign_addresses(unsigned dwidth, unsigned nullsz) {
 	unsigned daddr_abits = nextlg(dwidth/8);
 
-fprintf(gbl_dump, "PLIST::ASSIGN-ADDRESSES(%d, %d)\n", dwidth, nullsz);
-
 	// Use daddr_abits to convert our addresses between bus addresses and
 	// byte addresses.  The address width involved is in bus words,
 	// whereeas the base address needs to be in octets.  NullSz is also
@@ -316,10 +370,8 @@ fprintf(gbl_dump, "PLIST::ASSIGN-ADDRESSES(%d, %d)\n", dwidth, nullsz);
 	} else if ((size() < 2)&&(nullsz == 0)) {
 		(*this)[0]->p_base = 0;
 		(*this)[0]->p_mask = 0;
-fprintf(gbl_dump, "PLIST::ASSIGN-ADDRESSES, one component, awid = %d\n",
-	(*this)[0]->get_slave_address_width());
+		setvalue(*(*this)[0]->p_phash, KYBASE, (*this)[0]->p_base);
 		m_address_width = (*this)[0]->get_slave_address_width();
-fprintf(gbl_dump, "PLIST::SINGLE-COMPONENT assigned (%d)\n", m_address_width);
 		if (m_address_width <= 0) {
 			gbl_err++;
 			fprintf(stderr, "ERR: Slave %s has zero NADDR (now address assigned\n",
@@ -439,4 +491,6 @@ fprintf(gbl_dump, "PLIST::SINGLE-COMPONENT assigned (%d)\n", m_address_width);
 			}
 		} m_address_width = nextlg(start_address)-daddr_abits;
 	}
+
+	reeval(gbl_hash);
 }

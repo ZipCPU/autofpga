@@ -53,15 +53,16 @@
 @SCOPE.DATA=zip_debug
 @INT.ZIP.WIRE=zip_cpu_int
 @INT.ZIP.BUS=buspic
+@CPURESET=i_cpu_resetn
 @TOP.PORTLIST=
-		// A reset wire for the ZipCPU
-		i_cpu_resetn
+# 		// A reset wire for the ZipCPU
+# 		i_cpu_resetn
 @TOP.IODECL=
-	// A reset wire for the ZipCPU
-	input	wire		i_cpu_resetn;
+# 	// A reset wire for the ZipCPU
+# 	input	wire		i_cpu_resetn;
 @TOP.MAIN=
-		// Reset wire for the ZipCPU
-		(!i_cpu_resetn)
+ 		// Reset wire for the ZipCPU
+ 		s_reset
 @MAIN.PORTLIST=
 		i_cpu_reset
 @MAIN.IODECL=

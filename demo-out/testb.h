@@ -128,11 +128,11 @@ public:
 		m_core->i_clk_200mhz = m_clk_200mhz.advance(mintime);
 		m_core->i_hdmi_out_clk = m_hdmi_out_clk.advance(mintime);
 
+		m_time_ps += mintime;
+
 		eval();
 		if (m_trace) m_trace->dump(m_time_ps+1);
 
-
-		m_time_ps += mintime;
 		if (m_clk.falling_edge()) {
 			m_changed = true;
 			sim_clk_tick();
@@ -155,11 +155,36 @@ public:
 		}
 	}
 
-	virtual	void	sim_clk_tick(void) {}
-	virtual	void	sim_hdmi_in_clk_tick(void) {}
-	virtual	void	sim_hdmi_in_hsclk_tick(void) {}
-	virtual	void	sim_clk_200mhz_tick(void) {}
-	virtual	void	sim_hdmi_out_clk_tick(void) {}
+	virtual	void	sim_clk_tick(void) {
+			// Your test fixture should over-ride this method.
+			// If you change any of the inputs to the design
+			// (i.e. w/in main.v), then set m_changed to true.
+			m_changed = false;
+		}
+	virtual	void	sim_hdmi_in_clk_tick(void) {
+			// Your test fixture should over-ride this method.
+			// If you change any of the inputs to the design
+			// (i.e. w/in main.v), then set m_changed to true.
+			m_changed = false;
+		}
+	virtual	void	sim_hdmi_in_hsclk_tick(void) {
+			// Your test fixture should over-ride this method.
+			// If you change any of the inputs to the design
+			// (i.e. w/in main.v), then set m_changed to true.
+			m_changed = false;
+		}
+	virtual	void	sim_clk_200mhz_tick(void) {
+			// Your test fixture should over-ride this method.
+			// If you change any of the inputs to the design
+			// (i.e. w/in main.v), then set m_changed to true.
+			m_changed = false;
+		}
+	virtual	void	sim_hdmi_out_clk_tick(void) {
+			// Your test fixture should over-ride this method.
+			// If you change any of the inputs to the design
+			// (i.e. w/in main.v), then set m_changed to true.
+			m_changed = false;
+		}
 	virtual bool	done(void) {
 		if (m_done)
 			return true;

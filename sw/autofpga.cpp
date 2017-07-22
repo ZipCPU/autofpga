@@ -71,6 +71,7 @@
 #include "kveval.h"
 #include "legalnotice.h"
 #include "bldtestb.h"
+#include "bldboardld.h"
 #include "bitlib.h"
 #include "plist.h"
 #include "bldregdefs.h"
@@ -518,141 +519,6 @@ void	build_board_h(    MAPDHASH &master, FILE *fp, STRING &fname) {
 	}
 
 	fprintf(fp, "#endif\t// BOARD_H\n");
-}
-
-void	build_board_ld(   MAPDHASH &master, FILE *fp, STRING &fname) {
-	MAPDHASH::iterator	kvpair;
-	STRINGP		strp;
-	int		reset_address;
-	PERIPHP		fastmem = NULL, bigmem = NULL;
-	BUSINFO		*defbus;
-
-	legal_notice(master, fp, fname, "/*******************************************************************************", "*");
-	fprintf(fp, "*/\n");
-
-	defbus = find_bus((STRINGP)NULL);
-
-	fprintf(fp, "ENTRY(_start)\n\n");
-
-	fprintf(fp, "MEMORY\n{\n");
-	for(unsigned i=0; i<defbus->size(); i++) {
-		PERIPHP	p = (*defbus)[i];
-		STRINGP	name = getstring(*p->p_phash, KYLD_NAME),
-			perm = getstring(*p->p_phash, KYLD_PERM);
-
-		if (!ismemory(*p->p_phash))
-			continue;
-
-		if (NULL == name)
-			name = p->p_name;
-		fprintf(fp,"\t%8s(%2s) : ORIGIN = 0x%08lx, LENGTH = 0x%08x\n",
-			name->c_str(), (perm)?(perm->c_str()):"r",
-			p->p_base, (p->naddr()*(defbus->data_width()/8)));
-
-		// Find our bigest and fastest memories
-		if (tolower(perm->c_str()[0]) != 'w')
-			continue;
-		if (!bigmem)
-			bigmem = p;
-		else if ((bigmem)&&(p->naddr() > bigmem->naddr())) {
-			bigmem = p;
-		}
-	}
-	fprintf(fp, "}\n\n");
-
-	// Define pointers to these memories
-	for(unsigned i=0; i<defbus->size(); i++) {
-		PERIPHP	p = (*defbus)[i];
-		STRINGP	name = getstring(*p->p_phash, KYLD_NAME);
-
-		if (!ismemory(*p->p_phash))
-			continue;
-
-		if (NULL == name)
-			name = p->p_name;
-
-		fprintf(fp, "_%-8s = ORIGIN(%s);\n",
-			name->c_str(), name->c_str());
-	}
-
-	if (NULL != (strp = getstring(master, KYLD_DEFNS)))
-		fprintf(fp, "%s\n", strp->c_str());
-	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
-		if (NULL != (strp = getstring(kvpair->second, KYLD_DEFNS)))
-			fprintf(fp, "%s\n", strp->c_str());
-	}
-
-	if (!getvalue(master, KYRESET_ADDRESS, reset_address)) {
-		bool	found = false;
-		for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
-			if (kvpair->second.m_typ != MAPT_MAP)
-				continue;
-			if (getvalue(*kvpair->second.u.m_m, KYRESET_ADDRESS, reset_address)) {
-				found = true;
-				break;
-			}
-		} if (!found) {
-			for(unsigned i=0; i<defbus->size(); i++) {
-				PERIPHP	p = (*defbus)[i];
-				if (!ismemory(*p->p_phash))
-					continue;
-				STRINGP	name = getstring(*p->p_phash, KYLD_NAME);
-				if (NULL == name)
-					name = p->p_name;
-				if (KYFLASH.compare(*name) == 0) {
-					reset_address = p->p_base;
-					found = true;
-					break;
-				}
-			}
-		} if (!found) {
-			reset_address = 0;
-			fprintf(stderr, "WARNING: RESET_ADDRESS NOT FOUND\n");
-		}
-	}
-
-	fprintf(fp, "SECTIONS\n{\n");
-	fprintf(fp, "\t.rocode 0x%08x : ALIGN(4) {\n"
-			"\t\t_boot_address = .;\n"
-			"\t\t*(.start) *(.boot)\n", reset_address);
-	fprintf(fp, "\t} > flash\n\t_kernel_image_start = . ;\n");
-	if ((fastmem)&&(fastmem != bigmem)) {
-		STRINGP	name = getstring(*fastmem->p_phash, KYLD_NAME);
-		if (!name)
-			name = fastmem->p_name;
-		fprintf(fp, "\t.fastcode : ALIGN_WITH_INPUT {\n"
-				"\t\t*(.kernel)\n"
-				"\t\t_kernel_image_end = . ;\n"
-				"\t\t*(.start) *(.boot)\n");
-		fprintf(fp, "\t} > %s AT>flash\n", name->c_str());
-	} else {
-		fprintf(fp, "\t_kernel_image_end = . ;\n");
-	}
-
-	if (bigmem) {
-		STRINGP	name = getstring(*bigmem->p_phash, KYLD_NAME);
-		if (!name)
-			name = bigmem->p_name;
-		fprintf(fp, "\t_ram_image_start = . ;\n");
-		fprintf(fp, "\t.ramcode : ALIGN_WITH_INPUT {\n");
-		if ((!fastmem)||(fastmem == bigmem))
-			fprintf(fp, "\t\t*(.kernel)\n");
-		fprintf(fp, ""
-			"\t\t*(.text.startup)\n"
-			"\t\t*(.text*)\n"
-			"\t\t*(.rodata*) *(.strings)\n"
-			"\t\t*(.data) *(COMMON)\n"
-		"\t\t}> %s AT> flash\n", bigmem->p_name->c_str());
-		fprintf(fp, "\t_ram_image_end = . ;\n"
-			"\t.bss : ALIGN_WITH_INPUT {\n"
-				"\t\t*(.bss)\n"
-				"\t\t_bss_image_end = . ;\n"
-				"\t\t} > %s\n",
-			bigmem->p_name->c_str());
-	}
-
-	fprintf(fp, "\t_top_of_heap = .;\n");
-	fprintf(fp, "}\n");
 }
 
 void	build_latex_tbls( MAPDHASH &master) {
@@ -1165,7 +1031,7 @@ STRINGP	remove_comments(STRINGP s) {
 
 void	build_rtl_make_inc(MAPDHASH &master, FILE *fp, STRING &fname) {
 	MAPDHASH::iterator	kvpair;
-	STRINGP	mkgroup, mkfiles, mksubd;
+	STRINGP	mksubd;
 	STRING	allgroups, vdirs;
 
 	legal_notice(master, fp, fname,
@@ -1173,65 +1039,19 @@ void	build_rtl_make_inc(MAPDHASH &master, FILE *fp, STRING &fname) {
 		"########################################", "##");
 
 	for(kvpair=master.begin(); kvpair!=master.end(); kvpair++) {
-		const	char	DELIMITERS[] = ", \t\n";
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
-		mkgroup = getstring(kvpair->second, KYRTL_MAKE_GROUP);
-		if (NULL == mkgroup)
-			continue;
-		mkfiles = getstring(kvpair->second, KYRTL_MAKE_FILES);
 		mksubd  = getstring(kvpair->second, KYRTL_MAKE_SUBD);
-		if (!mkfiles)
-			continue;
 
-		char	*tokstr = strdup(mkfiles->c_str()), *tok;
-		STRING	filstr = "";
-
-		tok = strtok(tokstr, DELIMITERS);
-		while(NULL != tok) {
-			filstr += STRING(tok) + " ";
-			tok = strtok(NULL, DELIMITERS);
-		} if (filstr[filstr.size()-1] == ' ')
-			filstr[filstr.size()-1] = '\0';
 		if (mksubd) {
-			fprintf(fp, "%sD := %s\n\n", mkgroup->c_str(),
-					mksubd->c_str());
-			fprintf(fp, "%s  := $(addprefix $(%sD)/,%s)\n",
-				mkgroup->c_str(),
-				mkgroup->c_str(), filstr.c_str());
-
-			vdirs = vdirs + STRING(" -y $(")+(*mkgroup)
-					+STRING("D) ");
-		} else {
-			fprintf(fp, "%s:= %s\n\n", mkgroup->c_str(), filstr.c_str());
+			vdirs = vdirs + STRING(" -y ") + (*mksubd);
 		}
-
-		allgroups = allgroups + STRING(" $(") + (*mkgroup) + STRING(")");
-		free(tokstr);
 	}
 
-	mkgroup = getstring(master, KYRTL_MAKE_GROUP);
-	if (NULL == mkgroup)
-		mkgroup = new STRING(KYVFLIST);
-	mkfiles = getstring(master, KYRTL_MAKE_FILES);
 	mksubd  = getstring(master, KYRTL_MAKE_SUBD);
 
-	if (NULL != mkfiles) {
-		if (mksubd) {
-			fprintf(fp, "%sD := %s\n", mkgroup->c_str(),
-				mksubd->c_str());
-			fprintf(fp, "%s := $(addprefix $(%sD)/,%s) \\\t\t%s\n",
-				mkgroup->c_str(), mkgroup->c_str(),
-				mkfiles->c_str(), allgroups.c_str());
-			vdirs = vdirs + STRING(" -y $(")+(*mkgroup)
-					+STRING("D) ");
-		} else
-			fprintf(fp, "%s := %s \\\t\t%s\n",
-				mkgroup->c_str(),
-				mkfiles->c_str(), allgroups.c_str());
-	} else if (allgroups.size() > 0) {
-		fprintf(fp, "%s := main.v %s\n", mkgroup->c_str(), allgroups.c_str());
-	}
+	if (mksubd)
+		vdirs = vdirs + STRING(" -y ") + (*mksubd);
 
 	mksubd = getstring(master, KYRTL_MAKE_VDIRS);
 	if (NULL == mksubd)

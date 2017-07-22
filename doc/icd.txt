@@ -130,6 +130,11 @@ MAIN.INSERT
 MAIN.ALT
 
 BASE	(Created and used internally)
+	This is the base address of the given peripheral within its current
+	bus
+REGBASE (Created and used internally)
+	This is the base address of the given peripheral from an external
+	bus address reference.
 MASK	(Created and used internally)
 AWID	Address width, in terms of # of address lines, used by this component
 
@@ -274,6 +279,9 @@ BUS.CLOCK	The name of a previously defined clock from which this bus
 		runs on
 DEFAULT.BUS	The name of the default bus, which we spend most of our time on.
 		This bus gets the null device, for example
+
+REGISTER.BUS	The name of the bus global register addresses are calculated
+		from
 
 
 

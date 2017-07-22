@@ -1,10 +1,10 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	clockinfo.h
+// Filename: 	bldboardld.h
 //
 // Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 //
-// Purpose:
+// Purpose:	
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
@@ -35,61 +35,13 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 //
-#ifndef	CLOCKINFO_H
-#define	CLOCKINFO_H
+#ifndef	BLDBOARDLD_H
+#define	BLDBOARDLD_H
 
+#include <stdio.h>
+#include <string>
 #include "parser.h"
-#include "mapdhash.h"
 
+extern	void	build_board_ld(   MAPDHASH &master, FILE *fp, STRING &fname);
 
-class	CLOCKINFO {
-public:
-	MAPDHASH	*m_hash;
-	unsigned long	m_interval_ps;
-	STRINGP	m_name, m_wire;
-	static const unsigned long	UNKNOWN_PS,
-			PICOSECONDS_PER_SECOND;
-
-	CLOCKINFO(void);
-
-	unsigned long	interval_ps(void) {
-		return m_interval_ps;
-	}
-
-	unsigned long	setfrequency(const char *sfreq_hz) {
-		return setfrequency(strtoul(sfreq_hz, NULL, 0));
-	}
-
-	unsigned long	setfrequency(unsigned long frequency_hz);
-	void	setname(STRINGP name);
-	void	setwire(STRINGP wire);
-
-	void set(STRINGP name, STRINGP wire, unsigned long frequency_hz) {
-		setname(name);
-		setwire(wire);
-		setfrequency(frequency_hz);
-	}
-
-	void set(STRINGP name, STRINGP wire, char *sfreq) {
-		setname(name);
-		setwire(wire);
-		setfrequency(sfreq);
-	}
-
-	unsigned frequency(void);
-};
-typedef	std::vector<CLOCKINFO>	CLKLIST;
-
-
-// A list of all of the clocks found within this design
-extern	CLKLIST	cklist;
-
-// Search through the master hash looking for all of the clocks within it.
-extern	CLOCKINFO	*getclockinfo(STRING &clock_name);
-extern	CLOCKINFO	*getclockinfo(STRINGP clock_name);
-
-// Search through the master hash looking for all of the clocks within it.
-extern	void	find_clocks(MAPDHASH &master);
-
-#endif	// CLOCKINFO_H
-
+#endif	// BLDBOARDLD_H

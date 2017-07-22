@@ -79,6 +79,7 @@ extern const	STRING	KYMASTER,
 			KYMASTER_BUS;
 //
 extern const	STRING	KYBASE;
+extern const	STRING	KYREGBASE;
 extern const	STRING	KYMASK;
 extern const	STRING	KYNADDR;
 //
@@ -140,7 +141,6 @@ extern	const	STRING	KYOUT_FILE;
 extern	const	STRING	KYOUT_DATA;
 // rtl/Makefile include file
 extern	const	STRING	KYRTL_MAKE_GROUP;
-extern	const	STRING	KYRTL_MAKE_FILES;
 extern	const	STRING	KYRTL_MAKE_SUBD;
 extern	const	STRING	KYRTL_MAKE_VDIRS;
 extern	const	STRING	KYVFLIST;
@@ -174,7 +174,8 @@ extern	const	STRING	KYBUS,
 			KY_AWID,
 			KY_CLOCK,
 			KY_NULLSZ,
-			KYDEFAULT_BUS;
+			KYDEFAULT_BUS,
+			KYREGISTER_BUS;
 //
 extern const	STRING	KYSTHIS;
 extern const	STRING	KYTHISDOT;

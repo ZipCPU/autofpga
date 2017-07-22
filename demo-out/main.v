@@ -69,10 +69,10 @@
 `define	HDMI_IN_EDID_ACCESS
 `define	HDMIIN_ACCESS
 `define	CFG_ACCESS
-`define	SPIO_ACCESS
 `define	BUSPIC_ACCESS
 `define	GPSUART_ACCESS
 `define	NETCTRL_ACCESS
+`define	SPIO_ACCESS
 //
 //
 // The list of those things that have @DEPENDS tags
@@ -132,9 +132,8 @@ module	main(i_clk, i_reset,
 		i_ps2, o_ps2,
 		// HDMI input EDID I2C ports
 		i_hdmi_in_scl, i_hdmi_in_sda, o_hdmi_in_scl, o_hdmi_in_sda,
-		// Command and Control port
-		i_host_rx_stb, i_host_rx_data,
-		o_host_tx_stb, o_host_tx_data, i_host_tx_busy,
+ 		// UART/host to wishbone interface
+ 		i_host_uart_rx, o_host_uart_tx,
 		// HDMI input ports
 		i_hdmi_in_clk,
 		i_hdmi_in_r, i_hdmi_in_g, i_hdmi_in_b,
@@ -143,8 +142,6 @@ module	main(i_clk, i_reset,
 		i_hdmi_in_actual_delay_r, i_hdmi_in_actual_delay_g,
 		i_hdmi_in_actual_delay_b, o_hdmi_in_delay,
 		i_cpu_reset,
-		// SPIO interface
-		i_sw, i_btnc, i_btnd, i_btnl, i_btnr, i_btnu, o_led,
 		// HDMI output ports
 		i_hdmi_out_clk,
 		// HDMI output pixels
@@ -152,7 +149,9 @@ module	main(i_clk, i_reset,
 		// The GPS-UART
 		i_gpsu_rx, o_gpsu_tx,
 		// The ethernet MDIO wires
-		o_mdclk, o_mdio, o_mdwe, i_mdio);
+		o_mdclk, o_mdio, o_mdwe, i_mdio,
+		// SPIO interface
+		i_sw, i_btnc, i_btnd, i_btnl, i_btnr, i_btnu, o_led);
 //
 // Any parameter definitions
 //
@@ -222,11 +221,8 @@ module	main(i_clk, i_reset,
 	// HDMI input EDID I2C ports
 	input	wire		i_hdmi_in_scl, i_hdmi_in_sda;
 	output	wire		o_hdmi_in_scl, o_hdmi_in_sda;
-	input	wire		i_host_rx_stb;
-	input	wire	[7:0]	i_host_rx_data;
-	output	wire		o_host_tx_stb;
-	output	wire	[7:0]	o_host_tx_data;
-	input	wire		i_host_tx_busy;
+	input	wire		i_host_uart_rx;
+	output	wire		o_host_uart_tx;
 	// HDMI input ports
 	input	wire		i_hdmi_in_clk;
 	input	wire	[9:0]	i_hdmi_in_r, i_hdmi_in_g, i_hdmi_in_b;
@@ -237,10 +233,6 @@ module	main(i_clk, i_reset,
 	input	wire	[4:0]	i_hdmi_in_actual_delay_b;
 	output	wire	[4:0]	o_hdmi_in_delay;
 	input	wire		i_cpu_reset;
-	// SPIO interface
-	input	wire	[7:0]	i_sw;
-	input	wire		i_btnc, i_btnd, i_btnl, i_btnr, i_btnu;
-	output	wire	[7:0]	o_led;
 	// HDMI output clock
 	input	wire	i_hdmi_out_clk;
 	// HDMI output pixels
@@ -250,6 +242,10 @@ module	main(i_clk, i_reset,
 	// Ethernet control (MDIO)
 	output	wire		o_mdclk, o_mdio, o_mdwe;
 	input	wire		i_mdio;
+	// SPIO interface
+	input	wire	[7:0]	i_sw;
+	input	wire		i_btnc, i_btnd, i_btnl, i_btnr, i_btnu;
+	output	wire	[7:0]	o_led;
 	// Make Verilator happy ... defining bus wires for lots of components
 	// often ends up with unused wires lying around.  We'll turn off
 	// Verilator's lint warning here that checks for unused wires.
@@ -277,12 +273,12 @@ module	main(i_clk, i_reset,
 	wire	scope_sdcard_int;	// scope_sdcard.INT.SDSCOPE.WIRE
 	wire	hdmiin_int;	// hdmiin.INT.VSYNC.WIRE
 	wire	zip_cpu_int;	// zip.INT.ZIP.WIRE
-	wire	spio_int;	// spio.INT.SPIO.WIRE
 	wire	w_bus_int;	// buspic.INT.BUS.WIRE
 	wire	gpsutx_int;	// gpsu.INT.GPSTX.WIRE
 	wire	gpsutxf_int;	// gpsu.INT.GPSTXF.WIRE
 	wire	gpsurx_int;	// gpsu.INT.GPSRX.WIRE
 	wire	gpsurxf_int;	// gpsu.INT.GPSRXF.WIRE
+	wire	spio_int;	// spio.INT.SPIO.WIRE
 
 
 	//
@@ -317,6 +313,20 @@ module	main(i_clk, i_reset,
 	wire	[31:0]	edid_dbg;
 	wire	scope_sdcard_trigger,
 		scope_sdcard_ce;
+	//
+	//
+	// UART interface
+	//
+	//
+	localparam [23:0] BUSUART = 24'h64;	// 1000000 baud
+	//
+	wire	w_ck_uart, w_uart_tx;
+	wire		rx_host_stb;
+	wire	[7:0]	rx_host_data;
+	wire		tx_host_stb;
+	wire	[7:0]	tx_host_data;
+	wire		tx_host_busy;
+	//
 	// Definitions for the WB-UART converter.  We really only need one
 	// (more) non-bus wire--one to use to select if we are interacting
 	// with the ZipCPU or not.
@@ -337,17 +347,17 @@ module	main(i_clk, i_reset,
 	wire	[31:0]	zip_debug;
 	wire		zip_trigger;
 	wire	[15:0] zip_int_vector;
-	wire	[4:0]	w_btn;
 	reg	[23-1:0]	r_buserr_addr;
 	// Bus arbiter's internal lines
-	wire		dwbi_cyc, dwbi_stb, dwbi_we,
-			dwbi_ack, dwbi_stall, dwbi_err;
-	wire	[(23-1):0]	dwbi_addr;
-	wire	[31:0]	dwbi_odata, dwbi_idata;
-	wire	[3:0]	dwbi_sel;
+	wire		wbu_dwbi_cyc, wbu_dwbi_stb, wbu_dwbi_we,
+			wbu_dwbi_ack, wbu_dwbi_stall, wbu_dwbi_err;
+	wire	[(23-1):0]	wbu_dwbi_addr;
+	wire	[31:0]	wbu_dwbi_odata, wbu_dwbi_idata;
+	wire	[3:0]	wbu_dwbi_sel;
 	wire	w_gpsu_cts_n, w_gpsu_rts_n;
 	assign	w_gpsu_cts_n=1'b1;
 	wire	tb_pps;
+	wire	[4:0]	w_btn;
 
 
 	//
@@ -366,10 +376,11 @@ module	main(i_clk, i_reset,
 //
 	// Bus wb
 	// Wishbone master wire definitions for bus: wb
-	wire		wb_cyc, wb_stb, wb_we, wb_stall, wb_err;
-	wire		wb_none_sel, wb_many_ack;
+	wire		wb_cyc, wb_stb, wb_we, wb_stall, wb_err, 	wb_none_sel;
+	reg		wb_many_ack;
 	wire	[22:0]	wb_addr;
-	wire	[31:0]	wb_data, wb_idata;
+	wire	[31:0]	wb_data;
+	reg	[31:0]	wb_idata;
 	wire	[3:0]	wb_sel;
 	reg		wb_ack;
 
@@ -499,10 +510,11 @@ module	main(i_clk, i_reset,
 
 	// Bus wbu
 	// Wishbone master wire definitions for bus: wbu
-	wire		wbu_cyc, wbu_stb, wbu_we, wbu_stall, wbu_err;
-	wire		wbu_none_sel, wbu_many_ack;
+	wire		wbu_cyc, wbu_stb, wbu_we, wbu_stall, wbu_err, 	wbu_none_sel;
+	reg		wbu_many_ack;
 	wire	[23:0]	wbu_addr;
-	wire	[31:0]	wbu_data, wbu_idata;
+	wire	[31:0]	wbu_data;
+	reg	[31:0]	wbu_idata;
 	wire	[3:0]	wbu_sel;
 	reg		wbu_ack;
 
@@ -516,10 +528,11 @@ module	main(i_clk, i_reset,
 
 	// Bus zip
 	// Wishbone master wire definitions for bus: zip
-	wire		zip_cyc, zip_stb, zip_we, zip_stall, zip_err;
-	wire		zip_none_sel, zip_many_ack;
+	wire		zip_cyc, zip_stb, zip_we, zip_stall, zip_err, 	zip_none_sel;
+	reg		zip_many_ack;
 	wire	[22:0]	zip_addr;
-	wire	[31:0]	zip_data, zip_idata;
+	wire	[31:0]	zip_data;
+	reg	[31:0]	zip_idata;
 	wire	[3:0]	zip_sel;
 	reg		zip_ack;
 
@@ -585,6 +598,7 @@ module	main(i_clk, i_reset,
 	//
 	
 	assign	     wbu_dwb_sel = ((wbu_addr[23:23] &  1'h1) ==  1'h0);
+//x2	Was a master bus as well
 	assign	     zip_dbg_sel = ((wbu_addr[23:23] &  1'h1) ==  1'h1);
 	//
 
@@ -621,7 +635,7 @@ module	main(i_clk, i_reset,
 	//
 	// many_ack
 	//
-	// It is also a violation of the bus protocol to produce multiply
+	// It is also a violation of the bus protocol to produce multiple
 	// acks at once and on the same clock.  In that case, the bus
 	// can't decide which result to return.  Worse, if someone is waiting
 	// for a return value, that value will never come since another ack
@@ -670,46 +684,50 @@ module	main(i_clk, i_reset,
 		r_wb_sio_ack <= (wb_stb)&&(wb_sio_sel);
 	assign	wb_sio_ack = r_wb_sio_ack;
 	reg	r_wb_sio_ack;
+	reg	[31:0]	r_wb_sio_data;
 	always	@(posedge i_clk)
 		// mask        = 0000000f
 		// lgdw        = 2
 		// unused_lsbs = 0
 		casez( wb_addr[3:0] )
-			4'h0: wb_sio_data <= buserr_data;
-			4'h1: wb_sio_data <= buspic_data;
-			4'h2: wb_sio_data <= clkhdmiin_data;
-			4'h3: wb_sio_data <= clkhdmiout_data;
-			4'h4: wb_sio_data <= date_data;
-			4'h5: wb_sio_data <= gpio_data;
-			4'h6: wb_sio_data <= pwrcount_data;
-			4'h7: wb_sio_data <= spio_data;
-			4'h8: wb_sio_data <= sysclk_data;
-			default: wb_sio_data <= version_data;
+			4'h0: r_wb_sio_data <= buserr_data;
+			4'h1: r_wb_sio_data <= buspic_data;
+			4'h2: r_wb_sio_data <= clkhdmiin_data;
+			4'h3: r_wb_sio_data <= clkhdmiout_data;
+			4'h4: r_wb_sio_data <= date_data;
+			4'h5: r_wb_sio_data <= gpio_data;
+			4'h6: r_wb_sio_data <= pwrcount_data;
+			4'h7: r_wb_sio_data <= spio_data;
+			4'h8: r_wb_sio_data <= sysclk_data;
+			default: r_wb_sio_data <= version_data;
 		endcase
+	assign	wb_sio_data = r_wb_sio_data;
 
 	assign	wb_dio_stall = 1'b0;
 	reg	[1:0]	r_wb_dio_ack;
 	always	@(posedge i_clk)
-		r_wb_dio_ack <= { r_wb_dio_ack[0], (wb_stb)&&(r_wb_dio_sel) };
+		r_wb_dio_ack <= { r_wb_dio_ack[0], (wb_stb)&&(wb_dio_sel) };
 	assign	wb_dio_ack = r_wb_dio_ack[1];
+	reg	[31:0]	r_wb_dio_data;
 	always	@(posedge i_clk)
-		casez({		gck,
-				mous,
-				oled,
-				rtc,
-				gtb,
-				hdmiin,
-				edin	}) // edout default
-			7'b1??????: wb_dio_data <= gck_data;
-			7'b01?????: wb_dio_data <= mous_data;
-			7'b001????: wb_dio_data <= oled_data;
-			7'b0001???: wb_dio_data <= rtc_data;
-			7'b00001??: wb_dio_data <= gtb_data;
-			7'b000001?: wb_dio_data <= hdmiin_data;
-			7'b0000001: wb_dio_data <= edin_data;
-			default: wb_dio_data <= edout_data;
+		casez({		gck_ack,
+				mous_ack,
+				oled_ack,
+				rtc_ack,
+				gtb_ack,
+				hdmiin_ack,
+				edin_ack	}) // edout default
+			7'b1??????: r_wb_dio_data <= gck_data;
+			7'b01?????: r_wb_dio_data <= mous_data;
+			7'b001????: r_wb_dio_data <= oled_data;
+			7'b0001???: r_wb_dio_data <= rtc_data;
+			7'b00001??: r_wb_dio_data <= gtb_data;
+			7'b000001?: r_wb_dio_data <= hdmiin_data;
+			7'b0000001: r_wb_dio_data <= edin_data;
+			default: r_wb_dio_data <= edout_data;
 
 		endcase
+	assign	wb_dio_data = r_wb_dio_data;
 
 	//
 	// Finally, determine what the response is from the wb bus
@@ -810,7 +828,7 @@ module	main(i_clk, i_reset,
 	//
 	// many_ack
 	//
-	// It is also a violation of the bus protocol to produce multiply
+	// It is also a violation of the bus protocol to produce multiple
 	// acks at once and on the same clock.  In that case, the bus
 	// can't decide which result to return.  Worse, if someone is waiting
 	// for a return value, that value will never come since another ack
@@ -1290,6 +1308,12 @@ module	main(i_clk, i_reset,
 `endif	// SDSPI_SCOPE
 
 `ifdef	WBUBUS_MASTER
+	// The Host USB interface, to be used by the WB-UART bus
+	rxuartlite	#(BUSUART) rcv(s_clk, i_host_uart_rx,
+				rx_host_stb, rx_host_data);
+	txuartlite	#(BUSUART) txv(s_clk, tx_host_stb, tx_host_data,
+				o_host_uart_tx, tx_host_busy);
+
 `ifdef	INCLUDE_ZIPCPU
 	// assign	wbu_zip_sel   = wbu_addr[23];
 `else
@@ -1415,24 +1439,6 @@ module	main(i_clk, i_reset,
 	assign	zip_cpu_int = 1'b0;	// zip.INT.ZIP.WIRE
 `endif	// INCLUDE_ZIPCPU
 
-`ifdef	SPIO_ACCESS
-	assign	w_btn = { i_btnc, i_btnd, i_btnl, i_btnr, i_btnu };
-	spio #(.NBTN(5), .NLEDS(8)) thespio(i_clk,
-		wb_cyc, (wb_stb)&&(spio_sel), wb_we, wb_data, wb_sel,
-			spio_ack, spio_stall, spio_data,
-		i_sw, w_btn, o_led, spio_int);
-`else	// SPIO_ACCESS
-	assign	w_btn    = h0;
-	assign	o_led_cs_n    = 8'h0;
-	reg	r_spio_ack;
-	initial	r_spio_ack = 1'b0;
-	always @(posedge i_clk)	r_spio_ack <= (wb_stb)&&(spio_sel);
-	assign	spio_ack   = r_spio_ack;
-	assign	spio_stall = 0;
-	assign	spio_data  = 0;
-	assign	spio_int = 1'b0;	// spio.INT.SPIO.WIRE
-`endif	// SPIO_ACCESS
-
 	always @(posedge i_clk)
 		if (wb_err)
 			r_buserr_addr <= wb_addr;
@@ -1450,27 +1456,30 @@ module	main(i_clk, i_reset,
 		zip_cyc, (zip_stb)&&(zip_dwb_sel), zip_we, zip_addr, zip_data, zip_sel,
 			zip_dwb_ack, zip_dwb_stall, zip_dwb_err,
 		// The UART interface master
-		(wbu_cyc)&&(wbu_dwb_sel), (wbu_stb)&&(wbu_dwb_sel), wbu_we,
-			wbu_addr[(23-1):0], wbu_data, wbu_sel,
+		(wbu_cyc)&&(wbu_dwb_sel),
+			(wbu_stb)&&(wbu_dwb_sel),
+			wbu_we,
+			wbu_addr[(23-1):0],
+			wbu_data, wbu_sel,
 			wbu_dwb_ack, wbu_dwb_stall, wbu_dwb_err,
 		// Common bus returns
-		dwbi_cyc, dwbi_stb, dwbi_we, dwbi_addr, dwbi_odata, dwbi_sel,
-			dwbi_ack, dwbi_stall, dwbi_err);
+		wbu_dwbi_cyc, wbu_dwbi_stb, wbu_dwbi_we, wbu_dwbi_addr, wbu_dwbi_odata, wbu_dwbi_sel,
+			wbu_dwbi_ack, wbu_dwbi_stall, wbu_dwbi_err);
 
 	// And because the ZipCPU and the Arbiter can create an unacceptable
 	// delay, we often fail timing.  So, we add in a delay cycle
 `else
 	// If no ZipCPU, no delay arbiter is needed
-	assign	dwbi_cyc   = wbu_cyc;
-	assign	dwbi_stb   = wbu_stb;
-	assign	dwbi_we    = wbu_we;
-	assign	dwbi_addr  = wbu_addr;
-	assign	dwbi_odata = wbu_data;
-	assign	dwbi_sel   = wbu_sel;
-	assign	wbu_dwb_ack   = dwbi_ack;
-	assign	wbu_dwb_stall = dwbi_stall;
-	assign	wbu_dwb_err   = dwbi_err;
-	assign wbu_dwb_data   = dwbi_idata;
+	assign	wbu_dwbi_cyc   = wbu_cyc;
+	assign	wbu_dwbi_stb   = wbu_stb;
+	assign	wbu_dwbi_we    = wbu_we;
+	assign	wbu_dwbi_addr  = wbu_addr;
+	assign	wbu_dwbi_odata = wbu_data;
+	assign	wbu_dwbi_sel   = wbu_sel;
+	assign	wbu_dwb_ack    = wbu_dwbi_ack;
+	assign	wbu_dwb_stall  = wbu_dwbi_stall;
+	assign	wbu_dwb_err    = wbu_dwbi_err;
+	assign	wbu_dwb_data   = wbu_dwbi_idata;
 `endif	// INCLUDE_ZIPCPU
 
 `ifdef	WBUBUS_MASTER
@@ -1479,9 +1488,9 @@ module	main(i_clk, i_reset,
 `endif
 `endif
 `ifdef	BUS_DELAY_NEEDED
-	busdelay #(23)	dwbi_delay(i_clk,
-		dwbi_cyc, dwbi_stb, dwbi_we, dwbi_addr, dwbi_odata, dwbi_sel,
-			dwbi_ack, dwbi_stall, dwbi_idata, dwbi_err,
+	busdelay #(23)	wbu_dwbi_delay(i_clk,
+		wbu_dwbi_cyc, wbu_dwbi_stb, wbu_dwbi_we, wbu_dwbi_addr, wbu_dwbi_odata, wbu_dwbi_sel,
+			wbu_dwbi_ack, wbu_dwbi_stall, wbu_dwbi_idata, wbu_dwbi_err,
 		wb_cyc, wb_stb, wb_we, wb_addr, wb_data, wb_sel,
 			wb_ack, wb_stall, wb_idata, wb_err);
 `else
@@ -1489,20 +1498,20 @@ module	main(i_clk, i_reset,
 	// don't need the bus delay, and we can go directly from the bus driver
 	// to the bus itself
 	//
-	assign	wb_cyc    = dwbi_cyc;
-	assign	wb_stb    = dwbi_stb;
-	assign	wb_we     = dwbi_we;
-	assign	wb_addr   = dwbi_addr;
-	assign	wb_data   = dwbi_odata;
-	assign	wb_sel    = dwbi_sel;
-	assign	dwbi_ack   = wb_ack;
-	assign	dwbi_stall = wb_stall;
-	assign	dwbi_err   = wb_err;
-	assign	dwbi_idata = wb_idata;
+	assign	wb_cyc    = wbu_dwbi_cyc;
+	assign	wb_stb    = wbu_dwbi_stb;
+	assign	wb_we     = wbu_dwbi_we;
+	assign	wb_addr   = wbu_dwbi_addr;
+	assign	wb_data   = wbu_dwbi_odata;
+	assign	wb_sel    = wbu_dwbi_sel;
+	assign	wbu_dwbi_ack   = wb_ack;
+	assign	wbu_dwbi_stall = wb_stall;
+	assign	wbu_dwbi_err   = wb_err;
+	assign	wbu_dwbi_idata = wb_idata;
 `endif
-	assign	wbu_dwb_data = dwbi_idata;
+	assign	wbu_dwb_data = wbu_dwbi_idata;
 `ifdef	INCLUDE_ZIPCPU
-	assign	zip_dwb_data = dwbi_idata;
+	assign	zip_dwb_data = wbu_dwbi_idata;
 `endif
 `ifdef	BUSPIC_ACCESS
 	//
@@ -1580,6 +1589,24 @@ module	main(i_clk, i_reset,
 	assign	mdio_stall = 0;
 	assign	mdio_data  = 0;
 `endif	// NETCTRL_ACCESS
+
+`ifdef	SPIO_ACCESS
+	assign	w_btn = { i_btnc, i_btnd, i_btnl, i_btnr, i_btnu };
+	spio #(.NBTN(5), .NLEDS(8)) thespio(i_clk,
+		wb_cyc, (wb_stb)&&(spio_sel), wb_we, wb_data, wb_sel,
+			spio_ack, spio_stall, spio_data,
+		i_sw, w_btn, o_led, spio_int);
+`else	// SPIO_ACCESS
+	assign	w_btn    = h0;
+	assign	o_led_cs_n    = 8'h0;
+	reg	r_spio_ack;
+	initial	r_spio_ack = 1'b0;
+	always @(posedge i_clk)	r_spio_ack <= (wb_stb)&&(spio_sel);
+	assign	spio_ack   = r_spio_ack;
+	assign	spio_stall = 0;
+	assign	spio_data  = 0;
+	assign	spio_int = 1'b0;	// spio.INT.SPIO.WIRE
+`endif	// SPIO_ACCESS
 
 
 

@@ -130,7 +130,9 @@
 			.CLKFBIN(sysclk_feedback),
 			.LOCKED(sysclk_locked));
 
-	BUFG	sysbuf(.I(s_clk_200mhz_unbuffered), .O(s_clk_200mhz));
+`ifndef	SDRAM_ACCESS
+//	BUFG	sysbuf(.I(s_clk_200mhz_unbuffered), .O(s_clk_200mhz));
+`endif
 
 
 @MAIN.PORTLIST=

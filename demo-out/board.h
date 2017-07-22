@@ -240,13 +240,6 @@ typedef	struct	HDMI_IN_S {
 #define	CFG_BSPI	31
 
 
-#define	SPIO_BTNC	0x01000
-#define	SPIO_BTND	0x00800
-#define	SPIO_BTNL	0x00400
-#define	SPIO_BTNR	0x00200
-#define	SPIO_BTNU	0x00100
-
-
 #define	ALTPIC(A)	(1<<(A))
 
 
@@ -318,6 +311,13 @@ typedef struct ENETMDIO_S {
 
 
 
+#define	SPIO_BTNC	0x01000
+#define	SPIO_BTND	0x00800
+#define	SPIO_BTNL	0x00400
+#define	SPIO_BTNR	0x00200
+#define	SPIO_BTNU	0x00100
+
+
 #ifdef	SDSPI_ACCESS
 #define	_BOARD_HAS_SDSPI
 static volatile SDSPI *const _sdcard = ((SDSPI *)7340032);
@@ -375,10 +375,6 @@ static volatile unsigned *const _date = ((unsigned *)16);
 #define	_BOARD_HAS_ICAPTETWO
 static volatile unsigned *const _icape = ((unsigned *)9437184);
 #endif	// CFG_ACCESS
-#ifdef	SPIO_ACCESS
-#define	_BOARD_HAS_SPIO
-static volatile unsigned *const _spio = ((unsigned *)28);
-#endif	// SPIO_ACCESS
 #define	_BOARD_HAS_BUSERR
 static volatile unsigned *const _buserr = ((unsigned *)0);
 #ifdef	BUSPIC_ACCESS
@@ -393,6 +389,10 @@ static volatile WBUART *const gpsu = ((WBUART *)6291456);
 #define	_BOARD_HAS_NETMDIO
 static volatile ENETMDIO *const _mdio = ((ENETMDIO *)10485760);
 #endif	// NETCTRL_ACCESS
+#ifdef	SPIO_ACCESS
+#define	_BOARD_HAS_SPIO
+static volatile unsigned *const _spio = ((unsigned *)28);
+#endif	// SPIO_ACCESS
 //
 // Interrupt assignments (3 PICs)
 //

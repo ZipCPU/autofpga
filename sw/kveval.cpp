@@ -211,7 +211,7 @@ bool	subresults_into(MAPSTACK stack, MAPDHASH *here, STRINGP &sval) {
 	}
 
 	do {
-		unsigned long	sloc = -1;
+		unsigned long	sloc = -1, aloc;
 
 		changed = false;
 		sloc = 0;
@@ -242,7 +242,11 @@ bool	subresults_into(MAPSTACK stack, MAPDHASH *here, STRINGP &sval) {
 						&&(ptr[kylen] != '.'))
 					break;
 				} endpos = kylen+1+kystart-sloc;
-				assert(ptr[kylen] == ')');
+				if (ptr[kylen] != ')') {
+					fprintf(stderr, "ERR: Closing parentheses for %*s not found\n", kylen, ptr);
+					exit(EXIT_FAILURE);
+					assert(ptr[kylen] == ')');
+				}
 			} else {
 				for(; ptr[kylen]; kylen++) {
 					if((!isalpha(ptr[kylen]))
@@ -269,9 +273,13 @@ bool	subresults_into(MAPSTACK stack, MAPDHASH *here, STRINGP &sval) {
 					delete[] tbuf;
 				} else if (NULL != (vstr = get_named_string(
 							stack, *here, key))) {
-					sval->replace(sloc, endpos, *vstr);
-					changed = true;
-				}else if(get_named_value(stack,*here,key,value)){
+					aloc = vstr->find("@$");
+					if (STRING::npos == aloc) {
+						sval->replace(sloc, endpos, *vstr);
+						changed = true;
+					} else
+						sloc += endpos;
+				} else if(get_named_value(stack,*here,key,value)){
 					char	buffer[64];
 					STRING	tmp;
 					sprintf(buffer, "%d", value);

@@ -121,6 +121,7 @@ public:
 
 	void	adddefault(MAPDHASH &master, STRINGP defname);
 
+	BUSINFO *addbus_aux(MAPDHASH *phash, STRINGP pname, MAPDHASH *bp);
 	void	addbus(MAPDHASH *phash);
 	void	addbus(MAPT &map);
 	void	countsio(MAPDHASH *phash);

@@ -645,6 +645,8 @@ STRINGP getstring(MAPDHASH &m) {
 
 STRINGP getstring(MAPDHASH &master, const STRING &ky) {
 	MAPDHASH::iterator	r;
+	STRINGP	prefix;
+	char	errstr[256];
 
 	r = findkey(master, ky);
 	if (r == master.end())
@@ -656,12 +658,29 @@ STRINGP getstring(MAPDHASH &master, const STRING &ky) {
 		// Check for a .STR key within this node
 		strp = getstring(master);
 		if (NULL == strp) {
-			fprintf(stderr, "ERR: STRING expression isnt a string!! (KEY=%s)\n", ky.c_str());
-			fprintf(gbl_dump, "ERR: STRING expression isnt a string!! (KEY=%s)\n", ky.c_str());
+			MAPDHASH::iterator kvprefix= findkey(master, KYPREFIX);
+
+			if ((kvprefix != master.end())&&(kvprefix->second.m_typ == MAPT_STRING))
+				prefix = kvprefix->second.u.m_s;
+			else
+				prefix = new STRING("(Unknown context)");
+
+			sprintf(errstr, "ERR: STRING expression for KEY \"%s\" in %s isnt a string!!\n\t... it's a map, with sub-elements\n", ky.c_str(), prefix->c_str());
+			fprintf(stderr, "%s", errstr);
+			fprintf(gbl_dump, "%s", errstr);
 		}
 		return strp;
 	} else if (r->second.m_typ != MAPT_STRING) {
-		fprintf(stderr, "ERR: STRING expression isnt a string!! (KEY=%s)\n", ky.c_str());
+		MAPDHASH::iterator kvprefix= findkey(master, KYPREFIX);
+
+		if ((kvprefix != master.end())&&(kvprefix->second.m_typ == MAPT_STRING))
+			prefix = kvprefix->second.u.m_s;
+		else
+			prefix = new STRING("(Unknown context)");
+
+		sprintf(errstr, "ERR: STRING expression for KEY \"%s\" in %s isnt a string!! --- it's a %d\n", ky.c_str(), prefix->c_str(), r->second.m_typ);
+		fprintf(stderr, "%s", errstr);
+		fprintf(gbl_dump, "%s", errstr);
 		return NULL;
 	}
 	return r->second.u.m_s;
