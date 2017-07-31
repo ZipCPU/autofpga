@@ -116,6 +116,7 @@ void	build_testb_h(MAPDHASH &master, FILE *fp, STRING &fname) {
 "	virtual	void	closetrace(void) {\n"
 "		if (m_trace) {\n"
 "			m_trace->close();\n"
+"			delete m_trace;\n"
 "			m_trace = NULL;\n"
 "		}\n"
 "	}\n"
@@ -151,7 +152,10 @@ void	build_testb_h(MAPDHASH &master, FILE *fp, STRING &fname) {
 		fprintf(fp, "\n\t\tm_time_ps += mintime;\n");
 
 		fprintf(fp, "\n\t\teval();\n"
-			"\t\tif (m_trace) m_trace->dump(m_time_ps+1);\n\n");
+			"\t\tif (m_trace) {\n"
+				"\t\t\tm_trace->dump(m_time_ps+1);\n"
+				"\t\t\tm_trace->flush();\n"
+			"\t\t}\n\n");
 
 
 		for(unsigned i=0; i<cklist.size(); i++)
@@ -202,7 +206,9 @@ fprintf(fp, "\tvirtual	void	sim_%s_tick(void) {\n"
 		"\t\tif (m_trace) m_trace->dump(m_time_ps);\n"
 		"\t\tm_core->%s = 0;\n"
 		"\t\teval();\n"
-		"\t\tif (m_trace) m_trace->dump(m_time_ps + %ld);\n"
+		"\t\tif (m_trace) {\n"
+			"\t\t\tm_trace->dump(m_time_ps + %ld);\n"
+			"\t\t\tm_trace->flush();\n"
 		"\n\t}\n\n",
 			cklist[0].m_wire->c_str(),
 			cklist[0].m_wire->c_str(),
