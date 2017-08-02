@@ -93,4 +93,4 @@ typedef	struct OLEDBW_S {
 @BDEF.IONAME=io_oled
 @BDEF.IOTYPE=OLEDBW
 @BDEF.OSDEF= _BOARD_HAS_OLEDBW
-@BDEF.OSVAL= static volatile @$THIS.BDEF.IOTYPE *const _oledbw = ((@$THIS.BDEF.IOTYPE *)@$THIS.BASE);
+@BDEF.OSVAL= static volatile @$THIS.BDEF.IOTYPE *const _oledbw = ((@$THIS.BDEF.IOTYPE *)@$REGBASE);

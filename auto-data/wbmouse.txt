@@ -96,4 +96,4 @@ typedef struct  WBMOUSE_S {
 } WBMOUSE;
 @BDEF.IOTYPE=WBMOUSE
 @BDEF.OSDEF=_BOARD_HAS_WBMOUSE
-@BDEF.OSVAL=static volatile @$.BDEF.IOTYPE *const _mouse = ((@$.BDEF.IOTYPE *)@$.BASE);
+@BDEF.OSVAL=static volatile @$.BDEF.IOTYPE *const _mouse = ((@$.BDEF.IOTYPE *)@$.REGBASE);

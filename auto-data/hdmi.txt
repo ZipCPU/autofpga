@@ -65,7 +65,7 @@
 		w_hdmi_in_logic_clk,
 		w_hdmi_in_red, w_hdmi_in_green, w_hdmi_in_blue,
 		w_hdmi_in_hsclk, s_clk_200mhz,
-		// HDMI input (sink) delay)
+		// HDMI input (sink) delay
 		w_hdmi_in_actual_delay_r, w_hdmi_in_actual_delay_g,
 		w_hdmi_in_actual_delay_b, w_hdmi_in_delay
 @TOP.INSERT=
@@ -123,16 +123,14 @@
 		.CLKFBOUT_PHASE(0.0),
 		.CLKIN1_PERIOD(10),
 		.CLKOUT0_DIVIDE(4)) gen_sysclk(
-			.CLKIN1(s_clk),
+			.CLKIN1(i_clk),
 			.CLKOUT0(s_clk_200mhz_unbuffered),
 			.PWRDWN(1'b0), .RST(1'b0),
 			.CLKFBOUT(sysclk_feedback),
 			.CLKFBIN(sysclk_feedback),
 			.LOCKED(sysclk_locked));
 
-`ifndef	SDRAM_ACCESS
-//	BUFG	sysbuf(.I(s_clk_200mhz_unbuffered), .O(s_clk_200mhz));
-`endif
+	BUFG	sysbuf(.I(s_clk_200mhz_unbuffered), .O(s_clk_200mhz));
 
 
 @MAIN.PORTLIST=
@@ -217,7 +215,7 @@ typedef	struct	HDMI_IN_S {
 @BDEF.IOTYPE=HDMI_IN
 @BDEF.IONAME=_hin
 @BDEF.OSDEF=_BOARD_HAS_HDMI_IN
-@BDEF.OSVAL=static volatile @$.BDEF.IOTYPE *const @$BDEF.IONAME = ((@$.BDEF.IOTYPE *)@$.BASE);
+@BDEF.OSVAL=static volatile @$.BDEF.IOTYPE *const @$BDEF.IONAME = ((@$.BDEF.IOTYPE *)@$.REGBASE);
 #
 #
 #
@@ -236,8 +234,14 @@ typedef	struct	HDMI_IN_S {
 	wire	[31:0]	hdmi_in_data;
 @MAIN.INSERT=
 
+	reg	@$(PREFIX)_trigger, @$(PREFIX)_tmp;
+	always @(posedge i_clk)
+		@$(PREFIX)_tmp <= hin_dbg_scope[30];
+	always @(posedge i_clk)
+		@$(PREFIX)_trigger <= (hin_dbg_scope[30])&&(!@$(PREFIX)_tmp);
 	wbscope #(.LGMEM(5'd14), .SYNCHRONOUS(0)
-		) copyhdmiin(i_hdmi_in_clk, 1'b1, hin_dbg_scope[31], hin_dbg_scope,
+		) copyhdmiin(i_hdmi_in_clk, 1'b1,
+			@$(PREFIX)_trigger, hin_dbg_scope,
 		i_clk, wb_cyc, (wb_stb)&&(scope_hdmiin_sel), wb_we, wb_addr[0],
 				wb_data,
 			scope_hdmiin_ack, scope_hdmiin_stall,
@@ -342,7 +346,8 @@ typedef	struct	HDMI_IN_S {
 	// or not
 	wire		w_hdmi_in_scl, w_hdmi_in_sda;
 @TOP.MAIN=
-	io_hdmi_in_scl, io_hdmi_in_sda, w_hdmi_in_scl, w_hdmi_in_sda
+		// HDMI input EDID I2C ports
+		io_hdmi_in_scl, io_hdmi_in_sda, w_hdmi_in_scl, w_hdmi_in_sda
 @TOP.INSERT=
 	// The EDID I2C port for the HDMI source port
 	//
@@ -378,7 +383,7 @@ typedef	struct	HDMI_IN_S {
 @BDEF.IONAME=io_edin[(1<<(@$.LGMEMSZ-2))]
 @BDEF.IOTYPE=unsigned
 @BDEF.OSDEF=_BOARD_HAS_HDMI_IN_EDID
-@BDEF.OSVAL=static volatile @$.BDEF.IOTYPE *const _edin = ((unsigned *)@$.BASE);
+@BDEF.OSVAL=static volatile @$.BDEF.IOTYPE *const _edin = ((unsigned *)@$.REGBASE);
 #
 #
 #
@@ -452,7 +457,7 @@ typedef	struct	EDID_SRC_S {
 @BDEF.IONAME=io_edout
 @BDEF.IOTYPE=EDID_SRC
 @BDEF.OSDEF=_BOARD_HAS_HDMI_SRC_EDID
-@BDEF.OSVAL=static volatile @$.BDEF.IOTYPE *const _edout = ((@$.BDEF.IOTYPE *)@$.BASE);
+@BDEF.OSVAL=static volatile @$.BDEF.IOTYPE *const _edout = ((@$.BDEF.IOTYPE *)@$.REGBASE);
 #
 #
 #

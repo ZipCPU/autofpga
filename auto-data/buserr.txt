@@ -54,4 +54,4 @@
 @BDEF.IONAME=io_buserr
 @BDEF.IOTYPE=unsigned
 @BDEF.OSDEF=_BOARD_HAS_BUSERR
-@BDEF.OSVAL=static volatile @$THIS.BDEF.IOTYPE *const _buserr = ((@$THIS.BDEF.IOTYPE *)@$THIS.BASE);
+@BDEF.OSVAL=static volatile @$THIS.BDEF.IOTYPE *const _buserr = ((@$THIS.BDEF.IOTYPE *)@$.BASE);

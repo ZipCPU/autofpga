@@ -55,4 +55,4 @@
 @BDEF.IONAME=	_date
 @BDEF.IOTYPE=	unsigned
 @BDEF.OSDEF=	_BOARD_HAS_RTCDATE
-@BDEF.OSVAL=	static volatile @$BDEF.IOTYPE *const @$(BDEF.IONAME) = ((@$BDEF.IOTYPE *)@$BASE);
+@BDEF.OSVAL=	static volatile @$BDEF.IOTYPE *const @$(BDEF.IONAME) = ((@$BDEF.IOTYPE *)@$REGBASE);

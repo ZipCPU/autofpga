@@ -73,4 +73,4 @@
 @BDEF.IONAME=io_spio
 @BDEF.IOTYPE=unsigned
 @BDEF.OSDEF= _BOARD_HAS_SPIO
-@BDEF.OSVAL= static volatile @$THIS.BDEF.IOTYPE *const _spio = ((@$THIS.BDEF.IOTYPE *)@$THIS.BASE);
+@BDEF.OSVAL= static volatile @$THIS.BDEF.IOTYPE *const _spio = ((@$THIS.BDEF.IOTYPE *)@$.REGBASE);

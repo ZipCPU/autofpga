@@ -72,6 +72,6 @@ typedef	struct	RTCLIGHT_S	{
 @BDEF.IONAME=_rtc
 @BDEF.IOTYPE=RTCLIGHT
 @BDEF.OSDEF=_BOARD_HAS_RTCLIGHT
-@BDEF.OSVAL=static volatile @$BDEF.IOTYPE *const @$(BDEF.IONAME) = ((@$BDEF.IOTYPE *)@$BASE);
+@BDEF.OSVAL=static volatile @$BDEF.IOTYPE *const @$(BDEF.IONAME) = ((@$BDEF.IOTYPE *)@$REGBASE);
 #
 #
