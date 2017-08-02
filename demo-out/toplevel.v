@@ -83,8 +83,6 @@ module	toplevel(i_clk,
 		// HDMI input clock, and then data
 		i_hdmi_in_clk_n, i_hdmi_in_clk_p,
 		i_hdmi_in_p, i_hdmi_in_n,
-		// A reset wire for the ZipCPU
-		i_cpu_resetn,
 		// HDMI output clock
 		o_hdmi_out_clk_n, o_hdmi_out_clk_p,
 		// HDMI output pixels
@@ -142,8 +140,6 @@ module	toplevel(i_clk,
 	// HDMI input clock
 	input	wire	i_hdmi_in_clk_n, i_hdmi_in_clk_p;
 	input	[2:0]	i_hdmi_in_p, i_hdmi_in_n;
-	// A reset wire for the ZipCPU
-	input	wire		i_cpu_resetn;
 	// HDMI output clock
 	output	wire	o_hdmi_out_clk_n, o_hdmi_out_clk_p;
 	// HDMI output pixels
@@ -245,8 +241,8 @@ module	toplevel(i_clk,
 		// HDMI input (sink) delay)
 		w_hdmi_in_actual_delay_r, w_hdmi_in_actual_delay_g,
 		w_hdmi_in_actual_delay_b, w_hdmi_in_delay,
-		// Reset wire for the ZipCPU
-		(!i_cpu_resetn),
+ 		// Reset wire for the ZipCPU
+ 		s_reset,
 		// HDMI output ports
 		w_hdmi_out_logic_clk,
 		// HDMI output pixels, set within the main module
@@ -442,14 +438,12 @@ module	toplevel(i_clk,
 			.CLKFBIN(sysclk_feedback),
 			.LOCKED(sysclk_locked));
 
-`ifndef	SDRAM_ACCESS
-//	BUFG	sysbuf(.I(s_clk_200mhz_unbuffered), .O(s_clk_200mhz));
-`endif
+	BUFG	sysbuf(.I(s_clk_200mhz_unbuffered), .O(s_clk_200mhz));
 
 
 
 	assign	s_clk = i_clk;
-	assign	s_reset = 1'b0; // This design requires local, not global resets
+	// assign	s_reset = 1'b0; // This design requires local, not global resets
 
 	assign	w_hdmi_out_hsclk     = w_hdmi_in_hsclk;
 	assign	w_hdmi_out_logic_clk = w_hdmi_in_logic_clk;

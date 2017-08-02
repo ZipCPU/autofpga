@@ -94,6 +94,7 @@ public:
 	virtual	void	closetrace(void) {
 		if (m_trace) {
 			m_trace->close();
+			delete m_trace;
 			m_trace = NULL;
 		}
 	}
@@ -131,7 +132,10 @@ public:
 		m_time_ps += mintime;
 
 		eval();
-		if (m_trace) m_trace->dump(m_time_ps+1);
+		if (m_trace) {
+			m_trace->dump(m_time_ps+1);
+			m_trace->flush();
+		}
 
 		if (m_clk.falling_edge()) {
 			m_changed = true;
