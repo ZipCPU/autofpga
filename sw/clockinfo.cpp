@@ -232,7 +232,6 @@ void	add_to_clklist(MAPDHASH *ckmap) {
 
 			if (gbl_dump)
 				fputs(outstr, gbl_dump);
-			fputs(outstr, stdout);
 		}
 
 		if (pname) pname = strtok_r(NULL, DELIMITERS, &tname);

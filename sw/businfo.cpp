@@ -86,7 +86,19 @@ int	BUSINFO::data_width(void) {
 }
 
 bool	BUSINFO::get_base_address(MAPDHASH *phash, unsigned &base) {
-	return m_plist->get_base_address(phash, base);
+	/*
+	if ((m_slist)&&(m_slist->get_base_address(base)))
+		return;
+	if ((m_dlist)&&(m_dlist->get_base_address(base)))
+		return;
+	*/
+	if (!m_plist) {
+		fprintf(stderr, "ERR: BUS[%s] has no peripherals!\n",
+			m_name->c_str());
+		gbl_err++;
+		return false;
+	} else
+		return m_plist->get_base_address(phash, base);
 }
 
 void	BUSINFO::assign_addresses(void) {
@@ -901,6 +913,11 @@ void	BUSINFO::writeout_bus_select_v(FILE *fp) {
 	unsigned	dalines = nextlg(dw/8);
 	unsigned	unused_lsbs = 0, mask = 0;
 
+	if (NULL == m_plist) {
+		fprintf(stderr, "ERR: Bus[%s] has no peripherals\n", m_name->c_str());
+		return;
+	}
+
 	fprintf(fp, "\t//\n\t//\n\t//\n\t// Select lines for bus: %s\n\t//\n", m_name->c_str());
 	fprintf(fp, "\t// Address width: %d\n\t//\n\t//\n\t\n",
 		m_plist->get_address_width());
@@ -1057,6 +1074,9 @@ bool	BUSINFO::ismember_of(MAPDHASH *phash) {
 
 void	BUSINFO::writeout_bus_logic_v(FILE *fp) {
 	PLIST::iterator	pp;
+
+	if (NULL == m_plist)
+		return;
 
 	if (m_plist->size() == 0) {
 		// Since this bus has no slaves, any attempt to access it
