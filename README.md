@@ -5,11 +5,14 @@ After now having built several FPGA designs, such as the
 [s6soc](https://github.com/ZipCPU/s6soc),
 [openarty](https://github.com/ZipCPU/openarty),
 [zbasic](https://github.com/ZipCPU/zbasic),
+[icozip](https://github.com/ZipCPU/icozip),
 and even a Basys-3 design of my own that hasn't been published, I started
 recognizing that all of these designs have a lot in common.  In particular, they
 all have a set of bus masters, such as the
 [UART-to-wishbone](https://github.com/ZipCPU/zbasic/blob/master/rtl/wbubus.v)
-bridge that I use, or even the [zipcpu](https://github.com/ZipCPU/zipcpu). 
+bridge that I use, the [hexbus](https://github.com/ZipCPU/dbgbus) debugging
+bus that offers a simpler version of the same, or even the
+[zipcpu](https://github.com/ZipCPU/zipcpu). 
 Many of these designs have also started to use (and reuse) many of the
 peripherals I've developed, such as
 the generic [UART](https://github.com/ZipCPU/wbuart),
@@ -30,16 +33,16 @@ top level design, all of these require a certain amount of care and feeding
 as part of that top level design, but yet rebuilding that top level design over
 and over just to repeat this information becomes a pain.
 
-Where things were really starting to get annoying is when C++ information
+Where things were really starting to get annoying is where the C++ information
 was depending upon Verilog information.  A classic example of this is the
 base address of any bus components.  However, if you add clock rate into
 the mix, you can then also control things such as any default UART
 configuration, default clock stepping information (for the RTC clock),
 or even default video clock information.
 
-Sharing information between Verilog and C++ was one of the primary reasons
-for creating autofpga.  While peripheral decoding is typically done in some
-[main Verilog
+Sharing information between Verilog and C++ then became one of the primary
+reasons for creating autofpga.  While peripheral decoding is typically done
+in some [main Verilog
 file](https://github.com/ZipCPU/openarty/blob/master/rtl/busmaster.v),
 other files depend upon what this peripheral decoding is.  These other files
 include the [host register definition
@@ -62,11 +65,11 @@ to be updated to match the current constraints.
 Solving this multi-language coordination problem is the purpose of autofpga.
 
 Unlike many of the other tools out there, such as Xilinx's schematic capture,
-autofpga is not built with the beginner in mind, neither is it built to hide
-the details of what is going within the project it creates.  Instead, autofpga
-is built with the sole purpose of alleviate any burden on the FPGA designer
-who otherwise has to create and maintain coherency between multiple design
-files.
+autofpga is not built with the clueless beginner in mind, neither is it built
+to hide the details of what is going within the project it creates.  Instead,
+autofpga is built with the sole purpose of alleviating any burden on the FPGA
+designer who otherwise has to create and maintain coherency between multiple
+design files.
 
 That this program facilitates composing and building new designs from existing
 components ... is just a bonus.
@@ -95,15 +98,19 @@ Specifically, the parser must determine:
   so, what the configuration parameters are and how they need to be set.  For
   example, the UART baud rate and RTC and GPS clock steps both need to be set
   based upon the actual clock speed of the master clock.  Placing [a
-  module](auto-data/clock.txt) within the design that sets up a clock and
+  clock module](auto-data/clock.txt) within the design that sets up a clock and
   declares its rate is the current method for accomplishing this.
 
 - If peripherals have or create interrupts, those need to be found and
   determined, and (even better) wired up.
 
-- If the item it is parsing fits into one of the following classes of items:
+- If an autofpga configuration file describes one of the following classes of
+  items, then the file is wired up and connected to create the necessary bus
+  wiring as well.
 
   * Full bus masters
+
+    Peripheral selection and decoding logic is added in
 
   * (Partial) bus masters, wanting access to one peripheral only
 
@@ -123,7 +130,7 @@ Specifically, the parser must determine:
 - Peripheral files need to be able to describe more than one peripheral.  For
   example, the [GPS peripheral file](auto-data/gps.txt) has a GPS-Clock,
   GPS-TB to measure the performance of the GPS clock, and a serial port
-  (WBUART) to allow us
+  ([WBUART](https://github.com/ZipCPU/wbuart32)) to allow us
   to read from the GPS and to write to it and so configure it.  Of course ...
   this also includes a parameter that must be set (baud rate) based upon the
   global clock rate.
@@ -170,15 +177,28 @@ In detail:
   [SDRAM](https://github.com/ZipCPU/xulalx25soc/blob/master/rtl/wbsdram.v) or
   [DDR3 SDRAM](http://opencores.org/project,wbddr3) components.
 
-  o AutoFPGA now has support for building a [test bench](demo-out/testb.h)
+- AutoFPGA can now support multiple, dissimilar clock rates.  Users just need
+  to specify a clock to generate it.  The clock is then made available for
+  configuration files to reference
+
+  o AutoFPGA now also has support for building a [test bench](demo-out/testb.h)
     driver that would match multiple on-board clocks, and even a main Verilator
-    [test bench module](demo-out/main_tb.cpp) that will call any C++ simulators
-    associated with the various clocks and clock rates at the appropriate
-    time in your simulation.
+    [test bench module](demo-out/main_tb.cpp) that will declare and call any
+    C++ simulators associated with the various clocks and clock rates at the
+    appropriate time in your simulation.
 
 - Addresses get assigned in three groups, and processed in three groups:
   components having only one address, components having more addresses but
   only a single clock delay, and all other components and memories
+
+- Multiple bus support is now included, to include creating arbiters to
+  transition from one bus to the next, as well as keeping track of what the
+  final addresses are for devices on an upper level bus.
+
+  This makes it possible for the SDRAM to be on one bus, supporting video
+  reads/writes, and for the CPU to be able to access that bus as
+  well--as a sub-bus of the main peripheral/memory bus.
+
 
 - Interrupts get assigned to a named controller, and then C++ header files are
   updated to reflect the interrupt assignments
@@ -197,6 +217,9 @@ In detail:
   facilitate the modifications necessary for integrating the new component into
   the verilator simulation build
 
+  o Discovering the --MMD Verilator option has since rendered the dependency
+    work largely unnecessary
+
 - Only one type of address building is supported.  I'd like to be able to
   support others, but so far this has been sufficient for my first project.
 
@@ -209,28 +232,18 @@ In detail:
 
 - The LaTeX specification table building isn't there ... yet.
 
-**20170714 Update**: A *lot* of changes have been made that haven't yet been
-checked in.  These changes have been made to autofpga for the purpose of:
+# Specific Test Case
 
-1. Adding a multiple clock capability, and
-
-2. Adding the capability to support multiple busses. 
-
-The specific test case I'm trying to support is one that will build a system
-for a Nexys-4 Video, with not only a 100MHz ZipCPU on board accessing a 32-bit
-wishbone bus, but also a 200MHz DDR3 SDRAM existing on its own 128-bit wide
-wishbone bus, together with two HDMI components that will also write to and
-then read from this 128-bit bus.  The DDR3 wishbone bus will then go through
-a bridge to become an AXI4 bus.  The video test case I am hoping to support is
-1080p at 60Hz, which should use up about 25% of the memory bandwidth on the
-device.
-
-My initial goal was to make these interface changes take place automatically
-under the hood.  I've now backed off of that goal, and I'm just hoping to
-get this support running in the first place.
-
-These changes have not yet (as of this writing) been checked back in to 
-GitHub.
+A specific test case that I'm trying to support is one that will build a system
+for [Digilent's](https://store.digilentinc.com) [Nexys-4
+Video](https://store.digilentinc.com/nexys-video-artix-7-fpga-trainer-board-for-multimedia-applications/), with not
+only a 100MHz ZipCPU on board accessing a 32-bit
+wishbone bus, but also a 100MHz DDR3 SDRAM existing on its own 128-bit wide
+wishbone bus, together with two HDMI components (148.5MHz for 1080p) that will
+also write to and then read from this 128-bit bus.  The DDR3 wishbone bus will
+then go through a bridge to become an AXI4 bus.  The video test case I am
+hoping to support is 1080p at 60Hz, which should use up over 50% of the memory
+bandwidth on the device.
 
 # Sample component files
 
