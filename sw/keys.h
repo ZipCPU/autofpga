@@ -143,6 +143,7 @@ extern	const	STRING	KYOUT_DATA;
 extern	const	STRING	KYRTL_MAKE_GROUP;
 extern	const	STRING	KYRTL_MAKE_SUBD;
 extern	const	STRING	KYRTL_MAKE_VDIRS;
+extern	const	STRING	KYRTL_MAKE_FILES;
 extern	const	STRING	KYVFLIST;
 extern	const	STRING	KYAUTOVDIRS;
 // PIC definitions

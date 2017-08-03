@@ -72,6 +72,7 @@
 #include "legalnotice.h"
 #include "bldtestb.h"
 #include "bldboardld.h"
+#include "bldrtlmake.h"
 #include "bitlib.h"
 #include "plist.h"
 #include "bldregdefs.h"
@@ -1027,36 +1028,6 @@ STRINGP	remove_comments(STRINGP s) {
 	} (*r)[di] = '\0';
 
 	return r;
-}
-
-void	build_rtl_make_inc(MAPDHASH &master, FILE *fp, STRING &fname) {
-	MAPDHASH::iterator	kvpair;
-	STRINGP	mksubd;
-	STRING	allgroups, vdirs;
-
-	legal_notice(master, fp, fname,
-		"########################################"
-		"########################################", "##");
-
-	for(kvpair=master.begin(); kvpair!=master.end(); kvpair++) {
-		if (kvpair->second.m_typ != MAPT_MAP)
-			continue;
-		mksubd  = getstring(kvpair->second, KYRTL_MAKE_SUBD);
-
-		if (mksubd) {
-			vdirs = vdirs + STRING(" -y ") + (*mksubd);
-		}
-	}
-
-	mksubd  = getstring(master, KYRTL_MAKE_SUBD);
-
-	if (mksubd)
-		vdirs = vdirs + STRING(" -y ") + (*mksubd);
-
-	mksubd = getstring(master, KYRTL_MAKE_VDIRS);
-	if (NULL == mksubd)
-		mksubd = new STRING(KYAUTOVDIRS);
-	fprintf(fp, "%s := %s\n", mksubd->c_str(), vdirs.c_str());
 }
 
 void	build_outfile_aux(MAPDHASH &info, STRINGP fname, STRINGP data) {
