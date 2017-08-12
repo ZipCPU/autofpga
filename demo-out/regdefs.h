@@ -98,16 +98,18 @@
 #define	R_DATE            	0x00800010	// 00800010, wbregs names: RTCDATE, DATE
 #define	R_GPIO            	0x00800014	// 00800014, wbregs names: GPIO, GPI, GPO
 #define	R_GPIO            	0x00800014	// 00800014, wbregs names: GPIO, GPI, GPO
-#define	R_PWRCOUNT        	0x00800018	// 00800018, wbregs names: PWRCOUNT
-#define	R_PWRCOUNT        	0x00800018	// 00800018, wbregs names: PWRCOUNT
-#define	R_SPIO            	0x0080001c	// 0080001c, wbregs names: SPIO
-#define	R_SPIO            	0x0080001c	// 0080001c, wbregs names: SPIO
+#define	R_FRAME_OFFSET    	0x00800018	// 00800018, wbregs names: FRAMEOFFSET
+#define	R_FRAME_OFFSET    	0x00800018	// 00800018, wbregs names: FRAMEOFFSET
+#define	R_PWRCOUNT        	0x0080001c	// 0080001c, wbregs names: PWRCOUNT
+#define	R_PWRCOUNT        	0x0080001c	// 0080001c, wbregs names: PWRCOUNT
+#define	R_SPIO            	0x00800020	// 00800020, wbregs names: SPIO
+#define	R_SPIO            	0x00800020	// 00800020, wbregs names: SPIO
 // SYSCLK Clock Counter (measures clock speed)
-#define	R_SYSCLK          	0x00800020	// 00800020, wbregs names: SYSCLK
+#define	R_SYSCLK          	0x00800024	// 00800024, wbregs names: SYSCLK
 // SYSCLK Clock Counter (measures clock speed)
-#define	R_SYSCLK          	0x00800020	// 00800020, wbregs names: SYSCLK
-#define	R_VERSION         	0x00800024	// 00800024, wbregs names: VERSION
-#define	R_VERSION         	0x00800024	// 00800024, wbregs names: VERSION
+#define	R_SYSCLK          	0x00800024	// 00800024, wbregs names: SYSCLK
+#define	R_VERSION         	0x00800028	// 00800028, wbregs names: VERSION
+#define	R_VERSION         	0x00800028	// 00800028, wbregs names: VERSION
 // FPGA CONFIG REGISTERS: 0x4e0-0x4ff
 #define	R_CFG_CRC         	0x00900000	// 00900000, wbregs names: FPGACRC
 #define	R_CFG_FAR         	0x00900004	// 00900000, wbregs names: FPGAFAR

@@ -183,7 +183,6 @@ module	toplevel(i_clk,
 	wire		w_hdmi_in_logic_clk, w_hdmi_in_hsclk,
 			w_hdmi_in_clk_no_buf, w_hdmi_in_clk_no_delay,
 			w_hdmi_in_clk_raw;
-	wire	[1:0]	w_hdmi_in_hsclk_pn;
 	wire	[9:0]	w_hdmi_in_red, w_hdmi_in_green, w_hdmi_in_blue;
 	// HDMI input (sink) delay definition(s)
 	wire	[4:0]	w_hdmi_in_delay, w_hdmi_in_actual_delay_r,
@@ -231,14 +230,15 @@ module	toplevel(i_clk,
 		i_gps_pps,
 		// The PS/2 Mouse
 		{ io_ps2_clk, io_ps2_data }, w_ps2,
-	io_hdmi_in_scl, io_hdmi_in_sda, w_hdmi_in_scl, w_hdmi_in_sda,
+		// HDMI input EDID I2C ports
+		io_hdmi_in_scl, io_hdmi_in_sda, w_hdmi_in_scl, w_hdmi_in_sda,
  		// UART/host to wishbone interface
  		i_host_uart_rx, o_host_uart_tx,
 		// HDMI input clock
 		w_hdmi_in_logic_clk,
 		w_hdmi_in_red, w_hdmi_in_green, w_hdmi_in_blue,
 		w_hdmi_in_hsclk, s_clk_200mhz,
-		// HDMI input (sink) delay)
+		// HDMI input (sink) delay
 		w_hdmi_in_actual_delay_r, w_hdmi_in_actual_delay_g,
 		w_hdmi_in_actual_delay_b, w_hdmi_in_delay,
  		// Reset wire for the ZipCPU
@@ -386,25 +386,21 @@ module	toplevel(i_clk,
 
 	BUFG	rawckbuf(.I(w_hdmi_in_clk_raw), .O(w_hdmi_in_clk_no_buf));
 
-	
+
 
 	// 3. Use that signal to generate a clock
 	xhdmiiclk xhclkin(s_clk, w_hdmi_in_clk_no_buf, o_hdmi_in_txen,
-			w_hdmi_in_hsclk_pn, w_hdmi_in_logic_clk);
+			w_hdmi_in_hsclk, w_hdmi_in_logic_clk);
 
-	// 4. Use the (non-inverted) clock as needed as w_hdmi_in_hsclk
-	assign	w_hdmi_in_hsclk = w_hdmi_in_hsclk_pn[1]; // P
-
-
-	xhdmiin xhin_r(w_hdmi_in_logic_clk, w_hdmi_in_hsclk_pn,
+	xhdmiin xhin_r(w_hdmi_in_logic_clk, w_hdmi_in_hsclk,
 		o_hdmi_in_txen,
 		w_hdmi_in_delay, w_hdmi_in_actual_delay_r,
 		{ i_hdmi_in_p[2], i_hdmi_in_n[2] }, w_hdmi_in_red);
-	xhdmiin	xhin_g(w_hdmi_in_logic_clk, w_hdmi_in_hsclk_pn,
+	xhdmiin	xhin_g(w_hdmi_in_logic_clk, w_hdmi_in_hsclk,
 		o_hdmi_in_txen,
 		w_hdmi_in_delay, w_hdmi_in_actual_delay_g,
 		{ i_hdmi_in_p[1], i_hdmi_in_n[1] }, w_hdmi_in_green);
-	xhdmiin xhin_b(w_hdmi_in_logic_clk, w_hdmi_in_hsclk_pn,
+	xhdmiin xhin_b(w_hdmi_in_logic_clk, w_hdmi_in_hsclk,
 		o_hdmi_in_txen,
 		w_hdmi_in_delay, w_hdmi_in_actual_delay_b,
 		{ i_hdmi_in_p[0], i_hdmi_in_n[0] }, w_hdmi_in_blue);
@@ -431,7 +427,7 @@ module	toplevel(i_clk,
 		.CLKFBOUT_PHASE(0.0),
 		.CLKIN1_PERIOD(10),
 		.CLKOUT0_DIVIDE(4)) gen_sysclk(
-			.CLKIN1(s_clk),
+			.CLKIN1(i_clk),
 			.CLKOUT0(s_clk_200mhz_unbuffered),
 			.PWRDWN(1'b0), .RST(1'b0),
 			.CLKFBOUT(sysclk_feedback),

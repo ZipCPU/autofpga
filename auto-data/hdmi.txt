@@ -52,7 +52,6 @@
 	wire		w_hdmi_in_logic_clk, w_hdmi_in_hsclk,
 			w_hdmi_in_clk_no_buf, w_hdmi_in_clk_no_delay,
 			w_hdmi_in_clk_raw;
-	wire	[1:0]	w_hdmi_in_hsclk_pn;
 	wire	[9:0]	w_hdmi_in_red, w_hdmi_in_green, w_hdmi_in_blue;
 	// HDMI input (sink) delay definition(s)
 	wire	[4:0]	w_hdmi_in_delay, w_hdmi_in_actual_delay_r,
@@ -78,25 +77,21 @@
 
 	BUFG	rawckbuf(.I(w_hdmi_in_clk_raw), .O(w_hdmi_in_clk_no_buf));
 
-	
+
 
 	// 3. Use that signal to generate a clock
 	xhdmiiclk xhclkin(s_clk, w_hdmi_in_clk_no_buf, o_hdmi_in_txen,
-			w_hdmi_in_hsclk_pn, w_hdmi_in_logic_clk);
+			w_hdmi_in_hsclk, w_hdmi_in_logic_clk);
 
-	// 4. Use the (non-inverted) clock as needed as w_hdmi_in_hsclk
-	assign	w_hdmi_in_hsclk = w_hdmi_in_hsclk_pn[1]; // P
-
-
-	xhdmiin xhin_r(w_hdmi_in_logic_clk, w_hdmi_in_hsclk_pn,
+	xhdmiin xhin_r(w_hdmi_in_logic_clk, w_hdmi_in_hsclk,
 		o_hdmi_in_txen,
 		w_hdmi_in_delay, w_hdmi_in_actual_delay_r,
 		{ i_hdmi_in_p[2], i_hdmi_in_n[2] }, w_hdmi_in_red);
-	xhdmiin	xhin_g(w_hdmi_in_logic_clk, w_hdmi_in_hsclk_pn,
+	xhdmiin	xhin_g(w_hdmi_in_logic_clk, w_hdmi_in_hsclk,
 		o_hdmi_in_txen,
 		w_hdmi_in_delay, w_hdmi_in_actual_delay_g,
 		{ i_hdmi_in_p[1], i_hdmi_in_n[1] }, w_hdmi_in_green);
-	xhdmiin xhin_b(w_hdmi_in_logic_clk, w_hdmi_in_hsclk_pn,
+	xhdmiin xhin_b(w_hdmi_in_logic_clk, w_hdmi_in_hsclk,
 		o_hdmi_in_txen,
 		w_hdmi_in_delay, w_hdmi_in_actual_delay_b,
 		{ i_hdmi_in_p[0], i_hdmi_in_n[0] }, w_hdmi_in_blue);
@@ -216,11 +211,48 @@ typedef	struct	HDMI_IN_S {
 @BDEF.IONAME=_hin
 @BDEF.OSDEF=_BOARD_HAS_HDMI_IN
 @BDEF.OSVAL=static volatile @$.BDEF.IOTYPE *const @$BDEF.IONAME = ((@$.BDEF.IOTYPE *)@$.REGBASE);
+@SIM.INCLUDE=
+#include "hdmiinsim.h"
+@SIM.CLOCK= hdmi_in_clk
+@SIM.DEFNS=
+#ifdef	@$(ACCESS)
+	HDMIINSIM	*m_@$(PREFIX);
+#endif
+@SIM.INIT=
+#ifdef	@$(ACCESS)
+	m_@$(PREFIX) = new HDMIINSIM("frames/hdmidata.32t", 2200*1125);
+#endif
+@SIM.TICK=
+		// HDMI input simulation
+		{ unsigned	r, g, b;
+		(*m_@$(PREFIX))(r, g, b);
+		m_core->i_hdmi_in_r = r;
+		m_core->i_hdmi_in_g = g;
+		m_core->i_hdmi_in_b = b;
+		}
 #
 #
 #
 #
 #
+@PREFIX=hdmi_scope_frame_offset
+@SLAVE.TYPE=SINGLE
+@SLAVE.BUS=wb
+@NADDR=1
+@MAIN.DEFNS=
+	reg [31:0]	r_@$(PREFIX)_data;
+	reg	r_@$(PREFIX)_ack;
+	initial	r_@$(PREFIX)_data=0;
+	always @(posedge i_clk)
+		if ((wb_stb)&&(@$(PREFIX)_sel)&&(wb_we))
+			r_@$(PREFIX)_data <= wb_data;
+
+	assign	@$(PREFIX)_data = r_@$(PREFIX)_data;
+	assign	@$(PREFIX)_stall= 1'b0;
+	always @(posedge i_clk)
+		r_@$(PREFIX)_ack <= (wb_stb)&&(@$(PREFIX)_sel);
+@REGS.N=1
+@REGS.0= 0 R_FRAME_OFFSET FRAMEOFFSET
 #
 #
 #
@@ -234,16 +266,50 @@ typedef	struct	HDMI_IN_S {
 	wire	[31:0]	hdmi_in_data;
 @MAIN.INSERT=
 
-	reg	@$(PREFIX)_trigger, @$(PREFIX)_tmp;
-	always @(posedge i_clk)
-		@$(PREFIX)_tmp <= hin_dbg_scope[30];
-	always @(posedge i_clk)
-		@$(PREFIX)_trigger <= (hin_dbg_scope[30])&&(!@$(PREFIX)_tmp);
+	reg	@$(PREFIX)_trigger, @$(PREFIX)_tmp, @$(PREFIX)_pre_trigger,
+		@$(PREFIX)_count_triggered;
+	wire	@$(PREFIX)_clear_stb;
+	reg	[31:0]	@$(PREFIX)_counter, @$(PREFIX)_trigger_foo;
+	always @(posedge i_hdmi_in_clk)
+		if (@$(PREFIX)_trigger_foo == 0)
+		begin
+			@$(PREFIX)_trigger_foo = 32'd2475000-1'b1;
+			@$(PREFIX)_pre_trigger = 1'b1;
+		end else begin
+			@$(PREFIX)_trigger_foo = @$(PREFIX)_trigger_foo-1'b1;
+			@$(PREFIX)_pre_trigger = 1'b1;
+		end
+		// @$(PREFIX)_tmp <= hin_dbg_scope[30];
+	// always @(posedge i_hdmi_in_clk)
+		// @$(PREFIX)_tmp <= hin_dbg_scope[30];
+	// always @(posedge i_hdmi_in_clk)
+		// @$(PREFIX)_pre_trigger<= (hin_dbg_scope[30])&&(!@$(PREFIX)_tmp);
+
+	transferstb @$(PREFIX)_clearctri(i_clk, i_hdmi_in_clk, 
+		((wb_stb)&&(scope_hdmiin_sel)&&(wb_we)&&(!wb_addr[0])),
+		@$(PREFIX)_clear_stb);
+				
+	initial	@$(PREFIX)_count_triggered = 1'b0;
+	always @(posedge i_hdmi_in_clk)
+		if (@$(PREFIX)_clear_stb)
+			@$(PREFIX)_count_triggered <= 1'b0;
+		else if (@$(PREFIX)_pre_trigger)
+			@$(PREFIX)_count_triggered <= 1'b1;
+
+	always @(posedge i_hdmi_in_clk)
+		if (!@$(PREFIX)_count_triggered)
+			@$(PREFIX)_counter <= hdmi_scope_frame_offset_data;
+		else if (@$(PREFIX)_counter != 0)
+			@$(PREFIX)_counter <= @$(PREFIX)_counter - 1'b1;
+
+	always @(posedge i_hdmi_in_clk)
+		@$(PREFIX)_trigger <= (@$(PREFIX)_counter == 0);
+
 	wbscope #(.LGMEM(5'd14), .SYNCHRONOUS(0)
 		) copyhdmiin(i_hdmi_in_clk, 1'b1,
 			@$(PREFIX)_trigger, hin_dbg_scope,
 		i_clk, wb_cyc, (wb_stb)&&(scope_hdmiin_sel), wb_we, wb_addr[0],
-				wb_data,
+				{ wb_data[31:20], 20'h0 },
 			scope_hdmiin_ack, scope_hdmiin_stall,
 			scope_hdmiin_data,
 		scop_hdmiin_int);

@@ -324,7 +324,7 @@ static volatile SDSPI *const _sdcard = ((SDSPI *)7340032);
 #endif	// SDSPI_ACCESS
 #ifdef	RTC_ACCESS
 #define	_BOARD_HAS_RTCLIGHT
-static volatile RTCLIGHT *const _rtc = ((RTCLIGHT *)96);
+static volatile RTCLIGHT *const _rtc = ((RTCLIGHT *)11534432);
 #endif	// RTC_ACCESS
 #define	_BOARD_HAS_VERSION
 #ifdef	MICROPHONE_ACCESS
@@ -333,11 +333,11 @@ static volatile WBMIC *const _wbmic = ((WBMIC *)1048576);
 #endif	// MICROPHONE_ACCESS
 #ifdef	GPIO_ACCESS
 #define	_BOARD_HAS_GPIO
-static volatile unsigned *const _gpio = ((unsigned *)20);
+static volatile unsigned *const _gpio = ((unsigned *)8388628);
 #endif	// GPIO_ACCESS
 #ifdef	HDMI_OUT_EDID_ACCESS
 #define	_BOARD_HAS_HDMI_SRC_EDID
-static volatile EDID_SRC *const _edout = ((EDID_SRC *)512);
+static volatile EDID_SRC *const _edout = ((EDID_SRC *)11534848);
 #endif	// HDMI_OUT_EDID_ACCESS
 #ifdef	BKRAM_ACCESS
 #define	_BOARD_HAS_BKRAM
@@ -349,15 +349,15 @@ extern char _flash[0x01000000];
 #endif	// FLASH_ACCESS
 #ifdef	OLEDBW_ACCESS
 #define	_BOARD_HAS_OLEDBW
-static volatile OLEDBW *const _oledbw = ((OLEDBW *)64);
+static volatile OLEDBW *const _oledbw = ((OLEDBW *)11534400);
 #endif	// OLEDBW_ACCESS
 #ifdef	MOUSE_ACCESS
 #define	_BOARD_HAS_WBMOUSE
-static volatile WBMOUSE *const _mouse = ((WBMOUSE *)32);
+static volatile WBMOUSE *const _mouse = ((WBMOUSE *)11534368);
 #endif	// MOUSE_ACCESS
 #ifdef	HDMI_IN_EDID_ACCESS
 #define	_BOARD_HAS_HDMI_IN_EDID
-static volatile unsigned *const _edin = ((unsigned *)256);
+static volatile unsigned *const _edin = ((unsigned *)11534592);
 #endif	// HDMI_IN_EDID_ACCESS
 #ifdef	SDSPI_SCOPE
 #define	_BOARD_HAS_SDSPI_SCOPE
@@ -365,21 +365,21 @@ static volatile WBSCOPE *const _scope_sdcard = ((WBSCOPE *)4194304);
 #endif	// SDSPI_SCOPE
 #ifdef	HDMIIN_ACCESS
 #define	_BOARD_HAS_HDMI_IN
-static volatile HDMI_IN *const _hin = ((HDMI_IN *)192);
+static volatile HDMI_IN *const _hin = ((HDMI_IN *)11534528);
 #endif	// HDMIIN_ACCESS
 #ifdef	RTCDATE_ACCESS
 #define	_BOARD_HAS_RTCDATE
-static volatile unsigned *const _date = ((unsigned *)16);
+static volatile unsigned *const _date = ((unsigned *)8388624);
 #endif	// RTCDATE_ACCESS
 #ifdef	CFG_ACCESS
 #define	_BOARD_HAS_ICAPTETWO
 static volatile unsigned *const _icape = ((unsigned *)9437184);
 #endif	// CFG_ACCESS
 #define	_BOARD_HAS_BUSERR
-static volatile unsigned *const _buserr = ((unsigned *)0);
+static volatile unsigned *const _buserr = ((unsigned *)8388608);
 #ifdef	BUSPIC_ACCESS
 #define	_BOARD_HAS_BUSPIC
-static volatile unsigned *const _buspic = ((unsigned *)4);
+static volatile unsigned *const _buspic = ((unsigned *)8388612);
 #endif	// BUSPIC_ACCESS
 #ifdef	GPSUART_ACCESS
 #define	_BOARD_HAS_GPS_UART
@@ -391,7 +391,7 @@ static volatile ENETMDIO *const _mdio = ((ENETMDIO *)10485760);
 #endif	// NETCTRL_ACCESS
 #ifdef	SPIO_ACCESS
 #define	_BOARD_HAS_SPIO
-static volatile unsigned *const _spio = ((unsigned *)28);
+static volatile unsigned *const _spio = ((unsigned *)8388640);
 #endif	// SPIO_ACCESS
 //
 // Interrupt assignments (3 PICs)

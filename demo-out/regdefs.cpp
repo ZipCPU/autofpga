@@ -91,6 +91,8 @@ const	REGNAME	raw_bregs[] = {
 	{ R_GPIO            ,	"GPIO"         	},
 	{ R_GPIO            ,	"GPI"          	},
 	{ R_GPIO            ,	"GPO"          	},
+	{ R_FRAME_OFFSET    ,	"FRAMEOFFSET"  	},
+	{ R_FRAME_OFFSET    ,	"FRAMEOFFSET"  	},
 	{ R_PWRCOUNT        ,	"PWRCOUNT"     	},
 	{ R_PWRCOUNT        ,	"PWRCOUNT"     	},
 	{ R_SPIO            ,	"SPIO"         	},

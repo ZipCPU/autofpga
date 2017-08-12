@@ -263,8 +263,8 @@ module	main(i_clk, i_reset,
 	wire	rtc_int;	// rtc.INT.RTC.WIRE
 	wire	pmic_int;	// pmic.INT.MIC.WIRE
 	wire	gpio_int;	// gpio.INT.GPIO.WIRE
-	wire	edid_out_int;	// edout.INT.EDID.WIRE
 	wire	scop_edid_int;	// scop_edid.INT.SCOPE.WIRE
+	wire	edid_out_int;	// edout.INT.EDID.WIRE
 	wire	flash_interrupt;	// flash.INT.FLASH.WIRE
 	wire	oled_int;	// oled.INT.OLED.WIRE
 	wire	ck_pps;	// gck.INT.PPS.WIRE
@@ -298,11 +298,11 @@ module	main(i_clk, i_reset,
 	input		[(NGPI-1):0]	i_gpio;
 	output	wire	[(NGPO-1):0]	o_gpio;
 	reg	r_sysclk_ack;
-	reg	r_clkhdmiin_ack;
-	wire	[31:0]	edido_dbg;
 	wire		edid_scope_trigger;
 	wire	[30:0]	edid_scope_data;
 	reg	r_clkhdmiout_ack;
+	reg	r_clkhdmiin_ack;
+	wire	[31:0]	edido_dbg;
 	wire	gps_pps, gps_led, gps_locked, gps_tracking;
 	wire	[63:0]	gps_now, gps_err, gps_step;
 	wire	[1:0]	gps_dbg_tick;
@@ -342,6 +342,17 @@ module	main(i_clk, i_reset,
 	wire	[9:0]	hdmi_in_r;
 	wire	[9:0]	hdmi_in_g;
 	wire	[9:0]	hdmi_in_b;
+	reg [31:0]	r_hdmi_scope_frame_offset_data;
+	reg	r_hdmi_scope_frame_offset_ack;
+	initial	r_hdmi_scope_frame_offset_data=0;
+	always @(posedge i_clk)
+		if ((wb_stb)&&(hdmi_scope_frame_offset_sel)&&(wb_we))
+			r_hdmi_scope_frame_offset_data <= wb_data;
+
+	assign	hdmi_scope_frame_offset_data = r_hdmi_scope_frame_offset_data;
+	assign	hdmi_scope_frame_offset_stall= 1'b0;
+	always @(posedge i_clk)
+		r_hdmi_scope_frame_offset_ack <= (wb_stb)&&(hdmi_scope_frame_offset_sel);
 	// ZipSystem/ZipCPU connection definitions
 	// All we define here is a set of scope wires
 	wire	[31:0]	zip_debug;
@@ -407,6 +418,10 @@ module	main(i_clk, i_reset,
 	// Wishbone slave definitions for bus wb(SIO), slave gpio
 	wire		gpio_sel, gpio_ack, gpio_stall;
 	wire	[31:0]	gpio_data;
+
+	// Wishbone slave definitions for bus wb(SIO), slave hdmi_scope_frame_offset
+	wire		hdmi_scope_frame_offset_sel, hdmi_scope_frame_offset_ack, hdmi_scope_frame_offset_stall;
+	wire	[31:0]	hdmi_scope_frame_offset_data;
 
 	// Wishbone slave definitions for bus wb(SIO), slave pwrcount
 	wire		pwrcount_sel, pwrcount_ack, pwrcount_stall;
@@ -559,10 +574,11 @@ module	main(i_clk, i_reset,
 	assign	  clkhdmiout_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h3));
 	assign	        date_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h4));
 	assign	        gpio_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h5));
-	assign	    pwrcount_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h6));
-	assign	        spio_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h7));
-	assign	      sysclk_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h8));
-	assign	     version_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h9));
+	assign	hdmi_scope_frame_offset_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h6));
+	assign	    pwrcount_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h7));
+	assign	        spio_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h8));
+	assign	      sysclk_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h9));
+	assign	     version_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'ha));
 	assign	         gck_sel = ((wb_dio_sel)&&((wb_addr[ 7: 3] &  5'h1f) ==  5'h00));
 	assign	        mous_sel = ((wb_dio_sel)&&((wb_addr[ 7: 3] &  5'h1f) ==  5'h01));
 	assign	        oled_sel = ((wb_dio_sel)&&((wb_addr[ 7: 3] &  5'h1f) ==  5'h02));
@@ -696,9 +712,10 @@ module	main(i_clk, i_reset,
 			4'h3: r_wb_sio_data <= clkhdmiout_data;
 			4'h4: r_wb_sio_data <= date_data;
 			4'h5: r_wb_sio_data <= gpio_data;
-			4'h6: r_wb_sio_data <= pwrcount_data;
-			4'h7: r_wb_sio_data <= spio_data;
-			4'h8: r_wb_sio_data <= sysclk_data;
+			4'h6: r_wb_sio_data <= hdmi_scope_frame_offset_data;
+			4'h7: r_wb_sio_data <= pwrcount_data;
+			4'h8: r_wb_sio_data <= spio_data;
+			4'h9: r_wb_sio_data <= sysclk_data;
 			default: r_wb_sio_data <= version_data;
 		endcase
 	assign	wb_sio_data = r_wb_sio_data;
@@ -1085,7 +1102,19 @@ module	main(i_clk, i_reset,
 		r_sysclk_ack <= (wb_stb)&&(sysclk_sel);
 	assign	sysclk_ack   = r_sysclk_ack;
 	assign	sysclk_stall = 1'b0;
-	clkcounter clkclkhdmiinctr(i_clk, ck_pps, i_clk, clkhdmiin_data);
+	assign	edid_scope_trigger = edido_dbg[31];
+	assign	edid_scope_data    = edido_dbg[30:0];
+	wbscopc	#(.LGMEM(5'hb), .MAX_STEP(31'h10000)) theicscop(i_clk, 1'b1,
+			edid_scope_trigger, edid_scope_data,
+			i_clk, wb_cyc, (wb_stb)&&(scop_edid_sel), wb_we, wb_addr[0], wb_data,
+			scop_edid_ack, scop_edid_stall, scop_edid_data,
+			scop_edid_int);
+	clkcounter clkclkhdmioutctr(i_clk, ck_pps, i_clk_200mhz, clkhdmiout_data);
+	always @(posedge i_clk)
+		r_clkhdmiout_ack <= (wb_stb)&&(clkhdmiout_sel);
+	assign	clkhdmiout_ack   = r_clkhdmiout_ack;
+	assign	clkhdmiout_stall = 1'b0;
+	clkcounter clkclkhdmiinctr(i_clk, ck_pps, i_hdmi_in_clk, clkhdmiin_data);
 	always @(posedge i_clk)
 		r_clkhdmiin_ack <= (wb_stb)&&(clkhdmiin_sel);
 	assign	clkhdmiin_ack   = r_clkhdmiin_ack;
@@ -1113,18 +1142,6 @@ module	main(i_clk, i_reset,
 	assign	o_hdmi_out_g = hdmi_in_g;
 	assign	o_hdmi_out_b = hdmi_in_b;
 
-	assign	edid_scope_trigger = edido_dbg[31];
-	assign	edid_scope_data    = edido_dbg[30:0];
-	wbscopc	#(.LGMEM(5'hb), .MAX_STEP(31'h10000)) theicscop(i_clk, 1'b1,
-			edid_scope_trigger, edid_scope_data,
-			i_clk, wb_cyc, (wb_stb)&&(scop_edid_sel), wb_we, wb_addr[0], wb_data,
-			scop_edid_ack, scop_edid_stall, scop_edid_data,
-			scop_edid_int);
-	clkcounter clkclkhdmioutctr(i_clk, ck_pps, i_clk, clkhdmiout_data);
-	always @(posedge i_clk)
-		r_clkhdmiout_ack <= (wb_stb)&&(clkhdmiout_sel);
-	assign	clkhdmiout_ack   = r_clkhdmiout_ack;
-	assign	clkhdmiout_stall = 1'b0;
 `ifdef	FLASH_ACCESS
 	// The Flash control interface result comes back together with the
 	// flash interface itself.  Hence, we always return zero here.
@@ -1234,10 +1251,50 @@ module	main(i_clk, i_reset,
 `endif	// GPS_CLOCK
 
 
+	reg	scope_hdmiin_trigger, scope_hdmiin_tmp, scope_hdmiin_pre_trigger,
+		scope_hdmiin_count_triggered;
+	wire	scope_hdmiin_clear_stb;
+	reg	[31:0]	scope_hdmiin_counter, scope_hdmiin_trigger_foo;
+	always @(posedge i_hdmi_in_clk)
+		if (scope_hdmiin_trigger_foo == 0)
+		begin
+			scope_hdmiin_trigger_foo = 32'd2475000-1'b1;
+			scope_hdmiin_pre_trigger = 1'b1;
+		end else begin
+			scope_hdmiin_trigger_foo = scope_hdmiin_trigger_foo-1'b1;
+			scope_hdmiin_pre_trigger = 1'b1;
+		end
+		// scope_hdmiin_tmp <= hin_dbg_scope[30];
+	// always @(posedge i_hdmi_in_clk)
+		// scope_hdmiin_tmp <= hin_dbg_scope[30];
+	// always @(posedge i_hdmi_in_clk)
+		// scope_hdmiin_pre_trigger<= (hin_dbg_scope[30])&&(!scope_hdmiin_tmp);
+
+	transferstb scope_hdmiin_clearctri(i_clk, i_hdmi_in_clk, 
+		((wb_stb)&&(scope_hdmiin_sel)&&(wb_we)&&(!wb_addr[0])),
+		scope_hdmiin_clear_stb);
+				
+	initial	scope_hdmiin_count_triggered = 1'b0;
+	always @(posedge i_hdmi_in_clk)
+		if (scope_hdmiin_clear_stb)
+			scope_hdmiin_count_triggered <= 1'b0;
+		else if (scope_hdmiin_pre_trigger)
+			scope_hdmiin_count_triggered <= 1'b1;
+
+	always @(posedge i_hdmi_in_clk)
+		if (!scope_hdmiin_count_triggered)
+			scope_hdmiin_counter <= hdmi_scope_frame_offset_data;
+		else if (scope_hdmiin_counter != 0)
+			scope_hdmiin_counter <= scope_hdmiin_counter - 1'b1;
+
+	always @(posedge i_hdmi_in_clk)
+		scope_hdmiin_trigger <= (scope_hdmiin_counter == 0);
+
 	wbscope #(.LGMEM(5'd14), .SYNCHRONOUS(0)
-		) copyhdmiin(i_hdmi_in_clk, 1'b1, hin_dbg_scope[31], hin_dbg_scope,
+		) copyhdmiin(i_hdmi_in_clk, 1'b1,
+			scope_hdmiin_trigger, hin_dbg_scope,
 		i_clk, wb_cyc, (wb_stb)&&(scope_hdmiin_sel), wb_we, wb_addr[0],
-				wb_data,
+				{ wb_data[31:20], 20'h0 },
 			scope_hdmiin_ack, scope_hdmiin_stall,
 			scope_hdmiin_data,
 		scop_hdmiin_int);
@@ -1547,10 +1604,6 @@ module	main(i_clk, i_reset,
 	assign	gpsu_ack   = r_gpsu_ack;
 	assign	gpsu_stall = 0;
 	assign	gpsu_data  = 0;
-	assign	 = 1'b0;	// gpsu.INT.UARTTXF.WIRE
-	assign	 = 1'b0;	// gpsu.INT.UARTRXF.WIRE
-	assign	 = 1'b0;	// gpsu.INT.UARTTX.WIRE
-	assign	 = 1'b0;	// gpsu.INT.UARTRX.WIRE
 	assign	gpsutx_int = 1'b0;	// gpsu.INT.GPSTX.WIRE
 	assign	gpsutxf_int = 1'b0;	// gpsu.INT.GPSTXF.WIRE
 	assign	gpsurx_int = 1'b0;	// gpsu.INT.GPSRX.WIRE

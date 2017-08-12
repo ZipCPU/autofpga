@@ -53,6 +53,7 @@
 #include "sdspisim.h"
 #include "byteswap.h"
 #include "qspiflashsim.h"
+#include "hdmiinsim.h"
 #include "zipelf.h"
 
 #include "uartsim.h"
@@ -119,6 +120,9 @@ public:
 #ifdef	FLASH_ACCESS
 	QSPIFLASHSIM	*m_flash;
 #endif
+#ifdef	HDMIIN_ACCESS
+	HDMIINSIM	*m_hdmiin;
+#endif
 	int	m_cpu_bombed;
 #ifdef	GPSUART_ACCESS
 	UARTSIM	*m_gpsu;
@@ -131,6 +135,10 @@ public:
 		// From flash
 #ifdef	FLASH_ACCESS
 	m_flash = new QSPIFLASHSIM(FLASHLGLEN);
+#endif
+		// From hdmiin
+#ifdef	HDMIIN_ACCESS
+	m_hdmiin = new HDMIINSIM("frames/hdmidata.32t", 2200*1125);
 #endif
 		// From zip
 		m_cpu_bombed = 0;
@@ -164,9 +172,10 @@ public:
 	void	tick(void) {
 		if (done())
 			return;
-		TESTB<Vmain>::tick();
+		TESTB<Vmain>::tick(); // Clock.size = 5
 	}
 
+// Evaluating clock clk
 
 	virtual	void	sim_clk_tick(void) {
 		// Default clock tick
@@ -270,21 +279,31 @@ public:
 
 		}
 	}
+// Evaluating clock hdmi_in_clk
 
 	virtual	void	sim_hdmi_in_clk_tick(void) {
-		// No SIM.TICK tags defined
-		m_changed = false;
+		// SIM.TICK from hdmiin
+		// HDMI input simulation
+		{ unsigned	r, g, b;
+		(*m_hdmiin)(r, g, b);
+		m_core->i_hdmi_in_r = r;
+		m_core->i_hdmi_in_g = g;
+		m_core->i_hdmi_in_b = b;
+		}
 	}
+// Evaluating clock hdmi_in_hsclk
 
 	virtual	void	sim_hdmi_in_hsclk_tick(void) {
 		// No SIM.TICK tags defined
 		m_changed = false;
 	}
+// Evaluating clock clk_200mhz
 
 	virtual	void	sim_clk_200mhz_tick(void) {
 		// No SIM.TICK tags defined
 		m_changed = false;
 	}
+// Evaluating clock hdmi_out_clk
 
 	virtual	void	sim_hdmi_out_clk_tick(void) {
 		// No SIM.TICK tags defined
