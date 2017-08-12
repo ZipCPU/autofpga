@@ -306,12 +306,13 @@ void	build_main_tb_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 "			return;\n");
 
 	if (cklist.size() > 1) {
-		fprintf(fp, "\t\tTESTB<Vmain>::tick();\n\t}\n\n");
+		fprintf(fp, "\t\tTESTB<Vmain>::tick(); // Clock.size = %ld\n\t}\n\n", cklist.size());
 
 		for(unsigned i=0; i<cklist.size(); i++) {
 			bool	have_sim_tick = false, have_debug = false,
 				have_condition = false;
 
+			fprintf(fp, "// Evaluating clock %s\n", cklist[i].m_name->c_str());
 			have_debug = tb_debug(master, cklist[i].m_name, NULL);
 			have_condition = tb_dbg_condition(master,
 						cklist[i].m_name, NULL);
@@ -345,6 +346,7 @@ void	build_main_tb_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 		}
 
 	} else {
+		fprintf(fp, "\t\t// KYSIM.TICK tags\n");
 		writeout(fp, master, KYSIM_TICK);
 
 		fprintf(fp, "\t\tTESTB<Vmain>::tick();\n\n");
@@ -356,9 +358,6 @@ void	build_main_tb_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 		writeout(fp, master, KYSIM_DEBUG);
 		fprintf(fp, "\t\t}\n");
 		
-		fprintf(fp, "\t\t// KYSIM.TICK tags\n");
-		writeout(fp, master, KYSIM_TICK);
-		//
 		fprintf(fp, "\t}\n\n");
 	}
 

@@ -209,17 +209,17 @@ fprintf(fp, "\tvirtual	void	sim_%s_tick(void) {\n"
 		"\t\tif (m_trace) {\n"
 			"\t\t\tm_trace->dump(m_time_ps + %ld);\n"
 			"\t\t\tm_trace->flush();\n"
-		"\n\t}\n\n",
+		"\t\t}\n\t}\n\n",
 			cklist[0].m_wire->c_str(),
 			cklist[0].m_wire->c_str(),
 			clock_duration_ps/2);
 
-		fprintf(fp, "\t\tvirtual	void	sim_%s_tick(void) {\n"
-			"\t\t\t// Your test fixture should over-ride this\n"
-			"\t\t\t// method.  If you change any of the inputs,\n"
-			"\t\t\t// either ignore m_changed or set it to true.\n"
-			"\t\t\tm_changed = false;\n"
-			"\t\t}\n",
+		fprintf(fp, "\tvirtual	void	sim_%s_tick(void) {\n"
+			"\t\t// Your test fixture should over-ride this\n"
+			"\t\t// method.  If you change any of the inputs,\n"
+			"\t\t// either ignore m_changed or set it to true.\n"
+			"\t\tm_changed = false;\n"
+			"\t}\n",
 			cklist[0].m_name->c_str());
 	}
 
