@@ -358,12 +358,10 @@ void	BUSINFO::init(MAPDHASH *phash, MAPDHASH *bp) {
 		prefix = getstring(*phash, KY_NAME);
 	if (NULL == prefix)
 		prefix = new STRING("(Unknown prefix)");
-fprintf(gbl_dump, "BUSINFO::INIT(%s)\n", prefix->c_str());
 	for(MAPDHASH::iterator kvpair=bp->begin(); kvpair != bp->end();
 				kvpair++) {
 		if (0 == KY_WIDTH.compare(kvpair->first)) {
 			if (getvalue(*bp, KY_WIDTH, value)) {
-fprintf(gbl_dump, "BUSINFO::INIT(%s).WIDTH FOUND: %d\n", prefix->c_str(), value);
 				if (m_data_width <= 0) {
 					m_data_width = value;
 					//
@@ -379,7 +377,8 @@ fprintf(gbl_dump, "BUSINFO::INIT(%s).WIDTH FOUND: %d\n", prefix->c_str(), value)
 			continue;
 		} if (0== KY_NULLSZ.compare(kvpair->first)) {
 			if (getvalue(*bp, KY_NULLSZ, value)) {
-fprintf(gbl_dump, "BUSINFO::INIT(%s).NULLSZ FOUND: %d\n", prefix->c_str(), value);
+				fprintf(gbl_dump, "BUSINFO::INIT(%s).NULLSZ "
+					"FOUND: %d\n", prefix->c_str(), value);
 				m_nullsz = value;
 				// m_addresses_assigned = false;
 				//
@@ -393,9 +392,9 @@ fprintf(gbl_dump, "BUSINFO::INIT(%s).NULLSZ FOUND: %d\n", prefix->c_str(), value
 
 		if (kvpair->second.m_typ == MAPT_STRING) {
 			strp = kvpair->second.u.m_s;
-fprintf(gbl_dump, "BUSINFO::INIT(%s) @%s=%s\n", prefix->c_str(),
-kvpair->first.c_str(),
-kvpair->second.u.m_s->c_str());
+			fprintf(gbl_dump, "BUSINFO::INIT(%s) @%s=%s\n",
+				prefix->c_str(), kvpair->first.c_str(),
+				kvpair->second.u.m_s->c_str());
 			if (KY_TYPE.compare(kvpair->first)==0) {
 				if (m_type == NULL) {
 					m_type = strp;
@@ -416,7 +415,9 @@ kvpair->second.u.m_s->c_str());
 				continue;
 			} else if ((KY_CLOCK.compare(kvpair->first)==0)
 					&&(NULL == m_clock)) {
-fprintf(gbl_dump, "BUSINFO::INIT(%s).CLOCK(%s)\n", prefix->c_str(), strp->c_str());
+				fprintf(gbl_dump, "BUSINFO::INIT(%s)."
+					"CLOCK(%s)\n", prefix->c_str(),
+					strp->c_str());
 				m_clock = getclockinfo(strp);
 				elm.m_typ = MAPT_MAP;
 				if (m_clock == NULL) {
@@ -429,8 +430,10 @@ fprintf(gbl_dump, "BUSINFO::INIT(%s).CLOCK(%s)\n", prefix->c_str(), strp->c_str(
 					fprintf(stderr, "%s", errstr);
 					gbl_err++;
 				} else {
-fprintf(gbl_dump, "BUSINFO::INIT(%s).CLOCK(%s) FOUND, FREQ = %d\n",
-prefix->c_str(), strp->c_str(), m_clock->frequency());
+					fprintf(gbl_dump, "BUSINFO::INIT(%s)."
+						"CLOCK(%s) FOUND, FREQ = %d\n",
+						prefix->c_str(), strp->c_str(),
+						m_clock->frequency());
 					elm.m_typ = MAPT_MAP;
 					elm.u.m_m = m_clock->m_hash;
 
@@ -702,7 +705,7 @@ BUSINFO *BUSLIST::addbus_aux(MAPDHASH *phash, STRINGP pname, MAPDHASH *bp) {
 		if (!bi) {
 			MAPDHASH::iterator	kvpair;
 
-fprintf(gbl_dump, "ADDBUS(%s) ... BUS NOT FOUND(%s)\n",
+			fprintf(gbl_dump, "ADDBUS(%s) ... BUS NOT FOUND(%s)\n",
 			pname->c_str(), str->c_str());
 
 			bi = new BUSINFO();
@@ -711,9 +714,9 @@ fprintf(gbl_dump, "ADDBUS(%s) ... BUS NOT FOUND(%s)\n",
 			bi->m_name = str;
 			bi->m_hash = bp;
 			// setstring(*bi->m_hash, KY_NAME, str);
-		} else {
-fprintf(gbl_dump, "ADDBUS(%s) ... BUS FOUND(%s)\n",
-			pname->c_str(), bi->m_name->c_str());
+		// } else {
+		//	fprintf(gbl_dump, "ADDBUS(%s) ... BUS FOUND(%s)\n",
+		//		pname->c_str(), bi->m_name->c_str());
 		}
 	} else if (size() > 0) {
 		fprintf(gbl_dump, "ADDING BUS: (Unnamed--becomes default)\n");
@@ -728,7 +731,8 @@ fprintf(gbl_dump, "ADDBUS(%s) ... BUS FOUND(%s)\n",
 		bi->m_hash = NULL;
 	}
 
-fprintf(gbl_dump, "ADDBUS(%s)--calling INIT for %s\n", pname->c_str(), bi->m_name->c_str());
+	fprintf(gbl_dump, "ADDBUS(%s)--calling INIT for %s\n",
+		pname->c_str(), bi->m_name->c_str());
 	bi->init(phash, bp);
 
 	return bi;
@@ -762,9 +766,8 @@ void	BUSLIST::addbus(MAPDHASH *phash) {
 
 	kvbus = findkey(*phash, KYBUS);
 	if (kvbus != phash->end()) {
-fprintf(gbl_dump, "ADDBUS(%s)...@BUS FOUND (%d)\n",
-	pname->c_str(),
-	kvbus->second.m_typ);
+		fprintf(gbl_dump, "ADDBUS(%s)...@BUS FOUND (%d)\n",
+			pname->c_str(), kvbus->second.m_typ);
 		if (kvbus->second.m_typ == MAPT_MAP) {
 			bp = kvbus->second.u.m_m;
 			bi = addbus_aux(phash, pname, bp);
@@ -1494,11 +1497,11 @@ void	assign_bus_slave(MAPDHASH &master, MAPDHASH *bus_slave) {
 
 		tok = strtok(cstr, DELIMITERS);
 		nxt = strtok(NULL, DELIMITERS);
-		free(cstr);
 		if ((tok)&&(!nxt)) {
 			bi = gbl_blist->find_bus(strp);
 			if (NULL == bi) {
-				fprintf(stderr, "ERR: BUS %s not found\n", tok);
+				fprintf(stderr, "ERR: BUS %s not found in %s\n",
+					tok, pname->c_str());
 				gbl_err++;
 			} else if (sbus->second.m_typ == MAPT_MAP) {
 				if (sbus->second.u.m_m != bi->m_hash) {
@@ -1521,7 +1524,8 @@ void	assign_bus_slave(MAPDHASH &master, MAPDHASH *bus_slave) {
 			while(tok) {
 				bi = gbl_blist->find_bus(new STRING(tok));
 				if (NULL == bi) {
-					fprintf(stderr, "ERR: BUS %s not found\n", tok);
+					fprintf(stderr, "ERR: BUS %s not found in %s\n",
+						tok, pname->c_str());
 					gbl_err++;
 				} else {
 					MAPT	elm;
@@ -1536,7 +1540,7 @@ void	assign_bus_slave(MAPDHASH &master, MAPDHASH *bus_slave) {
 				tok = strtok(NULL, DELIMITERS);
 			} free(cstr);
 			reeval(master);
-		}
+		} free(cstr);
 	} else if (sbus->second.m_typ == MAPT_MAP) {
 		char	errstr[256];
 		if (NULL == (strp = getstring(*sbus->second.u.m_m, KY_NAME))) {
@@ -1615,12 +1619,12 @@ void	assign_bus_master(MAPDHASH &master, MAPDHASH *bus_master) {
 		cstr = strdup(strp->c_str());
 
 		tok = strtok(cstr, DELIMITERS);
-		nxt = strtok(NULL, DELIMITERS);
-		free(cstr);
+		nxt = (tok) ? strtok(NULL, DELIMITERS) : NULL;
 		if ((tok)&&(!nxt)) {
 			bi = gbl_blist->find_bus(strp);
 			if (NULL == bi) {
-				fprintf(stderr, "ERR: BUS %s not found\n", tok);
+				fprintf(stderr, "ERR: BUS %s not found in %s\n",
+					tok, pname->c_str());
 				gbl_err++;
 			} else if (mbus->second.m_typ == MAPT_MAP) {
 				if (mbus->second.u.m_m != bi->m_hash) {
@@ -1644,6 +1648,13 @@ void	assign_bus_master(MAPDHASH &master, MAPDHASH *bus_master) {
 				bi = gbl_blist->find_bus(new STRING(tok));
 				MAPT	elm;
 
+				if (!bi) {
+					fprintf(stderr, "ERR: BUS %s not found in %s\n",
+						tok, pname->c_str());
+					gbl_err ++;
+					continue;
+				}
+
 				elm.m_typ = MAPT_MAP;
 				elm.u.m_m = bi->m_hash;
 				reeval(master);
@@ -1651,8 +1662,9 @@ void	assign_bus_master(MAPDHASH &master, MAPDHASH *bus_master) {
 				//
 				tok = strtok(NULL, DELIMITERS);
 				reeval(master);
-			} free(cstr);
+			}
 		}
+		free(cstr);
 	} else if (mbus->second.m_typ == MAPT_MAP) {
 		char	errstr[256];
 		if (NULL == (strp = getstring(*mbus->second.u.m_m, KY_NAME))) {
