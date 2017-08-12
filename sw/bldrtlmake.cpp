@@ -99,6 +99,18 @@ void	build_rtl_make_inc(MAPDHASH &master, FILE *fp, STRING &fname) {
 		} if (filstr[filstr.size()-1] == ' ')
 			filstr[filstr.size()-1] = '\0';
 		if (mksubd) {
+			if (!mkgroup) {
+				char	temp[] = "MKGRPXXXXXX";
+				mkstemp(temp);
+				mkgroup = new STRING(temp);
+				setstring(kvpair->second, KYRTL_MAKE_GROUP, mkgroup);
+
+				STRINGP pfx = getstring(kvpair->second.u.m_m, KYPREFIX);
+				if (NULL == pfx)
+					pfx = new STRING("(Unnamed)");
+
+				fprintf(stderr, "WARNING: Creating a temporary group name for %s\n", pfx->c_str());
+			}
 			fprintf(fp, "%sD := %s\n", mkgroup->c_str(),
 				mksubd->c_str());
 			fprintf(fp, "%s  := $(addprefix $(%sD)/,%s)\n",
