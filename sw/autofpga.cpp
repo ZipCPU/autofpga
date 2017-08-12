@@ -989,6 +989,9 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 						continue;
 					if (kvwire->second.m_typ != MAPT_STRING)
 						continue;
+					if ((NULL == kvwire->second.u.m_s)
+						||(kvwire->second.u.m_s->size()==0))
+						continue;
 					fprintf(fp, "\tassign\t%s = 1\'b0;\t// %s.%s.%s.%s\n",
 						kvwire->second.u.m_s->c_str(),
 						kvpair->first.c_str(),
@@ -1346,7 +1349,7 @@ int	main(int argc, char **argv) {
 	FILE		*fp;
 	STRING		str, cmdline, searchstr = ".";
 	const char	*subdir;
-	gbl_dump = fopen("dump.txt", "w");
+	gbl_dump = fopen("autofpga.dbg", "w");
 
 	if (argc > 0) {
 		cmdline = STRING(argv[0]);
