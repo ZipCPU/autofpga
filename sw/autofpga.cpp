@@ -374,9 +374,11 @@ void	assign_interrupts(MAPDHASH &master) {
 				STRING	stok = STRING(tok);
 
 				kvline = findkey(*kvint->second.u.m_m, stok);
-				if (kvline != kvint->second.u.m_m->end())
+				if (kvline != kvint->second.u.m_m->end()) {
 					assign_int_to_pics(stok,
 						*kvline->second.u.m_m);
+				} else
+					fprintf(stderr, "WARNING: INT %s not found, not connected\n", tok);
 
 				tok = strtok(NULL, " \t\n,");
 			}
@@ -466,6 +468,7 @@ void	build_board_h(    MAPDHASH &master, FILE *fp, STRING &fname) {
 	}
 
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
+		const	char	*accessptr;
 		STRINGP	osdef, osval, access;
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
@@ -476,8 +479,12 @@ void	build_board_h(    MAPDHASH &master, FILE *fp, STRING &fname) {
 			continue;
 		access= getstring(kvpair->second, KYACCESS);
 
-		if (access)
-			fprintf(fp, "#ifdef\t%s\n", access->c_str());
+		if (access) {
+			accessptr = access->c_str();
+			if (accessptr[0] == '!')
+				accessptr++;
+			fprintf(fp, "#ifdef\t%s\n", accessptr);
+		} else	accessptr = NULL;
 		if (osdef)
 			fprintf(fp, "#define\t%s\n", osdef->c_str());
 		if (osval) {
@@ -485,7 +492,7 @@ void	build_board_h(    MAPDHASH &master, FILE *fp, STRING &fname) {
 			if (osval->c_str()[strlen(osval->c_str())-1] != '\n')
 				fputc('\n', fp);
 		} if (access)
-			fprintf(fp, "#endif\t// %s\n", access->c_str());
+			fprintf(fp, "#endif\t// %s\n", accessptr);
 	}
 
 	fprintf(fp, "//\n// Interrupt assignments (%ld PICs)\n//\n", piclist.size());
@@ -923,6 +930,7 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 		MAPDHASH::iterator	kvint, kvsub, kvwire;
 		bool			nomain, noaccess, noalt;
 		STRINGP			insert, alt, access;
+		const	char	 	*accessptr;
 
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
@@ -935,8 +943,14 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 		noalt    = false;
 		if (NULL == insert)
 			nomain = true;
-		if (NULL == access)
+		if (NULL == access) {
 			noaccess= true;
+			accessptr = NULL;
+		} else {
+			accessptr = access->c_str();
+			if (accessptr[0] == '!')
+				accessptr++;
+		}
 		if (NULL == alt)
 			noalt = true;
 
@@ -945,11 +959,11 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 				fputs(insert->c_str(), fp);
 		} else if ((!nomain)||(!noalt)) {
 			if (nomain) {
-				fprintf(fp, "`ifndef\t%s\n", access->c_str());
+				fprintf(fp, "`ifndef\t%s\n", accessptr);
 			} else {
-				fprintf(fp, "`ifdef\t%s\n", access->c_str());
+				fprintf(fp, "`ifdef\t%s\n", accessptr);
 				fputs(insert->c_str(), fp);
-				fprintf(fp, "`else\t// %s\n", access->c_str());
+				fprintf(fp, "`else\t// %s\n", accessptr);
 			}
 
 			if (!noalt) {
@@ -1000,7 +1014,7 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 						kvwire->first.c_str());
 				}
 			}
-			fprintf(fp, "`endif\t// %s\n\n", access->c_str());
+			fprintf(fp, "`endif\t// %s\n\n", accessptr);
 		}
 	}
 

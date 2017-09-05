@@ -63,7 +63,7 @@
 `define	FLASH_ACCESS
 `define	BKRAM_ACCESS
 `define	FLASH_ACCESS
-`define	OLEDBW_ACCESS
+// `define	OLEDBW_ACCESS
 `define	GPS_CLOCK
 `define	MOUSE_ACCESS
 `define	HDMI_IN_EDID_ACCESS
@@ -1255,20 +1255,16 @@ module	main(i_clk, i_reset,
 		scope_hdmiin_count_triggered;
 	wire	scope_hdmiin_clear_stb;
 	reg	[31:0]	scope_hdmiin_counter, scope_hdmiin_trigger_foo;
+	initial	scope_hdmiin_pre_trigger = 1'b1;
 	always @(posedge i_hdmi_in_clk)
 		if (scope_hdmiin_trigger_foo == 0)
 		begin
-			scope_hdmiin_trigger_foo = 32'd2475000-1'b1;
-			scope_hdmiin_pre_trigger = 1'b1;
+			scope_hdmiin_trigger_foo <= 32'd2475000-1'b1;
+			scope_hdmiin_pre_trigger <= 1'b1;
 		end else begin
-			scope_hdmiin_trigger_foo = scope_hdmiin_trigger_foo-1'b1;
-			scope_hdmiin_pre_trigger = 1'b1;
+			scope_hdmiin_trigger_foo <= scope_hdmiin_trigger_foo-1'b1;
+			scope_hdmiin_pre_trigger <= 1'b0;
 		end
-		// scope_hdmiin_tmp <= hin_dbg_scope[30];
-	// always @(posedge i_hdmi_in_clk)
-		// scope_hdmiin_tmp <= hin_dbg_scope[30];
-	// always @(posedge i_hdmi_in_clk)
-		// scope_hdmiin_pre_trigger<= (hin_dbg_scope[30])&&(!scope_hdmiin_tmp);
 
 	transferstb scope_hdmiin_clearctri(i_clk, i_hdmi_in_clk, 
 		((wb_stb)&&(scope_hdmiin_sel)&&(wb_we)&&(!wb_addr[0])),

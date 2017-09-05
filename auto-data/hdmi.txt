@@ -59,6 +59,7 @@
 	//
 	wire	s_clk_200mhz, s_clk_200mhz_unbuffered,
 		sysclk_locked, sysclk_feedback;
+	wire		w_hdmi_in_pll_locked;
 @TOP.MAIN=
 		// HDMI input clock
 		w_hdmi_in_logic_clk,
@@ -81,7 +82,8 @@
 
 	// 3. Use that signal to generate a clock
 	xhdmiiclk xhclkin(s_clk, w_hdmi_in_clk_no_buf, o_hdmi_in_txen,
-			w_hdmi_in_hsclk, w_hdmi_in_logic_clk);
+			w_hdmi_in_hsclk, w_hdmi_in_logic_clk,
+			w_hdmi_in_pll_locked);
 
 	xhdmiin xhin_r(w_hdmi_in_logic_clk, w_hdmi_in_hsclk,
 		o_hdmi_in_txen,
@@ -117,9 +119,13 @@
 		.CLKFBOUT_MULT(8),
 		.CLKFBOUT_PHASE(0.0),
 		.CLKIN1_PERIOD(10),
-		.CLKOUT0_DIVIDE(4)) gen_sysclk(
+		.CLKOUT0_DIVIDE(4),
+		.CLKOUT1_DIVIDE(2),
+		.CLKOUT2_DIVIDE(8)) gen_sysclk(
 			.CLKIN1(i_clk),
 			.CLKOUT0(s_clk_200mhz_unbuffered),
+			.CLKOUT1(s_clk4x_unbuffered),
+			.CLKOUT2(s_clksync_unbuffered),
 			.PWRDWN(1'b0), .RST(1'b0),
 			.CLKFBOUT(sysclk_feedback),
 			.CLKFBIN(sysclk_feedback),
@@ -270,20 +276,16 @@ typedef	struct	HDMI_IN_S {
 		@$(PREFIX)_count_triggered;
 	wire	@$(PREFIX)_clear_stb;
 	reg	[31:0]	@$(PREFIX)_counter, @$(PREFIX)_trigger_foo;
+	initial	@$(PREFIX)_pre_trigger = 1'b1;
 	always @(posedge i_hdmi_in_clk)
 		if (@$(PREFIX)_trigger_foo == 0)
 		begin
-			@$(PREFIX)_trigger_foo = 32'd2475000-1'b1;
-			@$(PREFIX)_pre_trigger = 1'b1;
+			@$(PREFIX)_trigger_foo <= 32'd2475000-1'b1;
+			@$(PREFIX)_pre_trigger <= 1'b1;
 		end else begin
-			@$(PREFIX)_trigger_foo = @$(PREFIX)_trigger_foo-1'b1;
-			@$(PREFIX)_pre_trigger = 1'b1;
+			@$(PREFIX)_trigger_foo <= @$(PREFIX)_trigger_foo-1'b1;
+			@$(PREFIX)_pre_trigger <= 1'b0;
 		end
-		// @$(PREFIX)_tmp <= hin_dbg_scope[30];
-	// always @(posedge i_hdmi_in_clk)
-		// @$(PREFIX)_tmp <= hin_dbg_scope[30];
-	// always @(posedge i_hdmi_in_clk)
-		// @$(PREFIX)_pre_trigger<= (hin_dbg_scope[30])&&(!@$(PREFIX)_tmp);
 
 	transferstb @$(PREFIX)_clearctri(i_clk, i_hdmi_in_clk, 
 		((wb_stb)&&(scope_hdmiin_sel)&&(wb_we)&&(!wb_addr[0])),

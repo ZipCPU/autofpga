@@ -190,6 +190,7 @@ module	toplevel(i_clk,
 	//
 	wire	s_clk_200mhz, s_clk_200mhz_unbuffered,
 		sysclk_locked, sysclk_feedback;
+	wire		w_hdmi_in_pll_locked;
 	wire		s_clk, s_reset;
 	wire		w_hdmi_out_hsclk, w_hdmi_out_logic_clk;
 	wire	[9:0]	w_hdmi_out_r, w_hdmi_out_g, w_hdmi_out_b;
@@ -272,7 +273,8 @@ module	toplevel(i_clk,
 	assign io_sd[2] = w_sd_data[2]? 1'bz:1'b0;
 	assign io_sd[3] = w_sd_data[3]? 1'bz:1'b0;
 
-	assign	i_gpio = { 11'h0,
+	assign	i_gpio = { 10'h0,
+			w_hdmi_in_pll_locked,
 			sysclk_locked, i_gps_3df,
 			!i_hdmi_out_hpd_n, i_sd_cd,
 			io_hdmi_out_cec, io_hdmi_in_cec };
@@ -390,7 +392,8 @@ module	toplevel(i_clk,
 
 	// 3. Use that signal to generate a clock
 	xhdmiiclk xhclkin(s_clk, w_hdmi_in_clk_no_buf, o_hdmi_in_txen,
-			w_hdmi_in_hsclk, w_hdmi_in_logic_clk);
+			w_hdmi_in_hsclk, w_hdmi_in_logic_clk,
+			w_hdmi_in_pll_locked);
 
 	xhdmiin xhin_r(w_hdmi_in_logic_clk, w_hdmi_in_hsclk,
 		o_hdmi_in_txen,
@@ -426,9 +429,13 @@ module	toplevel(i_clk,
 		.CLKFBOUT_MULT(8),
 		.CLKFBOUT_PHASE(0.0),
 		.CLKIN1_PERIOD(10),
-		.CLKOUT0_DIVIDE(4)) gen_sysclk(
+		.CLKOUT0_DIVIDE(4),
+		.CLKOUT1_DIVIDE(2),
+		.CLKOUT2_DIVIDE(8)) gen_sysclk(
 			.CLKIN1(i_clk),
 			.CLKOUT0(s_clk_200mhz_unbuffered),
+			.CLKOUT1(s_clk4x_unbuffered),
+			.CLKOUT2(s_clksync_unbuffered),
 			.PWRDWN(1'b0), .RST(1'b0),
 			.CLKFBOUT(sysclk_feedback),
 			.CLKFBIN(sysclk_feedback),

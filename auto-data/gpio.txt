@@ -74,7 +74,8 @@
 		// GPIO wires
 		i_gpio, o_gpio
 @TOP.INSERT=
-	assign	i_gpio = { 11'h0,
+	assign	i_gpio = { 10'h0,
+			w_hdmi_in_pll_locked,
 			sysclk_locked, i_gps_3df,
 			!i_hdmi_out_hpd_n, i_sd_cd,
 			io_hdmi_out_cec, io_hdmi_in_cec };

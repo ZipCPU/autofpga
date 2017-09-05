@@ -119,7 +119,10 @@ void	build_access_ifdefs_v(MAPDHASH &master, FILE *fp) {
 		else if (NULL != dep) {
 			dephash.insert(*kvpair);
 		} else {
-			fprintf(fp, "`define\t%s\n", accessp->c_str());
+			if ((*accessp)[0] == '!')
+				fprintf(fp, "// `define\t%s\n", accessp->c_str()+1);
+			else
+				fprintf(fp, "`define\t%s\n", accessp->c_str());
 			already_defined = already_defined + " " + (*accessp);
 		}
 	}

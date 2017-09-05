@@ -371,6 +371,7 @@ void	build_main_tb_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 		MAPDHASH *dev = kvpair->second.u.m_m;
 		int	base, naddr;
 		STRINGP	accessp;
+		const	char *accessptr;
 
 		str = getstring(kvpair->second, KYSIM_LOAD);
 		if (str == NULL)
@@ -394,8 +395,12 @@ void	build_main_tb_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 		fprintf(fp, "\t\t\twlen = (len-offset > naddr - start)\n\t\t\t\t? (naddr - start) : len - offset;\n");
 
 
-		if (accessp)
-			fprintf(fp, "#ifdef\t%s\n", accessp->c_str());
+		if (accessp) {
+			accessptr = accessp->c_str();
+			if (accessptr[0] == '!')
+				accessptr++;
+			fprintf(fp, "#ifdef\t%s\n", accessptr);
+		} else accessptr = NULL;
 		fprintf(fp, "\t\t\t// FROM %s.%s\n", kvpair->first.c_str(), KYSIM_LOAD.c_str());
 		fprintf(fp, "%s", str->c_str());
 		fprintf(fp, "\t\t\t// AUTOFPGA::Now clean up anything else\n");
@@ -404,9 +409,9 @@ void	build_main_tb_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 		fprintf(fp, "\t\t\t\treturn load(base + naddr, &buf[offset+wlen], len-wlen);\n");
 		fprintf(fp, "\t\t\treturn true;\n");
 		if (accessp) {
-			fprintf(fp, "#else\t// %s\n", accessp->c_str());
+			fprintf(fp, "#else\t// %s\n", accessptr);
 			fprintf(fp, "\t\t\treturn false;\n");
-			fprintf(fp, "#endif\t// %s\n", accessp->c_str());
+			fprintf(fp, "#endif\t// %s\n", accessptr);
 		}
 
 		fprintf(fp, "\t\t}\n\n");
