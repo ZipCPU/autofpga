@@ -103,12 +103,13 @@ public:
 	void	writeout_bus_logic_v(FILE *fp);
 
 	void	writeout_no_slave_v(FILE *fp, STRINGP prefix);
-	void	writeout_no_master_v(FILE *fp, STRINGP prefix);
+	void	writeout_no_master_v(FILE *fp);
 	bool	ismember_of(MAPDHASH *phash);
 
 	PERIPHP operator[](unsigned i);
 	unsigned size(void);
 	void	init(MAPDHASH *phash, MAPDHASH *bp);
+	void	integrity_check(void);
 };
 
 class	BUSLIST : public std::vector<BUSINFO *>	{
