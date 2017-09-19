@@ -131,9 +131,12 @@ unsigned PERIPH::naddr(void) {
 			p_naddr = value;
 			p_awid  = nextlg(p_naddr);
 		} else if ((int)p_naddr != value) {
+			fprintf(gbl_dump,
+				"WARNING: %s's number of addresses changed from %ld to %d\n",
+				p_name->c_str(), p_naddr, value);
 			fprintf(stderr,
-				"WARNING: %s's number of addresses changed\n",
-				p_name->c_str());
+				"WARNING: %s's number of addresses changed from %ld to %d\n",
+				p_name->c_str(), p_naddr, value);
 			p_naddr = value;
 			p_awid  = nextlg(p_naddr);
 		}
@@ -210,6 +213,7 @@ bool	compare_regaddr(PERIPHP a, PERIPHP b) {
 //
 // Add a peripheral to a given list of peripherals
 int	PLIST::add(MAPDHASH *phash) {
+	PERIPHP p;
 	STRINGP	pname;
 	int	naddr;
 
@@ -228,8 +232,7 @@ int	PLIST::add(MAPDHASH *phash) {
 		*/
 		naddr = 0;
 	}
-	PERIPHP p;
-	if (isbusmaster(*phash)) {
+	if (issubbus(*phash)) {
 		BUSINFO		*bi;
 		MAPDHASH::iterator	kvmbus;
 
@@ -374,7 +377,7 @@ void	PLIST::assign_addresses(unsigned dwidth, unsigned nullsz) {
 		m_address_width = (*this)[0]->get_slave_address_width();
 		if (m_address_width <= 0) {
 			gbl_err++;
-			fprintf(stderr, "ERR: Slave %s has zero NADDR (now address assigned\n",
+			fprintf(stderr, "ERR: Slave %s has zero NADDR (now address assigned)\n",
 				(*this)[0]->p_name->c_str());
 		}
 	} else {
@@ -415,7 +418,7 @@ void	PLIST::assign_addresses(unsigned dwidth, unsigned nullsz) {
 			if ((*p)->naddr() <= 0) {
 				gbl_err++;
 				fprintf(stderr, "ERR: Slave %s has zero "
-					"NADDR (now address assigned\n",
+					"NADDR (now address assigned)\n",
 					(*p)->p_name->c_str());
 			}
 		}

@@ -70,6 +70,30 @@ extern	FILE	*gbl_dump;
 bool	isbusmaster(MAPDHASH &phash) {
 	return (NULL != getstring(phash, KYMASTER_TYPE));
 }
+//
+// Does the given location describe access to a bus lying beneath it?
+//
+// To be true, isbusmaster() must be true, and the MASTER.BUS.TYPE field
+// must be one of: SUBBUS, XCLOCK, ARBITER, etc.
+//
+bool	issubbus(MAPDHASH &phash) {
+	if (!isperipheral(phash))
+		return false;
+	if (!isbusmaster(phash))
+		return false;
+	STRINGP	mtype = getstring(phash, KYMASTER_TYPE);
+	if (!mtype)
+		return false;
+	if (mtype->compare(KYBUS)==0)
+		return true;
+	if (mtype->compare(KYSUBBUS)==0)
+		return true;
+	if (mtype->compare(KYXCLOCK)==0)
+		return true;
+	if (mtype->compare(KYARBITER)==0)
+		return true;
+	return false;
+}
 
 //
 // Same thing, but when given a location within the tree, rather than a hash

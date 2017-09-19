@@ -52,6 +52,13 @@
 //
 bool	isbusmaster(MAPDHASH &phash);
 //
+// Does the given location describe access to a bus lying beneath it?
+//
+// To be true, isbusmaster() must be true, and the MASTER.BUS.TYPE field
+// must be one of: SUBBUS, XCLOCK, ARBITER, etc.
+//
+bool	issubbus(MAPDHASH &phash);
+//
 // Same thing, but when given a location within the tree, rather than a hash
 // value.
 bool	isbusmaster(MAPT &pmap);
