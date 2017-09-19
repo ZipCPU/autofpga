@@ -76,7 +76,15 @@ extern const	STRING	KYSLAVE,
 			KYSLAVE_ORDER;
 extern const	STRING	KYMASTER,
 			KYMASTER_TYPE,
-			KYMASTER_BUS;
+			KYMASTER_BUS,
+			KYMASTER_BUS_NAME;
+// Types of bus masters.
+// KYBUS, (HOST), (VIDEO), (XCLOCK), and ...
+extern	const	STRING	KYSUBBUS,
+			KYARBITER,
+			KYXCLOCK,
+			KYHOST,
+			KYCPU;
 //
 extern const	STRING	KYBASE;
 extern const	STRING	KYREGBASE;
@@ -175,6 +183,7 @@ extern	const	STRING	KYBUS,
 			KY_AWID,
 			KY_CLOCK,
 			KY_NULLSZ,
+			KY_NSELECT,
 			KYDEFAULT_BUS,
 			KYREGISTER_BUS;
 //

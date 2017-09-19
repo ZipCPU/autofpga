@@ -974,8 +974,15 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 				STRINGP	pfx = getstring(*kvpair->second.u.m_m,
 							KYPREFIX);
 				if (pfx) {
-					// get_bus_of(pfx)
-					// writeout_no_master_v(fp, pfx->c_str());
+					STRINGP	busname = getstring(
+							*kvpair->second.u.m_m,
+							KYMASTER_BUS_NAME);
+					if (busname) {
+						BUSINFO *bus = find_bus(busname);
+						if (bus) {
+							bus->writeout_no_master_v(fp);
+						}
+					}
 				}
 			}
 
