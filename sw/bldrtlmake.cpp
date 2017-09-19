@@ -102,6 +102,7 @@ void	build_rtl_make_inc(MAPDHASH &master, FILE *fp, STRING &fname) {
 			if (!mkgroup) {
 				char	temp[] = "MKGRPXXXXXX";
 				mkstemp(temp);
+				unlink(temp);
 				mkgroup = new STRING(temp);
 				setstring(kvpair->second, KYRTL_MAKE_GROUP, mkgroup);
 
