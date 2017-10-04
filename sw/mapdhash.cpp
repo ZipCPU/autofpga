@@ -45,6 +45,7 @@
 #include "ast.h"
 #include "kveval.h"
 #include "globals.h"
+#include "msgs.h"
 
 MAPT	operator+(MAPT a, MAPT b) {
 	char	*sbuf;
@@ -286,7 +287,7 @@ void	addtomap(MAPDHASH &fm, STRING ky, STRING vl) {
 			elm.m_typ = MAPT_AST;
 			elm.u.m_a = parse_ast(vl);
 			if (NULL == elm.u.m_a)
-				exit(EXIT_FAILURE);
+				gbl_msg.fatal("Could not parse %s\n", vl);
 			fm.insert(KEYVALUE(*trimmed, elm ) );
 			if ((elm.u.m_a->isdefined())&&(*trimmed == KYEXPR)) {
 				AST *ast = elm.u.m_a;
@@ -309,6 +310,9 @@ void	addtomap(MAPDHASH &fm, STRING ky, STRING vl) {
 
 void	mapdump_aux(FILE *fp, MAPDHASH &fm, int offset) {
 	MAPDHASH::iterator	kvpair;
+
+	if (!fp)
+		return;
 
 	for(kvpair = fm.begin(); kvpair != fm.end(); kvpair++) {
 		if (offset == 0)
@@ -343,6 +347,8 @@ void	mapdump_aux(FILE *fp, MAPDHASH &fm, int offset) {
 }
 
 void	mapdump(FILE *fp, MAPDHASH &fm) {
+	if (!fp)
+		return;
 	fprintf(fp, "\n================\nFULL HASH DUMP!!\n================\n");
 	mapdump_aux(fp, fm, 0);
 }
@@ -352,7 +358,8 @@ void	mapdump(MAPDHASH &fm) {
 }
 
 void	mapdump(FILE *fp, MAPT &elm) {
-fprintf(fp, "DUMP-REQ\n");
+	if (!fp)
+		return;
 	switch(elm.m_typ) {
 	case MAPT_STRING:
 		fprintf(fp, "DUMP: %s\n", elm.u.m_s->c_str()); fflush(fp);
@@ -646,7 +653,6 @@ STRINGP getstring(MAPDHASH &m) {
 STRINGP getstring(MAPDHASH &master, const STRING &ky) {
 	MAPDHASH::iterator	r;
 	STRINGP	prefix;
-	char	errstr[256];
 
 	r = findkey(master, ky);
 	if (r == master.end())
@@ -665,9 +671,10 @@ STRINGP getstring(MAPDHASH &master, const STRING &ky) {
 			else
 				prefix = new STRING("(Unknown context)");
 
-			sprintf(errstr, "ERR: STRING expression for KEY \"%s\" in %s isnt a string!!\n\t... it's a map, with sub-elements\n", ky.c_str(), prefix->c_str());
-			fprintf(stderr, "%s", errstr);
-			fprintf(gbl_dump, "%s", errstr);
+			gbl_msg.error("ERR: STRING expression for KEY \"%s\""
+				" in %s isnt a string!!\n\t... it's a map,"
+				" with sub-elements\n", ky.c_str(),
+				prefix->c_str());
 		}
 		return strp;
 	} else if (r->second.m_typ != MAPT_STRING) {
@@ -678,9 +685,7 @@ STRINGP getstring(MAPDHASH &master, const STRING &ky) {
 		else
 			prefix = new STRING("(Unknown context)");
 
-		sprintf(errstr, "ERR: STRING expression for KEY \"%s\" in %s isnt a string!! --- it's a %d\n", ky.c_str(), prefix->c_str(), r->second.m_typ);
-		fprintf(stderr, "%s", errstr);
-		fprintf(gbl_dump, "%s", errstr);
+		gbl_msg.error("ERR: STRING expression for KEY \"%s\" in %s isnt a string!! --- it's a %d\n", ky.c_str(), prefix->c_str(), r->second.m_typ);
 		return NULL;
 	}
 	return r->second.u.m_s;
@@ -897,7 +902,6 @@ void	setvalue(MAPDHASH &master, const STRING &ky, int value) {
 MAPDHASH *copy(MAPDHASH *top) {
 	MAPDHASH	*cp = new MAPDHASH();
 	MAPDHASH::iterator	kvpair;
-	extern FILE *gbl_dump;
 
 	for(kvpair = top->begin(); kvpair != top->end(); kvpair++) {
 		MAPT	elm;
@@ -912,9 +916,7 @@ MAPDHASH *copy(MAPDHASH *top) {
 		else if (kvpair->second.m_typ == MAPT_AST)
 			elm.u.m_a = copy(kvpair->second.u.m_a);
 		else {
-			fprintf(stderr, "ERROR in COPY(MAP)::UNKNOWN TYPE, %d\n", kvpair->second.m_typ);
-			fprintf(gbl_dump, "COPY(MAP)::UNKNOWN TYPE, %d\n", kvpair->second.m_typ);
-			exit(EXIT_FAILURE);
+			gbl_msg.fatal("in COPY(MAP)::UNKNOWN TYPE, %d\n", kvpair->second.m_typ);
 		}
 		cp->insert(KEYVALUE(kvpair->first, elm));
 	} return cp;
@@ -922,15 +924,14 @@ MAPDHASH *copy(MAPDHASH *top) {
 
 void	flatten_maps(MAPDHASH &node, MAPDHASH &sub, STRING &here) {
 	MAPDHASH::iterator	kvpair, nodepair;
-	extern FILE *gbl_dump;
 
-	fprintf(gbl_dump, "FLATT-MAP\n");
+	gbl_msg.info("FLATT-MAP\n");
 	for(kvpair = sub.begin(); kvpair!=sub.end(); kvpair++) {
 		nodepair = node.find(kvpair->first);
 		if (nodepair == node.end()) {
-			fprintf(gbl_dump, "Key not found, %s + %s, "
-				"inheriting key\n", here.c_str(),
-				kvpair->first.c_str());
+			gbl_msg.info("Key not found, %s + %s, "
+					"inheriting key\n", here.c_str(),
+					kvpair->first.c_str());
 			MAPT	elm;
 
 			elm.m_typ = kvpair->second.m_typ;
@@ -942,20 +943,17 @@ void	flatten_maps(MAPDHASH &node, MAPDHASH &sub, STRING &here) {
 				elm.u.m_m = copy(kvpair->second.u.m_m);
 			} else if (kvpair->second.m_typ == MAPT_AST) {
 				elm.u.m_a = copy(kvpair->second.u.m_a);
-			} else {
-				fprintf(gbl_dump,
-					"FLATTEN(MAP)::UNKNOWN TYPE, %d\n",
+			} else
+				gbl_msg.fatal("FLATTEN(MAP)::UNKNOWN TYPE, %d\n",
 					kvpair->second.m_typ);
-				exit(EXIT_FAILURE);
-			}
 			node.insert(KEYVALUE(kvpair->first, elm));
 		} else if ((nodepair->second.m_typ==MAPT_MAP)&&(kvpair->second.m_typ == MAPT_MAP)) {
 			STRING	nxt = here + "." + nodepair->first;
-			fprintf(gbl_dump, "RECURSING TO COPY %s\n", nxt.c_str());
+			gbl_msg.info("RECURSING TO COPY %s\n", nxt.c_str());
 			flatten_maps(*nodepair->second.u.m_m, *kvpair->second.u.m_m, nxt);
 		} else {
 			STRING	nkey = here + "." + nodepair->first;
-			fprintf(gbl_dump, "IGNORING %s (already exists)\n",
+			gbl_msg.info("IGNORING %s (already exists)\n",
 				nkey.c_str());
 		}
 	}
@@ -963,7 +961,6 @@ void	flatten_maps(MAPDHASH &node, MAPDHASH &sub, STRING &here) {
 
 void	flatten_aux(MAPDHASH &master, MAPDHASH &sub, STRING &here) {
 	MAPDHASH::iterator	kvpair, kvsub, kvnxt;
-	extern FILE *gbl_dump;
 
 	for(kvpair=sub.begin(); kvpair != sub.end(); kvpair++) {
 		if (kvpair->second.m_typ == MAPT_MAP) {
@@ -1011,7 +1008,6 @@ void	flatten_aux(MAPDHASH &master, MAPDHASH &sub, STRING &here) {
 		} else if (kvpair->first[0] == '/') {
 			STRING	nkey = kvpair->first.substr(1);
 			if (master.find(nkey) == master.end()) {
-				fprintf(gbl_dump, "Inserting %s into %s\n", nkey.c_str(), here.c_str());
 				master.insert(KEYVALUE(nkey, kvpair->second));
 			}
 		}
@@ -1019,13 +1015,7 @@ void	flatten_aux(MAPDHASH &master, MAPDHASH &sub, STRING &here) {
 }
 
 void	flatten(MAPDHASH &master) {
-	extern FILE *gbl_dump;
-	fprintf(gbl_dump, "PRE-FLATTENING MAP\n");
-	mapdump(gbl_dump, master);
-	fprintf(gbl_dump, "FLATTENING MAP\n");
 	STRING	top= STRING("");
 	flatten_aux(master, master, top);
-	fprintf(gbl_dump, "POST-FLATTENED MAP\n");
-	mapdump(gbl_dump, master);
 }
 

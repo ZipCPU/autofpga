@@ -49,8 +49,7 @@
 #include "mapdhash.h"
 #include "parser.h"
 #include "keys.h"
-
-extern	int	gbl_err;
+#include "msgs.h"
 
 STRING	*rawline(FILE *fp) {
 	char		linebuf[512];
@@ -121,8 +120,7 @@ MAPDHASH	*gensubhash(MAPDHASH *top, STRING &prefix) {
 	MAPDHASH::iterator	kvpair;
 	kvpair = top->find(*tmp);
 	if (tmp->length() <= 0) {
-		fprintf(stderr, "ERR: EMPTY KEY\n");
-		exit(EXIT_FAILURE);
+		gbl_msg.fatal("EMPTY KEY\n");
 	} else if (kvpair == top->end()) {
 		STRING	kyp = STRING(*tmp);
 		MAPT	elm;
@@ -136,8 +134,7 @@ MAPDHASH	*gensubhash(MAPDHASH *top, STRING &prefix) {
 	} else if (kvpair->second.m_typ == MAPT_MAP) {
 		devm = kvpair->second.u.m_m;
 	} else {
-		fprintf(stderr, "NAME-CONFLICT!! (witin the same file, too!)\n");
-		exit(EXIT_FAILURE);
+		gbl_msg.fatal("NAME-CONFLICT!! (witin the same file, too!)\n");
 	} delete tmp;
 	return devm;
 }
@@ -170,9 +167,7 @@ void	process_keyvalue_pair(MAPDHASH *parent, const STRING &search, STRING &key, 
 				elm.u.m_m = plusmap;
 				parent->insert(KEYVALUE(KYPLUSDOT, elm));
 			} else if (subp->second.m_typ != MAPT_MAP) {
-				fprintf(stderr, "ERR: KEY(+) EXISTS, AND ISN\'T A MAP\n");
-				// exit(EXIT_FAILURE);
-				gbl_err++;
+				gbl_msg.error("KEY(+) EXISTS, AND ISN\'T A MAP\n");
 			} else {
 				plusmap = subp->second.u.m_m;
 			} if (plusmap)
@@ -255,7 +250,7 @@ MAPDHASH	*parsefile(FILE *fp, const STRING &search) {
 				key   = STRING(*trimd);
 				delete trimd;
 
-				fprintf(stderr, "WARNING: Key line with no =, key was %s\n", key.c_str());
+				gbl_msg.warning("Key line with no =, key was %s\n", key.c_str());
 				value = "";
 			}
 
@@ -297,7 +292,6 @@ FILE	*open_data_file(const char *fname) {
 }
 
 FILE	*search_and_open(const char *fname, const STRING &search) {
-	extern	FILE *gbl_dump;
 	FILE	*fp = open_data_file(fname);
 
 	if ((fp == NULL)&&(fname[0] != '/')&&(fname[0] != '.')) {
@@ -310,39 +304,30 @@ FILE	*search_and_open(const char *fname, const STRING &search) {
 			strcat(full, "/");
 			strcat(full, fname);
 			if (NULL != (fp=open_data_file(full))) {
-				if (gbl_dump)
-					fprintf(gbl_dump, "Opened: %s\n", full);
+				gbl_msg.info("Opened: %s\n", full);
 				delete[] full;
 				return fp;
 			} delete[] full;
 			dir = strtok(NULL, ", \t\n:");
 		}
 
-		fprintf(stderr, "ERR: Could not open %s\nSearched through %s\n",
+		gbl_msg.error("Could not open %s\nSearched through %s\n",
 			fname, search.c_str());
-		gbl_err ++;
-		// exit(EXIT_FAILURE);
 		return NULL;
 	}
 
-	if (gbl_dump)
-		fprintf(gbl_dump, "Directly opened: %s\n", fname);
+	gbl_msg.info("Directly opened: %s\n", fname);
 	return fp;
 }
 
 MAPDHASH	*parsefile(const char *fname, const STRING &search) {
 	MAPDHASH	*map;
 	FILE		*fp = search_and_open(fname, search);
-	extern	FILE	*gbl_dump;
 
 	if (fp == NULL) {
-		fprintf(gbl_dump, "PARSE-ERR: Could not open %s\n", fname);
-		fprintf(gbl_dump, "\tSearched through: %s\n", search.c_str());
-		fprintf(stderr, "PARSE-ERR: Could not open %s\n", fname);
-		fprintf(stderr, "\tSearched through: %s\n", search.c_str());
-		gbl_err++;
+		gbl_msg.error("PARSE-ERR: Could not open %s\n"
+			"\t  Searched through: %s\n", fname, search.c_str());
 		return NULL;
-		// exit(EXIT_FAILURE);
 	} else {
 		map = parsefile(fp, search);
 		fclose(fp);

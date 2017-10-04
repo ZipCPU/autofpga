@@ -57,6 +57,7 @@
 #include "subbus.h"
 #include "globals.h"
 #include "gather.h"
+#include "msgs.h"
 
 extern	bool	isperipheral(MAPT &pmap);
 extern	bool	isperipheral(MAPDHASH &phash);
@@ -98,8 +99,7 @@ int	get_longest_defname(APLIST *alist) {
 				continue;
 			}
 			if (kvp->second.m_typ != MAPT_STRING) {
-				if (gbl_dump)
-				fprintf(gbl_dump, "%s is not a string\n", str.c_str());
+				gbl_msg.info("%s is not a string\n", str.c_str());
 				continue;
 			}
 
@@ -135,7 +135,7 @@ int	get_longest_defname(APLIST *alist) {
 void write_regdefs(FILE *fp, APLIST *alist, unsigned longest_defname) {
 	STRING	str;
 
-	fprintf(gbl_dump, "WRITE-REGDEFS\n");
+	gbl_msg.info("WRITE-REGDEFS\n");
 	// Walk through this peripheral list one peripheral at a time
 	for(unsigned i=0; i<alist->size(); i++) {
 		MAPDHASH::iterator	kvp;
@@ -145,7 +145,7 @@ void write_regdefs(FILE *fp, APLIST *alist, unsigned longest_defname) {
 
 		ph = (*alist)[i]->p_phash;
 		pname = (*alist)[i]->p_name;
-		fprintf(gbl_dump, "WRITE-REGDEFS(%s)\n", (NULL != pname)?pname->c_str() : "(No-name)");
+		gbl_msg.info("WRITE-REGDEFS(%s)\n", (NULL != pname)?pname->c_str() : "(No-name)");
 
 		// If there is a note key for this peripheral, place it into
 		// the output without modifications.
@@ -156,13 +156,12 @@ void write_regdefs(FILE *fp, APLIST *alist, unsigned longest_defname) {
 
 		// Walk through each of the defined registers.  There will be
 		// @REGS.N registers defined.
-		if ((gbl_dump)
-			&&(!getvalue(ph, KYREGS_N, nregs))) {
-			fprintf(gbl_dump, "REGS.N not found in %s\n", pname->c_str());
+		if (!getvalue(ph, KYREGS_N, nregs)) {
+			gbl_msg.info("REGS.N not found in %s\n", pname->c_str());
 			continue;
 		}
 
-		fprintf(gbl_dump, "Looking for REGS in %s\n", pname->c_str());
+		gbl_msg.info("Looking for REGS in %s\n", pname->c_str());
 		// Now, walk through all of the register definitions
 		for(int j=0; j<nregs; j++) {
 			char	nstr[32];
@@ -184,8 +183,7 @@ void write_regdefs(FILE *fp, APLIST *alist, unsigned longest_defname) {
 			// 1. Read the number
 			int roff = strtoul(scpy.c_str(), &nxtp, 0);
 			if ((nxtp==NULL)||(nxtp == scpy.c_str())) {
-				if (gbl_dump)
-				fprintf(gbl_dump, "No register name within string: %s\n", scpy.c_str());
+				gbl_msg.info("No register name within string: %s\n", scpy.c_str());
 				continue;
 			}
 
@@ -421,8 +419,7 @@ void write_regnames(FILE *fp, APLIST *alist,
 			// 1. Read the number
 			strtoul(scpy.c_str(), &nxtp, 0);
 			if ((nxtp==NULL)||(nxtp == scpy.c_str())) {
-				if (gbl_dump)
-				fprintf(gbl_dump, "No register name within string: %s\n", scpy.c_str());
+				gbl_msg.info("No register name within string: %s\n", scpy.c_str());
 				continue;
 			}
 

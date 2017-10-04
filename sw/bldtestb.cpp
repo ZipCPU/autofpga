@@ -46,8 +46,6 @@
 #include "legalnotice.h"
 #include "clockinfo.h"
 
-extern	FILE	*gbl_dump;
-
 void	build_testb_h(MAPDHASH &master, FILE *fp, STRING &fname) {
 	// Find all the clocks in the design, and categorize them
 	find_clocks(master);

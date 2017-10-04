@@ -71,9 +71,6 @@
 #include "legalnotice.h"
 #include "bldtestb.h"
 
-extern	int	gbl_err;
-extern	FILE	*gbl_dump;
-
 extern	void	writeout(FILE *fp, MAPDHASH &master, const STRING &ky);
 
 bool	tb_same_clock(MAPDHASH &info, STRINGP ckname) {

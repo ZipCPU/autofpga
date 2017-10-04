@@ -64,9 +64,8 @@
 #include "parser.h"
 #include "keys.h"
 #include "kveval.h"
+#include "msgs.h"
 
-extern	int	gbl_err;
-extern	FILE	*gbl_dump;
 
 //
 // Place a legal notice at the top of every file.  The legal notice is given
@@ -92,11 +91,10 @@ void	legal_notice(MAPDHASH &info, FILE *fp, STRING &fname,
 
 	lglfp = fopen(legal_fname->c_str(), "r");
 	if (!lglfp) {
-		fprintf(stderr, "ERR: Cannot open copyright notice file, %s\n", legal_fname->c_str());
+		gbl_msg.error("Cannot open copyright notice file, %s\n", legal_fname->c_str());
 		fprintf(fp, "%s WARNING: NO COPYRIGHT NOTICE\n\n"
 			"%s Please be considerate and license this project under the GPL\n", comment, comment);
 		perror("O/S Err:");
-		gbl_err++;
 		return;
 	}
 

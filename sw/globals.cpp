@@ -37,8 +37,6 @@
 //
 #include "globals.h"
 
-int		gbl_err = 0;
-FILE		*gbl_dump = NULL;
 MAPDHASH	*gbl_hash = NULL;
 const bool	DELAY_ACK = true;
 

@@ -20,7 +20,10 @@
 //	main.v
 //	regdefs.h
 //	regdefs.cpp
-//	board.h		(Built, but ... not yet tested)
+//	board.h
+//	board.ld
+//	main_tb.cpp
+//	testb.h
 //	* dev.tex	(Not yet included)
 //	* kernel device tree file
 //
@@ -81,6 +84,7 @@
 #include "predicates.h"
 #include "businfo.h"
 #include "globals.h"
+#include "msgs.h"
 
 //
 // The ILIST, a list of interrupt lines within the design
@@ -144,9 +148,8 @@ public:
 			for(int i=0; i<mx; i++)
 				i_alist[i] = NULL;
 		} else {
-			fprintf(stderr, "ERR: Cannot find PIC.MAX within ...\n");
-			gbl_err++;
-			mapdump(stderr, pic);
+			gbl_msg.error("ERR: Cannot find PIC.MAX!\n");
+			gbl_msg.dump(pic);
 			i_max = 0;
 			i_alist = NULL;
 		}
@@ -179,28 +182,24 @@ public:
 	// an interrupt with a known position assignment within the controller.
 	void add(unsigned id, MAPDHASH &psrc, STRINGP iname) {
 		if (!iname) {
-			fprintf(stderr, "WARNING: No name given for interrupt\n");
+			gbl_msg.warning("No name given for interrupt\n");
 			return;
 		} else if (id >= i_max) {
-			fprintf(stderr, "ERR: Interrupt ID %d out of bounds [0..%d]\n",
+			gbl_msg.error("ERR: Interrupt ID %d out of bounds [0..%d]\n",
 				id, i_max);
-			gbl_err++;
 			return;
 		} else if (i_nassigned+1 > i_max) {
-			fprintf(stderr, "ERR: Too many interrupts assigned to %s\n", i_name->c_str());
-			fprintf(stderr, "ERR: Assignment of %s ignored\n", iname->c_str());
-			gbl_err++;
+			gbl_msg.error("ERR: Too many interrupts assigned to %s\n", i_name->c_str());
 			return;
 		}
 
 		// Check to see if any other interrupt already has this
 		// identifier, and write an error out if so.
 		if (i_alist[id]) {
-			fprintf(stderr, "ERR: %s and %s are both competing for the same interrupt ID, #%d\n",
+			gbl_msg.error("%s and %s are both competing for the same interrupt ID, #%d\n",
 				i_alist[id]->i_name->c_str(),
 				iname->c_str(), id);
-			fprintf(stderr, "ERR: interrupt %s dropped\n", iname->c_str());
-			gbl_err++;
+			gbl_msg.error("interrupt %s dropped\n", iname->c_str());
 			return;
 		}
 
@@ -244,7 +243,7 @@ public:
 				continue; // All interrupts assigned
 		}
 		if (i_max < i_ilist.size()) {
-			fprintf(stderr, "WARNING: Too many interrupts assigned to PIC %s\n", i_name->c_str());
+			gbl_msg.warning("Too many interrupts assigned to PIC %s\n", i_name->c_str());
 		}
 
 		// Write the interrupt assignments back into the map
@@ -301,9 +300,6 @@ void	assign_int_to_pics(const STRING &iname, MAPDHASH &ihash) {
 
 	// Now, we need to map this to a PIC
 	if (NULL==(picname=getstring(ihash, KYPIC))) {
-		// fprintf(stderr,
-		//	"WARNING: No bus defined for INT_%s\nThis interrupt will not be connected.\n",
-		//	kvpair->first.c_str());
 		return;
 	}
 
@@ -316,8 +312,7 @@ void	assign_int_to_pics(const STRING &iname, MAPDHASH &ihash) {
 			if (*piclist[pid]->i_name == tok)
 				break;
 		if (pid >= piclist.size()) {
-			fprintf(stderr, "ERR: PIC NOT FOUND: %s\n", tok);
-			gbl_err++;
+			gbl_msg.error("PIC NOT FOUND: %s\n", tok);
 		} else if (getvalue(ihash, KY_ID, inum)) {
 			piclist[pid]->add((unsigned)inum, ihash, (STRINGP)&iname);
 		} else {
@@ -378,7 +373,7 @@ void	assign_interrupts(MAPDHASH &master) {
 					assign_int_to_pics(stok,
 						*kvline->second.u.m_m);
 				} else
-					fprintf(stderr, "WARNING: INT %s not found, not connected\n", tok);
+					gbl_msg.warning("INT %s not found, not connected\n", tok);
 
 				tok = strtok(NULL, " \t\n,");
 			}
@@ -403,7 +398,6 @@ void	assign_interrupts(MAPDHASH &master) {
 	for(unsigned picid=0; picid<piclist.size(); picid++)
 		piclist[picid]->assignids();
 	reeval(master);
-	// mapdump(master);
 }
 
 void	writeout(FILE *fp, MAPDHASH &master, const STRING &ky) {
@@ -695,6 +689,7 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 	STRING	str, astr, sellist, acklist, siosel_str, diosel_str;
 	int		first;
 
+	fprintf(fp, "`timescale\t1ps / 1ps\n");
 	legal_notice(master, fp, fname);
 
 	// Include a legal notice
@@ -890,8 +885,7 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 				fprintf(fp, "\tassign\t%s_int_vec = {\n",
 					defnstr->c_str());
 			else {
-				gbl_err++;
-				fprintf(stderr, "ERR: PIC has no associated name\n");
+				gbl_msg.error("PIC has no associated name\n");
 				continue;
 			}
 		}
@@ -1059,25 +1053,20 @@ void	build_outfile_aux(MAPDHASH &info, STRINGP fname, STRINGP data) {
 	STRINGP	subd = getstring(info, KYSUBD);
 
 	if (NULL != strchr(fname->c_str(), '/')) {
-		fprintf(stderr, "WARNING: Output files can only be placed in output directory\n");
-		fprintf(stderr, "Output file: %s ignored\n",
-			fname->c_str());
+		gbl_msg.warning("Output files can only be placed in output directory\n"
+			"Output file: %s ignored\n", fname->c_str());
 		return;
 	}
 
 	FILE	*fp;
 	str = subd->c_str(); str += "/"+(*fname);
 	fp = fopen(str.c_str(), "w");
-	if (NULL == fp) {
-		fprintf(stderr, "ERROR: Cannot write %s\n", str.c_str());
-		exit(EXIT_FAILURE);
-	}
+	if (NULL == fp)
+		gbl_msg.fatal("Cannot write %s\n", str.c_str());
 
 	unsigned nw = fwrite(data->c_str(), 1, data->size(), fp);
-	if (nw != data->size()) {
-		fprintf(stderr, "ERROR: %s data not fully written\n", str.c_str());
-		exit(EXIT_FAILURE);
-	}
+	if (nw != data->size())
+		gbl_msg.fatal("%s data not fully written\n", str.c_str());
 }
 
 
@@ -1143,7 +1132,7 @@ void	get_portlist(MAPDHASH &master, PORTLIST &ports) {
 		pptr = strtok((char *)stripped->c_str(), DELIMITERS);
 		while(pptr) {
 			ports.push_back(new STRING(pptr));
-			if (gbl_dump) fprintf(gbl_dump, "\t%s\n", pptr);
+			gbl_msg.info("\t%s\n", pptr);
 			pptr = strtok(NULL, DELIMITERS);
 		} delete stripped;
 	}
@@ -1156,10 +1145,8 @@ void	build_xdc(MAPDHASH &master, FILE *fp, STRING &fname) {
 	FILE			*fpsrc;
 	char	line[512];
 
-	if (gbl_dump) {
-		fprintf(gbl_dump, "\n\nBUILD-XDC\nLooking for ports:\n");
-		fflush(gbl_dump);
-	}
+	gbl_msg.info("\n\nBUILD-XDC\nLooking for ports:\n");
+	gbl_msg.flush();
 
 	get_portlist(master, ports);
 
@@ -1167,8 +1154,7 @@ void	build_xdc(MAPDHASH &master, FILE *fp, STRING &fname) {
 	fpsrc = open_in(master, *str);
 
 	if (!fpsrc) {
-		fprintf(stderr, "ERR: Could not find or open %s\n", str->c_str());
-		exit(EXIT_FAILURE);
+		gbl_msg.fatal("Could not find or open %s\n", str->c_str());
 	}
 
 	while(fgets(line, sizeof(line), fpsrc)) {
@@ -1217,8 +1203,7 @@ void	build_xdc(MAPDHASH &master, FILE *fp, STRING &fname) {
 				ptr++;
 			*ptr = '\0';
 
-			if (gbl_dump)
-				fprintf(gbl_dump, "Found XDC port: %s\n", name);
+			gbl_msg.info("Found XDC port: %s\n", name);
 
 			// Now, let's check to see if this is in our set
 			for(unsigned k=0; k<ports.size(); k++) {
@@ -1269,10 +1254,8 @@ void	build_ucf(MAPDHASH &master, FILE *fp, STRING &fname) {
 	PORTLIST		ports;
 	char	line[512];
 
-	if (gbl_dump) {
-		fprintf(gbl_dump, "\n\nBUILD-UCF\nLooking for ports:\n");
-		fflush(gbl_dump);
-	}
+	gbl_msg.info("\n\nBUILD-UCF\nLooking for ports:\n");
+	gbl_msg.flush();
 
 	get_portlist(master, ports);
 
@@ -1280,8 +1263,7 @@ void	build_ucf(MAPDHASH &master, FILE *fp, STRING &fname) {
 	fpsrc = open_in(master, *str);
 
 	if (!fpsrc) {
-		fprintf(stderr, "ERR: Could not find or open %s\n", str->c_str());
-		exit(EXIT_FAILURE);
+		gbl_msg.fatal("Could not find or open %s\n", str->c_str());
 	}
 
 	while(fgets(line, sizeof(line), fpsrc)) {
@@ -1317,10 +1299,8 @@ void	build_ucf(MAPDHASH &master, FILE *fp, STRING &fname) {
 				ptr++;
 			*ptr = '\0';
 
-			if (gbl_dump) {
-				fprintf(gbl_dump, "Found UCF port: %s", name);
-				fflush(gbl_dump);
-			}
+			gbl_msg.info("Found UCF port: %s", name);
+			gbl_msg.flush();
 
 			// Now, let's check to see if this is in our set
 			for(unsigned k=0; k<ports.size(); k++) {
@@ -1370,7 +1350,9 @@ int	main(int argc, char **argv) {
 	FILE		*fp;
 	STRING		str, cmdline, searchstr = ".";
 	const char	*subdir;
-	gbl_dump = fopen("autofpga.dbg", "w");
+
+
+	// gbl_msg.open("autofpga.dbg", "w");
 
 	if (argc > 0) {
 		cmdline = STRING(argv[0]);
@@ -1385,6 +1367,15 @@ int	main(int argc, char **argv) {
 		if (argv[argn][0] == '-') {
 			for(int j=1; ((j<2000)&&(argv[argn][j])); j++) {
 				switch(argv[argn][j]) {
+				case 'd':
+					if (argv[argn][j+1])
+						gbl_msg.open("autofpga.dbg");
+					else if (argv[argn+1][0] == '-')
+						gbl_msg.open("autofpga.dbg");
+					else
+						gbl_msg.open(argv[++argn]);
+					j+=5000;
+					break;
 				case 'o': subdir = argv[++argn];
 					j+=5000;
 					break;
@@ -1422,10 +1413,8 @@ int	main(int argc, char **argv) {
 		}
 	}
 
-	if (nhash == 0) {
-		fprintf(stderr, "ERR: No files given, no files written\n");
-		exit(EXIT_FAILURE);
-	}
+	if (nhash == 0)
+		gbl_msg.fatal("No files given, no files written\n");
 
 	gbl_hash = &master;
 
@@ -1441,9 +1430,9 @@ int	main(int argc, char **argv) {
 		setstring(master, KYSUBD, subd);
 	}
 	if ((*subd) == STRING("/")) {
-		fprintf(stderr, "ERR: OUTPUT SUBDIRECTORY = %s\n", subd->c_str());
-		fprintf(stderr, "Cowardly refusing to place output products into the root directory, '/'\n");
-		exit(EXIT_FAILURE);
+		gbl_msg.fatal("OUTPUT SUBDIRECTORY = %s\n"
+			"Cowardly refusing to place output products into the "
+			"root directory, '/'\n", subd->c_str());
 	} if ((*subd)[subd->size()-1] == '/')
 		(*subd)[subd->size()-1] = '\0';
 
@@ -1453,14 +1442,12 @@ int	main(int argc, char **argv) {
 		struct	stat	sbuf;
 		if (0 == stat(subd->c_str(), &sbuf)) {
 			if (!S_ISDIR(sbuf.st_mode)) {
-				fprintf(stderr, "ERR: %s exists, and is not a directory\n", subd->c_str());
-				fprintf(stderr, "Cowardly refusing to erase %s and build a directory in its place\n", subd->c_str());
-				exit(EXIT_FAILURE);
+				gbl_msg.fatal("%s exists, and is not a directory\n"
+				"Cowardly refusing to erase %s and build a directory in its place\n", subd->c_str(), subd->c_str());
 			}
 		} else if (mkdir(subd->c_str(), 0777) != 0) {
-			fprintf(stderr, "ERR: Could not create %s/ directory\n",
+			gbl_msg.fatal("Could not create %s/ directory\n",
 				subd->c_str());
-			exit(EXIT_FAILURE);
 		}
 	}
 
@@ -1530,6 +1517,8 @@ int	main(int argc, char **argv) {
 		str = subd->c_str(); str += "/build.xdc";
 		fp = fopen(str.c_str(), "w");
 		if (fp) { build_xdc(  master, fp, str); fclose(fp); }
+		else
+			gbl_msg.error("Cannot open %s !\n", str.c_str());
 	}
 
 	if (NULL != getstring(master, KYUCF_FILE)) {
@@ -1544,10 +1533,9 @@ int	main(int argc, char **argv) {
 
 	build_other_files(master);
 
-	if (0 != gbl_err)
-		fprintf(stderr, "ERR: Errors present\n");
+	if (0 != gbl_msg.status())
+		gbl_msg.error("ERR: Errors present\n");
 
-	if (gbl_dump)
-		mapdump(gbl_dump, master);
-	return gbl_err;
+	gbl_msg.dump(master);
+	return gbl_msg.status();
 }

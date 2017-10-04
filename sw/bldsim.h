@@ -44,9 +44,6 @@
 
 #include "parser.h"
 
-extern	int	gbl_err;
-extern	FILE	*gbl_dump;
-
 extern	void	writeout(FILE *fp, MAPDHASH &master, const STRING &ky);
 extern	bool	tb_same_clock(MAPDHASH &info, STRINGP ckname);
 extern	bool	tb_tick(MAPDHASH &info, STRINGP ckname, FILE *fp);

@@ -60,6 +60,7 @@
 #include "businfo.h"
 #include "globals.h"
 #include "subbus.h"
+#include "msgs.h"
 
 BUSLIST	*gbl_blist;
 
@@ -67,11 +68,11 @@ BUSLIST	*gbl_blist;
 
 // Look up the number of bits in the address bus of the given hash
 int	BUSINFO::address_width(void) {
-	fprintf(gbl_dump, "Requesting address width of %s: ", m_name->c_str());
+	gbl_msg.info("Requesting address width of %s\n", m_name->c_str());
 	if (!m_addresses_assigned)
 		assign_addresses();
 
-	fprintf(gbl_dump, "%d\n", m_address_width);
+	gbl_msg.info("Address width of %s is  ", m_name->c_str(), m_address_width);
 	return m_address_width;
 }
 
@@ -93,9 +94,8 @@ bool	BUSINFO::get_base_address(MAPDHASH *phash, unsigned &base) {
 		return;
 	*/
 	if (!m_plist) {
-		fprintf(stderr, "ERR: BUS[%s] has no peripherals!\n",
+		gbl_msg.error("BUS[%s] has no peripherals!\n",
 			m_name->c_str());
-		gbl_err++;
 		return false;
 	} else
 		return m_plist->get_base_address(phash, base);
@@ -103,7 +103,7 @@ bool	BUSINFO::get_base_address(MAPDHASH *phash, unsigned &base) {
 
 void	BUSINFO::assign_addresses(void) {
 
-	fprintf(gbl_dump, "Assigning addresses for bus %s\n", m_name->c_str());
+	gbl_msg.info("Assigning addresses for bus %s\n", m_name->c_str());
 	if ((!m_plist)||(m_plist->size() < 1)) {
 		m_address_width = 0;
 	} else if (!m_addresses_assigned) {
@@ -216,10 +216,8 @@ PERIPH *BUSINFO::add(PERIPHP p) {
 assert(NULL != p->p_phash);
 		return p;
 	} else {
-		gbl_err++;
-		fprintf(stderr, "ERR: Could not add %s\n",
+		gbl_msg.fatal("Could not add %s\n",
 			getstring(p->p_phash, KYPREFIX)->c_str());
-assert(0);
 		return NULL;
 	}
 }
@@ -254,14 +252,13 @@ PERIPH *BUSINFO::add(MAPDHASH *phash) {
 		p->p_slave_bus = this;
 		return p;
 	} else {
-		gbl_err++;
-		fprintf(stderr, "ERR: Could not add %s\n", getstring(phash, KYPREFIX)->c_str());
+		gbl_msg.error("Could not add %s\n", getstring(phash, KYPREFIX)->c_str());
 		return NULL;
 	}
 }
 
 void	BUSINFO::post_countsio(void) {
-	fprintf(gbl_dump, "BUSINFO::POST-COUNTSIO[%4s]: SINGLE=%2d, DOUBLE=%2d, TOTAL=%2d (PRE)\n",
+	gbl_msg.info("BUSINFO::POST-COUNTSIO[%4s]: SINGLE=%2d, DOUBLE=%2d, TOTAL=%2d (PRE)\n",
 		m_name->c_str(), m_num_single, m_num_double, m_num_total);
 	if (m_num_total == m_num_single + m_num_double) {
 		m_num_double = 0;
@@ -269,7 +266,7 @@ void	BUSINFO::post_countsio(void) {
 		m_num_single = 0;
 		m_num_double = 0;
 	}
-	fprintf(gbl_dump, "BUSINFO::POST-COUNTSIO[%4s]: SINGLE=%2d, DOUBLE=%2d, TOTAL=%2d\n",
+	gbl_msg.info("BUSINFO::POST-COUNTSIO[%4s]: SINGLE=%2d, DOUBLE=%2d, TOTAL=%2d\n",
 		m_name->c_str(), m_num_single, m_num_double, m_num_total);
 }
 	
@@ -368,7 +365,7 @@ void	BUSINFO::init(MAPDHASH *phash, MAPDHASH *bp) {
 					elm.m_typ = MAPT_INT;
 					elm.u.m_v = value;
 					m_hash->insert(KEYVALUE(KY_WIDTH, elm));
-					fprintf(gbl_dump, "Setting bus width for %s bus to %d, in %s\n", m_name->c_str(), value, prefix->c_str());
+					gbl_msg.info("Setting bus width for %s bus to %d, in %s\n", m_name->c_str(), value, prefix->c_str());
 
 					// Calculate the number of select lines
 					elm.m_typ = MAPT_INT;
@@ -377,14 +374,13 @@ void	BUSINFO::init(MAPDHASH *phash, MAPDHASH *bp) {
 					REHASH;
 					kvpair = bp->begin();
 				} else if (m_data_width != value) {
-					fprintf(stderr, "ERR: Conflicting bus width definitions for %s: %d != %d in %s\n", m_name->c_str(), m_data_width, value, prefix->c_str());
-					gbl_err++;
+					gbl_msg.error("Conflicting bus width definitions for %s: %d != %d in %s\n", m_name->c_str(), m_data_width, value, prefix->c_str());
 				}
 			}
 			continue;
 		} if (0== KY_NULLSZ.compare(kvpair->first)) {
 			if ((getvalue(*bp, KY_NULLSZ, value))&&(m_nullsz != value)) {
-				fprintf(gbl_dump, "BUSINFO::INIT(%s).NULLSZ "
+				gbl_msg.info("BUSINFO::INIT(%s).NULLSZ "
 					"FOUND: %d\n", prefix->c_str(), value);
 				m_nullsz = value;
 				// m_addresses_assigned = false;
@@ -402,7 +398,7 @@ void	BUSINFO::init(MAPDHASH *phash, MAPDHASH *bp) {
 		if ((kvpair->second.m_typ == MAPT_STRING)
 				&&(NULL != kvpair->second.u.m_s)) {
 			strp = kvpair->second.u.m_s;
-			fprintf(gbl_dump, "BUSINFO::INIT(%s) @%s=%s\n",
+			gbl_msg.info("BUSINFO::INIT(%s) @%s=%s\n",
 				prefix->c_str(), kvpair->first.c_str(),
 				kvpair->second.u.m_s->c_str());
 			if (KY_TYPE.compare(kvpair->first)==0) {
@@ -411,8 +407,7 @@ void	BUSINFO::init(MAPDHASH *phash, MAPDHASH *bp) {
 					elm.m_typ = MAPT_STRING;
 					elm.u.m_s = strp;
 					if (NULL == m_hash) {
-						gbl_err++;
-						fprintf(stderr, "ERR: Undefined bus as a part of %s (no name given?)\n",
+						gbl_msg.error("Undefined bus as a part of %s (no name given?)\n",
 							prefix->c_str());
 					} else
 						m_hash->insert(KEYVALUE(KY_TYPE, elm));
@@ -420,21 +415,19 @@ void	BUSINFO::init(MAPDHASH *phash, MAPDHASH *bp) {
 					REHASH;
 					kvpair = bp->begin();
 				} else if (m_type->compare(*strp) != 0) {
-					fprintf(stderr,
-						"ERR: Conflicting bus types "
+					gbl_msg.error("Conflicting bus types "
 						"for %s\n",m_name->c_str());
-					gbl_err++;
 				}
 				continue;
 			} else if ((KY_CLOCK.compare(kvpair->first)==0)
 					&&(NULL == m_clock)) {
-				fprintf(gbl_dump, "BUSINFO::INIT(%s)."
+				gbl_msg.info("BUSINFO::INIT(%s)."
 					"CLOCK(%s)\n", prefix->c_str(),
 					strp->c_str());
 				m_clock = getclockinfo(strp);
 				elm.m_typ = MAPT_MAP;
 				if (m_clock != NULL) {
-					fprintf(gbl_dump, "BUSINFO::INIT(%s)."
+					gbl_msg.info("BUSINFO::INIT(%s)."
 						"CLOCK(%s) FOUND, FREQ = %d\n",
 						prefix->c_str(), strp->c_str(),
 						m_clock->frequency());
@@ -442,8 +435,7 @@ void	BUSINFO::init(MAPDHASH *phash, MAPDHASH *bp) {
 					elm.u.m_m = m_clock->m_hash;
 
 					if (NULL == m_hash) {
-						gbl_err++;
-						fprintf(stderr, "ERR: Undefined bus as a part of %s (no name given?)\n",
+						gbl_msg.error("Undefined bus as a part of %s (no name given?)\n",
 							prefix->c_str());
 					} else
 						m_hash->insert(KEYVALUE(KY_CLOCK, elm));
@@ -467,21 +459,18 @@ void	BUSINFO::init(MAPDHASH *phash, MAPDHASH *bp) {
 
 void	BUSINFO::integrity_check(void) {
 	if (!m_name) {
-		fprintf(stderr, "ERR: Bus with no name! (No BUS.NAME tag)\n");
-		gbl_err++;
+		gbl_msg.error("ERR: Bus with no name! (No BUS.NAME tag)\n");
 		return;
 	}
 
 	if (m_data_width <= 0) {
-		fprintf(stderr, "ERR: BUS width not defined for %s\n",
+		gbl_msg.error("ERR: BUS width not defined for %s\n",
 			m_name->c_str());
-		gbl_err++;
 	}
 
 	if (m_clock == NULL) {
-		fprintf(stderr, "ERR: BUS %s has no defined clock\n",
+		gbl_msg.error("ERR: BUS %s has no defined clock\n",
 			m_name->c_str());
-		gbl_err++;
 	}
 }
 
@@ -586,19 +575,12 @@ void	BUSLIST::countsio(MAPDHASH *phash) {
 		}
 		assert(bi);
 	} else if (kvpair->second.m_typ == MAPT_STRING) {
-		char	errstr[256];
 		bi = find_bus(kvpair->second.u.m_s);
 		if (!bi) {
-			snprintf(errstr, sizeof(errstr), "ERR: Could not find %s bus, needed by %s\n", kvpair->second.u.m_s->c_str(), prefix->c_str());
-			fprintf(stderr, "%s", errstr);
-			fprintf(gbl_dump, "%s", errstr);
-			fflush(gbl_dump);
-			assert(bi);
+			gbl_msg.fatal("Could not find %s bus, needed by %s\n", kvpair->second.u.m_s->c_str(), prefix->c_str());
 		}
 	} else {
-		gbl_err++;
-		fprintf(stderr, "ERR: Internal error\n");
-		assert(0);
+		gbl_msg.fatal("Internal error\n");
 	}
 		
 
@@ -674,7 +656,7 @@ void	BUSLIST::addperipheral(MAPT &map) {
 void	BUSLIST::adddefault(MAPDHASH &master, STRINGP defname) {
 	BUSINFO	*bi;
 
-	fprintf(gbl_dump, "ADDING BUS: %s (default)\n", defname->c_str());
+	gbl_msg.userinfo("ADDING BUS: %s (default)\n", defname->c_str());
 	if (size() == 0) {
 		// If there are no elements (yet) in our BUSLIST, then create
 		// a first one, and call it our default.
@@ -737,12 +719,12 @@ BUSINFO *BUSLIST::addbus_aux(MAPDHASH *phash, STRINGP pname, MAPDHASH *bp) {
 		if (!bi) {
 			MAPDHASH::iterator	kvpair;
 
-			fprintf(gbl_dump, "ADDBUS(%s) ... BUS.NAME KEY NOT FOUND(%s)\n",
+			gbl_msg.info("ADDBUS(%s) ... BUS.NAME KEY NOT FOUND(%s)\n",
 			pname->c_str(), str->c_str());
 
 			bi = new BUSINFO();
 			push_back(bi);
-			fprintf(gbl_dump, "ADDING BUS: %s\n", str->c_str());
+			gbl_msg.info("ADDING BUS: %s\n", str->c_str());
 			bi->m_name = str;
 			bi->m_hash = bp;
 			// setstring(*bi->m_hash, KY_NAME, str);
@@ -751,11 +733,10 @@ BUSINFO *BUSLIST::addbus_aux(MAPDHASH *phash, STRINGP pname, MAPDHASH *bp) {
 		//		pname->c_str(), bi->m_name->c_str());
 		}
 	} else if (size() > 0) {
-		fprintf(gbl_dump, "ADDING BUS: (Unnamed--becomes default)\n");
+		gbl_msg.info("ADDING BUS: (Unnamed--becomes default)\n");
 		bi = (*this)[0];
 	} else {
-		gbl_err++;
-		fprintf(stderr, "ERR: Unnamed bus as a part of %s\n",
+		gbl_msg.error("Unnamed bus as a part of %s\n",
 			(NULL == getstring(*phash, KYPREFIX)) ? "(Null-no-name)"
 			: getstring(*phash, KYPREFIX)->c_str());
 		bi = new BUSINFO();
@@ -763,7 +744,7 @@ BUSINFO *BUSLIST::addbus_aux(MAPDHASH *phash, STRINGP pname, MAPDHASH *bp) {
 		bi->m_hash = NULL;
 	}
 
-	fprintf(gbl_dump, "ADDBUS-AUX(%s)--calling INIT for %s\n",
+	gbl_msg.info("ADDBUS-AUX(%s)--calling INIT for %s\n",
 		pname->c_str(), bi->m_name->c_str());
 	bi->init(phash, bp);
 
@@ -782,19 +763,21 @@ void	BUSLIST::addbus(MAPDHASH *phash) {
 	if (NULL == pname)
 		pname = new  STRING("(Null/No name)");
 
-	fprintf(gbl_dump, "ADDBUS request for \'%s\' ...", pname->c_str());
 	str = getstring(*phash, KYSLAVE_TYPE);
-	if (isbusmaster(*phash))
-		fprintf(gbl_dump, "MASTER ");
-	if (isperipheral(*phash))
-		fprintf(gbl_dump, "SLAVE ");
-	if (NULL == str) {
-		fprintf(gbl_dump, "NULL-TYPE ");
-	} else if (KYBUS.compare(*str)==0)
-		fprintf(gbl_dump, "BUS ");
-	else if (KYOTHER.compare(*str)==0)
-		fprintf(gbl_dump, "OTHER ");
-	fprintf(gbl_dump, "\n");
+	if (true) {
+		gbl_msg.info("ADDBUS request for \'%s\' ...", pname->c_str());
+		if (isbusmaster(*phash))
+			gbl_msg.info("MASTER ");
+		if (isperipheral(*phash))
+			gbl_msg.info("SLAVE ");
+		if (NULL == str) {
+			gbl_msg.info("NULL-TYPE ");
+		} else if (KYBUS.compare(*str)==0)
+			gbl_msg.info("BUS ");
+		else if (KYOTHER.compare(*str)==0)
+			gbl_msg.info("OTHER ");
+		gbl_msg.info("\n");
+	}
 
 	kvbus = findkey(*phash, KYBUS);
 	if (kvbus != phash->end()) {
@@ -803,7 +786,7 @@ void	BUSLIST::addbus(MAPDHASH *phash) {
 			tmps = STRING("map");
 		else if (MAPT_STRING == kvbus->second.m_typ)
 			tmps = STRING("string");
-		fprintf(gbl_dump, "ADDBUS(%s)...@BUS FOUND (%s)\n",
+		gbl_msg.info("ADDBUS(%s)...@BUS FOUND (%s)\n",
 			pname->c_str(), tmps.c_str());
 		if (MAPT_MAP == kvbus->second.m_typ) {
 			bp = kvbus->second.u.m_m;
@@ -925,9 +908,7 @@ void	BUSINFO::writeout_bus_slave_defns_v(FILE *fp) {
 				(errwire) ? errwire->c_str() : NULL);
 		}
 	} else {
-		fprintf(stderr, "ERR: BUS %s has no slaves\n", m_name->c_str());
-		gbl_err++;
-		
+		gbl_msg.error("%s has no slaves\n", m_name->c_str());
 	}
 }
 
@@ -960,7 +941,7 @@ void	BUSINFO::writeout_bus_defns_v(FILE *fp) {
 }
 
 void	writeout_bus_defns_v(FILE *fp) {
-	fprintf(fp, "//\n//\n// Define bus wires\n//\n//\n");
+	fprintf(fp, "\t//\n\t//\n\t// Define bus wires\n\t//\n\t//\n\n");
 	BUSLIST	*bl = gbl_blist;
 	for(BUSLIST::iterator bp=bl->begin(); bp != bl->end(); bp++) {
 		fprintf(fp, "\t// Bus %s\n", (*bp)->m_name->c_str());
@@ -976,7 +957,7 @@ void	BUSINFO::writeout_bus_select_v(FILE *fp) {
 	unsigned	unused_lsbs = 0, mask = 0;
 
 	if (NULL == m_plist) {
-		fprintf(stderr, "ERR: Bus[%s] has no peripherals\n", m_name->c_str());
+		gbl_msg.error("Bus[%s] has no peripherals\n", m_name->c_str());
 		return;
 	}
 
@@ -992,8 +973,6 @@ void	BUSINFO::writeout_bus_select_v(FILE *fp) {
 			mask |= (*m_slist)[i]->p_mask;
 		for(unsigned tmp=mask; ((tmp)&&((tmp&1)==0)); tmp>>=1)
 			unused_lsbs++;
-	fprintf(gbl_dump, "// SLIST.SBAW = %d\n// SLIST.DALINES = %d\n// SLIST.UNUSED_LSBS = %d\n", sbaw, dalines, unused_lsbs); fflush(gbl_dump);
-	fflush(gbl_dump);
 		for(unsigned i=0; i<m_slist->size(); i++) {
 			if ((*m_slist)[i]->p_mask == 0) {
 				fprintf(fp, "\tassign\t%12s_sel = 1\'b0; // ERR: (DIO) address mask == 0\n",
@@ -1018,8 +997,6 @@ void	BUSINFO::writeout_bus_select_v(FILE *fp) {
 			mask |= (*m_dlist)[i]->p_mask;
 		for(unsigned tmp=mask; ((tmp)&&((tmp&1)==0)); tmp>>=1)
 			unused_lsbs++;
-	fprintf(gbl_dump, "// DLIST.SBAW = %d\n// DLIST.DALINES = %d\n// DLIST.UNUSED_LSBS = %d\n", sbaw, dalines, unused_lsbs);
-	fflush(gbl_dump);
 		for(unsigned i=0; i<m_dlist->size(); i++) {
 			if ((*m_dlist)[i]->p_mask == 0) {
 				fprintf(fp, "\tassign\t%12s_sel = 1\'b0; // ERR: (DIO) address mask == 0\n",
@@ -1050,8 +1027,6 @@ void	BUSINFO::writeout_bus_select_v(FILE *fp) {
 	for(unsigned tmp=mask; ((tmp)&&((tmp&1)==0)); tmp>>=1)
 		unused_lsbs++;
 
-	fprintf(gbl_dump, "// SBAW = %d\n// DALINES = %d\n// UNUSED_LSBS = %d\n", sbaw, dalines, unused_lsbs);
-	fflush(gbl_dump);
 	if (m_plist->size() == 1) {
 		if ((*m_plist)[0]->p_name)
 			fprintf(fp, "\tassign\t%12s_sel = (%s_cyc); "
@@ -1112,7 +1087,7 @@ void	BUSINFO::writeout_no_slave_v(FILE *fp, STRINGP prefix) {
 
 void	BUSINFO::writeout_no_master_v(FILE *fp) {
 	if (!m_name)
-		fprintf(stderr, "ERR: (Unnamed bus) has no name!\n");
+		gbl_msg.error("(Unnamed bus) has no name!\n");
 	fprintf(fp, "\n");
 	fprintf(fp, "\t// In the case that nothing drives the %s bus ...\n", m_name->c_str());
 	fprintf(fp, "\tassign\t%s_cyc = 1\'b0;\n", m_name->c_str());
@@ -1578,9 +1553,8 @@ void	assign_bus_slave(MAPDHASH &master, MAPDHASH *bus_slave) {
 		if ((tok)&&(!nxt)) {
 			bi = gbl_blist->find_bus(strp);
 			if (NULL == bi) {
-				fprintf(stderr, "ERR: BUS %s not found in %s\n",
+				gbl_msg.error("BUS %s not found in %s\n",
 					tok, pname->c_str());
-				gbl_err++;
 			} else if (sbus->second.m_typ == MAPT_MAP) {
 				if (sbus->second.u.m_m != bi->m_hash) {
 					bi->init(bus_slave, sbus->second.u.m_m);
@@ -1602,9 +1576,8 @@ void	assign_bus_slave(MAPDHASH &master, MAPDHASH *bus_slave) {
 			while(tok) {
 				bi = gbl_blist->find_bus(new STRING(tok));
 				if (NULL == bi) {
-					fprintf(stderr, "ERR: BUS %s not found in %s\n",
+					gbl_msg.error("ERR: BUS %s not found in %s\n",
 						tok, pname->c_str());
-					gbl_err++;
 				} else {
 					MAPT	elm;
 
@@ -1620,31 +1593,21 @@ void	assign_bus_slave(MAPDHASH &master, MAPDHASH *bus_slave) {
 			reeval(master);
 		} free(cstr);
 	} else if (sbus->second.m_typ == MAPT_MAP) {
-		char	errstr[256];
 		if (NULL == (strp = getstring(*sbus->second.u.m_m, KY_NAME))) {
-			snprintf(errstr, sizeof(errstr), "ERR: %s SLAVE.BUS "
+			gbl_msg.error("%s SLAVE.BUS "
 				"exists, is a map, but has no name\n",
 				pname->c_str());
-			fprintf(stderr,   "%s", errstr);
-			fprintf(gbl_dump, "%s", errstr);
 		} else if (NULL == (bi = find_bus(strp))) {
-			snprintf(errstr, sizeof(errstr), "ERR: %s SLAVE.BUS "
+			gbl_msg.error("%s SLAVE.BUS "
 				"exists, is a map, but name %s not found\n",
 				pname->c_str(), strp->c_str());
-			fprintf(stderr,   "%s", errstr);
-			fprintf(gbl_dump, "%s", errstr);
 		} else if ((bi->m_hash != sbus->second.u.m_m)
 					&&(strp->compare(*bi->m_name)==0)) {
 			bi->init(bus_slave, sbus->second.u.m_m);
 				sbus->second.u.m_m = bi->m_hash;
 		}
 	} else {
-		gbl_err++;
-		fprintf(gbl_dump,
-			"ERR: %s SLAVE.BUS exists, but isn't a string!\n",
-			pname->c_str());
-		fprintf(stderr,
-			"ERR: %s SLAVE.BUS exists, but isn't a string!\n",
+		gbl_msg.error("%s SLAVE.BUS exists, but isn't a string!\n",
 			pname->c_str());
 	}
 }
@@ -1701,9 +1664,8 @@ void	assign_bus_master(MAPDHASH &master, MAPDHASH *bus_master) {
 		if ((tok)&&(!nxt)) {
 			bi = gbl_blist->find_bus(strp);
 			if (NULL == bi) {
-				fprintf(stderr, "ERR: BUS %s not found in %s\n",
+				gbl_msg.error("BUS %s not found in %s\n",
 					tok, pname->c_str());
-				gbl_err++;
 			} else if (mbus->second.m_typ == MAPT_MAP) {
 				if (mbus->second.u.m_m != bi->m_hash) {
 					bi->init(bus_master, mbus->second.u.m_m);
@@ -1727,9 +1689,8 @@ void	assign_bus_master(MAPDHASH &master, MAPDHASH *bus_master) {
 				MAPT	elm;
 
 				if (!bi) {
-					fprintf(stderr, "ERR: BUS %s not found in %s\n",
+					gbl_msg.error("ERR: BUS %s not found in %s\n",
 						tok, pname->c_str());
-					gbl_err ++;
 					continue;
 				}
 
@@ -1744,31 +1705,21 @@ void	assign_bus_master(MAPDHASH &master, MAPDHASH *bus_master) {
 		}
 		free(cstr);
 	} else if (mbus->second.m_typ == MAPT_MAP) {
-		char	errstr[256];
 		if (NULL == (strp = getstring(*mbus->second.u.m_m, KY_NAME))) {
-			snprintf(errstr, sizeof(errstr), "ERR: %s MASTER.BUS "
+			gbl_msg.error("%s MASTER.BUS "
 				"exists, is a map, but has no name\n",
 				pname->c_str());
-			fprintf(stderr,   "%s", errstr);
-			fprintf(gbl_dump, "%s", errstr);
 		} else if (NULL == (bi = find_bus(strp))) {
-			snprintf(errstr, sizeof(errstr), "ERR: %s MASTER.BUS "
+			gbl_msg.error("ERR: %s MASTER.BUS "
 				"exists, is a map, but name %s not found\n",
 				pname->c_str(), strp->c_str());
-			fprintf(stderr,   "%s", errstr);
-			fprintf(gbl_dump, "%s", errstr);
 		} else if ((bi->m_hash != mbus->second.u.m_m)
 					&&(strp->compare(*bi->m_name)==0)) {
 				bi->init(bus_master, mbus->second.u.m_m);
 				mbus->second.u.m_m = bi->m_hash;
 		}
 	} else {
-		gbl_err++;
-		fprintf(gbl_dump,
-			"ERR: %s MASTER.BUS exists, but isn't a string!\n",
-			pname->c_str());
-		fprintf(stderr,
-			"ERR: %s MASTER.BUS exists, but isn't a string!\n",
+		gbl_msg.error("%s MASTER.BUS exists, but isn't a string!\n",
 			pname->c_str());
 	}
 }
@@ -1780,8 +1731,7 @@ void	build_bus_list(MAPDHASH &master) {
 
 	gbl_blist = bl;
 
-	if (gbl_dump)
-		fprintf(gbl_dump, "------------ BUILD-BUS-LIST------------\n");
+	gbl_msg.info("------------ BUILD-BUS-LIST------------\n");
 
 
 	if (NULL != (str = getstring(master, KYDEFAULT_BUS))) {
@@ -1790,7 +1740,7 @@ void	build_bus_list(MAPDHASH &master) {
 
 	//
 	if (refbus(master)) {
-		fprintf(gbl_dump, "Adding a refbus (master)\n");
+		gbl_msg.info("Adding a refbus (master)\n");
 		bl->addbus(&master);
 	}
 	//

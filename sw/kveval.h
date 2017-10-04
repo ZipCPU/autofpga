@@ -43,7 +43,7 @@
 #include "mapdhash.h"
 #include "globals.h"
 
-#define	REHASH	do { fprintf(gbl_dump, "REEVAL %s:%d\n", __FILE__, __LINE__); reeval(gbl_hash); mapdump(gbl_dump, *gbl_hash); } while(0)
+#define	REHASH	do { gbl_msg.info("REEVAL %s:%d\n", __FILE__, __LINE__); reeval(gbl_hash); gbl_msg.dump(*gbl_hash); } while(0)
 typedef	std::vector<MAPDHASH *>	MAPSTACK;
 
 bool	get_named_kvpair(MAPSTACK &stack, MAPDHASH &here, STRING &key,

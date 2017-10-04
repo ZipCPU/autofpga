@@ -45,6 +45,7 @@
 #include "legalnotice.h"
 #include "clockinfo.h"
 #include "globals.h"
+#include "msgs.h"
 
 const	unsigned long	CLOCKINFO::UNKNOWN_PS = 2ul;
 const	unsigned long	CLOCKINFO::PICOSECONDS_PER_SECOND = 1000000000000ul;
@@ -139,8 +140,7 @@ void	add_to_clklist(MAPDHASH *ckmap) {
 		case MAPT_INT: case MAPT_AST: case MAPT_MAP:
 		default:
 			if (!getvalue(*ckmap, KY_FREQUENCY, ifreq)) {
-				gbl_err++;
-				fprintf(gbl_dump, "Could not evaluate the "
+				gbl_msg.error("Could not evaluate the "
 					"frequency of clock %s\n",
 					(sname)?(sname->c_str())
 						: "(Unnamed-clock)");
@@ -163,16 +163,14 @@ void	add_to_clklist(MAPDHASH *ckmap) {
 		STRINGP		wname;
 		bool		already_defined = false;
 
-		if (gbl_dump)
-			fprintf(gbl_dump, "Examining clock: %s %s %s\n",
+		gbl_msg.info("Examining clock: %s %s %s\n",
 				pname, (pwire)?pwire:"(Unspec)",
 				(pfreq)?pfreq:"(Unspec)");
 
 		for(unsigned i=0; i<id; i++) {
 			if (cklist[i].m_name->compare(pname)==0) {
 				already_defined = true;
-				fprintf(gbl_dump,
-					"Clock %s is already defined: %s %ld\n",
+				gbl_msg.info("Clock %s is already defined: %s %ld\n",
 						cklist[i].m_name->c_str(),
 						(cklist[i].m_wire)
 						  ? cklist[i].m_wire->c_str()
@@ -180,19 +178,18 @@ void	add_to_clklist(MAPDHASH *ckmap) {
 						cklist[i].m_interval_ps);
 				if ((pwire)&&(cklist[i].m_wire == NULL)) {
 					cklist[i].m_wire = new STRING(pwire);
-					fprintf(gbl_dump, "Clock %s\'s wire set to %s\n", pname, pwire);
+					gbl_msg.info("Clock %s\'s wire set to %s\n", pname, pwire);
 				} else if ((pwire)&&(cklist[i].m_wire->compare(pwire) != 0)) {
-					gbl_err++;
-					fprintf(gbl_dump, "ERR: Clock %s has a conflicting wire definition: %s and %s\n", pname, pwire, cklist[i].m_wire->c_str());
+					gbl_msg.error("Clock %s has a conflicting wire definition: %s and %s\n", pname, pwire, cklist[i].m_wire->c_str());
 				}
 
 				if ((pfreq)&&(cklist[i].interval_ps()==CLOCKINFO::UNKNOWN_PS)) {
 					clocks_per_second = strtoul(pfreq, NULL, 0);
-					fprintf(gbl_dump, "Setting %s clock frequency to %ld\n", pname, clocks_per_second);
+					gbl_msg.info("Setting %s clock frequency to %ld\n", pname, clocks_per_second);
 					cklist[i].setfrequency(
 							clocks_per_second);
 				} else if ((ifreq)&&(cklist[i].interval_ps() == CLOCKINFO::UNKNOWN_PS)) {
-					fprintf(gbl_dump, "Setting %s clock frequency to %u\n", pname, ifreq);
+					gbl_msg.info("Setting %s clock frequency to %u\n", pname, ifreq);
 					cklist[i].setfrequency(
 							(unsigned long)
 							((unsigned)ifreq));
@@ -220,18 +217,13 @@ void	add_to_clklist(MAPDHASH *ckmap) {
 				cki->setfrequency(clocks_per_second);
 			}
 
-			char	outstr[256];
-
-			sprintf(outstr, "ADDING CLOCK: %s, %s",
-					pname, wname->c_str());
 			if (clocks_per_second != 0)
-				sprintf(outstr, "%s, at %lu Hz\n", outstr,
-						clocks_per_second);
+				gbl_msg.userinfo("ADDING CLOCK: %s, %s, at %lu Hz\n",
+					pname, wname->c_str(),
+					clocks_per_second);
 			else
-				strcat(outstr, "\n");
-
-			if (gbl_dump)
-				fputs(outstr, gbl_dump);
+				gbl_msg.userinfo("ADDING CLOCK: %s, %s\n",
+					pname, wname->c_str());
 		}
 
 		if (pname) pname = strtok_r(NULL, DELIMITERS, &tname);
@@ -260,8 +252,9 @@ CLOCKINFO	*getclockinfo(STRING &clock_name) {
 CLOCKINFO	*getclockinfo(STRINGP clock_name) {
 	if (!clock_name) {
 		// Get the default clock
-		fprintf(stderr, "WARNING: Assuming a default clock of clk\n");
+		gbl_msg.fatal("No clock name given (might have assumed a default clock of clk)\n");
 		STRING	str("clk");
+		// assert(0);
 		return getclockinfo(str);
 	}
 	return getclockinfo(*clock_name);
@@ -299,8 +292,7 @@ void	find_clocks(MAPDHASH &master) {
 	MAPDHASH	*ckkey;
 	MAPDHASH::iterator	kypair;
 
-	if (gbl_dump)
-		fprintf(gbl_dump, "------------ FIND-CLOCKS!! ------------\n");
+	gbl_msg.info("------------ FIND-CLOCKS!! ------------\n");
 
 	// If we already have at least one clock, then we must've been called
 	// before.  Do nothing more.

@@ -40,6 +40,7 @@
 #include "kveval.h"
 #include "keys.h"
 #include "ast.h"
+#include "msgs.h"
 
 
 typedef	std::vector<MAPDHASH *>	MAPSTACK;
@@ -243,9 +244,7 @@ bool	subresults_into(MAPSTACK stack, MAPDHASH *here, STRINGP &sval) {
 					break;
 				} endpos = kylen+1+kystart-sloc;
 				if (ptr[kylen] != ')') {
-					fprintf(stderr, "ERR: Closing parentheses for %*s not found\n", kylen, ptr);
-					exit(EXIT_FAILURE);
-					assert(ptr[kylen] == ')');
+					gbl_msg.fatal("Closing parentheses for %*s not found\n", kylen, ptr);
 				}
 			} else {
 				for(; ptr[kylen]; kylen++) {

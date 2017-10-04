@@ -1,10 +1,10 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	globals.h
+// Filename: 	msgs.h
 //
 // Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 //
-// Purpose:	
+// Purpose:	A class for handling messages to the user
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
@@ -35,13 +35,37 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 //
-#ifndef	GLOBALS_H
-#define	GLOBALS_H
+#ifndef	MSGS_H
+#define	MSGS_H
 
+#include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+#include <assert.h>
+
+#include <string>
+#include <unordered_map>
 #include "mapdhash.h"
 
+class	MSGS {
+	FILE	*m_dump;
+	int	m_err;
+public:
+	MSGS(void) { m_err = 0; }
+	void	open(const char *fname) { close(); m_dump = fopen(fname, "W"); }
+	void	close(void) { if (m_dump) ::fclose(m_dump);  m_dump = NULL; };
+	void	flush(void) { if (m_dump) fflush(m_dump); }
+	//
+	void	info(const char *, ...);
+	void	userinfo(const char *, ...);
+	void	warning(const char *, ...);
+	void	error(const char *, ...);
+	// void	oserr(const char *, ...);
+	void	fatal(const char *, ...);
+	void	dump(MAPDHASH &map, const char *msg = NULL);
+	int	status(void) { return (m_err)?EXIT_FAILURE : EXIT_SUCCESS; }
+};
 
-extern	MAPDHASH	*gbl_hash;
+extern	MSGS	gbl_msg;
 
-#endif // GLOBALS_H
+#endif // MSGS

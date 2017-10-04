@@ -59,6 +59,7 @@
 #include "predicates.h"
 #include "subbus.h"
 #include "globals.h"
+#include "msgs.h"
 
 
 bool	PERIPH::issingle(void) {
@@ -131,11 +132,7 @@ unsigned PERIPH::naddr(void) {
 			p_naddr = value;
 			p_awid  = nextlg(p_naddr);
 		} else if ((int)p_naddr != value) {
-			fprintf(gbl_dump,
-				"WARNING: %s's number of addresses changed from %ld to %d\n",
-				p_name->c_str(), p_naddr, value);
-			fprintf(stderr,
-				"WARNING: %s's number of addresses changed from %ld to %d\n",
+			gbl_msg.warning("%s's number of addresses changed from %ld to %d\n",
 				p_name->c_str(), p_naddr, value);
 			p_naddr = value;
 			p_awid  = nextlg(p_naddr);
@@ -164,13 +161,9 @@ bool	compare_naddr(PERIPHP a, PERIPHP b) {
 	int		aorder, border;
 
 	if (a->p_phash == NULL) {
-		fflush(gbl_dump);
-		fprintf(stderr, "ERR: Peripheral %s has a null hash!\n", a->p_name->c_str());
-		assert(a->p_phash != NULL);
+		gbl_msg.fatal("Peripheral %s has a null hash!\n", a->p_name->c_str());
 	} if (b->p_phash == NULL) {
-		fflush(gbl_dump);
-		fprintf(stderr, "ERR: Peripheral %s has a null hash!\n", b->p_name->c_str());
-		assert(b->p_phash != NULL);
+		gbl_msg.fatal("ERR: Peripheral %s has a null hash!\n", b->p_name->c_str());
 	}
 
 	have_order = getvalue(*a->p_phash, KYSLAVE_ORDER, aorder);
@@ -219,17 +212,10 @@ int	PLIST::add(MAPDHASH *phash) {
 
 	pname  = getstring(*phash, KYPREFIX);
 	if (!pname) {
-		fprintf(stderr, "ERR: Skipping unnamed peripheral\n");
+		gbl_msg.warning("Skipping unnamed peripheral\n");
 		return -1;
 	}
-
 	if (!getvalue(*phash, KYNADDR, naddr)) {
-		/*
-		fprintf(stderr,
-		"WARNING: Skipping peripheral %s with no addresses\n",
-			pname->c_str());
-		return -1;
-		*/
 		naddr = 0;
 	}
 	if (issubbus(*phash)) {
@@ -376,8 +362,7 @@ void	PLIST::assign_addresses(unsigned dwidth, unsigned nullsz) {
 		setvalue(*(*this)[0]->p_phash, KYBASE, (*this)[0]->p_base);
 		m_address_width = (*this)[0]->get_slave_address_width();
 		if (m_address_width <= 0) {
-			gbl_err++;
-			fprintf(stderr, "ERR: Slave %s has zero NADDR (now address assigned)\n",
+			gbl_msg.error("Slave %s has zero NADDR (now address assigned)\n",
 				(*this)[0]->p_name->c_str());
 		}
 	} else {
@@ -416,8 +401,7 @@ void	PLIST::assign_addresses(unsigned dwidth, unsigned nullsz) {
 
 		for(iterator p=begin(); p!=end(); p++) {
 			if ((*p)->naddr() <= 0) {
-				gbl_err++;
-				fprintf(stderr, "ERR: Slave %s has zero "
+				gbl_msg.error("Slave %s has zero "
 					"NADDR (now address assigned)\n",
 					(*p)->p_name->c_str());
 			}
@@ -479,13 +463,10 @@ void	PLIST::assign_addresses(unsigned dwidth, unsigned nullsz) {
 
 			(*this)[i]->p_mask &= master_mask;
 
-			if (gbl_dump) {
-				fprintf(gbl_dump, "  %20s -> %08lx & 0x%08lx\n",
+			gbl_msg.info("  %20s -> %08lx & 0x%08lx\n",
 					(*this)[i]->p_name->c_str(),
 					(*this)[i]->p_base,
 					(*this)[i]->p_mask << daddr_abits);
-				fflush(gbl_dump);
-			}
 
 			if ((*this)[i]->p_phash) {
 				MAPDHASH	*ph = (*this)[i]->p_phash;
