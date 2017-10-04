@@ -1368,12 +1368,16 @@ int	main(int argc, char **argv) {
 			for(int j=1; ((j<2000)&&(argv[argn][j])); j++) {
 				switch(argv[argn][j]) {
 				case 'd':
-					if (argv[argn][j+1])
+					if (argv[argn][j+1]) {
 						gbl_msg.open("autofpga.dbg");
-					else if (argv[argn+1][0] == '-')
+						gbl_msg.userinfo("Opened %s\n", "autofpga.dbg");
+					} else if (argv[argn+1][0] == '-') {
 						gbl_msg.open("autofpga.dbg");
-					else
+						gbl_msg.userinfo("Opened %s\n", "autofpga.dbg");
+					} else {
 						gbl_msg.open(argv[++argn]);
+						gbl_msg.userinfo("Opened %s\n", argv[argn]);
+					}
 					j+=5000;
 					break;
 				case 'o': subdir = argv[++argn];
