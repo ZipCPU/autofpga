@@ -59,9 +59,6 @@
 #include "bldsim.h"
 #include "predicates.h"
 
-extern	int	gbl_err;
-extern	FILE	*gbl_dump;
-
 //
 // Is the given location within our hash a master?  Look it up.
 //
@@ -187,4 +184,22 @@ bool	refclock(MAPT &pmap) {
 	if (pmap.m_typ != MAPT_MAP)
 		return false;
 	return refbus(*pmap.u.m_m);
+}
+
+// Does the top level map contain a CPU as one of the peripherals?
+bool	has_cpu(MAPDHASH &phash) {
+	MAPDHASH::iterator	kvpair;
+	STRINGP	strp;
+
+	for(kvpair=phash.begin(); kvpair != phash.end(); kvpair++) {
+		if (kvpair->second.m_typ != MAPT_MAP)
+			continue;
+		if (!isbusmaster(kvpair->second))
+			continue;
+		strp = getstring(kvpair->second.u.m_m, KYMASTER_TYPE);
+		if (NULL == strp)
+			continue;
+		if (strp->compare(KYCPU)==0)
+			return true;
+	} return false;
 }

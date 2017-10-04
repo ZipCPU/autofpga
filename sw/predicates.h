@@ -95,4 +95,7 @@ bool	refbus(MAPT &pmap);
 bool	refclock(MAPDHASH &phash);
 bool	refclock(MAPT &pmap);
 
+// Does the toplevel map contain a CPU?
+bool	has_cpu(MAPDHASH &phash);
+
 #endif	// PREDICATES_H

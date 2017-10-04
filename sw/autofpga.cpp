@@ -1487,9 +1487,11 @@ int	main(int argc, char **argv) {
 	fp = fopen(str.c_str(), "w");
 	if (fp) { build_board_h(  master, fp, str); fclose(fp); }
 
-	str = subd->c_str(); str += "/board.ld";
-	fp = fopen(str.c_str(), "w");
-	if (fp) { build_board_ld(  master, fp, str); fclose(fp); }
+	if (has_cpu(master)) {
+		str = subd->c_str(); str += "/board.ld";
+		fp = fopen(str.c_str(), "w");
+		if (fp) { build_board_ld(  master, fp, str); fclose(fp); }
+	}
 
 	build_latex_tbls( master);
 
