@@ -40,6 +40,16 @@
 
 MSGS	gbl_msg;
 
+void	MSGS::open(const char *fname) {
+	close();
+	m_dump = fopen(fname, "w");
+
+	if (NULL == m_dump) {
+		fprintf(stderr, "ERR: Could not open %s\n", fname);
+		exit(EXIT_FAILURE);
+	}
+}
+
 void	MSGS::info(const char *fmt, ...) {
 	va_list	args;
 
@@ -70,13 +80,13 @@ void	MSGS::warning(const char *fmt, ...) {
 
 	if (m_dump) {
 		va_start(args, fmt);
-		fprintf(m_dump, prefix);
+		fprintf(m_dump, "%s", prefix);
 		vfprintf(m_dump, fmt, args);
 		va_end(args);
 	}
 
 	va_start(args, fmt);
-	fprintf(stderr, prefix);
+	fprintf(stderr, "%s", prefix);
 	vfprintf(stderr, fmt, args);
 	va_end(args);
 }
@@ -87,13 +97,13 @@ void	MSGS::error(const char *fmt, ...) {
 
 	if (m_dump) {
 		va_start(args, fmt);
-		fprintf(m_dump, prefix);
+		fprintf(m_dump, "%s", prefix);
 		vfprintf(m_dump, fmt, args);
 		va_end(args);
 	}
 
 	va_start(args, fmt);
-	fprintf(stderr, prefix);
+	fprintf(stderr, "%s", prefix);
 	vfprintf(stderr, fmt, args);
 	va_end(args);
 
@@ -106,13 +116,13 @@ void	MSGS::fatal(const char *fmt, ...) {
 
 	if (m_dump) {
 		va_start(args, fmt);
-		fprintf(m_dump, prefix);
+		fprintf(m_dump, "%s", prefix);
 		vfprintf(m_dump, fmt, args);
 		va_end(args);
 	}
 
 	va_start(args, fmt);
-	fprintf(stderr, prefix);
+	fprintf(stderr, "%s", prefix);
 	vfprintf(stderr, fmt, args);
 	va_end(args);
 

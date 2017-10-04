@@ -52,7 +52,7 @@ class	MSGS {
 	int	m_err;
 public:
 	MSGS(void) { m_err = 0; }
-	void	open(const char *fname) { close(); m_dump = fopen(fname, "W"); }
+	void	open(const char *fname);
 	void	close(void) { if (m_dump) ::fclose(m_dump);  m_dump = NULL; };
 	void	flush(void) { if (m_dump) fflush(m_dump); }
 	//
