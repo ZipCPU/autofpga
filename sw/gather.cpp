@@ -56,12 +56,14 @@
 #include "businfo.h"
 #include "subbus.h"
 #include "globals.h"
+#include "msgs.h"
 
 typedef	std::vector<PERIPHP>	APLIST;
 
 void	gather_peripherals(APLIST *alist, BUSINFO *bus, PLIST *plist) {
 	if (NULL == plist)
 		return;
+
 	for(unsigned k=0; k<plist->size(); k++) {
 		MAPDHASH	*ph = (*plist)[k]->p_phash;
 		unsigned base;
@@ -74,7 +76,8 @@ void	gather_peripherals(APLIST *alist, BUSINFO *bus, PLIST *plist) {
 		}
 		(*plist)[k]->p_regbase = base;
 		if ((NULL != (*plist)[k]->p_master_bus)
-			&&((*plist)[k]->p_master_bus != (*plist)[k]->p_slave_bus)) {
+			&&((*plist)[k]->p_master_bus != (*plist)[k]->p_slave_bus)
+			&&((*plist)[k]->p_master_bus != bus)) {
 			BUSINFO	*subbus;
 
 			subbus = (*plist)[k]->p_master_bus;
@@ -88,8 +91,6 @@ void	gather_peripherals(APLIST *alist, BUSINFO *bus, PLIST *plist) {
 APLIST	*gather_peripherals(BUSINFO *bus) {
 	APLIST	*alist = new APLIST;
 
-	gather_peripherals(alist, bus, bus->m_slist);
-	gather_peripherals(alist, bus, bus->m_dlist);
 	gather_peripherals(alist, bus, bus->m_plist);
 
 	return alist;
@@ -105,14 +106,12 @@ APLIST *full_gather(void) {
                 strp = new STRING("wbu");
         bi = find_bus(strp);
         if (NULL == bi) {
-                fprintf(stderr,
-                "WARNING: Register bus %s not found, switching to default\n",
+		gbl_msg.warning("Register bus %s not found, switching to default\n",
                 strp->c_str());
                 bi = find_bus((STRINGP)NULL);
         }
         if(!bi) {
-                fprintf(stderr, "ERR: No bus found for register definitions\n");
-                gbl_err++;
+		gbl_msg.error("No bus found for register definitions\n");
                 return NULL;
         }
 
