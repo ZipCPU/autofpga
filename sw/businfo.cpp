@@ -916,8 +916,8 @@ void	BUSINFO::writeout_bus_master_defns_v(FILE *fp) {
 	unsigned aw = address_width();
 	fprintf(fp, "\t// Wishbone master wire definitions for bus: %s\n",
 		m_name->c_str());
-	fprintf(fp, "\twire\t\t%s_cyc, %s_stb, %s_we, %s_stall, %s_err, "
-			"\t%s_none_sel;\n"
+	fprintf(fp, "\twire\t\t%s_cyc, %s_stb, %s_we, %s_stall, %s_err,\n"
+			"\t\t\t%s_none_sel;\n"
 			"\treg\t\t%s_many_ack;\n"
 			"\twire\t[%d:0]\t%s_addr;\n"
 			"\twire\t[%d:0]\t%s_data;\n"
