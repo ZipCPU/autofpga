@@ -453,13 +453,6 @@ void	build_board_h(    MAPDHASH &master, FILE *fp, STRING &fname) {
 			fprintf(fp, "%s\n\n", defns->c_str());
 	}
 
-	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
-		if (kvpair->second.m_typ != MAPT_MAP)
-			continue;
-		defns = getstring(kvpair->second, KYBDEF_INSERT);
-		if (defns)
-			fprintf(fp, "%s\n\n", defns->c_str());
-	}
 
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
 		const	char	*accessptr;
