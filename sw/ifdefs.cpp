@@ -63,9 +63,6 @@
 #include "kveval.h"
 #include "legalnotice.h"
 
-extern	int	gbl_err;
-extern	FILE	*gbl_dump;
-
 extern	bool	isperipheral(MAPT &pmap);
 extern	bool	isperipheral(MAPDHASH &phash);
 
@@ -119,11 +116,8 @@ void	build_access_ifdefs_v(MAPDHASH &master, FILE *fp) {
 		else if (NULL != dep) {
 			dephash.insert(*kvpair);
 		} else {
-			if ((*accessp)[0] == '!')
-				fprintf(fp, "// `define\t%s\n", accessp->c_str()+1);
-			else
-				fprintf(fp, "`define\t%s\n", accessp->c_str());
-			already_defined = already_defined + " " + (*accessp);
+			fprintf(fp, "`define\t%s\n", accessp->c_str());
+			already_defined = already_defined + " " + STRING(*accessp);
 		}
 	}
 
@@ -173,8 +167,6 @@ void	build_access_ifdefs_v(MAPDHASH &master, FILE *fp) {
 					char	*rawdep;
 
 					rawdep = dependency;
-					if (dependency[0] == '!')
-						rawdep = &dependency[1];
 					STRING	mstr = STRING(" ")+STRING(rawdep)
 						+STRING(" ");
 					if (NULL == strstr(already_defined.c_str(),
@@ -183,14 +175,9 @@ void	build_access_ifdefs_v(MAPDHASH &master, FILE *fp) {
 						break;
 					}
 
-					if (dependency[0] == '!')
-						depstr += STRING("`ifdef\t")
-							+STRING(rawdep)
-							+STRING("\n");
-					else
-						depstr += STRING("`ifndef\t")
-							+STRING(rawdep)
-							+STRING("\n");
+					depstr += STRING("`ifdef\t")
+						+STRING(rawdep)
+						+STRING("\n");
 					endstr += STRING("`endif\n");
 					dependency = strtok(NULL, DELIMITERS);
 				}
