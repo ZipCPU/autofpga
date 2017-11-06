@@ -26,7 +26,6 @@ the [Organic LED controller](https://github.com/ZipCPU/openarty/blob/master/rtl/
 Xilinx's [Internal Configuration Access Port](https://github.com/ZipCPU/wbicapetwo),
 the [wishbone scope](https://github.com/ZipCPU/wbscope),
 the [GPS controlled clock](https://github.com/ZipCPU/openarty/blob/master/rtl/gpsclock.v),
-the [GPS controlled clock](https://github.com/ZipCPU/openarty/blob/master/rtl/gpsclock.v),
 or even the [PWM Audio Controller](https://github.com/ZipCPU/wbpwmaudio).
 All of these peripherals have a very similar format when included within a
 top level design, all of these require a certain amount of care and feeding
