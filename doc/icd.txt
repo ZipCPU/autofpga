@@ -80,9 +80,10 @@ one of the following values:
 
 
 Other tags include
-ACCESS	This is a STRING that will be turned into an IFDEF in the main.v file.
-	The idea is, if this string is defined, then the components logic
-	will be included, otherwise not.
+ACCESS	This is a STRING that will be turned into a DEFINE and a couple IFDEFs
+	in the main.v file.  The idea is, if this string is defined, then the
+	components logic will be included, otherwise not.
+
 DEPENDS	If the logic of one component is dependent upon another, set the
 	DEPENDS tag to be a list of ACCESS parameters upon which this component
 	depends upon.  The ACCESS item for this parameter will then be
@@ -138,7 +139,7 @@ REGBASE (Created and used internally)
 MASK	(Created and used internally)
 AWID	Address width, in terms of # of address lines, used by this component
 
-REGSDEFS.H.INCLUDE	Placed at the top of the regdefs.h file
+REGDEFS.H.INCLUDE	Placed at the top of the regdefs.h file
 REGS.NOTE	A comment to be placed at the beginning of the register list
 		for this peripheral
 REGS.N		The number of registers this peripheral has.  AutoFPGA will then
@@ -148,8 +149,8 @@ REGS.0...?	Describes a register by name.  The first value is the offset
 		is a string defining a C #def'd constant.  The third and
 		subsequent tokens represent human readable names that may be
 		associated with this register.
-REGSDEFS.H.DEFNS	Placed with other definitions within regdefs.h
-REGS.H.INSERT
+REGDEFS.H.DEFNS	Placed with other definitions within regdefs.h
+REGDEFS.H.INSERT Placed in regdefs.h following all of the definitions
 I may change this to the following notation, though:
 REGSDEFS.NOTE
 REGS.<name>.ADDR	# Offset within the peripheral
@@ -260,6 +261,17 @@ SLAVE.TYPE	Indicates the type of peripheral
 SLAVE.BUS	Indicates the name of the bus used by this slave
 MASTER.BUS	Indicates that this component acts as a bus master, and
 		identifies (names) the bus it is a master of
+MASTER.TYPE	One of CPU, HOST, BUS, SUBBUS, ARBITER, or XCLOCK.
+	CPU	will cause board.ld to be created.  Depends upon RESET_ADDRESS
+		being defined.
+	HOST	Controls the bus from an external interface.
+	BUS, SUBBUS,
+	ARBITER,
+	XCLOCK	These define a series of bridges, whereby the master of one
+		bus can control another bus.  All of these therefore need to
+		have both a master and a slave bus.  Requests come in on the
+		slave bus, go out on the master, get returns to the master,
+		get sent back out on as returns on the slave bus.
 
 BUS.NAME	wb - master wishbone bus, dbg the debug port (wbu),
 		zip - the ZipCPU bus master
