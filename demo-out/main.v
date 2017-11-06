@@ -64,7 +64,7 @@
 `define	FLASH_ACCESS
 `define	BKRAM_ACCESS
 `define	FLASH_ACCESS
-// `define	OLEDBW_ACCESS
+`define	!OLEDBW_ACCESS
 `define	GPS_CLOCK
 `define	MOUSE_ACCESS
 `define	HDMI_IN_EDID_ACCESS
@@ -95,10 +95,10 @@
 // `endif // MUST_NOT_HAVE_B
 // `endif // MUST_HAVE_A
 //
-`ifndef	RTC_ACCESS
+`ifdef	RTC_ACCESS
 `define	RTCDATE_ACCESS
 `endif
-`ifndef	SDSPI_ACCESS
+`ifdef	SDSPI_ACCESS
 `define	SDSPI_SCOPE
 `endif
 //
@@ -1751,6 +1751,9 @@ module	main(i_clk, i_reset,
 	assign	spio_int = 1'b0;	// spio.INT.SPIO.WIRE
 `endif	// SPIO_ACCESS
 
+	//
+	//
+	//
 
 
 endmodule // main.v
