@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	autofpga.cpp
+// Filename: 	bldsim.cpp
 //
 // Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 //
@@ -101,6 +101,11 @@ bool	tb_tick(MAPDHASH &info, STRINGP ckname, FILE *fp) {
 	bool	result = false;
 	const STRING *ky = &KYSIM_TICK;
 
+	if ((ckname)&&(fp))
+		fprintf(fp, "\t\t//\n\t\t// SIM.TICK tags go here for SIM.CLOCK=%s\n\t\t//\n", ckname->c_str());
+	else if (fp)
+		fprintf(fp, "\t\t//\n\t\t// SIM.TICK tags go here for the default clock\n\t\t//\n");
+
 	if (tb_same_clock(info, ckname)) {
 		STRINGP	tick = getstring(info, *ky);
 		if (tick) {
@@ -139,6 +144,11 @@ bool	tb_dbg_condition(MAPDHASH &info, STRINGP ckname, FILE *fp) {
 	bool	result = true;
 	const STRING *ky = &KYSIM_DBGCONDITION;
 
+	if (fp) fprintf(fp, "\t\t//\n\t\t// SIM.DBGCONDITION\n"
+		"\t\t// Set writeout to true here for debug by printf access\n"
+		"\t\t// to this routine\n"
+		"\t\t//\n");
+
 	if (tb_same_clock(info, ckname)) {
 		STRINGP	tick = getstring(info, *ky);
 		if (tick) {
@@ -175,11 +185,17 @@ bool	tb_debug(MAPDHASH &info, STRINGP ckname, FILE *fp) {
 	bool	result = false;
 	const STRING *ky = &KYSIM_DEBUG;
 
+	if (fp)
+		fprintf(fp, "\t\t\t//\n\t\t\t// SIM.DEBUG tags can print here, supporting\n"
+			"\t\t\t// any attempts to debug by printf.  Following any\n"
+			"\t\t\t// code you place here, a newline will close the\n"
+			"\t\t\t// debug section.\n"
+			"\t\t\t//\n");
 	if (tb_same_clock(info, ckname)) {
 		STRINGP	tick = getstring(info, *ky);
 		if (tick) {
 			if (fp) {
-				fprintf(fp, "\t\t// %s from master\n", ky->c_str());
+				fprintf(fp, "\t\t\t// %s from master\n", ky->c_str());
 				fprintf(fp, "%s", tick->c_str());
 			}
 			result = true;
@@ -205,7 +221,7 @@ bool	tb_debug(MAPDHASH &info, STRINGP ckname, FILE *fp) {
 	}
 
 	if ((fp)&&(!result))
-		fprintf(fp, "\t\t// No %s tags defined\n", ky->c_str());
+		fprintf(fp, "\t\t\t// No %s tags defined\n", ky->c_str());
 	return result;
 }
 
@@ -216,13 +232,21 @@ void	build_main_tb_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 	legal_notice(master, fp, fname);
 
 	fprintf(fp, "//\n// SIM.INCLUDE\n//\n");
+	fprintf(fp, "// Any SIM.INCLUDE tags you define will be pasted here.\n");
+	fprintf(fp, "// This is useful for guaranteeing any include functions\n");
+	fprintf(fp, "// your simulation needs are called.\n//\n");
 	writeout(fp, master, KYSIM_INCLUDE);
 	fprintf(fp, "//\n// SIM.DEFINES\n//\n");
+	fprintf(fp, "// This tag is useful fr pasting in any #define values that\n");
+	fprintf(fp, "// might then control the simulation following.\n//\n");
 	writeout(fp, master, KYSIM_DEFINES);
 
 	// Class definitions
 	fprintf(fp, "class\tMAINTB : public TESTB<Vmain> {\npublic:\n");
-	fprintf(fp, "\t\t// SIM.DEFNS\n");
+	fprintf(fp, "\t\t// SIM.DEFNS\n\t\t//\n");
+	fprintf(fp, "\t\t// If you have any simulation components, create a\n");
+	fprintf(fp, "\t\t// SIM.DEFNS tag to have those components defined here\n");
+	fprintf(fp, "\t\t// as part of the main_tb.cpp function.\n");
 	writeout(fp, master, KYSIM_DEFNS);
 
 
@@ -255,6 +279,10 @@ void	build_main_tb_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 	} fprintf(fp, "\t{\n");
 */
 
+	fprintf(fp, "\t\t// SIM.INIT\n\t\t//\n");
+	fprintf(fp, "\t\t// If your simulation components need to be initialized,\n");
+	fprintf(fp, "\t\t// create a SIM.INIT tag.  That tag\'s value will be pasted\n");
+	fprintf(fp, "\t\t// here.\n\t\t//\n");
 	str = getstring(master, KYSIM_INIT);
 	if (NULL != str) {
 		fprintf(fp, "\t%s", str->c_str());
@@ -273,13 +301,24 @@ void	build_main_tb_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 
 	fprintf(fp, "\t}\n\n");
 
-	fprintf(fp, "\tvoid\treset(void) {\n");
+	fprintf(fp, "\tvoid\treset(void) {\n"
+		"\t\t// SIM.SETRESET\n"
+		"\t\t// If your simulation component needs logic before the\n"
+		"\t\t// tick with reset set, that logic can be placed into\n"
+		"\t\t// the SIM.SETRESET tag and thus pasted here.\n"
+		"\t\t//\n");
 
 	writeout(fp, master, KYSIM_SETRESET);
 
 	fprintf(fp, "\t\tm_core->i_clk = 1;\n"
 		"\t\tm_core->eval();\n");
 
+	fprintf(fp,
+		"\t\t// SIM.CLRRESET\n"
+		"\t\t// If your simulation component needs logic following the\n"
+		"\t\t// reset tick, that logic can be placed into the\n"
+		"\t\t// SIM.CLRRESET tag and thus pasted here.\n"
+		"\t\t//\n");
 	writeout(fp, master, KYSIM_CLRRESET);
 
 	fprintf(fp, "\t}\n");
@@ -349,17 +388,33 @@ void	build_main_tb_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 		fprintf(fp, "\t\tTESTB<Vmain>::tick();\n\n");
 		fprintf(fp, "\t\tbool\twriteout = false;\n\n");
 		fprintf(fp, "\t\t\t// KYSIM.DBGCONDITION tags\n");
+		fprintf(fp, "\t\t\t//\n\t\t\t// SIM.DBGCONDITION\n"
+		"\t\t\t// Set writeout to true here for debug by printf access\n"
+		"\t\t\t// to this routine\n"
+		"\t\t\t//\n");
+
 		writeout(fp, master, KYSIM_DBGCONDITION);
-		fprintf(fp, "\n\t\t\tif (writeout) {\n");
-		fprintf(fp, "\t\t\t\t\t// KYSIM.DEBUG tags\n");
+		fprintf(fp, "\n\t\t\tif (writeout) {\n"
+			"\t\t\t\t// SIM.DEBUG tags can print here, supporting\n"
+			"\t\t\t\t// any attempts to debug by printf.  Following any\n"
+			"\t\t\t\t// code you place here, a newline will close the\n"
+			"\t\t\t\t// debug section.\n"
+			"\t\t//\n");
 		writeout(fp, master, KYSIM_DEBUG);
 		fprintf(fp, "\t\t}\n");
-		
+
 		fprintf(fp, "\t}\n\n");
 	}
 
 
-	fprintf(fp, "\tbool\tload(uint32_t addr, const char *buf, uint32_t len) {\n");
+	fprintf(fp, "\t//\n\t// The load function\n"
+		"\t//\n"
+		"\t// This function is required by designs that need the flash or memory\n"
+		"\t// set prior to run time.  The test harness should be able to call\n"
+		"\t// this function to load values into any (memory-type) location\n"
+		"\t// on the bus.\n"
+		"\t//\n"
+		"\tbool\tload(uint32_t addr, const char *buf, uint32_t len) {\n");
 	STRING	prestr = STRING("\t\tuint32_t\tstart, offset, wlen, base, naddr;\n\n");
 
 	for(kvpair = master.begin(); kvpair != master.end(); kvpair++) {
@@ -384,7 +439,10 @@ void	build_main_tb_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 			prestr[0] = '\0';
 		}
 
-		fprintf(fp, "\t\tbase  = 0x%08x;\n\t\tnaddr = 0x%08x;\n\n", base, naddr);
+		fprintf(fp, "\t\t//\n\t\t// Loading the %s component\n\t\t//\n",
+			kvpair->first.c_str());
+		fprintf(fp, "\t\tbase  = 0x%08x;\n\t\tnaddr = 0x%08x;\n\n",
+			base, naddr);
 		fprintf(fp, "\t\tif ((addr >= base)&&(addr < base + naddr)) {\n");
 		fprintf(fp, "\t\t\t// If the start access is in %s\n", kvpair->first.c_str());
 		fprintf(fp, "\t\t\tstart = (addr > base) ? (addr-base) : 0;\n");
@@ -411,12 +469,20 @@ void	build_main_tb_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 			fprintf(fp, "#endif\t// %s\n", accessptr);
 		}
 
+		fprintf(fp, "\t\t//\n"
+			"\t\t// End of components with a SIM.LOAD tag, and a\n"
+			"\t\t// non-zero number of addresses (NADDR)\n"
+			"\t\t//\n");
 		fprintf(fp, "\t\t}\n\n");
 	}
 	fprintf(fp, "\t\treturn false;\n");
 	fprintf(fp, "\t}\n\n");
 
-	fprintf(fp, "\t//\n\t// KYSIM.METHODS\n\t//\n");
+	fprintf(fp, "\t//\n\t// KYSIM.METHODS\n\t//\n"
+		"\t// If your simulation code will need to call any of its own function\n"
+		"\t// define this tag by those functions (or other sim code), and\n"
+		"\t// it will be pasated here.\n"
+		"\t//\n");
 	writeout(fp, master, KYSIM_METHODS);
 
 	fprintf(fp, "\n};\n");
