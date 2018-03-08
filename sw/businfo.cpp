@@ -424,6 +424,7 @@ void	BUSINFO::init(MAPDHASH *phash, MAPDHASH *bp) {
 				gbl_msg.info("BUSINFO::INIT(%s)."
 					"CLOCK(%s)\n", prefix->c_str(),
 					strp->c_str());
+				assert(strp);
 				m_clock = getclockinfo(strp);
 				elm.m_typ = MAPT_MAP;
 				if (m_clock != NULL) {
@@ -1789,6 +1790,8 @@ void	build_bus_list(MAPDHASH &master) {
 				kvclock->second.m_typ = MAPT_MAP;
 				kvclock->second.u.m_m = (*bp)->m_clock->m_hash;
 			} else {
+				gbl_msg.fatal("Bus %s has no defined clock\n",
+					(*bp)->m_name->c_str());
 				(*bp)->m_clock = getclockinfo(NULL);
 				assert((*bp)->m_hash);
 				setstring((*bp)->m_hash, KYCLOCK, (*bp)->m_clock->m_name);
