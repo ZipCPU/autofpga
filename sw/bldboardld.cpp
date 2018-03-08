@@ -61,12 +61,13 @@
 #include "businfo.h"
 #include "globals.h"
 #include "gather.h"
+#include "msgs.h"
 
 void	build_board_ld(   MAPDHASH &master, FILE *fp, STRING &fname) {
 	MAPDHASH::iterator	kvpair;
 	STRINGP		strp;
 	int		reset_address;
-	PERIPHP		fastmem = NULL, bigmem = NULL;
+	PERIPHP		fastmem = NULL, bigmem = NULL, bootmem = NULL;
 	APLIST		*alist;
 
 	legal_notice(master, fp, fname, "/*******************************************************************************", "*");
@@ -92,13 +93,20 @@ void	build_board_ld(   MAPDHASH &master, FILE *fp, STRING &fname) {
 			p->p_regbase,
 			(p->naddr()*(p->p_slave_bus->data_width()/8)));
 
-		// Find our bigest and fastest memories
-		if (tolower(perm->c_str()[0]) != 'w')
-			continue;
-		if (!bigmem)
-			bigmem = p;
-		else if ((bigmem)&&(p->naddr() > bigmem->naddr())) {
-			bigmem = p;
+		if (tolower(perm->c_str()[0]) != 'w') {
+			// Read only memory must be flash
+			if (!bootmem)
+				bootmem = p;
+			else if ((bootmem)&&(KYFLASH.compare(*name)==0))
+				// Unless flash is explicitly named
+				bootmem = p;
+		} else {
+			// Find our bigest (and fastest?) memories
+			if (!bigmem)
+				bigmem = p;
+			else if ((bigmem)&&(p->naddr() > bigmem->naddr())) {
+				bigmem = p;
+			}
 		}
 	}
 	fprintf(fp, "}\n\n");
@@ -135,66 +143,110 @@ void	build_board_ld(   MAPDHASH &master, FILE *fp, STRING &fname) {
 				break;
 			}
 		} if (!found) {
-			for(unsigned i=0; i<alist->size(); i++) {
-				PERIPHP	p = (*alist)[i];
-				if (!ismemory(*p->p_phash))
-					continue;
-				STRINGP	name = getstring(*p->p_phash, KYLD_NAME);
-				if (NULL == name)
-					name = p->p_name;
-				if (KYFLASH.compare(*name) == 0) {
-					reset_address = p->p_regbase;
-					found = true;
-					break;
+			if (bootmem) {
+				reset_address = bootmem->p_regbase;
+			} else {
+				for(unsigned i=0; i<alist->size(); i++) {
+					PERIPHP	p = (*alist)[i];
+					if (!ismemory(*p->p_phash))
+						continue;
+					STRINGP	name = getstring(*p->p_phash, KYLD_NAME);
+					if (NULL == name) {
+						bootmem = p;
+						name = p->p_name;
+					} if (KYFLASH.compare(*name) == 0) {
+						reset_address = p->p_regbase;
+						bootmem = p;
+						found = true;
+						break;
+					}
 				}
 			}
 		} if (!found) {
 			reset_address = 0;
-			fprintf(stderr, "WARNING: RESET_ADDRESS NOT FOUND\n");
+			gbl_msg.warning("WARNING: RESET_ADDRESS NOT FOUND\n");
 		}
 	}
 
-	fprintf(fp, "SECTIONS\n{\n");
-	fprintf(fp, "\t.rocode 0x%08x : ALIGN(4) {\n"
+	if ((reset_address != 0)&&(!bootmem)) {
+		// We have a boot memory, but just don't know what it is.
+		// Let's go find it
+		for(unsigned i=0; i<alist->size(); i++) {
+			PERIPHP	p = (*alist)[i];
+
+			// If its not a memory, then we can't boot from it
+			if (!ismemory(*p->p_phash))
+				continue;
+
+			// If the reset address comes before this address,
+			// then its not the right peripheral
+			if ((unsigned)reset_address < p->p_regbase)
+				continue;
+			// Likewise if the reset address comes after this
+			// peripheral, this peripheral isn't it either
+			else if ((unsigned)reset_address
+				>= p->p_regbase + (p->naddr()
+					*(p->p_slave_bus->data_width()/8)))
+				continue;
+
+			// Otherwise we just found it.
+			bootmem = p;
+			break;
+		}
+	}
+
+	if (!bootmem) {
+		gbl_msg.warning("WARNING: No boot device, abandoning board.ld\n");
+	} else {
+
+		fprintf(fp, "SECTIONS\n{\n");
+		fprintf(fp, "\t.rocode 0x%08x : ALIGN(4) {\n"
 			"\t\t_boot_address = .;\n"
 			"\t\t*(.start) *(.boot)\n", reset_address);
-	fprintf(fp, "\t} > flash\n\t_kernel_image_start = . ;\n");
-	if ((fastmem)&&(fastmem != bigmem)) {
-		STRINGP	name = getstring(*fastmem->p_phash, KYLD_NAME);
-		if (!name)
+		fprintf(fp, "\t} > %s\n\t_kernel_image_start = . ;\n",
+			bootmem->p_name->c_str());
+		if ((fastmem)&&(fastmem != bigmem)) {
+			STRINGP	name = getstring(*fastmem->p_phash, KYLD_NAME);
+			if (!name)
 			name = fastmem->p_name;
-		fprintf(fp, "\t.fastcode : ALIGN_WITH_INPUT {\n"
-				"\t\t*(.kernel)\n"
-				"\t\t_kernel_image_end = . ;\n"
-				"\t\t*(.start) *(.boot)\n");
-		fprintf(fp, "\t} > %s AT>flash\n", name->c_str());
-	} else {
-		fprintf(fp, "\t_kernel_image_end = . ;\n");
-	}
+			fprintf(fp, "\t.fastcode : ALIGN_WITH_INPUT {\n"
+					"\t\t*(.kernel)\n"
+					"\t\t_kernel_image_end = . ;\n"
+					"\t\t*(.start) *(.boot)\n");
+			fprintf(fp, "\t} > %s", name->c_str());
+			if (bootmem != fastmem)
+				fprintf(fp, " AT>%s", bootmem->p_name->c_str());
+			fprintf(fp, "\n");
+		} else {
+			fprintf(fp, "\t_kernel_image_end = . ;\n");
+		}
 
-	if (bigmem) {
-		STRINGP	name = getstring(*bigmem->p_phash, KYLD_NAME);
-		if (!name)
-			name = bigmem->p_name;
-		fprintf(fp, "\t_ram_image_start = . ;\n");
-		fprintf(fp, "\t.ramcode : ALIGN_WITH_INPUT {\n");
-		if ((!fastmem)||(fastmem == bigmem))
-			fprintf(fp, "\t\t*(.kernel)\n");
-		fprintf(fp, ""
-			"\t\t*(.text.startup)\n"
-			"\t\t*(.text*)\n"
-			"\t\t*(.rodata*) *(.strings)\n"
-			"\t\t*(.data) *(COMMON)\n"
-		"\t\t}> %s AT> flash\n", bigmem->p_name->c_str());
-		fprintf(fp, "\t_ram_image_end = . ;\n"
-			"\t.bss : ALIGN_WITH_INPUT {\n"
-				"\t\t*(.bss)\n"
-				"\t\t_bss_image_end = . ;\n"
-				"\t\t} > %s\n",
-			bigmem->p_name->c_str());
-	}
+		if (bigmem) {
+			STRINGP	name = getstring(*bigmem->p_phash, KYLD_NAME);
+			if (!name)
+				name = bigmem->p_name;
+			fprintf(fp, "\t_ram_image_start = . ;\n");
+			fprintf(fp, "\t.ramcode : ALIGN_WITH_INPUT {\n");
+			if ((!fastmem)||(fastmem == bigmem))
+				fprintf(fp, "\t\t*(.kernel)\n");
+			fprintf(fp, ""
+				"\t\t*(.text.startup)\n"
+				"\t\t*(.text*)\n"
+				"\t\t*(.rodata*) *(.strings)\n"
+				"\t\t*(.data) *(COMMON)\n"
+			"\t\t}> %s", bigmem->p_name->c_str());
+			if (bootmem != bigmem)
+				fprintf(fp, " AT> %s", bootmem->p_name->c_str());
+			fprintf(fp, "\n\t_ram_image_end = . ;\n"
+				"\t.bss : ALIGN_WITH_INPUT {\n"
+					"\t\t*(.bss)\n"
+					"\t\t_bss_image_end = . ;\n"
+					"\t\t} > %s\n",
+				bigmem->p_name->c_str());
+		}
 
-	fprintf(fp, "\t_top_of_heap = .;\n");
-	fprintf(fp, "}\n");
+		fprintf(fp, "\t_top_of_heap = .;\n");
+		fprintf(fp, "}\n");
+	}
 }
 
