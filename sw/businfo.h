@@ -96,6 +96,7 @@ public:
 
 	bool	need_translator(BUSINFO *b);
 	void	writeout_slave_defn_v(FILE *fp, const char *name, const char *errwire = NULL, const char *btyp="");
+	void	write_addr_range(FILE *fp, const PERIPHP p, const int dalinse);
 	void	writeout_bus_slave_defns_v(FILE *fp);
 	void	writeout_bus_master_defns_v(FILE *fp);
 	void	writeout_bus_defns_v(FILE *fp);

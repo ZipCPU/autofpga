@@ -4,7 +4,7 @@
 //
 // Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 //
-// Purpose:	
+// Purpose:
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
@@ -269,7 +269,7 @@ void	BUSINFO::post_countsio(void) {
 	gbl_msg.info("BUSINFO::POST-COUNTSIO[%4s]: SINGLE=%2d, DOUBLE=%2d, TOTAL=%2d\n",
 		m_name->c_str(), m_num_single, m_num_double, m_num_total);
 }
-	
+
 void	BUSINFO::countsio(MAPDHASH *phash) {
 	STRINGP	strp;
 
@@ -583,7 +583,7 @@ void	BUSLIST::countsio(MAPDHASH *phash) {
 	} else {
 		gbl_msg.fatal("Internal error\n");
 	}
-		
+
 
 	// Use this peripheral, and count the number of each peripheral
 	// type
@@ -671,7 +671,7 @@ void	BUSLIST::adddefault(MAPDHASH &master, STRINGP defname) {
 		// so that the bus named defname is the first.
 		//
 		if (NULL != (bi = find_bus(defname))) {
-	
+
 			// This bus already exists
 			for(unsigned k=0; k<size(); k++) {
 				if (((*this)[k]->m_name)
@@ -950,6 +950,17 @@ void	writeout_bus_defns_v(FILE *fp) {
 	}
 }
 
+void	BUSINFO::write_addr_range(FILE *fp, const PERIPHP p, const int dalines) {
+	unsigned w = address_width();
+	w = (w+3)/4;
+	if (p->p_naddr == 1)
+		fprintf(fp, " // 0x%0*lx", w, p->p_base);
+	else
+		fprintf(fp, " // 0x%0*lx - 0x%0*lx",
+			w, p->p_base, w, p->p_base + (p->p_naddr<<(dalines))-1);
+
+}
+
 void	BUSINFO::writeout_bus_select_v(FILE *fp) {
 	STRING	addrbus = STRING(*m_name)+"_addr";
 	unsigned	sbaw = address_width();
@@ -985,9 +996,11 @@ void	BUSINFO::writeout_bus_select_v(FILE *fp) {
 					(*m_slist)[i]->p_name->c_str(), m_name->c_str(),
 					m_name->c_str(),
 					sbaw-1, unused_lsbs,
-					sbaw-unused_lsbs, 
+					sbaw-unused_lsbs,
 					(sbaw-unused_lsbs+3)/4,
 					(*m_slist)[i]->p_base >> (unused_lsbs+dalines));
+					write_addr_range(fp, (*m_slist)[i], dalines);
+					fprintf(fp, "\n");
 			}
 		}
 
@@ -1016,9 +1029,10 @@ void	BUSINFO::writeout_bus_select_v(FILE *fp) {
 				sbaw-unused_lsbs,
 				(sbaw-unused_lsbs+3)/4,
 				(*m_dlist)[i]->p_base>>(dalines+unused_lsbs));
+				write_addr_range(fp, (*m_dlist)[i], dalines);
+				fprintf(fp, "\n");
 			}
 		}
-			
 	}
 
 	sbaw = address_width();
@@ -1043,7 +1057,7 @@ void	BUSINFO::writeout_bus_select_v(FILE *fp) {
 				assert(sbaw > unused_lsbs);
 				assert(sbaw > 0);
 				fprintf(fp, "\tassign\t%12s_sel "
-					"= ((%s[%2d:%2d] & %2d\'h%lx) == %2d\'h%0*lx);\n",
+					"= ((%s[%2d:%2d] & %2d\'h%lx) == %2d\'h%0*lx);",
 					(*m_plist)[i]->p_name->c_str(),
 					addrbus.c_str(),
 					sbaw-1,
@@ -1052,6 +1066,8 @@ void	BUSINFO::writeout_bus_select_v(FILE *fp) {
 					sbaw-unused_lsbs,
 					(sbaw-unused_lsbs+3)/4,
 					(*m_plist)[i]->p_base>>(dalines+unused_lsbs));
+				write_addr_range(fp, (*m_plist)[i], dalines);
+				fprintf(fp, "\n");
 			}
 		} if ((*m_plist)[i]->p_master_bus) {
 			fprintf(fp, "//x2\tWas a master bus as well\n");
@@ -1138,7 +1154,7 @@ void	BUSINFO::writeout_bus_logic_v(FILE *fp) {
 	if (m_plist->size() == 0) {
 		// Since this bus has no slaves, any attempt to access it
 		// needs to cause a bus error.
-		fprintf(fp, 
+		fprintf(fp,
 			"\t\tassign\t%s_err   = %s_stb;\n"
 			"\t\tassign\t%s_stall = 1\'b0;\n"
 			"\t\talways @(*)\n\t\t\t%s_ack   <= 1\'b0;\n"
@@ -1830,3 +1846,19 @@ void	build_bus_list(MAPDHASH &master) {
 
 	reeval(master);
 }
+
+#ifdef	DUMP_BUS_TREE
+void	BUSINFO::dump_bus_tree(int tab=0) {
+
+	gbl_msg.info("%*sDUMP BUS-TREE: %s\n",
+		tab, "", b_name->c_str());
+
+	for(m_plist::iterator pp=m_plist->begin(); pp != m_plist->end(); pp++) {
+		gbl_msg.info("%*s%s\n", tab+1, "", (*pp)->p_name->c_str());
+	}
+}
+
+void	dump_global_buslist(void) {
+	find_bus(0)->dump_bus_tree(0);
+}
+#endif
