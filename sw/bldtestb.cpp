@@ -104,6 +104,8 @@ void	build_testb_h(MAPDHASH &master, FILE *fp, STRING &fname) {
 "			m_trace = new VerilatedVcdC;\n"
 "			m_core->trace(m_trace, 99);\n"
 "			m_trace->open(vcdname);\n"
+"			m_trace->set_time_resolution(\"ps\");\n"
+"			m_trace->set_time_unit(\"ps\");\n"
 "		}\n"
 "	}\n"
 "\n"
