@@ -47,6 +47,7 @@
 #include "clockinfo.h"
 
 void	build_testb_h(MAPDHASH &master, FILE *fp, STRING &fname) {
+	bool	multiclock = false;
 	// Find all the clocks in the design, and categorize them
 	find_clocks(master);
 
@@ -61,7 +62,18 @@ void	build_testb_h(MAPDHASH &master, FILE *fp, STRING &fname) {
 "#include <verilated_vcd_c.h>\n"
 "#include \"tbclock.h\"\n");
 
+	if (cklist.size() == 0) {
+		fprintf(stderr, "ERR: No clocks defined!\n");
+		exit(EXIT_FAILURE);
+	}
+
 	if (cklist.size() > 1)
+		multiclock = true;
+	else if (cklist[0].m_simclass != NULL)
+		multiclock = true;
+	else
+		multiclock = false;
+	if (multiclock)
 		fprintf(fp, "#include <tbclock.h>\n");
 
 	fprintf(fp, "\n"
@@ -73,12 +85,16 @@ void	build_testb_h(MAPDHASH &master, FILE *fp, STRING &fname) {
 "	bool		m_done;\n"
 "	unsigned long	m_time_ps;\n");
 
-	if (cklist.size()>1)
+	if (multiclock) {
 		fprintf(fp, "\t// TBCLOCK is a clock support class, enabling"
 				" multiclock simulation\n\t// operation.\n");
 		for(unsigned i=0; i<cklist.size(); i++)
-			fprintf(fp, "\tTBCLOCK\tm_%s;\n",
+			fprintf(fp, "\t%s\tm_%s;\n",
+				(cklist[i].m_simclass)
+					? cklist[i].m_simclass->c_str()
+					: "TBCLOCK",
 				cklist[i].m_name->c_str());
+	}
 
 	fprintf(fp, "\n"
 "	TESTB(void) {\n"
@@ -88,7 +104,7 @@ void	build_testb_h(MAPDHASH &master, FILE *fp, STRING &fname) {
 "		m_done     = false;\n"
 "		Verilated::traceEverOn(true);\n");
 
-	if (cklist.size()>1) {
+	if (multiclock) {
 		fprintf(fp, "// Set the initial clock periods\n");
 		for(unsigned i=0; i<cklist.size(); i++) {
 			double	freq;
@@ -136,7 +152,7 @@ void	build_testb_h(MAPDHASH &master, FILE *fp, STRING &fname) {
 "\n"
 "	virtual	void	tick(void) {\n");
 
-	if (cklist.size() > 1) {
+	if (multiclock) {
 		fprintf(fp, ""
 			"\t\tunsigned	mintime = m_%s.time_to_edge();\n\n",
 				cklist[0].m_name->c_str());
@@ -197,7 +213,7 @@ void	build_testb_h(MAPDHASH &master, FILE *fp, STRING &fname) {
 		"\t\t}\n\n");
 
 
-	if (cklist.size() > 1) {
+	if (multiclock) {
 		for(unsigned i=0; i<cklist.size(); i++)
 			fprintf(fp, "\t\tif (m_%s.falling_edge()) {\n"
 				"\t\t\tm_changed = true;\n"

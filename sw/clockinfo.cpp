@@ -11,7 +11,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017, Gisselquist Technology, LLC
+// Copyright (C) 2017-2018, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -56,6 +56,7 @@ CLOCKINFO::CLOCKINFO(void) {
 	m_hash = new MAPDHASH();
 	m_name = NULL;
 	m_wire = NULL;
+	m_simclass = NULL;
 	m_interval_ps = UNKNOWN_PS;
 }
 
@@ -106,23 +107,41 @@ void	CLOCKINFO::setwire(STRINGP wire) {
 		m_wire = wire;
 }
 
+void	CLOCKINFO::setclass(STRINGP simclass) {
+	STRINGP	strp;
+
+	strp = getstring(*m_hash, KY_CLASS);
+	if (NULL == strp) {
+		setstring(*m_hash, KY_CLASS, simclass);
+		m_simclass = simclass;
+	} else if (strp->compare(*simclass) != 0) {
+		fprintf(stderr, "ERR: Clock with multiple simulation classes: %s and %s\n",
+			strp->c_str(), simclass->c_str());
+		m_simclass = strp;
+	} else if (!m_simclass)
+		m_simclass = simclass;
+}
+
 void	add_to_clklist(MAPDHASH *ckmap) {
 	const	char	DELIMITERS[] = " \t\n,";
 	int	ifreq;
 
-	STRINGP	sname, swire, sfreq;
-	char	*dname, *dwire, *dfreq;
-	char	*pname, *pwire, *pfreq;
-	char	*tname, *twire, *tfreq;
+	STRINGP	sname, swire, sfreq, simclass;
+	char	*dname, *dwire, *dfreq, *dsimclass;
+	char	*pname, *pwire, *pfreq, *psimclass;
+	char	*tname, *twire, *tfreq, *tsimclass;
 
-	sname = getstring(*ckmap, KY_NAME);
-	swire = getstring(*ckmap, KY_WIRE);
+	sname    = getstring(*ckmap, KY_NAME);
+	swire    = getstring(*ckmap, KY_WIRE);
+	simclass = getstring(*ckmap, KY_CLASS);
 
 	// strtok requires a writable string
 	if (sname) dname = strdup(sname->c_str());
 	else	  dname = NULL;
 	if (swire) dwire = strdup(swire->c_str());
 	else	  dwire = NULL;
+	if (simclass) dsimclass = strdup(simclass->c_str());
+	else	  dsimclass = NULL;
 
 	{
 		MAPDHASH::iterator	kvfreq;
@@ -151,6 +170,7 @@ void	add_to_clklist(MAPDHASH *ckmap) {
 	pname = (dname) ? strtok_r(dname, DELIMITERS, &tname) : NULL;
 	pwire = (dwire) ? strtok_r(dwire, DELIMITERS, &twire) : NULL;
 	pfreq = (dfreq) ? strtok_r(dfreq, DELIMITERS, &tfreq) : NULL;
+	psimclass = (dsimclass) ? strtok_r(dsimclass, DELIMITERS, &tsimclass) : NULL;
 
 	if (!pname)
 		fprintf(stderr, "ERR: CLOCK has no name!\n");
@@ -160,7 +180,7 @@ void	add_to_clklist(MAPDHASH *ckmap) {
 	while(pname) {
 		unsigned	id = cklist.size();
 		unsigned long	clocks_per_second;
-		STRINGP		wname;
+		STRINGP		wname, wsimclass = NULL;
 		bool		already_defined = false;
 
 		gbl_msg.info("Examining clock: %s %s %s\n",
@@ -208,6 +228,10 @@ void	add_to_clklist(MAPDHASH *ckmap) {
 			else
 				wname = new STRING(STRING("i_")+STRING(pname));
 			cki->setwire(wname);
+			if (psimclass) {
+				wsimclass = new STRING(psimclass);
+				cki->setclass(wsimclass);
+			}
 			clocks_per_second = (unsigned)ifreq;
 			if (pfreq) {
 				clocks_per_second = strtoul(pfreq, NULL, 0);
@@ -229,12 +253,14 @@ void	add_to_clklist(MAPDHASH *ckmap) {
 		if (pname) pname = strtok_r(NULL, DELIMITERS, &tname);
 		if (pwire) pwire = strtok_r(NULL, DELIMITERS, &twire);
 		if (pfreq) pfreq = strtok_r(NULL, DELIMITERS, &tfreq);
+		if (psimclass) psimclass = strtok_r(NULL, DELIMITERS, &tsimclass);
 		ifreq = 0;
 	}
 
 	free(dname);
 	free(dwire);
 	free(dfreq);
+	free(dsimclass);
 }
 
 CLOCKINFO	*getclockinfo(STRING &clock_name) {
@@ -252,9 +278,9 @@ CLOCKINFO	*getclockinfo(STRING &clock_name) {
 CLOCKINFO	*getclockinfo(STRINGP clock_name) {
 	if (!clock_name) {
 		// Get the default clock
+		assert(0);
 		gbl_msg.fatal("No clock name given (might have assumed a default clock of clk)\n");
 		STRING	str("clk");
-		// assert(0);
 		return getclockinfo(str);
 	}
 	return getclockinfo(*clock_name);
@@ -273,6 +299,8 @@ void	expand_clock(MAPDHASH &info) {
 		return;
 	ckmap = kyclock->second.u.m_m;
 	sname = getstring(ckmap, KY_NAME);
+
+assert(sname);
 
 	// This will fail if multiple clocks are defined on the same line
 	cki = getclockinfo(sname);

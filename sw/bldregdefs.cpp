@@ -145,7 +145,7 @@ void write_regdefs(FILE *fp, APLIST *alist, unsigned longest_defname) {
 
 		ph = (*alist)[i]->p_phash;
 		pname = (*alist)[i]->p_name;
-		gbl_msg.info("WRITE-REGDEFS(%s)\n", (NULL != pname)?pname->c_str() : "(No-name)");
+		gbl_msg.info("WRITE-REGDEFS(%d, %s)\n", i, (NULL != pname)?pname->c_str() : "(No-name)");
 
 		// If there is a note key for this peripheral, place it into
 		// the output without modifications.
@@ -261,7 +261,7 @@ void	build_regdefs_h(  MAPDHASH &master, FILE *fp, STRING &fname) {
 
 	unsigned	longest_defname = 0;
 
-	// Get the list of peripherals
+	// Get the list of all peripherals
 	alist = full_gather();
 
 	longest_defname = get_longest_defname(alist);
@@ -436,7 +436,6 @@ void write_regnames(FILE *fp, APLIST *alist,
 			}
 		}
 	}
-
 }
 
 

@@ -11,7 +11,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017, Gisselquist Technology, LLC
+// Copyright (C) 2017-2018, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -167,7 +167,9 @@ extern	const	STRING	KYSIM_INCLUDE, KYSIM_DEFINES, KYSIM_DEFNS,
 // CLOCK definitions
 extern	const	STRING	KYCLOCK,
 			KYCLOCK_NAME,
+			KYCLOCK_CLASS,
 			KY_NAME,
+			KY_CLASS,
 			KY_FREQUENCY;
 // BUS definitions
 extern	const	STRING	KYBUS,

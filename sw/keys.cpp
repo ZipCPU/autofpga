@@ -4,14 +4,18 @@
 //
 // Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 //
-// Purpose:	
+// Purpose:	Defines the strings AutoFPGA understands.  These strings are
+// 		typically key names, as described by the ICD.  The actual string
+// 	names are (nearly) equal to their C++ name.  However, by defining them
+// 	here, I get some robustness to ICD changes, and some compiler help to
+// 	make sure I only use named strings.
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017, Gisselquist Technology, LLC
+// Copyright (C) 2017-2018, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -185,6 +189,7 @@ const	STRING	KYCLOCK="CLOCK";
 const	STRING	KYCLOCK_NAME="CLOCK.NAME";
 const	STRING	KY_NAME="NAME";
 const	STRING	KY_FREQUENCY="FREQUENCY";
+const	STRING	KY_CLASS="CLASS";
 // BUS definitions
 const	STRING	KYBUS = "BUS",
 		KYBUS_NAME = "BUS.NAME",

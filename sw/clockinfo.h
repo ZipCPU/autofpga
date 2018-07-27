@@ -11,7 +11,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017, Gisselquist Technology, LLC
+// Copyright (C) 2017-2018, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -46,7 +46,7 @@ class	CLOCKINFO {
 public:
 	MAPDHASH	*m_hash;
 	unsigned long	m_interval_ps;
-	STRINGP	m_name, m_wire;
+	STRINGP		m_name, m_wire, m_simclass;
 	static const unsigned long	UNKNOWN_PS,
 			PICOSECONDS_PER_SECOND;
 
@@ -63,6 +63,7 @@ public:
 	unsigned long	setfrequency(unsigned long frequency_hz);
 	void	setname(STRINGP name);
 	void	setwire(STRINGP wire);
+	void	setclass(STRINGP simclass);
 
 	void set(STRINGP name, STRINGP wire, unsigned long frequency_hz) {
 		setname(name);
