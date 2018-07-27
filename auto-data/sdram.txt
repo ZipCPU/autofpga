@@ -1,0 +1,163 @@
+################################################################################
+##
+## Filename: 	sdram.txt
+##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+##
+## Purpose:	Describes the logic necessary to connect an SDRAM to the design.
+##
+## Creator:	Dan Gisselquist, Ph.D.
+##		Gisselquist Technology, LLC
+##
+################################################################################
+##
+## Copyright (C) 2018, Gisselquist Technology, LLC
+##
+## This program is free software (firmware): you can redistribute it and/or
+## modify it under the terms of  the GNU General Public License as published
+## by the Free Software Foundation, either version 3 of the License, or (at
+## your option) any later version.
+##
+## This program is distributed in the hope that it will be useful, but WITHOUT
+## ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY or
+## FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+## for more details.
+##
+## You should have received a copy of the GNU General Public License along
+## with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
+## target there if the PDF file isn't present.)  If not, see
+## <http://www.gnu.org/licenses/> for a copy.
+##
+## License:	GPL, v3, as defined and found on www.gnu.org,
+##		http://www.gnu.org/licenses/gpl.html
+##
+##
+################################################################################
+##
+##
+@PREFIX= sdram
+@DEVID=SDRAM
+@$LGRAMSZ.EXPR=23
+@$NADDR=(1<<(@$LGRAMSZ-2))
+@$NBYTES=(1<<@$LGRAMSZ)
+@NBYTES.FORMAT=0x%08x
+@ACCESS= SDRAM_ACCESS
+@SLAVE.TYPE=MEMORY
+@SLAVE.BUS=wb
+@LD.PERM=rwx
+@TOP.PORTLIST=
+		// Top level SDRAM I/O ports
+		o_ram_clk, o_ram_cke, o_ram_cs_n, o_ram_ras_n, o_ram_cas_n,
+		o_ram_we_n, o_ram_bs, o_ram_addr, o_ram_udqm, o_ram_ldqm,
+		io_ram_data
+@TOP.IODECL=
+	// SDRAM
+	output	wire	o_ram_clk, o_ram_cke,
+			o_ram_cs_n, o_ram_ras_n, o_ram_cas_n, o_ram_we_n;
+	output	wire	[1:0]	o_ram_bs;
+	output	wire	[11:0]	o_ram_addr;
+	output	wire		o_ram_udqm, o_ram_ldqm;
+	inout	wire	[15:0]	io_ram_data;
+@TOP.DEFNS=
+	// SDRAM data wires
+	wire	[15:0]	w_ram_data;
+	wire		w_ram_drive_data;
+	reg	[15:0]	r_ram_data;
+@TOP.MAIN=
+			// SDRAM interface
+			// o_ram_clk,	// SDRAM clock = clk_100mhz_s = s_clk
+			o_ram_cs_n,	// Chip select
+			o_ram_cke,	// Clock enable
+			o_ram_ras_n,	// Row address strobe
+			o_ram_cas_n,	// Column address strobe
+			o_ram_we_n,	// Write enable
+			o_ram_bs,	// Bank select
+			o_ram_addr,	// Address lines
+			w_ram_drive_data,
+			r_ram_data,	// Data lines (input)
+			w_ram_data,	// Data lines (output)
+			{ o_ram_udqm, o_ram_ldqm }
+@TOP.INSERT=
+	//
+	// Tri-sate logic for the SDRAM
+	//
+	assign io_ram_data = (w_ram_drive_data) ? w_ram_data
+				: 16'bzzzz_zzzz_zzzz_zzzz;
+@MAIN.PORTLIST=
+		// The SDRAM I/O ports
+		o_ram_cs_n, o_ram_cke, o_ram_ras_n, o_ram_cas_n,
+			o_ram_we_n, o_ram_bs, o_ram_addr,
+			o_ram_drive_data, i_ram_data, o_ram_data,
+			o_ram_dqm
+@MAIN.IODECL=
+	// SDRAM control
+	output	wire		o_ram_cs_n, o_ram_cke;
+	output	wire		o_ram_ras_n, o_ram_cas_n, o_ram_we_n;
+	output	wire	[11:0]	o_ram_addr;
+	output	wire	[1:0]	o_ram_bs;
+	output	wire		o_ram_drive_data;
+	input	wire	[15:0]	i_ram_data;
+	output	wire	[15:0]	o_ram_data;
+	output	wire	[1:0]	o_ram_dqm;
+@MAIN.DEFNS=
+	//
+	// SDRAM
+	//
+	wire	[31:0]	@$(PREFIX)_debug;
+@MAIN.INSERT=
+	wbsdram	sdram(i_clk,
+		wb_cyc, (wb_stb)&&(sdram_sel),
+			wb_we, wb_addr[21:0], wb_data, wb_sel,
+			@$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_data,
+		o_ram_cs_n, o_ram_cke, o_ram_ras_n, o_ram_cas_n, o_ram_we_n,
+			o_ram_bs, o_ram_addr,
+			o_ram_drive_data, i_ram_data, o_ram_data, o_ram_dqm,
+		@$(PREFIX)_debug);
+@MAIN.ALT=
+	assign	o_ram_cs_n  = 1'b1;
+	assign	o_ram_cke   = 1'b1;
+	assign	o_ram_ras_n = 1'b1;
+	assign	o_ram_cas_n = 1'b1;
+	assign	o_ram_we_n  = 1'b1;
+	assign	o_ram_bs    = 2'b11;
+
+	assign	o_ram_drive_data  = 1'b0;
+
+	assign	sdram_debug = 32'h0000;
+@MEM.NAME= @$(PREFIX)
+@MEM.ACCESS = @$(LD.PERM)
+@REGS.N= 1
+@REGDEFS.H.DEFNS=
+#define	@$(DEVID)BASE	@$[0x%08x](REGBASE)
+#define	@$(DEVID)LEN	@$NBYTES
+#define	@$(DEVID)LGLEN	@$LGRAMSZ
+@REGS.0= 0 R_@$(DEVID) @$(DEVID)
+@BDEF.OSDEF=_BOARD_HAS_@$(DEVID)
+@BDEF.OSVAL=extern char _@$(PREFIX)[@$NBYTES];
+@LDSCRIPT.PSTR=	@$(LD.PERM)
+@LDSCRIPT.PTR=	@$(PREFIX)
+@LDSCRIPT.DEF=
+_@$(PREFIX)=ORIGIN(@$(PREFIX));
+@SIM.INCLUDE+=
+#include "sdramsim.h"
+@SIM.DEFNS+=
+#ifdef	@$(ACCESS)
+	SDRAMSIM	*m_@$(MEM.NAME);
+#endif
+@SIM.INIT+=
+#ifdef	@$(ACCESS)
+	m_@$(MEM.NAME) = new SDRAMSIM();
+#endif
+@SIM.TICK +=
+#ifdef	@$(ACCESS)
+		m_core->i_ram_data = (*m_@$(MEM.NAME))(1,
+			m_core->o_ram_cke, m_core->o_ram_cs_n,
+				m_core->o_ram_ras_n, m_core->o_ram_cas_n,
+				m_core->o_ram_we_n, m_core->o_ram_bs,
+				m_core->o_ram_addr, m_core->o_ram_drive_data,
+				m_core->o_ram_data, m_core->o_ram_dqm);
+
+#endif
+@SIM.LOAD +=
+			m_@$(MEM.NAME)->load(start, &buf[offset], wlen);
+#

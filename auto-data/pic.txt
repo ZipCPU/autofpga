@@ -58,7 +58,7 @@
 @BDEF.IONAME= _@$(PREFIX)
 @BDEF.IOTYPE= unsigned
 @BDEF.OSDEF= _BOARD_HAS_@$(DEVID)
-@BDEF.OSVAL= static volatile @$BDEF.IOTYPE *const @$BDEF.IONAME = ((@$BDEF.IOTYPE *)@$REGBASE);
+@BDEF.OSVAL= static volatile @$BDEF.IOTYPE *const @$BDEF.IONAME = ((@$BDEF.IOTYPE *)@$[0x%08x](REGBASE));
 @RTL.MAKE.GROUP= BUSPIC
 @RTL.MAKE.SUBD= cpu
 @RTL.MAKE.FILES=icontrol.v

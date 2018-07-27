@@ -15,7 +15,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017, Gisselquist Technology, LLC
+// Copyright (C) 2017-2018, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -379,7 +379,7 @@ static volatile unsigned *const _icape = ((unsigned *)9437184);
 static volatile unsigned *const _buserr = ((unsigned *)8388608);
 #ifdef	BUSPIC_ACCESS
 #define	_BOARD_HAS_BUSPIC
-static volatile unsigned *const _buspic = ((unsigned *)8388612);
+static volatile unsigned *const _buspic = ((unsigned *)0x00800004);
 #endif	// BUSPIC_ACCESS
 #ifdef	GPSUART_ACCESS
 #define	_BOARD_HAS_GPS_UART

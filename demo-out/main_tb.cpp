@@ -15,7 +15,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017, Gisselquist Technology, LLC
+// Copyright (C) 2017-2018, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -42,6 +42,10 @@
 //
 // SIM.INCLUDE
 //
+// Any SIM.INCLUDE tags you define will be pasted here.
+// This is useful for guaranteeing any include functions
+// your simulation needs are called.
+//
 // Looking for string: SIM.INCLUDE
 #include "verilated.h"
 #include "Vmain.h"
@@ -59,6 +63,9 @@
 #include "uartsim.h"
 //
 // SIM.DEFINES
+//
+// This tag is useful fr pasting in any #define values that
+// might then control the simulation following.
 //
 // Looking for string: SIM.DEFINES
 #define	sd_cmd_busy	v__DOT__sdcardi__DOT__r_cmd_busy
@@ -113,6 +120,10 @@
 class	MAINTB : public TESTB<Vmain> {
 public:
 		// SIM.DEFNS
+		//
+		// If you have any simulation components, create a
+		// SIM.DEFNS tag to have those components defined here
+		// as part of the main_tb.cpp function.
 // Looking for string: SIM.DEFNS
 #ifdef	SDSPI_ACCESS
 	SDSPISIM	m_sdcard;
@@ -128,6 +139,12 @@ public:
 	UARTSIM	*m_gpsu;
 #endif
 	MAINTB(void) {
+		// SIM.INIT
+		//
+		// If your simulation components need to be initialized,
+		// create a SIM.INIT tag.  That tag's value will be pasted
+		// here.
+		//
 		// From sdcard
 #ifdef	SDSPI_ACCESS
 		m_sdcard.debug(false);
@@ -150,10 +167,19 @@ public:
 	}
 
 	void	reset(void) {
+		// SIM.SETRESET
+		// If your simulation component needs logic before the
+		// tick with reset set, that logic can be placed into
+		// the SIM.SETRESET tag and thus pasted here.
+		//
 // Looking for string: SIM.SETRESET
 		m_core->i_cpu_reset = 1;
-		m_core->i_clk = 1;
-		m_core->eval();
+		TESTB<Vmain>::reset();
+		// SIM.CLRRESET
+		// If your simulation component needs logic following the
+		// reset tick, that logic can be placed into the
+		// SIM.CLRRESET tag and thus pasted here.
+		//
 // Looking for string: SIM.CLRRESET
 		m_core->i_cpu_reset = 0;
 	}
@@ -175,12 +201,18 @@ public:
 		TESTB<Vmain>::tick(); // Clock.size = 5
 	}
 
-// Evaluating clock clk
 
+	// Evaluating clock clk
+
+	// sim_clk_tick() will be called from TESTB<Vmain>::tick()
+	//   following any falling edge of clock clk
 	virtual	void	sim_clk_tick(void) {
 		// Default clock tick
 		bool	writeout;
 
+		//
+		// SIM.TICK tags go here for SIM.CLOCK=clk
+		//
 		// SIM.TICK from sdcard
 #ifdef	SDSPI_ACCESS
 		m_core->i_sd_data = m_sdcard((m_core->o_sd_data&8)?1:0,
@@ -223,7 +255,18 @@ public:
 #endif
 
 		writeout = false;
+		//
+		// SIM.DBGCONDITION
+		// Set writeout to true here for debug by printf access
+		// to this routine
+		//
 		if (writeout) {
+			//
+			// SIM.DEBUG tags can print here, supporting
+			// any attempts to debug by printf.  Following any
+			// code you place here, a newline will close the
+			// debug section.
+			//
 			//    SIM.DEBUG from sdcard
 			/*
 			printf(" SDSPI[%d,%d(%d),(%d)]",
@@ -279,9 +322,15 @@ public:
 
 		}
 	}
-// Evaluating clock hdmi_in_clk
 
+	// Evaluating clock hdmi_in_clk
+
+	// sim_hdmi_in_clk_tick() will be called from TESTB<Vmain>::tick()
+	//   following any falling edge of clock hdmi_in_clk
 	virtual	void	sim_hdmi_in_clk_tick(void) {
+		//
+		// SIM.TICK tags go here for SIM.CLOCK=hdmi_in_clk
+		//
 		// SIM.TICK from hdmiin
 		// HDMI input simulation
 		{ unsigned	r, g, b;
@@ -291,27 +340,102 @@ public:
 		m_core->i_hdmi_in_b = b;
 		}
 	}
-// Evaluating clock hdmi_in_hsclk
 
+	// Evaluating clock hdmi_in_hsclk
+
+	// sim_hdmi_in_hsclk_tick() will be called from TESTB<Vmain>::tick()
+	//   following any falling edge of clock hdmi_in_hsclk
 	virtual	void	sim_hdmi_in_hsclk_tick(void) {
+		//
+		// SIM.TICK tags go here for SIM.CLOCK=hdmi_in_hsclk
+		//
 		// No SIM.TICK tags defined
 		m_changed = false;
 	}
-// Evaluating clock clk_200mhz
 
+	// Evaluating clock clk_200mhz
+
+	// sim_clk_200mhz_tick() will be called from TESTB<Vmain>::tick()
+	//   following any falling edge of clock clk_200mhz
 	virtual	void	sim_clk_200mhz_tick(void) {
+		//
+		// SIM.TICK tags go here for SIM.CLOCK=clk_200mhz
+		//
 		// No SIM.TICK tags defined
 		m_changed = false;
 	}
-// Evaluating clock hdmi_out_clk
 
+	// Evaluating clock hdmi_out_clk
+
+	// sim_hdmi_out_clk_tick() will be called from TESTB<Vmain>::tick()
+	//   following any falling edge of clock hdmi_out_clk
 	virtual	void	sim_hdmi_out_clk_tick(void) {
+		//
+		// SIM.TICK tags go here for SIM.CLOCK=hdmi_out_clk
+		//
 		// No SIM.TICK tags defined
 		m_changed = false;
 	}
+	//
+	// Step until clock clk ticks
+	//
+	virtual	void	tick_clk(void) {
+		// Advance until the default clock ticks
+		do {
+			tick();
+		} while(!m_clk.rising_edge());
+	}
+
+	//
+	// Step until clock hdmi_in_clk ticks
+	//
+	virtual	void	tick_hdmi_in_clk(void) {
+		do {
+			tick();
+		} while(!m_hdmi_in_clk.rising_edge());
+	}
+
+	//
+	// Step until clock hdmi_in_hsclk ticks
+	//
+	virtual	void	tick_hdmi_in_hsclk(void) {
+		do {
+			tick();
+		} while(!m_hdmi_in_hsclk.rising_edge());
+	}
+
+	//
+	// Step until clock clk_200mhz ticks
+	//
+	virtual	void	tick_clk_200mhz(void) {
+		do {
+			tick();
+		} while(!m_clk_200mhz.rising_edge());
+	}
+
+	//
+	// Step until clock hdmi_out_clk ticks
+	//
+	virtual	void	tick_hdmi_out_clk(void) {
+		do {
+			tick();
+		} while(!m_hdmi_out_clk.rising_edge());
+	}
+
+	//
+	// The load function
+	//
+	// This function is required by designs that need the flash or memory
+	// set prior to run time.  The test harness should be able to call
+	// this function to load values into any (memory-type) location
+	// on the bus.
+	//
 	bool	load(uint32_t addr, const char *buf, uint32_t len) {
 		uint32_t	start, offset, wlen, base, naddr;
 
+		//
+		// Loading the bkram component
+		//
 		base  = 0x00c00000;
 		naddr = 0x00040000;
 
@@ -340,8 +464,15 @@ public:
 #else	// BKRAM_ACCESS
 			return false;
 #endif	// BKRAM_ACCESS
+		//
+		// End of components with a SIM.LOAD tag, and a
+		// non-zero number of addresses (NADDR)
+		//
 		}
 
+		//
+		// Loading the flash component
+		//
 		base  = 0x01000000;
 		naddr = 0x00400000;
 
@@ -362,6 +493,10 @@ public:
 #else	// FLASH_ACCESS
 			return false;
 #endif	// FLASH_ACCESS
+		//
+		// End of components with a SIM.LOAD tag, and a
+		// non-zero number of addresses (NADDR)
+		//
 		}
 
 		return false;
@@ -369,6 +504,10 @@ public:
 
 	//
 	// KYSIM.METHODS
+	//
+	// If your simulation code will need to call any of its own function
+	// define this tag by those functions (or other sim code), and
+	// it will be pasated here.
 	//
 // Looking for string: SIM.METHODS
 #ifdef	SDSPI_ACCESS

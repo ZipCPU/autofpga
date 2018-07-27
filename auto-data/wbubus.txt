@@ -43,8 +43,10 @@
 @BUS.NAME=wbu
 @BUS.CLOCK=clk
 @BUS.WIDTH=32
+@BUS.TYPE=wb
 @$BAUDRATE=1000000
-@$SETUP=@$CLKFREQHZ / @$.BAUDRATE
+@CLOCK.NAME=clk
+@$SETUP=@$(CLOCK.FREQUENCY) / @$BAUDRATE
 @SETUP.FORMAT=24'h%x
 @$BUS_ADDRESS_WIDTH=@$(MASTER.BUS.AWID)
 # @TOP.PORTLIST=
@@ -84,6 +86,10 @@
 	wire		wbu_zip_sel;
 	wire	[0:0]	wbubus_dbg;
 `ifndef	INCLUDE_ZIPCPU
+	//
+	// The bus-console depends upon the zip_dbg wires.  If there is no
+	// ZipCPU defining them, we'll need to define them here anyway.
+	//
 	wire		zip_dbg_ack, zip_dbg_stall;
 	wire	[31:0]	zip_dbg_data;
 `endif

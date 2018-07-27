@@ -15,7 +15,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017, Gisselquist Technology, LLC
+// Copyright (C) 2017-2018, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -55,6 +55,8 @@ public:
 	VerilatedVcdC*	m_trace;
 	bool		m_done;
 	unsigned long	m_time_ps;
+	// TBCLOCK is a clock support class, enabling multiclock simulation
+	// operation.
 	TBCLOCK	m_clk;
 	TBCLOCK	m_hdmi_in_clk;
 	TBCLOCK	m_hdmi_in_hsclk;
@@ -67,6 +69,7 @@ public:
 		m_trace    = NULL;
 		m_done     = false;
 		Verilated::traceEverOn(true);
+// Set the initial clock periods
 		m_clk.init(10000);	//  100.00 MHz
 		m_hdmi_in_clk.init(6734);	//  148.50 MHz
 		m_hdmi_in_hsclk.init(673);	// 1485.88 MHz
@@ -83,6 +86,8 @@ public:
 		if (!m_trace) {
 			m_trace = new VerilatedVcdC;
 			m_core->trace(m_trace, 99);
+			m_trace->spTrace()->set_time_resolution("ps");
+			m_trace->spTrace()->set_time_unit("ps");
 			m_trace->open(vcdname);
 		}
 	}
@@ -104,25 +109,29 @@ public:
 	}
 
 	virtual	void	tick(void) {
-		unsigned	mintime = m_clk.time_to_tick();
+		unsigned	mintime = m_clk.time_to_edge();
 
-		if (m_hdmi_in_clk.time_to_tick() < mintime)
-			mintime = m_hdmi_in_clk.time_to_tick();
+		if (m_hdmi_in_clk.time_to_edge() < mintime)
+			mintime = m_hdmi_in_clk.time_to_edge();
 
-		if (m_hdmi_in_hsclk.time_to_tick() < mintime)
-			mintime = m_hdmi_in_hsclk.time_to_tick();
+		if (m_hdmi_in_hsclk.time_to_edge() < mintime)
+			mintime = m_hdmi_in_hsclk.time_to_edge();
 
-		if (m_clk_200mhz.time_to_tick() < mintime)
-			mintime = m_clk_200mhz.time_to_tick();
+		if (m_clk_200mhz.time_to_edge() < mintime)
+			mintime = m_clk_200mhz.time_to_edge();
 
-		if (m_hdmi_out_clk.time_to_tick() < mintime)
-			mintime = m_hdmi_out_clk.time_to_tick();
+		if (m_hdmi_out_clk.time_to_edge() < mintime)
+			mintime = m_hdmi_out_clk.time_to_edge();
 
 		assert(mintime > 1);
 
+		// Pre-evaluate, to give verilator a chance to settle any
+		// combinatorial logic thatthat may have changed since the
+		// last clockevaluation, and then record that in the trace.
 		eval();
 		if (m_trace) m_trace->dump(m_time_ps+1);
 
+		// Advance each clock
 		m_core->i_clk = m_clk.advance(mintime);
 		m_core->i_hdmi_in_clk = m_hdmi_in_clk.advance(mintime);
 		m_core->i_hdmi_in_hsclk = m_hdmi_in_hsclk.advance(mintime);
@@ -130,10 +139,11 @@ public:
 		m_core->i_hdmi_out_clk = m_hdmi_out_clk.advance(mintime);
 
 		m_time_ps += mintime;
-
 		eval();
+		// If we are keeping a trace, dump the current state to that
+		// trace now
 		if (m_trace) {
-			m_trace->dump(m_time_ps+1);
+			m_trace->dump(m_time_ps);
 			m_trace->flush();
 		}
 
@@ -160,35 +170,40 @@ public:
 	}
 
 	virtual	void	sim_clk_tick(void) {
-			// Your test fixture should over-ride this method.
-			// If you change any of the inputs to the design
-			// (i.e. w/in main.v), then set m_changed to true.
-			m_changed = false;
-		}
+		// AutoFPGA will override this method within main_tb.cpp if any
+		// @SIM.TICK key is present within a design component also
+		// containing a @SIM.CLOCK key identifying this clock.  That
+		// component must also set m_changed to true.
+		m_changed = false;
+	}
 	virtual	void	sim_hdmi_in_clk_tick(void) {
-			// Your test fixture should over-ride this method.
-			// If you change any of the inputs to the design
-			// (i.e. w/in main.v), then set m_changed to true.
-			m_changed = false;
-		}
+		// AutoFPGA will override this method within main_tb.cpp if any
+		// @SIM.TICK key is present within a design component also
+		// containing a @SIM.CLOCK key identifying this clock.  That
+		// component must also set m_changed to true.
+		m_changed = false;
+	}
 	virtual	void	sim_hdmi_in_hsclk_tick(void) {
-			// Your test fixture should over-ride this method.
-			// If you change any of the inputs to the design
-			// (i.e. w/in main.v), then set m_changed to true.
-			m_changed = false;
-		}
+		// AutoFPGA will override this method within main_tb.cpp if any
+		// @SIM.TICK key is present within a design component also
+		// containing a @SIM.CLOCK key identifying this clock.  That
+		// component must also set m_changed to true.
+		m_changed = false;
+	}
 	virtual	void	sim_clk_200mhz_tick(void) {
-			// Your test fixture should over-ride this method.
-			// If you change any of the inputs to the design
-			// (i.e. w/in main.v), then set m_changed to true.
-			m_changed = false;
-		}
+		// AutoFPGA will override this method within main_tb.cpp if any
+		// @SIM.TICK key is present within a design component also
+		// containing a @SIM.CLOCK key identifying this clock.  That
+		// component must also set m_changed to true.
+		m_changed = false;
+	}
 	virtual	void	sim_hdmi_out_clk_tick(void) {
-			// Your test fixture should over-ride this method.
-			// If you change any of the inputs to the design
-			// (i.e. w/in main.v), then set m_changed to true.
-			m_changed = false;
-		}
+		// AutoFPGA will override this method within main_tb.cpp if any
+		// @SIM.TICK key is present within a design component also
+		// containing a @SIM.CLOCK key identifying this clock.  That
+		// component must also set m_changed to true.
+		m_changed = false;
+	}
 	virtual bool	done(void) {
 		if (m_done)
 			return true;
