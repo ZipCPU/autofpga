@@ -30,7 +30,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017, Gisselquist Technology, LLC
+// Copyright (C) 2017-2018, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -310,8 +310,7 @@ void	build_main_tb_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 
 	writeout(fp, master, KYSIM_SETRESET);
 
-	fprintf(fp, "\t\tm_core->i_clk = 1;\n"
-		"\t\tm_core->eval();\n");
+	fprintf(fp, "\t\tTESTB<Vmain>::reset();\n");
 
 	fprintf(fp,
 		"\t\t// SIM.CLRRESET\n"
@@ -340,73 +339,78 @@ void	build_main_tb_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 "	void	tick(void) {\n"
 "		if (done())\n"
 "			return;\n");
+fprintf(stderr, "BLDSIM:: #1\n");
+	fprintf(fp, "\t\tTESTB<Vmain>::tick(); // Clock.size = %ld\n\t}\n\n", cklist.size());
 
-	if (cklist.size() > 1) {
-		fprintf(fp, "\t\tTESTB<Vmain>::tick(); // Clock.size = %ld\n\t}\n\n", cklist.size());
+	for(unsigned i=0; i<cklist.size(); i++) {
+		bool	have_sim_tick = false, have_debug = false,
+			have_condition = false;
 
-		for(unsigned i=0; i<cklist.size(); i++) {
-			bool	have_sim_tick = false, have_debug = false,
-				have_condition = false;
-
-			fprintf(fp, "// Evaluating clock %s\n", cklist[i].m_name->c_str());
-			have_debug = tb_debug(master, cklist[i].m_name, NULL);
-			have_condition = tb_dbg_condition(master,
+		fprintf(fp, "\n\t// Evaluating clock %s\n",
+				cklist[i].m_name->c_str());
+		have_debug = tb_debug(master, cklist[i].m_name, NULL);
+		have_condition = tb_dbg_condition(master,
 						cklist[i].m_name, NULL);
-			have_sim_tick = tb_tick(master, cklist[i].m_name, NULL);
+		have_sim_tick = tb_tick(master, cklist[i].m_name, NULL);
 
-			if ((!have_sim_tick)&&(!have_condition)&&(!have_debug))
-				continue;
+		if ((!have_sim_tick)&&(!have_condition)&&(!have_debug))
+			continue;
 
 
-			fprintf(fp, "\n\tvirtual\tvoid\tsim_%s_tick(void) {\n",
+		fprintf(fp, "\n\t// sim_%s_tick() will be called from"
+				" TESTB<Vmain>::tick()\n"
+				"\t//   following any falling edge of clock "
+				"%s\n",
+				cklist[i].m_name->c_str(),
+				cklist[i].m_name->c_str());
+		fprintf(fp, "\tvirtual\tvoid\tsim_%s_tick(void) {\n",
+			cklist[i].m_name->c_str());
+		if (0 == i)
+			fprintf(fp, "\t\t// Default clock tick\n");
+
+		if ((have_debug)&&(have_condition))
+			fprintf(fp, "\t\tbool\twriteout;\n\n");
+		tb_tick(master, cklist[i].m_name, fp);
+		if (!have_sim_tick)
+			fprintf(fp, "\t\tm_changed = false;\n");
+
+		if ((have_debug)&&(have_condition)) {
+			fprintf(fp, "\t\twriteout = false;\n");
+
+			tb_dbg_condition(master, cklist[i].m_name, fp);
+
+			fprintf(fp, "\t\tif (writeout) {\n");
+			tb_debug(master, cklist[i].m_name, fp);
+			fprintf(fp, "\t\t}\n");
+		}
+		fprintf(fp, "\t}\n");
+	}
+fprintf(stderr, "BLDSIM:: #2\n");
+
+	if (cklist.size()>1) {
+		for(unsigned i=0; i<cklist.size(); i++) {
+			fprintf(fp, "\t//\n\t// Step until clock %s ticks\n\t//\n",
+				cklist[i].m_name->c_str());
+
+			fprintf(fp, "\tvirtual\tvoid\ttick_%s(void) {\n",
 				cklist[i].m_name->c_str());
 			if (0 == i)
-				fprintf(fp, "\t\t// Default clock tick\n");
+				fprintf(fp, "\t\t// Advance until the default clock ticks\n");
 
-			if ((have_debug)&&(have_condition))
-				fprintf(fp, "\t\tbool\twriteout;\n\n");
-			tb_tick(master, cklist[i].m_name, fp);
-			if (!have_sim_tick)
-				fprintf(fp, "\t\tm_changed = false;\n");
+			fprintf(fp, "\t\tdo {\n"
+				"\t\t\ttick();\n"
+				"\t\t} while(!m_%s.rising_edge());\n",
+				cklist[i].m_name->c_str());
 
-			if ((have_debug)&&(have_condition)) {
-				fprintf(fp, "\t\twriteout = false;\n");
-
-				tb_dbg_condition(master, cklist[i].m_name, fp);
-
-				fprintf(fp, "\t\tif (writeout) {\n");
-				tb_debug(master, cklist[i].m_name, fp);
-				fprintf(fp, "\t\t}\n");
-			}
-			fprintf(fp, "\t}\n");
+			fprintf(fp, "\t}\n\n");
 		}
-
 	} else {
-		fprintf(fp, "\t\t// KYSIM.TICK tags\n");
-		writeout(fp, master, KYSIM_TICK);
-
-		fprintf(fp, "\t\tTESTB<Vmain>::tick();\n\n");
-		fprintf(fp, "\t\tbool\twriteout = false;\n\n");
-		fprintf(fp, "\t\t\t// KYSIM.DBGCONDITION tags\n");
-		fprintf(fp, "\t\t\t//\n\t\t\t// SIM.DBGCONDITION\n"
-		"\t\t\t// Set writeout to true here for debug by printf access\n"
-		"\t\t\t// to this routine\n"
-		"\t\t\t//\n");
-
-		writeout(fp, master, KYSIM_DBGCONDITION);
-		fprintf(fp, "\n\t\t\tif (writeout) {\n"
-			"\t\t\t\t// SIM.DEBUG tags can print here, supporting\n"
-			"\t\t\t\t// any attempts to debug by printf.  Following any\n"
-			"\t\t\t\t// code you place here, a newline will close the\n"
-			"\t\t\t\t// debug section.\n"
-			"\t\t//\n");
-		writeout(fp, master, KYSIM_DEBUG);
-		fprintf(fp, "\t\t}\n");
-
-		fprintf(fp, "\t}\n\n");
+		fprintf(fp,
+			"\tinline\tvoid\ttick_%s(void) {\ttick();\t}\n\n",
+			cklist[0].m_name->c_str());
 	}
 
-
+fprintf(stderr, "BLDSIM:: #3\n");
 	fprintf(fp, "\t//\n\t// The load function\n"
 		"\t//\n"
 		"\t// This function is required by designs that need the flash or memory\n"
