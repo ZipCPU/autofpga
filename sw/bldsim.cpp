@@ -339,7 +339,6 @@ void	build_main_tb_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 "	void	tick(void) {\n"
 "		if (done())\n"
 "			return;\n");
-fprintf(stderr, "BLDSIM:: #1\n");
 	fprintf(fp, "\t\tTESTB<Vmain>::tick(); // Clock.size = %ld\n\t}\n\n", cklist.size());
 
 	for(unsigned i=0; i<cklist.size(); i++) {
@@ -385,7 +384,6 @@ fprintf(stderr, "BLDSIM:: #1\n");
 		}
 		fprintf(fp, "\t}\n");
 	}
-fprintf(stderr, "BLDSIM:: #2\n");
 
 	if (cklist.size()>1) {
 		for(unsigned i=0; i<cklist.size(); i++) {
@@ -410,7 +408,6 @@ fprintf(stderr, "BLDSIM:: #2\n");
 			cklist[0].m_name->c_str());
 	}
 
-fprintf(stderr, "BLDSIM:: #3\n");
 	fprintf(fp, "\t//\n\t// The load function\n"
 		"\t//\n"
 		"\t// This function is required by designs that need the flash or memory\n"
