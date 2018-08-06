@@ -54,7 +54,7 @@ public:
 	bool		m_changed;
 	VerilatedVcdC*	m_trace;
 	bool		m_done;
-	unsigned long	m_time_ps;
+	uint64_t	m_time_ps;
 	// TBCLOCK is a clock support class, enabling multiclock simulation
 	// operation.
 	TBCLOCK	m_clk;

@@ -83,7 +83,7 @@ void	build_testb_h(MAPDHASH &master, FILE *fp, STRING &fname) {
 "	bool		m_changed;\n"
 "	VerilatedVcdC*	m_trace;\n"
 "	bool		m_done;\n"
-"	unsigned long	m_time_ps;\n");
+"	uint64_t	m_time_ps;\n");
 
 	if (multiclock) {
 		fprintf(fp, "\t// TBCLOCK is a clock support class, enabling"
