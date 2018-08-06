@@ -1342,7 +1342,7 @@ int	main(int argc, char **argv) {
 	MAPDHASH	master;
 	FILE		*fp;
 	STRING		str, cmdline, searchstr = ".";
-	const char	*subdir;
+	const char	*subdir = NULL;
 
 
 	// gbl_msg.open("autofpga.dbg", "w");
