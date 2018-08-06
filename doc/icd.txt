@@ -256,6 +256,12 @@ CLOCK.WIRE	A list of the clock names used by this component.  These
 		be necessary for your application.
 CLOCK.FREQUENCY	A list of frequencies in Hz corresponding to each of the clocks
 		listed in the CLOCK.NAME tag
+CLOCK.CLASS	A list containing the names of clock support classes used for
+		these clocks.  If no class is given, TBCLOCK is assumed as a
+		default.  The clock class must have a time_to_edge() function,
+		an advance(int ps) function, and rising_edge() and
+		falling_edge() indicators.  Likewise, an init(ps) function
+		will be called to define the period of the clock.
 
 SLAVE.TYPE	Indicates the type of peripheral
 SLAVE.BUS	Indicates the name of the bus used by this slave
