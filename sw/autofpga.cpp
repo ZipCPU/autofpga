@@ -1239,6 +1239,98 @@ void	build_xdc(MAPDHASH &master, FILE *fp, STRING &fname) {
 	}
 }
 
+void	build_pcf(MAPDHASH &master, FILE *fp, STRING &fname) {
+	MAPDHASH::iterator	kvpair;
+	STRINGP			str;
+	PORTLIST		ports;
+	FILE			*fpsrc;
+	char	line[512];
+
+	gbl_msg.info("\n\nBUILD-PCF\nLooking for ports:\n");
+	gbl_msg.flush();
+
+	get_portlist(master, ports);
+
+	str = getstring(master, KYPCF_FILE);
+	fpsrc = open_in(master, *str);
+
+	if (!fpsrc) {
+		gbl_msg.fatal("Could not find or open %s\n", str->c_str());
+	}
+
+	while(fgets(line, sizeof(line), fpsrc)) {
+		const char	*SET_IO_KEY = "set_io";
+		const	char	*cptr;
+
+		STRINGP	tmp = trim(STRING(line));
+		strcpy(line, tmp->c_str());
+		delete	tmp;
+
+
+		// Ignore any lines that don't begin with #,
+		// Ignore any lines that start with two ##'s,
+		// Ignore any lines that don't have set_property within them
+		if ((line[0] != '#')||(line[1] == '#')
+			||(NULL == (cptr= strstr(line, SET_IO_KEY)))) {
+			fprintf(fp, "%s\n", line);
+			continue;
+		}
+
+		bool	found = false;
+		char	*cpy = strdup(cptr + strlen(SET_IO_KEY));
+		char		*ptr, *name;
+
+		name = strtok(cpy, " \t");
+
+		ptr = name;
+		while((*ptr)
+			&&(*ptr != '[')
+			&&(*ptr != '}')
+			&&(*ptr != ']')
+			&&(!isspace(*ptr)))
+			ptr++;
+		*ptr = '\0';
+
+		gbl_msg.info("Found PCF port: %s\n", name);
+
+		// Now, let's check to see if this is in our set
+		for(unsigned k=0; k<ports.size(); k++) {
+			if (strcmp(ports[k]->c_str(), name)==0) {
+				found = true;
+				break;
+			}
+		} free(cpy);
+
+		if (found) {
+			int start = 0;
+			while((line[start])&&(
+					(line[start]=='#')
+					||(isspace(line[start]))))
+				start++;
+			fprintf(fp, "%s\n", &line[start]);
+		} else
+			fprintf(fp, "%s\n", line);
+	}
+
+	fclose(fpsrc);
+
+	fprintf(fp, "\n## Adding in any PCF_INSERT tags\n\n");
+	for(kvpair = master.begin(); kvpair != master.end(); kvpair++) {
+		if (kvpair->second.m_typ != MAPT_MAP)
+			continue;
+		str = getstring(kvpair->second, KYPCF_INSERT);
+		if (NULL == str)
+			continue;
+
+		fprintf(fp, "## From %s\n%s", kvpair->first.c_str(),
+			kvpair->second.u.m_s->c_str());
+	}
+	str = getstring(master, KYPCF_INSERT);
+	if (NULL != str) {
+		fprintf(fp, "## From the global level\n%s",
+			kvpair->second.u.m_s->c_str());
+	}
+}
 
 void	build_ucf(MAPDHASH &master, FILE *fp, STRING &fname) {
 	MAPDHASH::iterator	kvpair;
@@ -1516,6 +1608,14 @@ int	main(int argc, char **argv) {
 		str = subd->c_str(); str += "/build.xdc";
 		fp = fopen(str.c_str(), "w");
 		if (fp) { build_xdc(  master, fp, str); fclose(fp); }
+		else
+			gbl_msg.error("Cannot open %s !\n", str.c_str());
+	}
+
+	if (NULL != getstring(master, KYPCF_FILE)) {
+		str = subd->c_str(); str += "/build.pcf";
+		fp = fopen(str.c_str(), "w");
+		if (fp) { build_pcf(  master, fp, str); fclose(fp); }
 		else
 			gbl_msg.error("Cannot open %s !\n", str.c_str());
 	}
