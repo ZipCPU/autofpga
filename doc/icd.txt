@@ -191,6 +191,11 @@ UCF.FILE	Does the same thing with a UCF file as was done with the
 UCF.INSERT	Adds lines to the UCF file, just as with the XDC.INSERT tag
 		does for the XDC file.
 
+PCF.FILE	Does the same thing with a UCF file as was done with the
+		XDC.FILE, creating a build.pcf file when done.
+PCF.INSERT	Adds lines to the PCF file, just as with the XDC.INSERT tag
+		does for the XDC file.
+
 LDSCRIPT.PTR	(Name to be used within the linker script)
 LDSCRIPT.PSTR	(Permission string for the linker script)
 LDSCRIPT.DEF	(Any definitions to be added to the linker script)
@@ -279,6 +284,11 @@ MASTER.TYPE	One of CPU, HOST, BUS, SUBBUS, ARBITER, or XCLOCK.
 		slave bus, go out on the master, get returns to the master,
 		get sent back out on as returns on the slave bus.
 
+		Many bus masters of type ARBITER can master the same bus.
+		In this way, slaves of one bus can also be ARBITER masters
+		of another.  Further, some busses may have multiple masters,
+		if all of those masters are of type ARBITER.
+
 BUS.NAME	wb - master wishbone bus, dbg the debug port (wbu),
 		zip - the ZipCPU bus master
 		sdram - the MIG generated bus master
@@ -302,6 +312,12 @@ REGISTER.BUS	The name of the bus global register addresses are calculated
 		from
 
 
+CACHABLE.FILE	Creates a Verilog module of this name containing a
+		combinatorial check of whether a given address beneath it is
+		a cachable address (i.e., is it a memory or other type of
+		peripheral).  Walks the address tree below the containing
+		master peripheral to find memories that may be some number
+		of arbiters removed from the current file.
 
 .... GOALS ...
 Build S/W to collect all busses together

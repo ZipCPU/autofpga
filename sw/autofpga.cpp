@@ -19,6 +19,7 @@
 //	toplevel.v
 //	main.v
 //	regdefs.h
+//	iscachable.h
 //	regdefs.cpp
 //	board.h
 //	board.ld
@@ -33,7 +34,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017, Gisselquist Technology, LLC
+// Copyright (C) 2017-2018, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -85,6 +86,7 @@
 #include "businfo.h"
 #include "globals.h"
 #include "msgs.h"
+#include "bldcachable.h"
 
 //
 // The ILIST, a list of interrupt lines within the design
@@ -1595,6 +1597,7 @@ int	main(int argc, char **argv) {
 		// writeout_bus_defns_v(fp);
 		// writeout_bus_logic_v(fp);
 		fclose(fp); }
+	build_cachable_v(master, subd);
 
 	str = subd->c_str(); str += "/rtl.make.inc";
 	fp = fopen(str.c_str(), "w");

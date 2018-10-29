@@ -158,6 +158,8 @@ extern	const	STRING	KYVFLIST;
 extern	const	STRING	KYAUTOVDIRS;
 // PIC definitions
 extern	const	STRING	KYPIC, KYPIC_BUS, KYPIC_MAX;
+// Cache information
+extern	const	STRING	KYCACHABLE_FILE;
 // Interrupt definitions
 extern	const	STRING	KY_INT, KYINTLIST, KY_WIRE, KY_DOTWIRE, KY_ID;
 // SIM definitions

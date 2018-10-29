@@ -14,6 +14,7 @@ svn-commit*
 *_tb
 *_tb.dbl
 *dbg.txt
+autofpga.dbg
 *dump.txt
 *debug.txt
 tags

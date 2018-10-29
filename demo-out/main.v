@@ -1774,9 +1774,6 @@ module	main(i_clk, i_reset,
 	assign	spio_int = 1'b0;	// spio.INT.SPIO.WIRE
 `endif	// SPIO_ACCESS
 
-	//
-	//
-	//
 
 
 endmodule // main.v
