@@ -102,9 +102,10 @@ APLIST *full_gather(void) {
 	APLIST	*alist;
 
         strp = getstring(*gbl_hash, KYREGISTER_BUS);
-        if (NULL == strp)
+        if (NULL == strp) {
+		gbl_msg.warning("No REGISTER.BUS defined, assuming a register bus of \"wbu\".\n");
                 strp = new STRING("wbu");
-        bi = find_bus(strp);
+        } bi = find_bus(strp);
         if (NULL == bi) {
 		gbl_msg.warning("Register bus %s not found, switching to default\n",
                 strp->c_str());

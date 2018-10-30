@@ -50,6 +50,35 @@
 @BUS.NAME=zip
 @BUS.WIDTH=32
 @BUS.CLOCK=clk
+@LD.FILE=board.ld
+@LD.ENTRY=_start
+@LD.SCRIPT=
+
+SECTIONS
+{
+	.rocode @$(RESET_ADDRESS) : ALIGN(4) {
+		_boot_address = .;
+		*(.start) *(.boot)
+	} > flash
+
+	_kernel_image_start = . ;
+	_kernel_image_end = . ;
+	_ram_image_start = . ;
+	.ramcode : ALIGN_WITH_INPUT {
+		*(.kernel)
+		*(.text.startup)
+		*(.text)
+		*(.rodata) *(.strings)
+		*(.data) *(COMMON)
+		}> bkram AT> flash
+	_ram_image_end = . ;
+	.bss : ALIGN_WITH_INPUT {
+		*(.bss)
+		_bss_image_end = . ;
+		}> bkram
+	_top_of_heap = .;
+}
+
 @SCOPE.TRIGGER=zip_trigger
 @SCOPE.DATA=zip_debug
 @INT.ZIP.WIRE=zip_cpu_int

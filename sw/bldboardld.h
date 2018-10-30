@@ -42,6 +42,6 @@
 #include <string>
 #include "parser.h"
 
-extern	void	build_board_ld(   MAPDHASH &master, FILE *fp, STRING &fname);
+extern	void	build_ld_files(MAPDHASH &master, STRINGP subd);
 
 #endif	// BLDBOARDLD_H

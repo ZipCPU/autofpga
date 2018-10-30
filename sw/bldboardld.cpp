@@ -63,19 +63,32 @@
 #include "gather.h"
 #include "msgs.h"
 
-void	build_board_ld(   MAPDHASH &master, FILE *fp, STRING &fname) {
+static void	build_script_ld(MAPDHASH &master, MAPDHASH &busmaster, FILE *fp, STRING &fname) {
 	MAPDHASH::iterator	kvpair;
 	STRINGP		strp;
 	int		reset_address;
 	PERIPHP		fastmem = NULL, bigmem = NULL, bootmem = NULL;
 	APLIST		*alist;
+	BUSINFO		*bi;
+	MAPDHASH	*bimap;
 
 	legal_notice(master, fp, fname, "/*******************************************************************************", "*");
 	fprintf(fp, "*/\n");
 
-	fprintf(fp, "ENTRY(_start)\n\n");
+	if (NULL == (strp = getstring(busmaster, KYLD_ENTRY)))
+		fprintf(fp, "ENTRY(_start)\n\n");
+	else
+		fprintf(fp, "ENTRY(%s)\n\n", strp->c_str());
 
-	alist = full_gather();
+	bimap = getmap(busmaster, KYMASTER_BUS);
+	if (bimap == NULL) {
+		gbl_msg.error("Linker script not found within a bus master component\n");
+		return;
+	}
+
+	bi = find_bus(bimap);
+	alist = gather_peripherals(bi);
+	sort(alist->begin(), alist->end(), compare_regaddr);
 
 	fprintf(fp, "MEMORY\n{\n");
 	for(unsigned i=0; i<alist->size(); i++) {
@@ -133,6 +146,23 @@ void	build_board_ld(   MAPDHASH &master, FILE *fp, STRING &fname) {
 			fprintf(fp, "%s\n", strp->c_str());
 	}
 
+	//
+	// Check to see if the configuration for this master has already given
+	// us a linker script to work with.  If so, use it.
+	//
+	if (NULL != (strp = getstring(busmaster,KYLD_SCRIPT))) {
+		fprintf(fp, "%s\n", strp->c_str());
+
+		// clear_regbase(alist);
+		// delete	alist;
+		return;
+	}
+
+	//
+	// There is no given configuration script.  We'll have to try to build
+	// one using a default that may or may not apply in all cases.  This is
+	// making the best of a bad situation.
+	//
 	if (!getvalue(master, KYRESET_ADDRESS, reset_address)) {
 		bool	found = false;
 		for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
@@ -164,7 +194,7 @@ void	build_board_ld(   MAPDHASH &master, FILE *fp, STRING &fname) {
 			}
 		} if (!found) {
 			reset_address = 0;
-			gbl_msg.warning("WARNING: RESET_ADDRESS NOT FOUND\n");
+			gbl_msg.warning("WARNING: RESET_ADDRESS NOT FOUND, assuming address zero\n");
 		}
 	}
 
@@ -247,6 +277,50 @@ void	build_board_ld(   MAPDHASH &master, FILE *fp, STRING &fname) {
 
 		fprintf(fp, "\t_top_of_heap = .;\n");
 		fprintf(fp, "}\n");
+	}
+}
+
+void	build_ld_files(MAPDHASH &master, STRINGP subd) {
+	FILE		 *fp;
+	MAPDHASH::iterator	kvpair;
+	STRINGP		fnamep;
+	MAPDHASH	*bimap;
+
+	for(kvpair = master.begin(); kvpair != master.end(); kvpair++) {
+		if (!isbusmaster(kvpair->second))
+			continue;
+
+		fnamep = getstring(kvpair->second.u.m_m, KYLD_FILE);
+		if (fnamep == NULL)
+			// No linker script filename, ignore this component
+			continue;
+
+		bimap = getmap(kvpair->second.u.m_m, KYMASTER_BUS);
+		if (bimap == NULL) {
+			gbl_msg.error("Linker scripts can only be made within bus master.  %s is not a bus master\n", kvpair->first.c_str());
+			continue;
+		}
+
+		if (fnamep->size() < 3) {
+			gbl_msg.error("Linker script filename, %s, for %s is too short\n",
+				fnamep->c_str(), kvpair->first.c_str());
+			continue;
+		} else if ((*fnamep)[0] == '/') {
+			gbl_msg.error("Cowardly refusing to write a linker script to an absolute pathname, %s\n", fnamep->c_str());
+			continue;
+		}
+
+		STRING	fname = (*subd) + "/" + (*fnamep);
+		if (strcmp(&fname.c_str()[fname.size()-3],".ld")!=0)
+			fname += ".ld";
+		fp = fopen(fname.c_str(), "w");
+		if (fp == NULL)
+			gbl_msg.error("Could not write linker script, %s\n", fname.c_str());
+		else {
+			build_script_ld(master, *kvpair->second.u.m_m,
+				fp, fname);
+			fclose(fp);
+		}
 	}
 }
 

@@ -196,8 +196,11 @@ PCF.FILE	Does the same thing with a UCF file as was done with the
 PCF.INSERT	Adds lines to the PCF file, just as with the XDC.INSERT tag
 		does for the XDC file.
 
-LDSCRIPT.PTR	(Name to be used within the linker script)
-LDSCRIPT.PSTR	(Permission string for the linker script)
+LDSCRIPT.FILE	Name of the linker script to generate.  The linker script
+		will reflect memory components found beneath the component
+		containing this file.
+LDSCRIPT.SCRIPT	Contains a customized script
+LDSCRIPT.ENTRY	The name of the entry symbol in the linker script.
 LDSCRIPT.DEF	(Any definitions to be added to the linker script)
 
 PIC.BUS		The name of a parameter to hold all of the interrupt wires

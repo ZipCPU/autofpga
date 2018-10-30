@@ -135,6 +135,9 @@ extern const	STRING	KYMAIN_DEFNS;
 extern const	STRING	KYMAIN_INSERT;
 extern const	STRING	KYMAIN_ALT;
 // Definitions for the .ld file(s)
+extern const	STRING	KYLD_FILE;
+extern const	STRING	KYLD_SCRIPT;
+extern const	STRING	KYLD_ENTRY;
 extern const	STRING	KYLD_NAME;
 extern const	STRING	KYLD_PERM;
 extern const	STRING	KYLD_DEFNS;

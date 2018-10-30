@@ -86,7 +86,6 @@ static void	print_cachable(FILE *fp, BUSINFO *bi, unsigned dw,
 			pbits++;	// log_2 Octets
 
 		if ((*pl)[i]->p_master_bus) {
-fprintf(fp, "\t\t// Master-BUS\n");
 			print_cachable(fp, (*pl)[i]->p_master_bus,
 				dw, submask, subaddr);
 			continue;
@@ -173,11 +172,11 @@ void build_cachable_v(MAPDHASH &master, STRINGP subd) {
 		// A cachable file tag can only be found within a bus master
 		// component
 		if (fnamep->size() < 3) {
-			gbl_msg.warning("Cachable filename is too short\n",
+			gbl_msg.error("Cachable filename is too short\n",
 				kvpair->first.c_str());
 			continue;
 		} else if ((*fnamep)[0] == '/') {
-			gbl_msg.warning("Cowardly refusing to write cachable with an absolute pathname, %s\n",
+			gbl_msg.error("Cowardly refusing to write cachable with an absolute pathname, %s\n",
 				(*fnamep));
 			continue;
 		}
@@ -187,7 +186,7 @@ void build_cachable_v(MAPDHASH &master, STRINGP subd) {
 			fname += ".v";
 		fp = fopen(fname.c_str(), "w");
 		if (fp == NULL)
-			gbl_msg.warning("Could not write cachable file: %s\n", fname);
+			gbl_msg.error("Could not write cachable file: %s\n", fname);
 		else {
 			build_cachable_core_v(master, *kvpair->second.u.m_m,
 				fp, fname);
