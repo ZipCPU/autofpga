@@ -196,12 +196,16 @@ PCF.FILE	Does the same thing with a UCF file as was done with the
 PCF.INSERT	Adds lines to the PCF file, just as with the XDC.INSERT tag
 		does for the XDC file.
 
-LDSCRIPT.FILE	Name of the linker script to generate.  The linker script
+LD.FILE		Name of the linker script to generate.  The linker script
 		will reflect memory components found beneath the component
 		containing this file.
-LDSCRIPT.SCRIPT	Contains a customized script
-LDSCRIPT.ENTRY	The name of the entry symbol in the linker script.
-LDSCRIPT.DEF	(Any definitions to be added to the linker script)
+LD.SCRIPT	Contains a customized script
+LD.ENTRY	The name of the entry symbol in the linker script.
+LD.DEFNS	(Any definitions to be added to the linker script)
+LD.PERM		The permissions a memory region has before the linker.
+		This is either r, rx, or wx.  See the documentation for
+		binutils/ld for more details of this field
+LD.NAME		The name of this peripheral, as it appears in the linker script
 
 PIC.BUS		The name of a parameter to hold all of the interrupt wires
 PIC.MAX		The maximum number of interrutps this one can have
