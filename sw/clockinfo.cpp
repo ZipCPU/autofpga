@@ -56,13 +56,16 @@ CLOCKINFO::CLOCKINFO(void) {
 	m_hash = new MAPDHASH();
 	m_name = NULL;
 	m_wire = NULL;
+	m_top  = NULL;
 	m_simclass = NULL;
 	m_interval_ps = UNKNOWN_PS;
 }
 
 unsigned long CLOCKINFO::setfrequency(unsigned long frequency_hz) {
+
 	if (frequency_hz != 0l) {
 		unsigned long ps;
+
 		setvalue(*m_hash, KY_FREQUENCY, (int)frequency_hz);
 		ps = PICOSECONDS_PER_SECOND / (unsigned long)frequency_hz;
 		m_interval_ps = ps;
@@ -103,8 +106,39 @@ void	CLOCKINFO::setwire(STRINGP wire) {
 		fprintf(stderr, "ERR: Clock with multiple wire ID\'s: %s and %s\n",
 			strp->c_str(), wire->c_str());
 		m_wire = strp;
-	} else if (!m_wire)
+	} else if (!m_wire) {
+		// Case #3: This is a new WIRE tag
+		MAPT	subfm;
+
+		subfm.m_typ = MAPT_STRING;
+		subfm.u.m_s = wire;
+		m_hash->insert(KEYVALUE(KY_WIRE, subfm));
 		m_wire = wire;
+	}
+}
+
+void	CLOCKINFO::settop(STRINGP top) {
+	STRINGP	strp;
+
+	strp = getstring(*m_hash, KY_TOP);
+	if (NULL == strp) {
+		// Case #1: it's not (yet) in our hash
+		setstring(*m_hash, KY_TOP, top);
+		m_top = top;
+	} else if (strp->compare(*top) != 0) {
+		// Case #2: it's in the has, but conflicts
+		fprintf(stderr, "ERR: Clock with multiple top-level wire ID\'s: %s and %s\n",
+			strp->c_str(), top->c_str());
+		m_top = strp;
+	} else if (!m_top) {
+		// Case #3: This is a new TOP tag
+		MAPT	subfm;
+
+		subfm.m_typ = MAPT_STRING;
+		subfm.u.m_s = top;
+		m_hash->insert(KEYVALUE(KY_TOP, subfm));
+		m_top = top;
+	}
 }
 
 void	CLOCKINFO::setclass(STRINGP simclass) {
@@ -118,22 +152,31 @@ void	CLOCKINFO::setclass(STRINGP simclass) {
 		fprintf(stderr, "ERR: Clock with multiple simulation classes: %s and %s\n",
 			strp->c_str(), simclass->c_str());
 		m_simclass = strp;
-	} else if (!m_simclass)
+	} else if (!m_simclass) {
+		// Case #3: This is a new CLASS tag
 		m_simclass = simclass;
+		MAPT	subfm;
+
+		subfm.m_typ = MAPT_STRING;
+		subfm.u.m_s = simclass;
+		m_hash->insert(KEYVALUE(KY_CLASS, subfm));
+		m_simclass = simclass;
+	}
 }
 
 void	add_to_clklist(MAPDHASH *ckmap) {
 	const	char	DELIMITERS[] = " \t\n,";
 	int	ifreq;
 
-	STRINGP	sname, swire, sfreq, simclass;
-	char	*dname, *dwire, *dfreq, *dsimclass;
-	char	*pname, *pwire, *pfreq, *psimclass;
-	char	*tname, *twire, *tfreq, *tsimclass;
+	STRINGP	sname, swire, sfreq, simclass, stop;
+	char	*dname, *dwire, *dfreq, *dsimclass, *dtop;
+	char	*pname, *pwire, *pfreq, *psimclass, *ptop;
+	char	*tname, *twire, *tfreq, *tsimclass, *ttop;
 
 	sname    = getstring(*ckmap, KY_NAME);
 	swire    = getstring(*ckmap, KY_WIRE);
 	simclass = getstring(*ckmap, KY_CLASS);
+	stop     = getstring(*ckmap, KY_TOP);
 
 	// strtok requires a writable string
 	if (sname) dname = strdup(sname->c_str());
@@ -142,6 +185,8 @@ void	add_to_clklist(MAPDHASH *ckmap) {
 	else	  dwire = NULL;
 	if (simclass) dsimclass = strdup(simclass->c_str());
 	else	  dsimclass = NULL;
+	if (stop) dtop = strdup(stop->c_str());
+	else	  dtop = NULL;
 
 	{
 		MAPDHASH::iterator	kvfreq;
@@ -170,6 +215,7 @@ void	add_to_clklist(MAPDHASH *ckmap) {
 	pname = (dname) ? strtok_r(dname, DELIMITERS, &tname) : NULL;
 	pwire = (dwire) ? strtok_r(dwire, DELIMITERS, &twire) : NULL;
 	pfreq = (dfreq) ? strtok_r(dfreq, DELIMITERS, &tfreq) : NULL;
+	ptop  = (dtop ) ? strtok_r(dtop , DELIMITERS, &ttop) : NULL;
 	psimclass = (dsimclass) ? strtok_r(dsimclass, DELIMITERS, &tsimclass) : NULL;
 
 	if (!pname)
@@ -185,10 +231,14 @@ void	add_to_clklist(MAPDHASH *ckmap) {
 
 		gbl_msg.info("Examining clock: %s %s %s\n",
 				pname, (pwire)?pwire:"(Unspec)",
-				(pfreq)?pfreq:"(Unspec)");
+				(pfreq)?pfreq:"(Unspec)",
+				(ptop)?ptop:"(Unspec)");
 
 		for(unsigned i=0; i<id; i++) {
 			if (cklist[i].m_name->compare(pname)==0) {
+				//
+				// Update an existing clocks information
+				//
 				already_defined = true;
 				gbl_msg.info("Clock %s is already defined: %s %ld\n",
 						cklist[i].m_name->c_str(),
@@ -196,12 +246,39 @@ void	add_to_clklist(MAPDHASH *ckmap) {
 						  ? cklist[i].m_wire->c_str()
 						  : "(Unspec)",
 						cklist[i].m_interval_ps);
+
+				//
+				// Clock's wire name, such as i_clk
+				//
 				if ((pwire)&&(cklist[i].m_wire == NULL)) {
 					cklist[i].m_wire = new STRING(pwire);
 					gbl_msg.info("Clock %s\'s wire set to %s\n", pname, pwire);
 				} else if ((pwire)&&(cklist[i].m_wire->compare(pwire) != 0)) {
 					gbl_msg.error("Clock %s has a conflicting wire definition: %s and %s\n", pname, pwire, cklist[i].m_wire->c_str());
 				}
+
+				//
+				// Name of the top level incoming port, if
+				// present
+				//
+				if ((ptop)&&(cklist[i].m_top == NULL)) {
+					cklist[i].m_top = new STRING(ptop);
+					gbl_msg.info("Clock %s\'s top-level wire set to %s\n", pname, ptop);
+				} else if ((ptop)&&(cklist[i].m_top->compare(ptop) != 0)) {
+					gbl_msg.error("Clock %s has a conflicting toplevel wire definition: %s and %s\n", pname, ptop, cklist[i].m_top->c_str());
+				}
+
+
+				//
+				// Name of the simulation class, if present
+				//
+				if ((psimclass)&&(cklist[i].m_simclass == NULL)) {
+					cklist[i].m_simclass = new STRING(psimclass);
+					gbl_msg.info("Clock %s\'s simulation class set to %s\n", pname, psimclass);
+				} else if ((psimclass)&&(cklist[i].m_simclass->compare(psimclass) != 0)) {
+					gbl_msg.error("Clock %s has a conflicting simulation class definition: %s and %s\n", pname, psimclass, cklist[i].m_simclass->c_str());
+				}
+
 
 				if ((pfreq)&&(cklist[i].interval_ps()==CLOCKINFO::UNKNOWN_PS)) {
 					clocks_per_second = strtoul(pfreq, NULL, 0);
@@ -228,6 +305,8 @@ void	add_to_clklist(MAPDHASH *ckmap) {
 			else
 				wname = new STRING(STRING("i_")+STRING(pname));
 			cki->setwire(wname);
+			if (ptop)
+				cki->settop(new STRING(ptop));
 			if (psimclass) {
 				wsimclass = new STRING(psimclass);
 				cki->setclass(wsimclass);
@@ -253,6 +332,7 @@ void	add_to_clklist(MAPDHASH *ckmap) {
 		if (pname) pname = strtok_r(NULL, DELIMITERS, &tname);
 		if (pwire) pwire = strtok_r(NULL, DELIMITERS, &twire);
 		if (pfreq) pfreq = strtok_r(NULL, DELIMITERS, &tfreq);
+		if (ptop)  ptop  = strtok_r(NULL, DELIMITERS, &ttop);
 		if (psimclass) psimclass = strtok_r(NULL, DELIMITERS, &tsimclass);
 		ifreq = 0;
 	}
@@ -260,6 +340,7 @@ void	add_to_clklist(MAPDHASH *ckmap) {
 	free(dname);
 	free(dwire);
 	free(dfreq);
+	free(dtop);
 	free(dsimclass);
 }
 

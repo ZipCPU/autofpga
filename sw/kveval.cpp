@@ -91,7 +91,7 @@ bool	get_named_kvpair(MAPSTACK &stack, MAPDHASH &here, STRING &key,
 }
 
 bool	get_named_value(MAPSTACK &stack, MAPDHASH &here, STRING &key,
-		int &value){
+		int &value) {
 	MAPDHASH::iterator	kvpair;
 
 	if (get_named_kvpair(stack, here, key, kvpair)) {
@@ -142,7 +142,8 @@ void	expr_eval(MAPSTACK &stack, MAPDHASH &here, MAPDHASH &sub, MAPT &expr) {
 	}
 }
 
-bool	find_any_unevaluated_sub(MAPSTACK &stack, MAPDHASH *here, MAPDHASH &sub) {
+bool	find_any_unevaluated_sub(MAPSTACK &stack, MAPDHASH *here,
+		MAPDHASH &sub) {
 	bool	changed = false;
 	MAPDHASH::iterator	pfx = sub.end(), subi;
 	MAPDHASH	*component;
@@ -278,7 +279,7 @@ bool	subresults_into(MAPSTACK stack, MAPDHASH *here, STRINGP &sval) {
 						changed = true;
 					} else
 						sloc += endpos;
-				} else if(get_named_value(stack,*here,key,value)){
+				} else if(get_named_value(stack,*here,key,value)) {
 					char	buffer[64];
 					STRING	tmp;
 					sprintf(buffer, "%d", value);

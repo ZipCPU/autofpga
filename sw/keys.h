@@ -174,8 +174,9 @@ extern	const	STRING	KYSIM_INCLUDE, KYSIM_DEFINES, KYSIM_DEFNS,
 // CLOCK definitions
 extern	const	STRING	KYCLOCK,
 			KYCLOCK_NAME,
-			KYCLOCK_CLASS,
+			KYCLOCK_TOP,
 			KY_NAME,
+			KY_TOP,
 			KY_CLASS,
 			KY_FREQUENCY;
 // BUS definitions

@@ -143,6 +143,7 @@ public:
 		i_max = 0;
 		int	mx = 0;
 		i_name = getstring(pic, KYPREFIX);
+		assert(i_name);
 		i_bus  = getstring(pic, KYPIC_BUS);
 		if (getvalue( pic, KYPIC_MAX, mx)) {
 			i_max = mx;
@@ -161,13 +162,19 @@ public:
 
 	// Add an interrupt with the given name, and hash source, to the table
 	void add(MAPDHASH &psrc, STRINGP iname) {
-		if ((!iname)||(i_nallocated >= i_max))
+		if (!iname)
 			return;
+		if (i_nallocated >= i_max) {
+			gbl_msg.warning("Interrupt %s not assigned, PIC %s is full\n",
+				iname->c_str(), i_name->c_str());
+			return;
+		}
 
 		INTP	ip = new INTID();
 		i_ilist.push_back(ip);
 
 		// Initialize the table entry with the name of this interrupt
+		assert(iname);
 		ip->i_name = trim(*iname);
 		assert(ip->i_name->size() > 0);
 		// The wire from the rest of the design to connect to this
@@ -208,6 +215,7 @@ public:
 		// Otherwise, add the interrupt to our list
 		INTP	ip = new INTID();
 		i_ilist.push_back(ip);
+		assert(iname);
 		ip->i_name = trim(*iname);
 		assert(ip->i_name->size() > 0);
 		ip->i_wire = getstring(psrc, KY_WIRE);
@@ -305,13 +313,13 @@ void	assign_int_to_pics(const STRING &iname, MAPDHASH &ihash) {
 		return;
 	}
 
-	char	*tok, *cpy;
+	char	*tok, *cpy, *sr;
 	cpy = strdup(picname->c_str());
-	tok = strtok(cpy, ", \t\n");
+	tok = strtok_r(cpy, ", \t\n", &sr);
 	while(tok) {
 		unsigned pid;
 		for(pid = 0; pid<piclist.size(); pid++)
-			if (*piclist[pid]->i_name == tok)
+			if (piclist[pid]->i_name->compare(tok)==0)
 				break;
 		if (pid >= piclist.size()) {
 			gbl_msg.error("PIC NOT FOUND: %s\n", tok);
@@ -320,7 +328,7 @@ void	assign_int_to_pics(const STRING &iname, MAPDHASH &ihash) {
 		} else {
 			piclist[pid]->add(ihash, (STRINGP)&iname);
 		}
-		tok = strtok(NULL, ", \t\n");
+		tok = strtok_r(NULL, ", \t\n", &sr);
 	} free(cpy);
 }
 
@@ -363,10 +371,10 @@ void	assign_interrupts(MAPDHASH &master) {
 		// Now, let's look to see if it has a list of interrupts
 		if (NULL != (sintlist = getstring(kvint->second,
 					KYINTLIST))) {
-			STRING	scpy = *sintlist;
-			char	*tok;
-
-			tok = strtok((char *)scpy.c_str(), " \t\n,");
+			const char DELIMITERS[] = " \t\n,";
+			char	*scpy = strdup(sintlist->c_str());
+			char	*tok, *stoksv=NULL;
+			tok = strtok_r(scpy, DELIMITERS, &stoksv);
 			while(tok) {
 				STRING	stok = STRING(tok);
 
@@ -377,8 +385,8 @@ void	assign_interrupts(MAPDHASH &master) {
 				} else
 					gbl_msg.warning("INT %s not found, not connected\n", tok);
 
-				tok = strtok(NULL, " \t\n,");
-			}
+				tok = strtok_r(NULL, DELIMITERS, &stoksv);
+			} free(scpy);
 		} else {
 			// NAME is now @comp.INT.
 
@@ -555,8 +563,20 @@ void	build_toplevel_v( MAPDHASH &master, FILE *fp, STRING &fname) {
 	"// @TOP.PORTLIST is absent.  For those peripherals that don't need\n"
 	"// any top level logic, the @MAIN.PORTLIST should be sufficent,\n"
 	"// so the @TOP.PORTLIST key may be left undefined.\n"
+	"//\n"
+	"// The only exception is that any clocks with CLOCK.TOP tags will\n"
+	"// also appear in this list\n"
 	"//\n");
-	fprintf(fp, "module\ttoplevel(i_clk,\n");
+	fprintf(fp, "module\ttoplevel(");
+	int	nclocks_at_top = 0;
+	for(unsigned ck=0; ck<cklist.size(); ck++) {
+		if (cklist[ck].m_top) {
+			fprintf(fp, "%s%s,", (nclocks_at_top > 0)?" ":"",
+				cklist[ck].m_top->c_str());
+			nclocks_at_top++;
+		}
+	} fprintf(fp, "\n");
+
 	first = 1;
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
 		if (kvpair->second.m_typ != MAPT_MAP)
@@ -594,9 +614,15 @@ void	build_toplevel_v( MAPDHASH &master, FILE *fp, STRING &fname) {
 	"\t// those peripherals that don't do anything at the top level,\n"
 	"\t// the @MAIN.IODECL key should be sufficient, so the @TOP.IODECL\n"
 	"\t// key may be left undefined.\n"
+	"\t//\n"
+	"\t// We start with any @CLOCK.TOP keys\n"
 	"\t//\n");
-	fprintf(fp, "\tinput\twire\t\ti_clk;\n");
-	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
+	for(unsigned ck=0; ck<cklist.size(); ck++) {
+		if (cklist[ck].m_top) {
+			fprintf(fp, "\tinput\twire\t\t%s;\n",
+				cklist[ck].m_top->c_str());
+		}
+	} for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
 

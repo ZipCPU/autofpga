@@ -11,7 +11,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017, Gisselquist Technology, LLC
+// Copyright (C) 2017-2018, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -71,6 +71,7 @@ static void	build_script_ld(MAPDHASH &master, MAPDHASH &busmaster, FILE *fp, STR
 	APLIST		*alist;
 	BUSINFO		*bi;
 	MAPDHASH	*bimap;
+	int		found = 0;
 
 	legal_notice(master, fp, fname, "/*******************************************************************************", "*");
 	fprintf(fp, "*/\n");
@@ -90,17 +91,27 @@ static void	build_script_ld(MAPDHASH &master, MAPDHASH &busmaster, FILE *fp, STR
 	alist = gather_peripherals(bi);
 	sort(alist->begin(), alist->end(), compare_regaddr);
 
-	fprintf(fp, "MEMORY\n{\n");
+	fprintf(fp, "MEMORY\n{\n"
+"\t/* To be listed here, a slave must be of type MEMORY.  If the slave\n"
+"\t* has a defined name in its @%s tag, it will be listed here\n"
+"\t* under that name.  The permissions are given by the @%s tag.\n"
+"\t* If no permission tag exists, a permission of \'r\' will be assumed.\n"
+"\t*/\n", KYLD_NAME.c_str(), KYLD_PERM.c_str());
+
 	for(unsigned i=0; i<alist->size(); i++) {
 		PERIPHP	p = (*alist)[i];
 		STRINGP	name = getstring(*p->p_phash, KYLD_NAME),
 			perm = getstring(*p->p_phash, KYLD_PERM);
 
-		if (!ismemory(*p->p_phash))
+		if (!ismemory(*p->p_phash)) {
+			// fprintf(fp,"\t\t/* %s is not a memory */\n",
+			//	(name) ? name->c_str():p->p_name->c_str());
 			continue;
+		}
 
 		if (NULL == name)
 			name = p->p_name;
+		found++;
 		fprintf(fp,"\t%8s(%2s) : ORIGIN = 0x%08lx, LENGTH = 0x%08x\n",
 			name->c_str(), (perm)?(perm->c_str()):"r",
 			p->p_regbase,
@@ -122,8 +133,15 @@ static void	build_script_ld(MAPDHASH &master, MAPDHASH &busmaster, FILE *fp, STR
 			}
 		}
 	}
+	if (found == 0)
+		fprintf(fp, "\t/* No memories found */\n");
 	fprintf(fp, "}\n\n");
 
+	fprintf(fp,
+"/* For each defined memory peripheral, we also define a pointer to that\n"
+"* memory.  The name of this pointer is given by the @%s tag within\n"
+"* the memory peripheral\'s configuration\n"
+"*/\n", KYLD_NAME.c_str());
 	// Define pointers to these memories
 	for(unsigned i=0; i<alist->size(); i++) {
 		PERIPHP	p = (*alist)[i];
