@@ -59,8 +59,7 @@ void	build_testb_h(MAPDHASH &master, FILE *fp, STRING &fname) {
 "\n"
 "#include <stdio.h>\n"
 "#include <stdint.h>\n"
-"#include <verilated_vcd_c.h>\n"
-"#include \"tbclock.h\"\n");
+"#include <verilated_vcd_c.h>\n");
 
 	if (cklist.size() == 0) {
 		fprintf(stderr, "ERR: No clocks defined!\n");
