@@ -71,6 +71,7 @@ void	build_rtl_make_inc(MAPDHASH &master, FILE *fp, STRING &fname) {
 	STRINGP	mksubd, mkgroup, mkfiles;
 	STRING	allgroups, vdirs;
 	const char *DELIMITERS=", \t\r\n";
+	std::vector<STRINGP>	subdirs;
 
 	legal_notice(master, fp, fname,
 		"########################################"
@@ -83,8 +84,16 @@ void	build_rtl_make_inc(MAPDHASH &master, FILE *fp, STRING &fname) {
 		mkgroup = getstring(kvpair->second, KYRTL_MAKE_GROUP);
 		mkfiles = getstring(kvpair->second, KYRTL_MAKE_FILES);
 
-		if (mksubd)
-			vdirs = vdirs + STRING(" -y ") + (*mksubd);
+		if (mksubd) {
+			bool	prior_dir = false;
+			for(auto k : subdirs) {
+				if (mksubd->compare(*k)==0) {
+					prior_dir = true;
+					break;
+				}
+			} if (!prior_dir)
+				subdirs.push_back(mksubd);
+		}
 
 		if (!mkfiles)
 			continue;
@@ -147,8 +156,20 @@ void	build_rtl_make_inc(MAPDHASH &master, FILE *fp, STRING &fname) {
 		fprintf(fp, "%s := main.v %s\n", mkgroup->c_str(), allgroups.c_str());
 	}
 
-	if (mksubd)
-		vdirs = vdirs + STRING(" -y ") + (*mksubd);
+	if (mksubd) {
+		bool	prior_dir = false;
+		for(auto k : subdirs) {
+			if (mksubd->compare(*k)==0) {
+				prior_dir = true;
+				break;
+			}
+		}
+		if (!prior_dir)
+			subdirs.push_back(mksubd);
+	}
+
+	for(auto k : subdirs)
+		vdirs = vdirs + STRING(" -y ") + (*k);
 
 	mksubd = getstring(master, KYRTL_MAKE_VDIRS);
 	if (NULL == mksubd)
