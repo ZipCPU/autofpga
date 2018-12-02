@@ -99,7 +99,7 @@ static void	print_cachable(FILE *fp, BUSINFO *bi, unsigned dw,
 		fprintf(fp, "\t\t// %s\n"
 		"\t\tif ((i_addr[%d:0] & %d'h%0*x) == %d'h%0*x)\n"
 				"\t\t\to_cachable = 1'b1;\n",
-			(*pl)[i]->p_name->c_str(), pbits,
+			(*pl)[i]->p_name->c_str(), pbits - 1,
 			pbits, (pbits+3)/4, submask>>dw,
 			pbits, (pbits+3)/4, subaddr>>dw);
 	}
@@ -109,11 +109,10 @@ void build_cachable_core_v(MAPDHASH &master, MAPDHASH &busmaster,
 		FILE *fp, STRING &fname) {
 	// We come in here after a CACHEABLE.FILE = (*fname) key
 	char	*modulename;
+	const char *ptr;
 	BUSINFO	*bi;
 	int	dw;
 	MAPDHASH	*bimap;
-
-fprintf(stderr, "Build cachable: %s\n", fname.c_str());
 
 	bimap = getmap(busmaster, KYMASTER_BUS);
 	if (bimap == NULL) {
@@ -123,7 +122,10 @@ fprintf(stderr, "Build cachable: %s\n", fname.c_str());
 
 	bi = find_bus(bimap);
 
-	modulename = strdup(fname.c_str());
+	if (NULL == (ptr = strrchr(fname.c_str(),'/')))
+		modulename = strdup(fname.c_str());
+	else
+		modulename = strdup(ptr+1);
 	
 	assert((strlen(modulename)>2)
 		&& strcmp(&modulename[strlen(modulename)-2],".v")==0);
@@ -137,7 +139,7 @@ fprintf(stderr, "Build cachable: %s\n", fname.c_str());
 "module %s(i_addr, o_cachable);\n"
 	"\tlocalparam		AW = %d;\n"
 	"\tinput\twire\t[AW-1:0]\ti_addr;\n"
-	"\toutput\twire\t[AW-1:0]\to_cachable;\n"
+	"\toutput\treg\t\t\to_cachable;\n"
 "\n", modulename, bi->address_width());
 	free(modulename);
 
