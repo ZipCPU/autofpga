@@ -416,13 +416,14 @@ void	build_main_tb_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 		"\t// on the bus.\n"
 		"\t//\n"
 		"\tbool\tload(uint32_t addr, const char *buf, uint32_t len) {\n");
-	STRING	prestr = STRING("\t\tuint32_t\tstart, offset, wlen, base, naddr;\n\n");
+	STRING	prestr = STRING("\t\tuint32_t\tstart, offset, wlen, base, adrln;\n\n");
 
 	for(kvpair = master.begin(); kvpair != master.end(); kvpair++) {
 		if (kvpair->second.m_typ != MAPT_MAP)
 				continue;
 		MAPDHASH *dev = kvpair->second.u.m_m;
-		int	base, naddr;
+		int	base, naddr,
+			lgnb = 2; // Log of the byte width of this bus
 		STRINGP	accessp;
 		const	char *accessptr;
 
@@ -442,13 +443,14 @@ void	build_main_tb_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 
 		fprintf(fp, "\t\t//\n\t\t// Loading the %s component\n\t\t//\n",
 			kvpair->first.c_str());
-		fprintf(fp, "\t\tbase  = 0x%08x;\n\t\tnaddr = 0x%08x;\n\n",
-			base, naddr);
-		fprintf(fp, "\t\tif ((addr >= base)&&(addr < base + naddr)) {\n");
+		fprintf(fp, "\t\tbase  = 0x%08x; // in octets\n"
+				"\t\tadrln = 0x%08x;\n\n",
+			base, naddr << lgnb);
+		fprintf(fp, "\t\tif ((addr >= base)&&(addr < base + adrln)) {\n");
 		fprintf(fp, "\t\t\t// If the start access is in %s\n", kvpair->first.c_str());
 		fprintf(fp, "\t\t\tstart = (addr > base) ? (addr-base) : 0;\n");
 		fprintf(fp, "\t\t\toffset = (start + base) - addr;\n");
-		fprintf(fp, "\t\t\twlen = (len-offset > naddr - start)\n\t\t\t\t? (naddr - start) : len - offset;\n");
+		fprintf(fp, "\t\t\twlen = (len-offset > adrln - start)\n\t\t\t\t? (adrln - start) : len - offset;\n");
 
 
 		if (accessp) {
@@ -461,8 +463,8 @@ void	build_main_tb_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 		fprintf(fp, "%s", str->c_str());
 		fprintf(fp, "\t\t\t// AUTOFPGA::Now clean up anything else\n");
 		fprintf(fp, "\t\t\t// Was there more to write than we wrote?\n");
-		fprintf(fp, "\t\t\tif (addr + len > base + naddr)\n");
-		fprintf(fp, "\t\t\t\treturn load(base + naddr, &buf[offset+wlen], len-wlen);\n");
+		fprintf(fp, "\t\t\tif (addr + len > base + adrln)\n");
+		fprintf(fp, "\t\t\t\treturn load(base + adrln, &buf[offset+wlen], len-wlen);\n");
 		fprintf(fp, "\t\t\treturn true;\n");
 		if (accessp) {
 			fprintf(fp, "#else\t// %s\n", accessptr);
