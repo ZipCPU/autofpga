@@ -431,20 +431,20 @@ public:
 	// on the bus.
 	//
 	bool	load(uint32_t addr, const char *buf, uint32_t len) {
-		uint32_t	start, offset, wlen, base, naddr;
+		uint32_t	start, offset, wlen, base, adrln;
 
 		//
 		// Loading the bkram component
 		//
-		base  = 0x00c00000;
-		naddr = 0x00040000;
+		base  = 0x00c00000; // in octets
+		adrln = 0x00100000;
 
-		if ((addr >= base)&&(addr < base + naddr)) {
+		if ((addr >= base)&&(addr < base + adrln)) {
 			// If the start access is in bkram
 			start = (addr > base) ? (addr-base) : 0;
 			offset = (start + base) - addr;
-			wlen = (len-offset > naddr - start)
-				? (naddr - start) : len - offset;
+			wlen = (len-offset > adrln - start)
+				? (adrln - start) : len - offset;
 #ifdef	BKRAM_ACCESS
 			// FROM bkram.SIM.LOAD
 			start = start & (-4);
@@ -458,8 +458,8 @@ public:
 			delete	bswapd;
 			// AUTOFPGA::Now clean up anything else
 			// Was there more to write than we wrote?
-			if (addr + len > base + naddr)
-				return load(base + naddr, &buf[offset+wlen], len-wlen);
+			if (addr + len > base + adrln)
+				return load(base + adrln, &buf[offset+wlen], len-wlen);
 			return true;
 #else	// BKRAM_ACCESS
 			return false;
@@ -473,22 +473,22 @@ public:
 		//
 		// Loading the flash component
 		//
-		base  = 0x01000000;
-		naddr = 0x00400000;
+		base  = 0x01000000; // in octets
+		adrln = 0x01000000;
 
-		if ((addr >= base)&&(addr < base + naddr)) {
+		if ((addr >= base)&&(addr < base + adrln)) {
 			// If the start access is in flash
 			start = (addr > base) ? (addr-base) : 0;
 			offset = (start + base) - addr;
-			wlen = (len-offset > naddr - start)
-				? (naddr - start) : len - offset;
+			wlen = (len-offset > adrln - start)
+				? (adrln - start) : len - offset;
 #ifdef	FLASH_ACCESS
 			// FROM flash.SIM.LOAD
 			m_flash->load(start, &buf[offset], wlen);
 			// AUTOFPGA::Now clean up anything else
 			// Was there more to write than we wrote?
-			if (addr + len > base + naddr)
-				return load(base + naddr, &buf[offset+wlen], len-wlen);
+			if (addr + len > base + adrln)
+				return load(base + adrln, &buf[offset+wlen], len-wlen);
 			return true;
 #else	// FLASH_ACCESS
 			return false;
