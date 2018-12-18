@@ -1258,12 +1258,12 @@ void	build_xdc(MAPDHASH &master, FILE *fp, STRING &fname) {
 			continue;
 
 		fprintf(fp, "## From %s\n%s", kvpair->first.c_str(),
-			kvpair->second.u.m_s->c_str());
+			str->c_str());
 	}
 	str = getstring(master, KYXDC_INSERT);
 	if (NULL != str) {
 		fprintf(fp, "## From the global level\n%s",
-			kvpair->second.u.m_s->c_str());
+			str->c_str());
 	}
 }
 
@@ -1351,12 +1351,12 @@ void	build_pcf(MAPDHASH &master, FILE *fp, STRING &fname) {
 			continue;
 
 		fprintf(fp, "## From %s\n%s", kvpair->first.c_str(),
-			kvpair->second.u.m_s->c_str());
+			str->c_str());
 	}
 	str = getstring(master, KYPCF_INSERT);
 	if (NULL != str) {
 		fprintf(fp, "## From the global level\n%s",
-			kvpair->second.u.m_s->c_str());
+			str->c_str());
 	}
 }
 
@@ -1448,12 +1448,12 @@ void	build_ucf(MAPDHASH &master, FILE *fp, STRING &fname) {
 			continue;
 
 		fprintf(fp, "## From %s\n%s", kvpair->first.c_str(),
-			kvpair->second.u.m_s->c_str());
+			str->c_str());
 	}
 	str = getstring(master, KYUCF_INSERT);
 	if (NULL != str) {
 		fprintf(fp, "## From the global level\n%s",
-			kvpair->second.u.m_s->c_str());
+			str->c_str());
 	}
 }
 
