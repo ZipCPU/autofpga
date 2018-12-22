@@ -11,7 +11,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017, Gisselquist Technology, LLC
+## Copyright (C) 2017-2018, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -36,6 +36,7 @@
 ##
 ##
 @PREFIX=buspic
+@DEVID=BUSPIC
 @NADDR=1
 @ACCESS=BUSPIC_ACCESS
 @SLAVE.TYPE=SINGLE
@@ -46,6 +47,8 @@
 @INT.BUS.WIRE= w_bus_int
 @INT.BUS.PIC=  syspic
 @INT.BUS.ID=   6
+@BDEF.DEFN=
+#define BUSPIC(X) (1<<X)
 @MAIN.INSERT=
 	//
 	// The BUS Interrupt controller

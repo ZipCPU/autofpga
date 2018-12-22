@@ -12,7 +12,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017, Gisselquist Technology, LLC
+## Copyright (C) 2017-2018, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -41,6 +41,7 @@
 @SLAVE.TYPE=SINGLE
 @SLAVE.BUS=wb
 @SINGLE.INPUT= r_bus_err
+@CLOCK.NAME=clk
 @MAIN.DEFNS=
 	reg	[@$(SLAVE.BUS.AWID)-1:0]	r_@$(PREFIX)_addr;
 @MAIN.INSERT=

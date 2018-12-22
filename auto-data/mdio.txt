@@ -13,7 +13,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017, Gisselquist Technology, LLC
+## Copyright (C) 2017-2018, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -129,3 +129,5 @@ typedef struct ENETMDIO_S {
 @BDEF.IONAME= io_netmdio
 @BDEF.OSDEF= _BOARD_HAS_NETMDIO
 @BDEF.OSVAL= static volatile @$THIS.BDEF.IOTYPE *const _mdio = ((@$THIS.BDEF.IOTYPE *)@$THIS.BASE);
+@RTL.MAKE.GROUP=ENETMDIO
+@RTL.MAKE.FILES=enetctrl.v

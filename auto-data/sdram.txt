@@ -11,7 +11,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2018, Gisselquist Technology, LLC
+## Copyright (C) 2017-2018, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -35,16 +35,20 @@
 ################################################################################
 ##
 ##
-@PREFIX= sdram
+@PREFIX=sdram
 @DEVID=SDRAM
-@$LGRAMSZ.EXPR=23
+@ACCESS=@$(DEVID)_ACCESS
+@$LGRAMSZ.=23
 @$NADDR=(1<<(@$LGRAMSZ-2))
 @$NBYTES=(1<<@$LGRAMSZ)
 @NBYTES.FORMAT=0x%08x
 @ACCESS= SDRAM_ACCESS
 @SLAVE.TYPE=MEMORY
 @SLAVE.BUS=wb
-@LD.PERM=rwx
+@BUS=wb
+@ERROR.WIRE=@$(PREFIX)_err
+# 8-bit byte accesses
+@LD.PERM=wx
 @TOP.PORTLIST=
 		// Top level SDRAM I/O ports
 		o_ram_clk, o_ram_cke, o_ram_cs_n, o_ram_ras_n, o_ram_cas_n,
@@ -126,29 +130,30 @@
 	assign	sdram_debug = 32'h0000;
 @MEM.NAME= @$(PREFIX)
 @MEM.ACCESS = @$(LD.PERM)
-@REGS.N= 1
+@REGS.N=1
+@REGS.0= 0 R_@$(DEVID) @$(DEVID)
 @REGDEFS.H.DEFNS=
 #define	@$(DEVID)BASE	@$[0x%08x](REGBASE)
-#define	@$(DEVID)LEN	@$NBYTES
+#define	@$(DEVID)LEN	@$(NBYTES)
 #define	@$(DEVID)LGLEN	@$LGRAMSZ
-@REGS.0= 0 R_@$(DEVID) @$(DEVID)
 @BDEF.OSDEF=_BOARD_HAS_@$(DEVID)
-@BDEF.OSVAL=extern char _@$(PREFIX)[@$NBYTES];
+@BDEF.OSVAL=extern char	_@$(PREFIX)[@$NBYTES];
 @LDSCRIPT.PSTR=	@$(LD.PERM)
 @LDSCRIPT.PTR=	@$(PREFIX)
 @LDSCRIPT.DEF=
-_@$(PREFIX)=ORIGIN(@$(PREFIX));
-@SIM.INCLUDE+=
+_@$(PREFIX) = ORIGIN(@$(PREFIX));
+@SIM.INCLUDE=
 #include "sdramsim.h"
-@SIM.DEFNS+=
+@SIM.DEFNS=
 #ifdef	@$(ACCESS)
 	SDRAMSIM	*m_@$(MEM.NAME);
-#endif
-@SIM.INIT+=
+#endif	// @$(ACCESS)
+@SIM.INIT=
 #ifdef	@$(ACCESS)
 	m_@$(MEM.NAME) = new SDRAMSIM();
-#endif
-@SIM.TICK +=
+#endif	// @$(ACCESS)
+@SIM.CLOCK=@$(SLAVE.BUS.CLOCK.NAME)
+@SIM.TICK=
 #ifdef	@$(ACCESS)
 		m_core->i_ram_data = (*m_@$(MEM.NAME))(1,
 			m_core->o_ram_cke, m_core->o_ram_cs_n,
@@ -156,8 +161,6 @@ _@$(PREFIX)=ORIGIN(@$(PREFIX));
 				m_core->o_ram_we_n, m_core->o_ram_bs,
 				m_core->o_ram_addr, m_core->o_ram_drive_data,
 				m_core->o_ram_data, m_core->o_ram_dqm);
-
-#endif
+#endif	// @$(ACCESS)
 @SIM.LOAD +=
 			m_@$(MEM.NAME)->load(start, &buf[offset], wlen);
-#

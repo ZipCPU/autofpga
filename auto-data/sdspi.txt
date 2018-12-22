@@ -18,7 +18,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017, Gisselquist Technology, LLC
+## Copyright (C) 2017-2018, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -152,13 +152,13 @@ typedef	struct @$(DEVID)_S {
 @BDEF.IONAME=_sdcard
 @BDEF.IOTYPE=@$(DEVID)
 @BDEF.OSDEF=_BOARD_HAS_@$(DEVID)
-@BDEF.OSVAL=static volatile @$BDEF.IOTYPE *const @$BDEF.IONAME = ((@$BDEF.IOTYPE *)@$BASE);
+@BDEF.OSVAL=static volatile @$BDEF.IOTYPE *const @$BDEF.IONAME = ((@$BDEF.IOTYPE *)@$[0x%08x](REGBASE));
 @SIM.INCLUDE=
 #include "sdspisim.h"
 @SIM.DEFNS=
 #ifdef	SDSPI_ACCESS
 	SDSPISIM	m_sdcard;
-#endif
+#endif // @$(ACCESS)
 @SIM.INIT=
 #ifdef	@$(ACCESS)
 		m_sdcard.debug(false);
@@ -168,7 +168,7 @@ typedef	struct @$(DEVID)_S {
 	void	setsdcard(const char *fn) {
 		m_sdcard.load(fn);
 	}
-#endif
+#endif // @$(ACCESS)
 @SIM.TICK=
 #ifdef	@$(ACCESS)
 		m_core->i_sd_data = m_sdcard((m_core->o_sd_data&8)?1:0,
@@ -178,33 +178,42 @@ typedef	struct @$(DEVID)_S {
 		m_core->i_sd_detect = 1;
 #endif	// @$(ACCESS)
 @SIM.DEFINES=
-#define	sd_cmd_busy	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)i__DOT__r_cmd_busy
-#define	sd_clk		@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)i__DOT__r_sdspi_clk
-#define	sd_cmd_state	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)i__DOT__r_cmd_state
-#define	sd_rsp_state	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)i__DOT__r_rsp_state
-#define	sd_ll_cmd_stb	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__ll_cmd_stb
-#define	sd_ll_cmd_dat	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__ll_cmd_dat
-#define	sd_ll_z_counter	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__lowlevel__DOT__r_z_counter
-#define	sd_ll_clk_counter	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__lowlevel__DOT__r_clk_counter
-#define	sd_ll_idle	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__lowlevel__DOT__r_idle
-#define	sd_ll_state	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__lowlevel__DOT__r_state
-#define	sd_ll_byte	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__lowlevel__DOT__r_byte
-#define	sd_ll_ireg	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__lowlevel__DOT__r_ireg
-#define	sd_ll_out_stb	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__ll_out_stb
-#define	sd_ll_out_dat	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__ll_out_dat
-#define	sd_lgblklen	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__r_lgblklen
-#define	sd_fifo_rd_crc	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__fifo_rd_crc_reg
-#define	sd_cmd_crc	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__r_cmd_crc,
-#define	sd_cmd_crc_cnt	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__r_cmd_crc_cnt
-#define	sd_fifo_rd_crc_stb	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__fifo_rd_crc_stb
-#define	ll_fifo_pkt_state	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__ll_fifo_pkt_state
-#define	sd_have_data_response_token	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__r_have_data_response_token
-#define	sd_fifo_wr_crc		@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__fifo_wr_crc_reg
-#define	sd_fifo_wr_crc_stb	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__fifo_wr_crc_stb,
-#define	sd_ll_fifo_wr_state	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__ll_fifo_wr_state,
-#define	sd_ll_fifo_wr_complete	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__ll_fifo_wr_complete
-#define	sd_use_fifo	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__r_use_fifo
-#define	sd_fifo_wr	@$(VERILATOR_PREFIX)__DOT__@$(PREFIX)__DOT__r_fifo_wr
+
+#ifndef	VVAR
+#ifdef	NEW_VERILATOR
+#define	VVAR(A)	main__DOT_ ## A
+#else
+#define	VVAR(A)	v__DOT_ ## A
+#endif
+#endif
+
+#define	sd_cmd_busy	VVAR(_@$(PREFIX)i__DOT__r_cmd_busy)
+#define	sd_clk		VVAR(_@$(PREFIX)i__DOT__r_sdspi_clk)
+#define	sd_cmd_state	VVAR(_@$(PREFIX)i__DOT__r_cmd_state)
+#define	sd_rsp_state	VVAR(_@$(PREFIX)i__DOT__r_rsp_state)
+#define	sd_ll_cmd_stb	VVAR(_@$(PREFIX)__DOT__ll_cmd_stb)
+#define	sd_ll_cmd_dat	VVAR(_@$(PREFIX)__DOT__ll_cmd_dat)
+#define	sd_ll_z_counter	VVAR(_@$(PREFIX)__DOT__lowlevel__DOT__r_z_counter)
+#define	sd_ll_clk_counter	VVAR(_@$(PREFIX)__DOT__lowlevel__DOT__r_clk_counter)
+#define	sd_ll_idle	VVAR(_@$(PREFIX)__DOT__lowlevel__DOT__r_idle)
+#define	sd_ll_state	VVAR(_@$(PREFIX)__DOT__lowlevel__DOT__r_state)
+#define	sd_ll_byte	VVAR(_@$(PREFIX)__DOT__lowlevel__DOT__r_byte)
+#define	sd_ll_ireg	VVAR(_@$(PREFIX)__DOT__lowlevel__DOT__r_ireg)
+#define	sd_ll_out_stb	VVAR(_@$(PREFIX)__DOT__ll_out_stb)
+#define	sd_ll_out_dat	VVAR(_@$(PREFIX)__DOT__ll_out_dat)
+#define	sd_lgblklen	VVAR(_@$(PREFIX)__DOT__r_lgblklen)
+#define	sd_fifo_rd_crc	VVAR(_@$(PREFIX)__DOT__fifo_rd_crc_reg)
+#define	sd_cmd_crc	VVAR(_@$(PREFIX)__DOT__r_cmd_crc)
+#define	sd_cmd_crc_cnt	VVAR(_@$(PREFIX)__DOT__r_cmd_crc_cnt)
+#define	sd_fifo_rd_crc_stb	VVAR(_@$(PREFIX)__DOT__fifo_rd_crc_stb)
+#define	ll_fifo_pkt_state	VVAR(_@$(PREFIX)__DOT__ll_fifo_pkt_state)
+#define	sd_have_data_response_token	VVAR(_@$(PREFIX)__DOT__r_have_data_response_token)
+#define	sd_fifo_wr_crc		VVAR(_@$(PREFIX)__DOT__fifo_wr_crc_reg)
+#define	sd_fifo_wr_crc_stb	VVAR(_@$(PREFIX)__DOT__fifo_wr_crc_stb,)
+#define	sd_ll_fifo_wr_state	VVAR(_@$(PREFIX)__DOT__ll_fifo_wr_state,)
+#define	sd_ll_fifo_wr_complete	VVAR(_@$(PREFIX)__DOT__ll_fifo_wr_complete)
+#define	sd_use_fifo	VVAR(_@$(PREFIX)__DOT__r_use_fifo)
+#define	sd_fifo_wr	VVAR(_@$(PREFIX)__DOT__r_fifo_wr)
 
 @SIM.DEBUG=
 			/*
@@ -312,6 +321,6 @@ typedef struct WBSCOPE_S {
 @BDEF.IONAME= _@$(PREFIX)
 @BDEF.IOTYPE=WBSCOPE
 @BDEF.OSDEF=_BOARD_HAS_SDSPI_SCOPE
-@BDEF.OSVAL=static volatile @$BDEF.IOTYPE *const @$(BDEF.IONAME) = ((@$BDEF.IOTYPE *)@$BASE);
+@BDEF.OSVAL=static volatile @$BDEF.IOTYPE *const @$(BDEF.IONAME) = ((@$BDEF.IOTYPE *)@$[0x%08x](REGBASE));
 @RTL.MAKE.GROUP= SDSPI
 @RTL.MAKE.FILES= sdspi.v llsdspi.v wbscope.v

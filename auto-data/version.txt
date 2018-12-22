@@ -11,7 +11,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017, Gisselquist Technology, LLC
+## Copyright (C) 2017-2018, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -44,11 +44,32 @@
 `include "builddate.v"
 @MAIN.INSERT=
 	assign	@$(PREFIX)_data = `DATESTAMP;
-	assign	@$(PREFIX)_ack = 1'b0;
+	assign	@$(PREFIX)_ack = wb_stb && @$(PREFIX)_sel;
 	assign	@$(PREFIX)_stall = 1'b0;
 @REGS.N=1
 @REGS.0= 0 R_@$(DEVID) @$(DEVID)
 @BDEF.IONAME=_@$(PREFIX)
 @BDEF.IOTYPE=unsigned
 @BDEF.OSDEF=_BOARD_HAS_@$(DEVID)
-@BDEF.IOTYPE=static volatile @$BDEF.IOTYPE *const @$BDEF.IONAME = &((@$.BDEF.IOTYPE *)@$.BASE);
+@BDEF.IOTYPE=static volatile @$BDEF.IOTYPE *const @$BDEF.IONAME = &((@$BDEF.IOTYPE *)@$[0x%08x](REGBASE));
+##
+##
+##
+@PREFIX=buildtime
+@DEVID=BUILDTIME
+@NADDR=1
+@SLAVE.TYPE=SINGLE
+@SLAVE.BUS=wb
+@MAIN.DEFNS=
+// BUILDTIME doesnt need to include builddate.v a second time
+// `include "builddate.v"
+@MAIN.INSERT=
+	assign	@$(PREFIX)_data = `BUILDTIME;
+	assign	@$(PREFIX)_ack = wb_stb && @$(PREFIX)_sel;
+	assign	@$(PREFIX)_stall = 1'b0;
+@REGS.N=1
+@REGS.0= 0 R_@$(DEVID) @$(DEVID)
+@BDEF.IONAME=_@$(PREFIX)
+@BDEF.IOTYPE=unsigned
+@BDEF.OSDEF=_BOARD_HAS_@$(DEVID)
+@BDEF.IOTYPE=static volatile @$BDEF.IOTYPE *const @$BDEF.IONAME = &((@$.BDEF.IOTYPE *)@$[0x%08x](REGBASE));

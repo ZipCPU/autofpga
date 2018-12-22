@@ -11,7 +11,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017, Gisselquist Technology, LLC
+## Copyright (C) 2017-2018, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -139,7 +139,7 @@ typedef struct  WBUART_S {
 @BDEF.IONAME= _@$PREFIX
 @BDEF.IOTYPE= WBUART
 @BDEF.OSDEF=	_BOARD_HAS_WBUART
-@BDEF.OSVAL=static volatile WBUART *const @$BDEF.IONAME = ((WBUART *)@$.BASE);
+@BDEF.OSVAL=static volatile WBUART *const @$BDEF.IONAME = ((WBUART *)@$[0x%08x](REGBASE));
 @RTL.MAKE.GROUP=WBUART
 @RTL.MAKE.FILES= wbuart.v ufifo.v rxuart.v txuart.v
 @SIM.INCLUDE=
@@ -147,16 +147,16 @@ typedef struct  WBUART_S {
 @SIM.DEFNS=
 #ifdef	@$(ACCESS)
 	UARTSIM	*m_@$(PREFIX);
-#endif
+#endif // @$(ACCESS)
 @SIM.INIT=
 #ifdef	@$(ACCESS)
-		m_@$(PREFIX) = new UARTSIM(FPGAPORT+$(SIM.PORTOFFSET),@$(SIM.UARTSETUP));
+		m_@$(PREFIX) = new UARTSIM(FPGAPORT+@$(SIM.PORTOFFSET),@$(SIM.UARTSETUP));
 		m_core->@$CTS = 0; // The sim doesnt use flow control
-#endif
+#endif // @$(ACCESS)
 @SIM.TICK=
 #ifdef	@$(ACCESS)
-		m_core->i_@$(PREFIX)_rx = m_@$(PREFIX)->tick(m_core->o_@$(PREFIX)_tx);
+		m_core->i_@$(PREFIX)_rx = (*m_@$(PREFIX))(m_core->o_@$(PREFIX)_tx);
 #else
 		m_core->i_@$(PREFIX)_rx = 1;
-#endif
+#endif // @$(ACCESS)
 

@@ -11,7 +11,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017, Gisselquist Technology, LLC
+## Copyright (C) 2017-2018, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -35,24 +35,25 @@
 ################################################################################
 ##
 ##
-@PREFIX=date
+@PREFIX=rtcdate
+@DEVID=RTCDATE
 @NADDR=1
-@ACCESS=RTCDATE_ACCESS
+@ACCESS=@$(DEVID)_ACCESS
 @DEPENDS=RTC_ACCESS
 @SLAVE.TYPE=SINGLE
 @SLAVE.BUS=wb
-@RTL.MAKE.GROUP=RTCDATE
-@RTL.MAKE.FILES=rtcdate.v
 @MAIN.INSERT=
 	//
 	// The Calendar DATE
 	//
-	rtcdate	the@$(PREFIX)(i_clk, rtc_ppd,
-		(wb_stb)&&(@$(PREFIX)_sel), wb_we, wb_data,
+	rtcdate	@$(PREFIX)i(i_clk, rtc_ppd,
+		(wb_stb)&&(@$(PREFIX)_sel), wb_we, wb_data, wb_sel,
 			@$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_data);
 @REGS.N=1
-@REGS.0= 0 R_DATE RTCDATE DATE
-@BDEF.IONAME=	_date
+@REGS.0= 0 R_@$(DEVID) @$(DEVID) DATE
+@BDEF.IONAME=	_@$(PREFIX)
 @BDEF.IOTYPE=	unsigned
-@BDEF.OSDEF=	_BOARD_HAS_RTCDATE
-@BDEF.OSVAL=	static volatile @$BDEF.IOTYPE *const @$(BDEF.IONAME) = ((@$BDEF.IOTYPE *)@$REGBASE);
+@BDEF.OSDEF=	_BOARD_HAS_@$(DEVID)
+@BDEF.OSVAL=	static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME) = ((@$BDEF.IOTYPE *)@$REGBASE);
+@RTL.MAKE.GROUP=@$(DEVID)
+@RTL.MAKE.FILES=rtcdate.v

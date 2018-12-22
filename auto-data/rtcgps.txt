@@ -11,7 +11,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017, Gisselquist Technology, LLC
+## Copyright (C) 2017-2018, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -36,32 +36,46 @@
 ##
 ##
 @PREFIX=rtc
+@DEVID=RTC
 @NADDR=4
 @SLAVE.TYPE=DOUBLE
 @SLAVE.BUS=wb
 @ACCESS=RTC_ACCESS
-@$CLKSTEP=((1<<48)/@$CLKFREQHZ)
-@CLKSTEP.FORMAT=32'h%08x
+@CLOCK.NAME=clk
+@CLKFREQHZ=@$(CLOCK.FREQUENCY)
+@$CLKSTEP=((1<<48)/@$(CLOCK.FREQUENCY))
 @INT.RTC.WIRE=rtc_int
 @INT.RTC.PIC=altpic
 @MAIN.DEFNS=
 	// Definitions in support of the GPS driven RTC
-	wire	rtc_ppd, rtc_pps;
-	reg	r_rtc_ack;
+	localparam	[31:0]	RTC_CLKSTEP = @$[32'h%08x](CLKSTEP);
+	wire	@$(PREFIX)_ppd;
+	reg	r_@$(PREFIX)_ack;
+`ifdef	GPSTRK_ACCESS
+	wire	@$(PREFIX)_pps;
+`endif
 @MAIN.INSERT=
-	rtcgps	#(@$CLKSTEP) the@$(PREFIX)(i_clk,
-		wb_cyc, (wb_stb)&&(@$(PREFIX)_sel), wb_we, wb_addr[1:0], wb_data,
-		@$(PREFIX)_data, @$(PREFIX)_int, @$(PREFIX)_ppd,
+`ifdef	GPSTRK_ACCESS
+	rtcgps	#(RTC_CLKSTEP) the@$(PREFIX)(i_clk, i_reset,
+		wb_cyc, (wb_stb)&&(@$(PREFIX)_sel), wb_we, wb_addr[1:0], wb_data, wb_sel,
+		@$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_data,
+		@$(PREFIX)_int, @$(PREFIX)_ppd,
 		gps_tracking, ck_pps, gps_step[47:16], rtc_pps);
-	initial	r_rtc_ack = 1'b0;
-	always @(posedge i_clk)
-		r_rtc_ack <= (wb_stb)&&(rtc_sel);
-	assign	rtc_ack = r_rtc_ack;
+`else
+	rtclight #(@$[32'h%x](CLKSTEP)) the@$(PREFIX)(i_clk, i_reset,
+		wb_cyc, (wb_stb)&&(@$(PREFIX)_sel), wb_we, { 1'b0, wb_addr[1:0] },
+			wb_data, wb_sel,
+		@$(PREFIX)_stall, @$(PREFIX)_ack, @$(PREFIX)_data,
+		@$(PREFIX)_int, @$(PREFIX)_ppd);
+`endif
 @MAIN.ALT=
-	assign	rtc_pps = 1'b0;
+`ifdef	GPSTRK_ACCESS
+	assign	@$(PREFIX)_pps = 1'b0;
+`endif
+	assign	@$(PREFIX)_ppd = 1'b0;
 @REGS.NOTE= // RTC clock registers
 @REGS.N=4
-@REGS.0= 0 R_CLOCK	CLOCK TIMER
+@REGS.0= 0 R_CLOCK	CLOCK
 @REGS.1= 1 R_TIMER	TIMER
 @REGS.2= 2 R_STOPWATCH	STOPWATCH
 @REGS.3= 3 R_CKALARM	ALARM CKALARM
@@ -71,7 +85,40 @@ typedef	struct	RTCLIGHT_S	{
 } RTCLIGHT;
 @BDEF.IONAME=_rtc
 @BDEF.IOTYPE=RTCLIGHT
-@BDEF.OSDEF=_BOARD_HAS_RTCLIGHT
-@BDEF.OSVAL=static volatile @$BDEF.IOTYPE *const @$(BDEF.IONAME) = ((@$BDEF.IOTYPE *)@$REGBASE);
+@BDEF.OSDEF=_BOARD_HAS_RTC
+@BDEF.OSVAL=static volatile @$BDEF.IOTYPE *const @$(BDEF.IONAME) = ((@$BDEF.IOTYPE *)@$[0x%08x](REGBASE));
 #
 #
+@RTL.MAKE.GROUP=RTCGPS
+@RTL.MAKE.FILES=rtcgps.v rtcbare.v rtctimer.v rtcstopwatch.v rtcalarm.v rtclight.v
+##
+##
+@PREFIX=subseconds
+@DEVID=SUBSECONDS
+@NADDR=1
+@SLAVE.BUS=wb
+@SLAVE.TYPE=SINGLE
+@MAIN.DEFNS=
+`ifndef	GPSTRK_ACCESS
+	reg	[31:0]	r_@$(PREFIX)_data;
+`endif
+@MAIN.INSERT=
+`ifdef	GPSTRK_ACCESS
+	assign	@$(PREFIX)_data = gps_now[31:0];
+`else
+	always @(posedge i_clk)
+	if ((wb_stb)&&(@$(PREFIX)_sel))
+		r_@$(PREFIX)_data <= wb_data;
+	else
+		r_@$(PREFIX)_data <= r_@$(PREFIX)_data
+			+ { 16'h0, RTLCLKSTEP[31:16] };
+
+	assign	@$(PREFIX)_data = r_@$(PREFIX)_data;
+`endif
+@REGS.NOTE= // A register capturing subseconds, locked to GPS if present
+@REGS.N=1
+@REGS.0= 0 R_SUBSECONDS	SUBSECONDS
+@BDEF.IONAME=_@$(PREFIX)
+@BDEF.IOTYPE=unsigned
+@BDEF.OSDEF=_BOARD_HAS_@$(DEVID)
+@BDEF.OSVAL=static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME) = ((@$BDEF.IOTYPE *)@$[0x%08x](REGBASE));

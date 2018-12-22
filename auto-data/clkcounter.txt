@@ -2,10 +2,12 @@
 ##
 ## Filename: 	clkcounter.txt
 ##
-## Project:	AutoGen, a utility for composing FPGA designs from peripherals
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 ##
-## Purpose:	To describe the clkcounter's interface for autofpga to work
-##		with.
+## Purpose:	The clkcounter peripheral counts the number of a given clocks
+##		ticks per second as defined by a second clock.  This particular
+##	file tells us how to connect the clkcounter to the rest of the design
+##	using AutoFPGA.
 ##
 ## Creator:	Dan Gisselquist, Ph.D.
 ##		Gisselquist Technology, LLC

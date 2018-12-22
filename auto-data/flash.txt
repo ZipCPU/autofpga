@@ -11,7 +11,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017, Gisselquist Technology, LLC
+## Copyright (C) 2017-2018, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -36,7 +36,9 @@
 ##
 ##
 @PREFIX= flash
-@$LGFLASHSZ.EXPR=24
+@DEVID=FLASH
+@ACCESS= FLASH_ACCESS
+@$LGFLASHSZ=24
 @$NADDR=(1<<(@$LGFLASHSZ-2))
 @$NBYTES=(1<<@$LGFLASHSZ)
 @NBYTES.FORMAT=0x%08x
@@ -151,7 +153,7 @@
 		flashmem(i_clk,
 			(wb_cyc), (wb_stb)&&(flash_sel), (wb_stb)&&(flctl_sel),wb_we,
 			wb_addr[(@$LGFLASHSZ-3):0], wb_data,
-			flash_ack, flash_stall, flash_data,
+			@$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_data,
 			o_qspi_sck, o_qspi_cs_n, o_qspi_mod, o_qspi_dat, i_qspi_dat,
 			flash_interrupt);
 @MAIN.ALT=
@@ -162,18 +164,15 @@
 @MEM.NAME= flash
 @MEM.ACCESS = rx
 @REGS.N= 1
-@DEVID=FLASH
 @REGDEFS.H.DEFNS=
 #define	@$(DEVID)BASE	@$[0x%08x](REGBASE)
 #define	@$(DEVID)LEN	@$NBYTES
 #define	@$(DEVID)LGLEN	@$LGFLASHSZ
-@REGS.0= 0 R_@$(DEVID) FLASH
-@BDEF.OSDEF=_BOARD_HAS_FLASH
-@BDEF.OSVAL=extern char _flash[@$NBYTES];
-@LDSCRIPT.PSTR=	rx
-@LDSCRIPT.PTR=	flash
-@LDSCRIPT.DEF=
-_flash=ORIGIN(flash);
+@REGS.0= 0 R_@$(DEVID) @$(DEVID)
+@BDEF.OSDEF=_BOARD_HAS_@$(DEVID)
+@BDEF.OSVAL=extern int _@$(PREFIX)[1];
+@LD.PERM=	rx
+@LD.NAME=	flash
 @REGDEFS.H.INSERT=
 
 #define	R_ICONTROL	R_PIC
@@ -185,18 +184,20 @@ _flash=ORIGIN(flash);
 @SIM.DEFNS+=
 #ifdef	@$(ACCESS)
 	QSPIFLASHSIM	*m_@$(MEM.NAME);
-#endif
+#endif // @$(ACCESS)
 @SIM.INIT+=
 #ifdef	@$(ACCESS)
-	m_@$(MEM.NAME) = new QSPIFLASHSIM(FLASHLGLEN);
-#endif
+		m_@$(MEM.NAME) = new QSPIFLASHSIM(FLASHLGLEN);
+#endif // @$(ACCESS)
 @SIM.TICK +=
 #ifdef	@$(ACCESS)
 		m_core->i_qspi_dat = (*m_@$(MEM.NAME))(m_core->o_qspi_cs_n,
 			m_core->o_qspi_sck, m_core->o_qspi_dat);
 #endif
 @SIM.LOAD +=
+#ifdef	@$(ACCESS)
 			m_@$(MEM.NAME)->load(start, &buf[offset], wlen);
+#endif // @$(ACCESS)
 #
 #
 #
@@ -205,7 +206,7 @@ _flash=ORIGIN(flash);
 # Now, the control interface
 @PREFIX= flctl
 @NADDR= 4
-@ACCESS= FLASH_ACCESS
+@DEPENDS= FLASH_ACCESS
 # This cannot be a DOUBLE peripheral type, since our response may take more than
 # two clock cycles.
 @SLAVE.TYPE=OTHER
@@ -213,9 +214,9 @@ _flash=ORIGIN(flash);
 @MAIN.INSERT=
 	// The Flash control interface result comes back together with the
 	// flash interface itself.  Hence, we always return zero here.
-	assign	flctl_ack   = 1'b0;
-	assign	flctl_stall = 1'b0;
-	assign	flctl_data  = 0;
+	assign	@$(PREFIX)_ack   = 1'b0;
+	assign	@$(PREFIX)_stall = 1'b0;
+	assign	@$(PREFIX)_data  = 0;
 @REGS.NOTE= // FLASH erase/program configuration registers
 @REGS.N= 4
 @REGS.0= 0 R_QSPI_EREG QSPIE
@@ -244,6 +245,9 @@ typedef struct FLASHCTL_S {
 #define	SUBSECTOROF(A)	((A) & (-1<<12))
 #define	PAGEOF(A)	((A) & (-1<<8))
 
-@BDEF.IONAME= io_flctl
+@BDEF.IONAME= _@$(PREFIX)
+@BDEF.OSDEF= _BOARD_HAS_@$(DEVID)
+@BDEF.IOTYPE=unsigned
+@BDEF.OSVAL=static volatile @$(BDEF.IOTYPE) * const @$(BDEF.IONAME) = ((@$BDEF.IOTYPE *)(@$[0x%08x](REGBASE)));
 @RTL.MAKE.GROUP= FLASH
 @RTL.MAKE.FILES= wbqspiflash.v llqspi.v flashconfig.v

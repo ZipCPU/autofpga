@@ -2,7 +2,7 @@
 ##
 ## Filename: 	global.txt
 ##
-## Project:	VideoZip, a ZipCPU SoC supporting video functionality
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 ##
 ## Purpose:	Capture any global configuration parameters
 ##
@@ -11,7 +11,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017, Gisselquist Technology, LLC
+## Copyright (C) 2015-2018, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -36,15 +36,14 @@
 ##
 ##
 @LEGAL=../auto-data/legalgen.txt
-@PROJECT=VideoZip, a ZipCPU SoC supporting video functionality
+@PROJECT=AutoFPGA, a utility for composing FPGA designs from peripherals
 #
 # @KEYS.TRIMLIST is a list of all string keys that need to be trimmed (have
 # spaces removed from either side) before being used
 # @KEYS.INTLIST is a list of all things that need to be converted to integers
 @KEYS.INTLIST= BUS_ADDRESS_WIDTH NADDR NPIC NSCOPES PIC.MAX REGS.N ID
 @DEFAULT.BUS=wb
-@$RESET_ADDRESS=@$flash.BASE+(@$flash.NADDR)
-@RESET_ADDRESS.FORMAT=32'h%08x
+@REGISTER.BUS=wbu
 @VERILATOR_PREFIX=v
 @REGDEFS.H.INSERT=
 typedef	struct {
@@ -74,16 +73,16 @@ unsigned	addrdecode(const char *v) {
 		for(int i=0; i<NREGS; i++)
 			if (strcasecmp(v, bregs[i].m_name)==0)
 				return bregs[i].m_addr;
-		fprintf(stderr, "Unknown register: %s\n", v);
-		exit(-2);
 #ifdef	R_ZIPCTRL
-	} else if (strcasecmp(v, "CPU")==0) {
-		return R_ZIPCTRL;
+		if (strcasecmp(v, "CPU")==0)
+			return R_ZIPCTRL;
 #endif	// R_ZIPCTRL
 #ifdef	R_ZIPDATA
-	} else if (strcasecmp(v, "CPUD")==0) {
-		return R_ZIPDATA;
+		if (strcasecmp(v, "CPUD")==0)
+			return R_ZIPDATA;
 #endif	// R_ZIPDATA
+		fprintf(stderr, "Unknown register: %s\n", v);
+		exit(-2);
 	} else
 		return strtoul(v, NULL, 0);
 }

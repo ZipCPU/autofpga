@@ -11,7 +11,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017, Gisselquist Technology, LLC
+## Copyright (C) 2017-2018, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -60,6 +60,7 @@
 
 	assign	netb_ack   = 1'b0;
 	assign	netb_stall = 1'b0;
+	assign	netb_data  = 0;
 
 `endif
 
@@ -141,4 +142,4 @@ typedef	struct ENETPACKET_S {
 @BDEF.IONAME=io_enet
 @BDEF.IOTYPE=ENETPACKET
 @BDEF.OSDEF=_BOARD_HAS_ENETP
-@BDEF.OSVAL=static volatile *const _netp = &((ENETPACKET *)@$THIS.BASE);
+@BDEF.OSVAL=static volatile ENETPACKET *const _netp = ((ENETPACKET *)@$[0x%08x](REGBASE));

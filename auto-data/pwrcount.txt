@@ -11,7 +11,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017, Gisselquist Technology, LLC
+## Copyright (C) 2017-2018, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -37,6 +37,7 @@
 ##
 @PREFIX=pwrcount
 @NADDR=1
+@ACCESS=PWRCOUNT_ACCESS
 @SLAVE.TYPE=SINGLE
 @SLAVE.BUS=wb
 @MAIN.DEFNS=
@@ -51,3 +52,4 @@
 	assign	pwrcount_data = r_pwrcount_data;
 @REGS.N=1
 @REGS.0= 0 R_PWRCOUNT PWRCOUNT
+@BDEF.OSVAL= static volatile unsigned *const _@$(PREFIX) = ((unsigned *)@$[0x%08x](REGBASE));

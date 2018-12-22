@@ -14,7 +14,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017, Gisselquist Technology, LLC
+## Copyright (C) 2017-2018, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -46,44 +46,17 @@
 @ACCESS=INCLUDE_ZIPCPU
 @MASTER.TYPE=CPU
 @MASTER.BUS=zip
-@CACHABLE.FILE=iscachable.v
 @BUS.NAME=zip
 @BUS.WIDTH=32
 @BUS.CLOCK=clk
-@LD.FILE=board.ld
-@LD.ENTRY=_start
-@LD.SCRIPT=
-
-SECTIONS
-{
-	.rocode @$(RESET_ADDRESS) : ALIGN(4) {
-		_boot_address = .;
-		*(.start) *(.boot)
-	} > flash
-
-	_kernel_image_start = . ;
-	_kernel_image_end = . ;
-	_ram_image_start = . ;
-	.ramcode : ALIGN_WITH_INPUT {
-		*(.kernel)
-		*(.text.startup)
-		*(.text)
-		*(.rodata) *(.strings)
-		*(.data) *(COMMON)
-		}> bkram AT> flash
-	_ram_image_end = . ;
-	.bss : ALIGN_WITH_INPUT {
-		*(.bss)
-		_bss_image_end = . ;
-		}> bkram
-	_top_of_heap = .;
-}
-
 @SCOPE.TRIGGER=zip_trigger
 @SCOPE.DATA=zip_debug
+@$RESET_ADDRESS=@$(flash.REGBASE)+(4<<20)
 @INT.ZIP.WIRE=zip_cpu_int
 @INT.ZIP.BUS=buspic
-@CPURESET=i_cpu_resetn
+@CACHABLE.FILE=iscachable.v
+@LGICACHE=10
+@LGDCACHE=10
 @TOP.PORTLIST=
 # 		// A reset wire for the ZipCPU
 # 		i_cpu_resetn
@@ -103,12 +76,12 @@ SECTIONS
 	// Variables/definitions needed by the ZipCPU BUS master
 	//
 	//
-	// A 32-bit address indicating where teh ZipCPU should start running
+	// A 32-bit address indicating where the ZipCPU should start running
 	// from
 	localparam	RESET_ADDRESS = @$RESET_ADDRESS;
 	//
 	// The number of valid bits on the bus
-	localparam	ZIP_ADDRESS_WIDTH = @$(MASTER.BUS.AWID);	// Zip-CPU address width
+	localparam	ZIP_ADDRESS_WIDTH = @$(BUS.AWID); // Zip-CPU address width
 	//
 	// Number of ZipCPU interrupts
 	localparam	ZIP_INTS = 16;
@@ -130,8 +103,9 @@ SECTIONS
 	//
 	//
 	assign	zip_int_vector = { alt_int_vector[14:8], sys_int_vector[14:6] };
-	zipsystem #(RESET_ADDRESS,ZIP_ADDRESS_WIDTH,10,ZIP_START_HALTED,ZIP_INTS)
-		swic(i_clk, i_cpu_reset,
+	zipsystem #(RESET_ADDRESS,ZIP_ADDRESS_WIDTH,@$(LGICACHE),@$(LGDCACHE),
+			ZIP_START_HALTED,ZIP_INTS)
+		swic(i_clk, (i_reset)||(i_cpu_reset),
 			// Zippys wishbone interface
 			zip_cyc, zip_stb, zip_we, zip_addr, zip_data, zip_sel,
 					zip_ack, zip_stall, zip_idata, zip_err,
@@ -141,10 +115,14 @@ SECTIONS
 			wbu_addr[0],
 			wbu_data, zip_dbg_ack, zip_dbg_stall, zip_dbg_data,
 			zip_debug);
-	assign	zip_trigger = zip_debug[0];
+	assign	zip_trigger = zip_debug[31];
 @BDEF.INCLUDE=
 #include <design.h>
 #include <cpudefs.h>
+
+#define	_HAVE_ZIPSYS
+#define	PIC	_zip->z_pic
+
 #ifdef	INCLUDE_ZIPCPU
 #ifdef INCLUDE_DMA_CONTROLLER
 #define	_HAVE_ZIPSYS_DMA
@@ -171,30 +149,57 @@ SECTIONS
 #define	CPU_uCC		0x001e
 #define	CPU_uPC		0x001f
 
+#define	RESET_ADDRESS	@$[0x%08x](RESET_ADDRESS)
+
 
 @SIM.INCLUDE=
 #include "zipelf.h"
 
 @SIM.DEFINES=
-#define	cpu_break 	@$(VERILATOR_PREFIX)__DOT__swic__DOT__cpu_break
-#define	cpu_cmd_halt	@$(VERILATOR_PREFIX)__DOT__swic__DOT__cmd_halt
-#define	cpu_ipc		@$(VERILATOR_PREFIX)__DOT__swic__DOT__thecpu__DOT__ipc
-#define	cpu_upc		@$(VERILATOR_PREFIX)__DOT__swic__DOT__thecpu__DOT__r_upc
-#define	cpu_gie		@$(VERILATOR_PREFIX)__DOT__swic__DOT__thecpu__DOT__r_gie
-#define	cpu_iflags	@$(VERILATOR_PREFIX)__DOT__swic__DOT__thecpu__DOT__w_iflags
-#define	cpu_uflags	@$(VERILATOR_PREFIX)__DOT__swic__DOT__thecpu__DOT__w_uflags
-#define	cpu_regs	@$(VERILATOR_PREFIX)__DOT__swic__DOT__thecpu__DOT__regset
-#define	cpu_cmd_addr	@$(VERILATOR_PREFIX)__DOT__swic__DOT__cmd_addr
-#define	cpu_bus_err	@$(VERILATOR_PREFIX)__DOT__swic__DOT__thecpu__DOT__bus_err
-#define	cpu_ibus_err	@$(VERILATOR_PREFIX)__DOT__swic__DOT__thecpu__DOT__ibus_err_flag
-#define	cpu_ubus_err	@$(VERILATOR_PREFIX)__DOT__swic__DOT__thecpu__DOT__r_ubus_err_flag
-#define	cpu_mem_rdaddr	@$(VERILATOR_PREFIX)__DOT__swic__DOT__thecpu__DOT__domem__DOT__rdaddr
-#define	cpu_mem_wraddr	@$(VERILATOR_PREFIX)__DOT__swic__DOT__thecpu__DOT__domem__DOT__wraddr
-#define	cpu_op_sim	@$(VERILATOR_PREFIX)__DOT__swic__DOT__thecpu__DOT__op_sim
-#define	cpu_op_valid	@$(VERILATOR_PREFIX)__DOT__swic__DOT__thecpu__DOT__op_valid
-#define	cpu_alu_ce	@$(VERILATOR_PREFIX)__DOT__swic__DOT__thecpu__DOT__alu_ce
-#define	cpu_new_pc	@$(VERILATOR_PREFIX)__DOT__swic__DOT__thecpu__DOT__new_pc
-#define	cpu_sim_immv	@$(VERILATOR_PREFIX)__DOT__swic__DOT__thecpu__DOT__op_sim_immv
+#ifndef	VVAR
+#ifdef	NEW_VERILATOR
+#define	VVAR(A)	main__DOT_ ## A
+#else
+#define	VVAR(A)	v__DOT_ ## A
+#endif
+#endif
+
+#define	CPUVAR(A)	VVAR(_swic__DOT__thecpu__DOT_ ## A)
+
+#define	cpu_reset	VVAR(_swic__DOT__cmd_reset)
+#define	cpu_break 	VVAR(_swic__DOT__cpu_break)
+#define	cpu_cmd_halt	VVAR(_swic__DOT__cmd_halt)
+#define	cpu_ipc		CPUVAR(_ipc)
+#define	cpu_pf_pc	CPUVAR(_pf_pc)
+#define	cpu_upc		CPUVAR(_SET_USER_PC__DOT__r_upc)
+#define	cpu_gie		CPUVAR(_SET_GIE__DOT__r_gie)
+#define	cpu_iflags	CPUVAR(_w_iflags)
+#define	cpu_uflags	CPUVAR(_w_uflags)
+#define	cpu_regs	CPUVAR(_regset)
+#define	cpu_cmd_addr	VVAR(_swic__DOT__cmd_addr)
+#define	cpu_bus_err	CPUVAR(_bus_err)
+#define	cpu_ibus_err	CPUVAR(_ibus_err_flag)
+#define	cpu_ubus_err	CPUVAR(_r_ubus_err_flag)
+#define	cpu_mem_rdaddr	CPUVAR(_domem__DOT__rdaddr)
+#define	cpu_mem_wraddr	CPUVAR(_domem__DOT__wraddr)
+#define	cpu_op_sim	CPUVAR(_op_sim)
+#define	cpu_op_valid	CPUVAR(_op_valid)
+#define	cpu_alu_ce	CPUVAR(_alu_ce)
+#define	cpu_new_pc	CPUVAR(_new_pc)
+#define	cpu_sim_immv	CPUVAR(_op_sim_immv)
+#define	cpu_alu_pc_valid	CPUVAR(_alu_pc_valid)
+#define	cpu_mem_pc_valid	CPUVAR(_mem_pc_valid)
+#ifdef	OPT_PIPELINED
+#define	cpu_alu_pc	CPUVAR(_GEN_ALU_PC__DOT__r_alu_pc)
+#else
+#define	cpu_alu_pc	CPUVAR(_op_pc)
+#endif
+#ifdef	OPT_CIS
+#define	cpu_alu_phase	CPUVAR(_GEN_ALU_PHASE__DOT__r_alu_phase)
+#endif
+#define	cpu_wr_ce	CPUVAR(_wr_reg_ce)
+#define	cpu_wr_reg_id	CPUVAR(_wr_reg_id)
+#define	cpu_wr_gpreg	CPUVAR(_wr_gpreg_vl)
 
 @SIM.DEFNS=
 	int	m_cpu_bombed;
@@ -213,10 +218,19 @@ SECTIONS
 		elfread(elfname, entry, secpp);
 
 		for(int s=0; secpp[s]->m_len; s++) {
+			bool	successful_load;
 			secp = secpp[s];
 
-			load(secp->m_start, secp->m_data, secp->m_len);
-		}
+			successful_load = load(secp->m_start,
+				secp->m_data, secp->m_len);
+
+			if (!successful_load) {
+				printf("Could not load section "
+					"from %08x to %08x--no such address\n",
+					secp->m_start,
+					secp->m_start+secp->m_len);
+			}
+		} free(secpp);
 	}
 
 
@@ -294,14 +308,20 @@ SECTIONS
 			exit(0);
 		} else if ((imm & 0x0ffff0)==0x00310) {
 			// SIM Exit(User-Reg)
-			int	rcode;
-			rcode = regp[(imm&0x0f)+16] & 0x0ff;
+			int	rcode, rnum;
+			rnum  = (imm&0x0f)+16;
+			rcode = regp[rnum] & 0x0ff;
+			if ((m_core->cpu_wr_ce)&&(m_core->cpu_wr_reg_id==rnum))
+				rcode = m_core->cpu_wr_gpreg;
 			close();
 			exit(rcode);
 		} else if ((imm & 0x0ffff0)==0x00300) {
 			// SIM Exit(Reg)
-			int	rcode;
-			rcode = regp[(imm&0x0f)+rbase] & 0x0ff;
+			int	rcode, rnum;
+			rnum  = (imm&0x0f)+rbase;
+			rcode = regp[rnum] & 0x0ff;
+			if ((m_core->cpu_wr_ce)&&(m_core->cpu_wr_reg_id==rnum))
+				rcode = m_core->cpu_wr_gpreg;
 			close();
 			exit(rcode);
 		} else if ((imm & 0x0fff00)==0x00100) {
@@ -316,23 +336,38 @@ SECTIONS
 			dump(regp);
 		} else if ((imm & 0x0ffff0)==0x00200) {
 			// Dump a register
-			int rid = (imm&0x0f)+rbase;
+			int	rcode, rnum;
+			rnum  = (imm&0x0f)+rbase;
+			rcode = regp[rnum];
+			if ((m_core->cpu_wr_ce)&&(m_core->cpu_wr_reg_id==rnum))
+				rcode = m_core->cpu_wr_gpreg;
 			printf("%8lu @%08x R[%2d] = 0x%08x\n", m_time_ps/1000,
-			m_core->cpu_ipc, rid, regp[rid]);
+				m_core->cpu_ipc, rnum, rcode);
 		} else if ((imm & 0x0ffff0)==0x00210) {
 			// Dump a user register
-			int rid = (imm&0x0f);
+			int	rcode, rnum;
+			rnum  = (imm&0x0f)+16;
+			rcode = regp[rnum] & 0x0ff;
+			if ((m_core->cpu_wr_ce)&&(m_core->cpu_wr_reg_id==rnum))
+				rcode = m_core->cpu_wr_gpreg;
 			printf("%8lu @%08x uR[%2d] = 0x%08x\n", m_time_ps/1000,
-				m_core->cpu_ipc,
-				rid, regp[rid+16]);
+				m_core->cpu_ipc, rnum, rcode);
 		} else if ((imm & 0x0ffff0)==0x00230) {
 			// SOUT[User Reg]
-			int rid = (imm&0x0f)+16;
-			printf("%c", regp[rid]&0x0ff);
+			int	rcode, rnum;
+			rnum  = (imm&0x0f)+16;
+			rcode = regp[rnum];
+			if ((m_core->cpu_wr_ce)&&(m_core->cpu_wr_reg_id==rnum))
+				rcode = m_core->cpu_wr_gpreg;
+			printf("%c", rcode&0x0ff);
 		} else if ((imm & 0x0fffe0)==0x00220) {
 			// SOUT[User Reg]
-			int rid = (imm&0x0f)+rbase;
-			printf("%c", regp[rid]&0x0ff);
+			int	rcode, rnum;
+			rnum  = (imm&0x0f)+rbase;
+			rcode = regp[rnum];
+			if ((m_core->cpu_wr_ce)&&(m_core->cpu_wr_reg_id==rnum))
+				rcode = m_core->cpu_wr_gpreg;
+			printf("%c", rcode&0x0ff);
 		} else if ((imm & 0x0fff00)==0x00400) {
 			// SOUT[Imm]
 			printf("%c", imm&0x0ff);
@@ -358,13 +393,13 @@ SECTIONS
 			execsim(m_core->cpu_sim_immv);
 		}
 
-		if (m_core->v__DOT__swic__DOT__cpu_break) {
+		if (m_cpu_bombed) {
+			if (m_cpu_bombed++ > 12)
+				m_done = true;
+		} else if (m_core->cpu_break) {
 			printf("\n\nBOMB : CPU BREAK RECEIVED\n");
 			m_cpu_bombed++;
 			dump(m_core->cpu_regs);
-		} else if (m_cpu_bombed) {
-			if (m_cpu_bombed++ > 12)
-				m_done = true;
 		}
 #endif	// @$(ACCESS)
 

@@ -12,7 +12,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017, Gisselquist Technology, LLC
+## Copyright (C) 2017-2018, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -37,40 +37,44 @@
 ##
 ##
 @PREFIX=spio
+@DEVID=SPIO
 @NADDR=1
 @SLAVE.TYPE=SINGLE
 @SLAVE.BUS=wb
-@ACCESS=SPIO_ACCESS
-@INT.SPIO.WIRE=spio_int
+@ACCESS=@$(DEVID)_ACCESS
+@INT.SPIO.WIRE=@$(PREFIX)_int
 @INT.SPIO.PIC=buspic
+@NLED=8
+@NBTN=5
+@NSW=8
 @MAIN.PORTLIST=
 		// SPIO interface
 		i_sw, i_btnc, i_btnd, i_btnl, i_btnr, i_btnu, o_led
 @MAIN.IODECL=
-	// SPIO interface
-	input	wire	[7:0]	i_sw;
+	// @$(DEVID) interface
+	input	wire	[@$(NSW)-1:0]	i_sw;
 	input	wire		i_btnc, i_btnd, i_btnl, i_btnr, i_btnu;
-	output	wire	[7:0]	o_led;
+	output	wire	[@$(NLED)-1:0]	o_led;
 @MAIN.DEFNS=
 	wire	[4:0]	w_btn;
 @MAIN.INSERT=
 	assign	w_btn = { i_btnc, i_btnd, i_btnl, i_btnr, i_btnu };
-	spio #(.NBTN(5), .NLEDS(8)) thespio(i_clk,
-		wb_cyc, (wb_stb)&&(spio_sel), wb_we, wb_data, wb_sel,
-			spio_ack, spio_stall, spio_data,
-		i_sw, w_btn, o_led, spio_int);
+	spio #(.NBTN(@$(NBTN)), .NLEDS(@$(NLED)), .NSW(@$(NSW))) @$(PREFIX)i(i_clk,
+		wb_cyc, (wb_stb)&&(@$(PREFIX)_sel), wb_we, wb_data, wb_sel,
+			@$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_data,
+		i_sw, w_btn, o_led, @$(PREFIX)_int);
 @MAIN.ALT=
 	assign	w_btn    = h0;
-	assign	o_led_cs_n    = 8'h0;
+	assign	o_led    = 8'h0;
 @REGS.N=1
-@REGS.0= 0 R_SPIO		SPIO
+@REGS.0= 0 R_@$(DEVID) @$(DEVID)
 @BDEF.DEFN=
 #define	SPIO_BTNC	0x01000
 #define	SPIO_BTND	0x00800
 #define	SPIO_BTNL	0x00400
 #define	SPIO_BTNR	0x00200
 #define	SPIO_BTNU	0x00100
-@BDEF.IONAME=io_spio
+@BDEF.IONAME=_@$(PREFIX)
 @BDEF.IOTYPE=unsigned
-@BDEF.OSDEF= _BOARD_HAS_SPIO
-@BDEF.OSVAL= static volatile @$THIS.BDEF.IOTYPE *const _spio = ((@$THIS.BDEF.IOTYPE *)@$.REGBASE);
+@BDEF.OSDEF= _BOARD_HAS_@$(DEVID)
+@BDEF.OSVAL= static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME) = ((@$(BDEF.IOTYPE) *)@$REGBASE);

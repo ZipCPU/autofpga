@@ -11,7 +11,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017, Gisselquist Technology, LLC
+## Copyright (C) 2017-2018, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -36,13 +36,14 @@
 ##
 ##
 @PREFIX=zip_dwb
-@$NADDR=(1<<@$(MASTER.BUS.AWID))
+@$NADDR=(1<<@$(BUS.AWID))
 @ERROR.WIRE=@$(PREFIX)_err
 @SLAVE.TYPE=BUS
 @SLAVE.BUS.NAME=zip
 @SLAVE.BUS.WIDTH=32
 @MASTER.TYPE=ARBITER
 @MASTER.BUS=wb
+@BUS.NAME=wb
 ##
 @PREFIX=wbu_dwb
 @$NADDR=(1<<@$(BUS.AWID))
@@ -52,7 +53,9 @@
 @$SLAVE.BUS.WIDTH=32
 @SLAVE.ORDER=0
 @MASTER.TYPE=ARBITER
-### ----- need something like this: @ARBITER.PORTS=zip_dwb wbu_dwb
+@MASTER.BUS=wb
+@BUS.NAME=wb
+@MASTER.TYPE=ARBITER
 @MASTER.BUS=wb
 @BUS.NAME=wb
 @BUS.WIDTH=32
@@ -65,8 +68,8 @@
 	wire		@$(PREFIX)i_cyc, @$(PREFIX)i_stb, @$(PREFIX)i_we,
 			@$(PREFIX)i_ack, @$(PREFIX)i_stall, @$(PREFIX)i_err;
 	wire	[(@$(AWID)-1):0]	@$(PREFIX)i_addr;
-	wire	[31:0]	@$(PREFIX)i_odata, @$(PREFIX)i_idata;
-	wire	[3:0]	@$(PREFIX)i_sel;
+	wire	[(@$(MASTER.BUS.WIDTH)-1):0]	@$(PREFIX)i_odata, @$(PREFIX)i_idata;
+	wire	[(@$(MASTER.BUS.NSELECT)-1):0]	@$(PREFIX)i_sel;
 @MAIN.INSERT=
 `ifdef	INCLUDE_ZIPCPU
 	//
@@ -112,7 +115,7 @@
 `endif
 `endif
 `ifdef	BUS_DELAY_NEEDED
-	busdelay #(@$(AWID))	@$(PREFIX)i_delay(i_clk,
+	busdelay #(@$(AWID))	@$(PREFIX)i_delay(i_clk, i_reset,
 		@$(PREFIX)i_cyc, @$(PREFIX)i_stb, @$(PREFIX)i_we, @$(PREFIX)i_addr, @$(PREFIX)i_odata, @$(PREFIX)i_sel,
 			@$(PREFIX)i_ack, @$(PREFIX)i_stall, @$(PREFIX)i_idata, @$(PREFIX)i_err,
 		wb_cyc, wb_stb, wb_we, wb_addr, wb_data, wb_sel,

@@ -35,17 +35,18 @@
 ################################################################################
 ##
 ##
-@$CLKFREQHZ=100000000
 @CLOCK.NAME=clk
-@CLOCK.TOP=i_clk
-@$CLOCK.FREQUENCY= @$(CLKFREQHZ)
 @PREFIX=clk
+@CLOCK.TOP=i_clk
+@CLOCK.NAME=clk
+@CLOCK.WIRE=i_clk
+@$CLOCK.FREQUENCY=100000000
 @TOP.DEFNS=
 	wire		s_clk, s_reset;
 @TOP.INSERT=
 	assign	s_clk = i_clk;
 	// assign	s_reset = 1'b0; // This design requires local, not global resets
 @REGDEFS.H.DEFNS=
-#define	CLKFREQHZ	@$CLKFREQHZ
+#define	CLKFREQHZ	@$(CLOCK.FREQUENCY)
 @BDEF.DEFN=
-#define	CLKFREQHZ	@$CLKFREQHZ
+#define	CLKFREQHZ	@$(CLOCK.FREQUENCY)
