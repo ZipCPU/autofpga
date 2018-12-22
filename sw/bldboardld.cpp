@@ -157,11 +157,21 @@ static void	build_script_ld(MAPDHASH &master, MAPDHASH &busmaster, FILE *fp, STR
 			name->c_str(), name->c_str());
 	}
 
-	if (NULL != (strp = getstring(master, KYLD_DEFNS)))
-		fprintf(fp, "%s\n", strp->c_str());
+	STRINGP	defns, ldfile;
+	defns = getstring(master, KYLD_DEFNS);
+	if (NULL != defns) {
+		ldfile = getstring(master, KYLD_FILE);
+		if ((NULL == ldfile)||(strcmp(ldfile->c_str(), fname.c_str())==0))
+			fprintf(fp, "%s\n", defns->c_str());
+	}
+
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
-		if (NULL != (strp = getstring(kvpair->second, KYLD_DEFNS)))
-			fprintf(fp, "%s\n", strp->c_str());
+		defns = getstring(kvpair->second, KYLD_DEFNS);
+		if (NULL == defns)
+			continue;
+		ldfile = getstring(kvpair->second, KYLD_FILE);
+		if ((NULL == ldfile)||(strcmp(ldfile->c_str(), fname.c_str())==0))
+			fprintf(fp, "%s\n", defns->c_str());
 	}
 
 	//
