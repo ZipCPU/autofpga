@@ -1,0 +1,85 @@
+################################################################################
+##
+## Filename: 	wbscope.txt
+##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+##
+## Purpose:	A generic scope description, from which other internal wbscopes
+##		may depend upon
+##
+## Creator:	Dan Gisselquist, Ph.D.
+##		Gisselquist Technology, LLC
+##
+################################################################################
+##
+## Copyright (C) 2017-2018, Gisselquist Technology, LLC
+##
+## This program is free software (firmware): you can redistribute it and/or
+## modify it under the terms of  the GNU General Public License as published
+## by the Free Software Foundation, either version 3 of the License, or (at
+## your option) any later version.
+##
+## This program is distributed in the hope that it will be useful, but WITHOUT
+## ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY or
+## FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+## for more details.
+##
+## You should have received a copy of the GNU General Public License along
+## with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
+## target there if the PDF file isn't present.)  If not, see
+## <http://www.gnu.org/licenses/> for a copy.
+##
+## License:	GPL, v3, as defined and found on www.gnu.org,
+##		http://www.gnu.org/licenses/gpl.html
+##
+##
+################################################################################
+##
+##
+@PREFIX=wbscope
+@DEVID=WBSCOPE
+@NADDR= 2
+@ACCESS=@$(DEVID)_SCOPE
+@SLAVE.TYPE=OTHER
+@SLAVE.BUS=wb
+@LOG_CAPTURE_SIZE=12
+@DATA_CLOCK=i_clk
+@CAPTURECE=1'b1
+@SYNCHRONOUS=1
+@CORE=wbscope
+@TRIGGER=@$(TARGET)_dbg_trigger
+@DEBUG=@$(TARGET)_debug
+@MAIN.DEFNS=
+	// Remove this scope tag via inheritance when/if you connect the
+	// scope interrupt
+	//
+	// Virilator lint_off UNUSED
+	wire	@$(PREFIX)_int;
+	// Virilator lint_on  UNUSED
+@MAIN.INSERT=
+	@$(CORE) #(.LGMEM(@$(LOG_CAPTURE_SIZE)),
+		.SYNCHRONOUS(@$(SYNCHRONOUS)))
+	@$(PREFIX)i(@$(DATA_CLOCK), @$(CAPTURECE), @$(TRIGGER), @$(DEBUG),
+		@$(SLAVE.BUS.CLOCK.WIRE), @$(SLAVE.BUS)_cyc, (@$(SLAVE.BUS)_stb)&&(@$(PREFIX)_sel), @$(SLAVE.BUS)_we,
+		@$(SLAVE.BUS)_addr[0], @$(SLAVE.BUS)_data, @$(PREFIX)_ack, @$(PREFIX)_stall,
+		@$(PREFIX)_data, @$(PREFIX)_int);
+@MAIN.ALT=
+	assign	@$(PREFIX)_int = 0;
+@REGS.NOTE=// @$(PREFIX) scope
+@REGS.N=1
+@REGS.0=0 R_@$(DEVID)  @$(DEVID)
+@REGS.1=1 R_@$(DEVID)D @$(DEVID)D
+@RTL.MAKE.GROUP=SCOPE
+@RTL.MAKE.FILES=@$(CORE).v
+@BDEF.DEFN=
+#ifndef	SCOPE_H
+#define	SCOPE_H
+
+typedef	struct	SCOPE_S {
+	unsigned s_ctrl, s_data;
+} SCOPE;
+#endif
+@BDEF.IONAME=_@$(PREFIX)
+@BDEF.IOTYPE=SCOPE
+@BDEF.OSDEF=_BOARD_HAS_@$(DEVID)
+@BDEF.OSVAL=static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME) = ((@$(BDEF.IOTYPE) *)@$[0x%08x](REGBASE));
