@@ -202,6 +202,9 @@ LD.FILE		Name of the linker script to generate.  The linker script
 LD.SCRIPT	Contains a customized script
 LD.ENTRY	The name of the entry symbol in the linker script.
 LD.DEFNS	(Any definitions to be added to the linker script)
+
+		If the peripheral has an LD.FILE attribute,  the LD.DEFNS
+		will not be included in any other linker scripts
 LD.PERM		The permissions a memory region has before the linker.
 		This is either r, rx, or wx.  See the documentation for
 		binutils/ld for more details of this field
