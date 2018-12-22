@@ -381,7 +381,22 @@ void	expand_clock(MAPDHASH &info) {
 	ckmap = kyclock->second.u.m_m;
 	sname = getstring(ckmap, KY_NAME);
 
-assert(sname);
+	if (!sname) {
+		STRINGP ckwire;
+		MAPDHASH::iterator	kyprefix;
+		kyprefix = findkey(info, KYPREFIX);
+		if ((info.end() == kyprefix)
+				||(kyprefix->second.m_typ != MAPT_STRING)) {
+			gbl_msg.error("ERR: Clock in %s has been given no name",
+				kyprefix->second.u.m_s->c_str());
+			return;
+		}
+		ckwire = getstring(ckmap, KY_WIRE);
+		if (ckwire) {
+			gbl_msg.error("ERR: Clock with no name, using wire named %s\n", ckwire->c_str());
+			return;
+		}
+	} assert(sname);
 
 	// This will fail if multiple clocks are defined on the same line
 	cki = getclockinfo(sname);
