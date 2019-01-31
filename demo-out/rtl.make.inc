@@ -41,6 +41,8 @@
 ##
 RTCGPS := rtcgps.v rtcbare.v rtctimer.v rtcstopwatch.v rtcalarm.v rtclight.v
 
+GPIO := wbgpio.v
+
 FLASH := wbqspiflash.v llqspi.v flashconfig.v
 
 BKRAM := memdev.v
@@ -61,5 +63,5 @@ WBUART := wbuart.v ufifo.v rxuart.v txuart.v
 
 ENETMDIO := enetctrl.v
 
-VFLIST := main.v  $(RTCGPS) $(FLASH) $(BKRAM) $(WBMOUSE) $(SDSPI) $(RTCDATE) $(ZIPCPU) $(BUSDLY) $(BUSPIC) $(WBUART) $(ENETMDIO)
+VFLIST := main.v  $(RTCGPS) $(GPIO) $(FLASH) $(BKRAM) $(WBMOUSE) $(SDSPI) $(RTCDATE) $(ZIPCPU) $(BUSDLY) $(BUSPIC) $(WBUART) $(ENETMDIO)
 AUTOVDIRS :=  -y cpu

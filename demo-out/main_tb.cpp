@@ -56,7 +56,6 @@
 #include "testb.h"
 #include "sdspisim.h"
 #include "byteswap.h"
-#include "qspiflashsim.h"
 #include "hdmiinsim.h"
 #include "zipelf.h"
 
@@ -170,9 +169,6 @@ public:
 #ifdef	SDSPI_ACCESS
 	SDSPISIM	m_sdcard;
 #endif // SDSPI_ACCESS
-#ifdef	FLASH_ACCESS
-	QSPIFLASHSIM	*m_flash;
-#endif // FLASH_ACCESS
 #ifdef	HDMIIN_ACCESS
 	HDMIINSIM	*m_hdmiin;
 #endif
@@ -191,10 +187,6 @@ public:
 #ifdef	SDSPI_ACCESS
 		m_sdcard.debug(false);
 #endif	// SDSPI_ACCESS
-		// From flash
-#ifdef	FLASH_ACCESS
-		m_flash = new QSPIFLASHSIM(FLASHLGLEN);
-#endif // FLASH_ACCESS
 		// From hdmiin
 #ifdef	HDMIIN_ACCESS
 	m_hdmiin = new HDMIINSIM("frames/hdmidata.32t", 2200*1125);
@@ -263,11 +255,6 @@ public:
 		m_core->i_sd_data |= (m_core->o_sd_data&0x0e);
 		m_core->i_sd_detect = 1;
 #endif	// SDSPI_ACCESS
-		// SIM.TICK from flash
-#ifdef	FLASH_ACCESS
-		m_core->i_qspi_dat = (*m_flash)(m_core->o_qspi_cs_n,
-			m_core->o_qspi_sck, m_core->o_qspi_dat);
-#endif
 		// SIM.TICK from zip
 #ifdef	INCLUDE_ZIPCPU
 		// ZipCPU Sim instruction support
@@ -506,37 +493,6 @@ public:
 #else	// BKRAM_ACCESS
 			return false;
 #endif	// BKRAM_ACCESS
-		//
-		// End of components with a SIM.LOAD tag, and a
-		// non-zero number of addresses (NADDR)
-		//
-		}
-
-		//
-		// Loading the flash component
-		//
-		base  = 0x01000000; // in octets
-		adrln = 0x01000000;
-
-		if ((addr >= base)&&(addr < base + adrln)) {
-			// If the start access is in flash
-			start = (addr > base) ? (addr-base) : 0;
-			offset = (start + base) - addr;
-			wlen = (len-offset > adrln - start)
-				? (adrln - start) : len - offset;
-#ifdef	FLASH_ACCESS
-			// FROM flash.SIM.LOAD
-#ifdef	FLASH_ACCESS
-			m_flash->load(start, &buf[offset], wlen);
-#endif // FLASH_ACCESS
-			// AUTOFPGA::Now clean up anything else
-			// Was there more to write than we wrote?
-			if (addr + len > base + adrln)
-				return load(base + adrln, &buf[offset+wlen], len-wlen);
-			return true;
-#else	// FLASH_ACCESS
-			return false;
-#endif	// FLASH_ACCESS
 		//
 		// End of components with a SIM.LOAD tag, and a
 		// non-zero number of addresses (NADDR)

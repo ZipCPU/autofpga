@@ -1149,10 +1149,9 @@ module	main(i_clk, i_reset,
 	//
 	// GPIO
 	//
-	// Not used (yet), but this interface should allow us to control up to
-	// 16 GPIO inputs, and another 16 GPIO outputs.  The interrupt trips
-	// when any of the inputs changes.  (Sorry, which input isn't (yet)
-	// selectable.)
+	// This interface should allow us to control up to 16 GPIO inputs, and
+	// another 16 GPIO outputs.  The interrupt trips when any of the inputs
+	// changes.  (Sorry, which input isn't (yet) selectable.)
 	//
 	localparam	INITIAL_GPIO = 16'h0f;
 	wbgpio	#(NGPI, NGPO, INITIAL_GPIO)

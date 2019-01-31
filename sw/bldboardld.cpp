@@ -11,7 +11,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017-2018, Gisselquist Technology, LLC
+// Copyright (C) 2017-2019, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -145,11 +145,11 @@ static void	build_script_ld(MAPDHASH &master, MAPDHASH &busmaster, FILE *fp, STR
 	// Define pointers to these memories
 	for(unsigned i=0; i<alist->size(); i++) {
 		PERIPHP	p = (*alist)[i];
-		STRINGP	name = getstring(*p->p_phash, KYLD_NAME);
 
 		if (!ismemory(*p->p_phash))
 			continue;
 
+		STRINGP	name = getstring(*p->p_phash, KYLD_NAME);
 		if (NULL == name)
 			name = p->p_name;
 
@@ -346,9 +346,8 @@ void	build_ld_files(MAPDHASH &master, STRINGP subd) {
 			gbl_msg.error("Could not write linker script, %s\n", fname.c_str());
 		else {
 			build_script_ld(master, *kvpair->second.u.m_m,
-				fp, fname);
+				fp, *fnamep);
 			fclose(fp);
 		}
 	}
 }
-

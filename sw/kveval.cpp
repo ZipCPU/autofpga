@@ -11,7 +11,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017, Gisselquist Technology, LLC
+// Copyright (C) 2017-2019, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -56,14 +56,27 @@ bool	get_named_kvpair(MAPSTACK &stack, MAPDHASH &here, STRING &key,
 		pair = findkey(here, subkey);
 		return (pair != here.end());
 	} else if (key[0] == '+') {
-		STRING	subkey = key.substr(1);
+		STRING	subkey = key.substr(2);
+		MAPDHASH::iterator	kvnxt;
 
+fprintf(stderr, "Recursing from %s\n", getstring(here, KYPREFIX)->c_str());
 		kvpair = findkey(here, KYPLUSDOT);
 		if (kvpair == here.end())
 			return false;
+fprintf(stderr, "  Found a plus key\n");
 		if (kvpair->second.m_typ != MAPT_MAP)
 			return false;
-		pair = findkey(*kvpair->second.u.m_m, subkey);
+fprintf(stderr, "  Found a plus map\n");
+		kvsub = kvpair->second.u.m_m->begin();
+		kvnxt = kvsub; kvnxt++;
+		assert(kvnxt == kvpair->second.u.m_m->end());
+		assert(kvsub->second.m_typ == MAPT_MAP);
+
+		pair = findkey(*kvsub->second.u.m_m, subkey);
+if (pair != kvpair->second.u.m_m->end())
+	fprintf(stderr, "  Found a key for %s\n", subkey.c_str());
+else
+	fprintf(stderr, "  %s not found\n", subkey.c_str());
 		return (pair != kvpair->second.u.m_m->end());
 	} else if (key[0] == '/') {
 		STRING	subkey = key.substr(1);
@@ -156,10 +169,14 @@ bool	find_any_unevaluated_sub(MAPSTACK &stack, MAPDHASH *here,
 
 	for(subi=sub.begin(); subi != sub.end(); subi++) {
 		if (subi->second.m_typ == MAPT_MAP) {
-			stack.push_back(subi->second.u.m_m);
-			changed = find_any_unevaluated_sub(stack, component,
-				*subi->second.u.m_m) || (changed);
-			stack.pop_back();
+			if (KYPLUSDOT.compare(subi->first) != 0) {
+				// Don't recurse below any +. keys
+				stack.push_back(subi->second.u.m_m);
+				changed = find_any_unevaluated_sub(stack,
+					component, *subi->second.u.m_m)
+					|| (changed);
+				stack.pop_back();
+			}
 		} else if (subi->first == KYEXPR) {
 			if (subi->second.m_typ == MAPT_STRING) {
 				expr_eval(stack, *component, sub, subi->second);
@@ -212,8 +229,9 @@ bool	subresults_into(MAPSTACK stack, MAPDHASH *here, STRINGP &sval) {
 		return everchanged;
 	}
 
+fprintf(stderr, "Attempting to expand %s\n", sval->c_str());
 	do {
-		unsigned long	sloc = -1, aloc;
+		unsigned long	sloc = -1;
 
 		changed = false;
 		sloc = 0;
@@ -237,6 +255,10 @@ bool	subresults_into(MAPSTACK stack, MAPDHASH *here, STRINGP &sval) {
 			if (*ptr == '(') {
 				kystart++;
 				ptr++;
+				if ((ptr[kylen] == '+')
+					||(ptr[kylen] == '!')
+					||(ptr[kylen] == '/'))
+					kylen++;
 				for(; (ptr[kylen]); kylen++) {
 					if((!isalpha(ptr[kylen]))
 						&&(!isdigit(ptr[kylen]))
@@ -248,6 +270,10 @@ bool	subresults_into(MAPSTACK stack, MAPDHASH *here, STRINGP &sval) {
 					gbl_msg.fatal("Closing parentheses for %*s not found\n", kylen, ptr);
 				}
 			} else {
+				if ((ptr[kylen] == '+')
+					||(ptr[kylen] == '!')
+					||(ptr[kylen] == '/'))
+					kylen++;
 				for(; ptr[kylen]; kylen++) {
 					if((!isalpha(ptr[kylen]))
 						&&(!isdigit(ptr[kylen]))
@@ -256,10 +282,11 @@ bool	subresults_into(MAPSTACK stack, MAPDHASH *here, STRINGP &sval) {
 					break;
 				} endpos = kylen+kystart-sloc;
 			}
-				
+
 			if (kylen > 0) {
 				STRING key = sval->substr(kystart, kylen),
 					*vstr;
+fprintf(stderr, "  Found key to expand, %s\n", key.c_str());
 				if ((fmt)&&(get_named_value(stack, *here,
 						key, value))) {
 					char	*tbuf, *fcpy;
@@ -273,12 +300,9 @@ bool	subresults_into(MAPSTACK stack, MAPDHASH *here, STRINGP &sval) {
 					delete[] tbuf;
 				} else if (NULL != (vstr = get_named_string(
 							stack, *here, key))) {
-					aloc = vstr->find("@$");
-					if (STRING::npos == aloc) {
-						sval->replace(sloc, endpos, *vstr);
-						changed = true;
-					} else
-						sloc += endpos;
+fprintf(stderr, "  Value was the string: %s\n", vstr->c_str());
+					sval->replace(sloc, endpos, *vstr);
+					changed = true;
 				} else if(get_named_value(stack,*here,key,value)) {
 					char	buffer[64];
 					STRING	tmp;
@@ -382,6 +406,8 @@ bool	substitute_any_results_sub(MAPSTACK &stack, MAPDHASH *here,
 
 	for(subi=sub.begin(); subi != sub.end(); subi++) {
 		if (subi->second.m_typ == MAPT_MAP) {
+			if ((KYPLUSDOT.compare(subi->first)!=0)
+				&&(subi->first.size()>0)) {
 			stack.push_back(subi->second.u.m_m);
 			substitute_any_results_sub(stack, component,
 				*subi->second.u.m_m);
@@ -392,6 +418,7 @@ bool	substitute_any_results_sub(MAPSTACK &stack, MAPDHASH *here,
 			if ((kvstr == subi->second.u.m_m->end())
 				&&(kvelm != subi->second.u.m_m->end())) {
 				v = resolve_ast_expressions(*subi->second.u.m_m) || v;
+			}
 			}
 		} else if (subi->second.m_typ == MAPT_STRING) {
 			v = subresults_into(stack, here, subi->second.u.m_s) ||v;

@@ -11,7 +11,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017, Gisselquist Technology, LLC
+// Copyright (C) 2017-2019, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -340,7 +340,7 @@ void	mapdump_aux(FILE *fp, MAPDHASH &fm, int offset) {
 				fprintf(fp, "%s", s->c_str());
 			} else	{
 				fprintf(fp, "<Multi-line-String>\n");
-				fprintf(fp, "\n\n----------------\n%s\n", s->c_str());
+				fprintf(fp, "%s\n----------------\n", s->c_str());
 			}
 		}
 	}
@@ -926,9 +926,16 @@ void	flatten_maps(MAPDHASH &node, MAPDHASH &sub, STRING &here) {
 	MAPDHASH::iterator	kvpair, nodepair;
 
 	gbl_msg.info("FLATT-MAP\n");
+	//
+	// Search for subnodes that are not maps within node
+	//
 	for(kvpair = sub.begin(); kvpair!=sub.end(); kvpair++) {
 		nodepair = node.find(kvpair->first);
 		if (nodepair == node.end()) {
+			//
+			// The subnode key, from a plus map, does not exist
+			// in the parent.  Copy it into the parent therefore.
+			//
 			gbl_msg.info("Key not found, %s + %s, "
 					"inheriting key\n", here.c_str(),
 					kvpair->first.c_str());
@@ -936,20 +943,34 @@ void	flatten_maps(MAPDHASH &node, MAPDHASH &sub, STRING &here) {
 
 			elm.m_typ = kvpair->second.m_typ;
 			if (kvpair->second.m_typ == MAPT_INT) {
+				// Copy an integer key
 				elm.u.m_v = kvpair->second.u.m_v;
 			} else if (kvpair->second.m_typ == MAPT_STRING) {
+				// Copy a string
 				elm.u.m_s = new STRING(*kvpair->second.u.m_s);
 			} else if (kvpair->second.m_typ == MAPT_MAP) {
+				// Copy a MAP
 				elm.u.m_m = copy(kvpair->second.u.m_m);
 			} else if (kvpair->second.m_typ == MAPT_AST) {
+				// Copy a AST/expression
 				elm.u.m_a = copy(kvpair->second.u.m_a);
 			} else
+				// Otherwise, I have no idea what kind of
+				// element this was.  BOMB!
 				gbl_msg.fatal("FLATTEN(MAP)::UNKNOWN TYPE, %d\n",
 					kvpair->second.m_typ);
+	
+			//
+			// Put this newly copied key into the parent map.
+			//
 			node.insert(KEYVALUE(kvpair->first, elm));
 		} else if ((nodepair->second.m_typ==MAPT_MAP)&&(kvpair->second.m_typ == MAPT_MAP)) {
+			// It's not uncommon to have a +.name.KEY.SUBKEY..etc
+			// tag.  In that case, we need to get copy the
+			// maps while preserving their structure
 			STRING	nxt = here + "." + nodepair->first;
 			gbl_msg.info("RECURSING TO COPY %s\n", nxt.c_str());
+			// Recurse on both the node, and the subnode
 			flatten_maps(*nodepair->second.u.m_m, *kvpair->second.u.m_m, nxt);
 		} else {
 			STRING	nkey = here + "." + nodepair->first;
@@ -969,18 +990,28 @@ void	flatten_aux(MAPDHASH &master, MAPDHASH &sub, STRING &here) {
 			flatten_aux(master, *kvpair->second.u.m_m, nkey);
 
 			if (kvpair->first == KYPLUSDOT) {
-				kvsub = kvpair->second.u.m_m->begin();
-				kvnxt = kvsub; kvnxt++;
-				assert(kvnxt == kvpair->second.u.m_m->end());
-				if (kvsub->second.m_typ == MAPT_MAP)
+			    // Only if the key of this element is +
+			    // do we need to recurse and copy keys beneath
+			    // the plus into this primary location
+			    //
+			    kvsub = kvpair->second.u.m_m->begin();
+			    kvnxt = kvsub; kvnxt++;
+
+			    // Every +. key should contain its own map,
+			    // and a single map within it.  Skip the extra
+			    // recursion, and reference the map within only.
+			    // First, though, assert this is the case.
+			    assert(kvnxt == kvpair->second.u.m_m->end());
+			    if (kvsub->second.m_typ == MAPT_MAP)
 				flatten_maps(sub, *kvsub->second.u.m_m, nkey);
-				else
+			    else
 				flatten_maps(sub, *kvpair->second.u.m_m, nkey);
 			}
 		}
 
 
-		if (kvpair->first[0] == '+') {
+		if (kvpair->first.compare(KYPLUSDOT)==0) {
+fprintf(stderr, "KYPLUSDOT--FLATTEN.PLUS\n");
 				STRING	ikey = kvpair->first.substr(1);
 				MAPDHASH::iterator	kvprior;
 
@@ -999,10 +1030,14 @@ void	flatten_aux(MAPDHASH &master, MAPDHASH &sub, STRING &here) {
 						(*kvprior->second.u.m_s) = (*kvprior->second.u.m_s) + STRING(" ") + (*kvpair->second.u.m_s);
 				}
 
+/*
+				// Can't delete the + sub hash, since we might
+				// wish to reference it
 				sub.erase(kvpair);
 				kvpair = sub.begin();
 				if (kvpair == sub.end())
 					break;
+*/
 
 		//else if((kvpair->first[0] == '/')&&(kvpair->first[1]=='+'))
 		} else if (kvpair->first[0] == '/') {
