@@ -59,14 +59,11 @@ bool	get_named_kvpair(MAPSTACK &stack, MAPDHASH &here, STRING &key,
 		STRING	subkey = key.substr(2);
 		MAPDHASH::iterator	kvnxt;
 
-fprintf(stderr, "Recursing from %s\n", getstring(here, KYPREFIX)->c_str());
 		kvpair = findkey(here, KYPLUSDOT);
 		if (kvpair == here.end())
 			return false;
-fprintf(stderr, "  Found a plus key\n");
 		if (kvpair->second.m_typ != MAPT_MAP)
 			return false;
-fprintf(stderr, "  Found a plus map\n");
 		kvsub = kvpair->second.u.m_m->begin();
 		kvnxt = kvsub; kvnxt++;
 		assert(kvnxt == kvpair->second.u.m_m->end());
@@ -229,7 +226,6 @@ bool	subresults_into(MAPSTACK stack, MAPDHASH *here, STRINGP &sval) {
 		return everchanged;
 	}
 
-fprintf(stderr, "Attempting to expand %s\n", sval->c_str());
 	do {
 		unsigned long	sloc = -1;
 
@@ -286,7 +282,6 @@ fprintf(stderr, "Attempting to expand %s\n", sval->c_str());
 			if (kylen > 0) {
 				STRING key = sval->substr(kystart, kylen),
 					*vstr;
-fprintf(stderr, "  Found key to expand, %s\n", key.c_str());
 				if ((fmt)&&(get_named_value(stack, *here,
 						key, value))) {
 					char	*tbuf, *fcpy;
@@ -300,7 +295,6 @@ fprintf(stderr, "  Found key to expand, %s\n", key.c_str());
 					delete[] tbuf;
 				} else if (NULL != (vstr = get_named_string(
 							stack, *here, key))) {
-fprintf(stderr, "  Value was the string: %s\n", vstr->c_str());
 					sval->replace(sloc, endpos, *vstr);
 					changed = true;
 				} else if(get_named_value(stack,*here,key,value)) {
