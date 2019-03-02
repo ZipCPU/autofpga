@@ -1311,31 +1311,62 @@ void	BUSINFO::writeout_bus_logic_v(FILE *fp) {
 				m_name->c_str());
 		fprintf(fp, "\tassign\t" PREFIX "%s_dio_ack = " PREFIX "r_%s_dio_ack[1];\n", m_name->c_str(), m_name->c_str());
 
+		unsigned mask = 0, unused_lsbs = 0, lgdw, maskbits;
+		for(unsigned k=0; k<m_dlist->size(); k++) {
+			mask |= (*m_dlist)[k]->p_mask;
+		} for(unsigned tmp=mask; ((tmp!=0)&&((tmp & 1)==0)); tmp >>= 1)
+			unused_lsbs++;
+		maskbits = nextlg(mask)-unused_lsbs;
+		// lgdw is the log of the data width in bytes.  We require it
+		// here because the bus addresses words rather than the bytes
+		// within them
+		lgdw = nextlg(data_width())-3;
+
 		//
 		// The data return lines
+		fprintf(fp, "\treg\t[%d:0]\t" PREFIX "r_%s_dio_bus_select;\n",
+			maskbits-1, m_name->c_str());
 		fprintf(fp, "\treg\t[%d:0]\t" PREFIX "r_%s_dio_data;\n",
 			m_data_width-1, m_name->c_str());
+		fprintf(fp, "\talways @(posedge %s)\n"
+			"\t\tr_%s_dio_bus_select <= %s_addr[%d:%d];\n\n",
+				m_clock->m_wire->c_str(),
+				m_name->c_str(),
+				nextlg(mask)-1, unused_lsbs);
 		fprintf(fp, "\talways\t@(posedge %s)\n"
-			"\t\tcasez({\t\t",
-			m_clock->m_wire->c_str());
-		for(unsigned k=0; k<m_dlist->size()-1; k++) {
-			fprintf(fp, "%s_ack%s", (*m_dlist)[k]->p_name->c_str(),
-				(k == m_dlist->size()-2)?"":",\n\t\t\t\t");
-		} fprintf(fp, "\t}) // %s default\n",
-			(*m_dlist)[m_dlist->size()-1]->p_name->c_str());
-		for(unsigned k=0; k<m_dlist->size()-1; k++) {
-			fprintf(fp, "\t\t\t%d\'b", (int)m_dlist->size()-1);
-			for(unsigned j=0; j<m_dlist->size()-1; j++)
-				fprintf(fp, (k==j)?"1":((k>j)?"0":"?"));
-			fprintf(fp, ": " PREFIX "r_%s_dio_data <= %s_data;\n", m_name->c_str(),
-				(*m_dlist)[k]->p_name->c_str());
-		} fprintf(fp, "\t\t\tdefault: " PREFIX "r_%s_dio_data <= %s_data;\n\n",
-			m_name->c_str(),
-			(*m_dlist)[m_dlist->size()-1]->p_name->c_str());
+			"\t\tcasez(" PREFIX "r_%s_dio_bus_select)\n",
+			m_clock->m_wire->c_str(),
+			m_name->c_str());
+		for(unsigned k=0; k<m_dlist->size(); k++) {
+			fprintf(fp, "\t\t\t%d'b", maskbits);
+			for(int b=0; b<maskbits; b++) {
+				int	shift = maskbits + unused_lsbs+lgdw-b-1;
+				if (((*m_dlist)[k]->p_mask & (1<<shift))==0)
+					fprintf(fp, "?");
+				else if ((*m_dlist)[k]->p_addr & (1<<shift))
+					fprintf(fp, "1");
+				else
+					fprintf(fp, "0");
+
+				if ((shift > lgdw)&&(((shift-lgdw)&3)=0)
+					&&(b<maskbits-1))
+					fprintf(fp, "_");
+			}
+			fprintf(fp, ": " PREFIX "r_%s_sio_data <= %s_data;\n",
+				((*m_dlist)[j]->p_base) >> (unused_lsbs + lgdw),
+				m_name->c_str(),
+				(*m_dlist)[j]->p_name->c_str());
+		}
+
+		// fprintf(fp, "\t\t\tdefault: " PREFIX "r_%s_dio_data <= %s_data;\n\n",
+			// m_name->c_str(),
+			// (*m_dlist)[m_dlist->size()-1]->p_name->c_str());
+		fprintf(fp, "\t\t\tdefault: " PREFIX "r_%s_dio_data <= 0;\n\n",
 		fprintf(fp, "\t\tendcase\n");
 		fprintf(fp, "\tassign\t" PREFIX "%s_dio_data = " PREFIX "r_%s_dio_data;\n\n",
 			m_name->c_str(), m_name->c_str());
-	}
+	} else
+		fprintf(fp, "\t//\n// No class DOUBLE peripherals on the %s bus\n\t//\n", m_name->c_str());
 
 
 
@@ -1385,8 +1416,11 @@ void	BUSINFO::writeout_bus_logic_v(FILE *fp) {
 	"\t// true.  Although we might choose to return zeros in that case, by\n"
 	"\t// returning something we can skimp a touch on the logic.\n"
 	"\t//\n"
-	"\t// Any peripheral component with a @SLAVE.TYPE value will be listed\n"
-	"\t// here.\n"
+	"\t// Any peripheral component with a @SLAVE.TYPE value of either OTHER\n"
+	"\t// or MEMORY will automatically be listed here.  In addition, the\n"
+	"\t// bus responses from @SLAVE.TYPE SINGLE (_sio_) and/or DOUBLE\n"
+	"\t// (_dio_) may also be listed here, depending upon components are\n"
+	"\t// connected to them.\n"
 	"\t//\n", m_name->c_str());
 
 	if ((m_plist)&&(m_plist->size() > 0)) {
@@ -1403,23 +1437,56 @@ void	BUSINFO::writeout_bus_logic_v(FILE *fp) {
 				m_name->c_str(),
 				(*m_plist)[1]->p_name->c_str());
 		} else {
+			unsigned mask = 0, unused_lsbs = 0, lgdw, maskbits;
+			for(unsigned k=0; k<m_plist->size(); k++) {
+				mask |= (*m_plist)[k]->p_mask;
+			} for(unsigned tmp=mask; ((tmp!=0)&&((tmp & 1)==0));
+					tmp >>= 1)
+				unused_lsbs++;
+			maskbits = nextlg(mask)-unused_lsbs;
+			// lgdw is the log of the data width in bytes.  We
+			// require it here because the bus addresses words
+			// rather than the bytes within them
+			lgdw = nextlg(data_width())-3;
+
+			fprintf(fp,"\treg [%d:0]\t" PREFIX "r_%s_bus_select;\n",
+				nextlg(m_plist->size())-1, m_name->c_str());
+			fprintf(fp, "\talways\t@(posedge %s)\n"
+				"\tif (%s_stb && ! %s_stall)\n"
+				"\t\tcasez(" PREFIX "%s_addr)\n",
+				m_clock->m_wire->c_str(),
+				m_name->c_str(), m_name->c_str(),
+				m_name->c_str());
+			for(unsigned k=0; k<m_plist->size(); k++) {
+				fprintf(fp, "\t\t\t%d'b", maskbits);
+				for(int b=0; b<maskbits; b++) {
+					int	shift = maskbits + unused_lsbs+lgdw-b-1;
+					if (((*m_plist)[k]->p_mask & (1<<shift))==0)
+						fprintf(fp, "?");
+					else if ((*m_plist)[k]->p_addr & (1<<shift))
+						fprintf(fp, "1");
+					else
+						fprintf(fp, "0");
+
+					if ((shift > lgdw)&&(((shift-lgdw)&3)=0)
+						&&(b<maskbits-1))
+						fprintf(fp, "_");
+				}
+				fprintf(fp, ": " PREFIX "r_%s_bus_select <= %d'd%d;\n",
+					((*m_plist)[j]->p_base) >> (unused_lsbs + lgdw),
+					m_name->c_str(), m_name->c_str(),
+					nextlg(m_plist->size()), k);
+			}
+
 			fprintf(fp, "\talways @(posedge %s)\n"
 				"\tbegin\n"
-				"\t\tcasez({\t\t%s_ack%s\n\t\t\t\t",
+				"\t\tcasez(" PREFIX "r_%s_bus_select)\n"
 					m_clock->m_wire->c_str(),
-				(*m_plist)[0]->p_name->c_str(),
-				((m_plist->size() > 1)?",":""));
-				for(unsigned i=1; i<m_plist->size()-1; i++) {
-					fprintf(fp, "%s_ack",
-						(*m_plist)[i]->p_name->c_str());
-					if (i != m_plist->size()-2)
-						fprintf(fp, ",\n\t\t\t\t");
-				} fprintf(fp, "\t})\n");
+					m_name->c_str());
 
-			for(unsigned i=0; i<m_plist->size()-1; i++) {
-				fprintf(fp, "\t\t\t%d\'b", (int)m_plist->size()-1);
-				for(unsigned j=0; j<m_plist->size()-1; j++)
-					fprintf(fp, (i==j)?"1":(i>j)?"0":"?");
+			for(unsigned i=0; i<m_plist->size(); i++) {
+				fprintf(fp, "\t\t\t%d\'d%d",
+					nextlg(m_plist->size()-1), i);
 				fprintf(fp, ": %s_idata <= %s_data;\n",
 					m_name->c_str(),
 					(*m_plist)[i]->p_name->c_str());
