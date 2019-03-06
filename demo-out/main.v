@@ -189,7 +189,7 @@ module	main(i_clk, i_reset,
 // @MAIN.IODECL keys.
 //
 	input	wire		i_clk;
-// verilator lint_off UNUSED
+	// verilator lint_off UNUSED
 	input	wire		i_reset;
 	// verilator lint_on UNUSED
 	// SD-Card declarations
@@ -253,7 +253,7 @@ module	main(i_clk, i_reset,
 	output	wire	[8-1:0]	o_led;
 	// Make Verilator happy ... defining bus wires for lots of components
 	// often ends up with unused wires lying around.  We'll turn off
-	// Verilator's lint warning here that checks for unused wires.
+	// Ver1lator's lint warning here that checks for unused wires.
 	// verilator lint_off UNUSED
 
 
@@ -746,17 +746,17 @@ module	main(i_clk, i_reset,
 			default: wb_many_ack <= (wb_cyc);
 		endcase
 
+	reg		r_wb_sio_ack;
+	reg	[31:0]	r_wb_sio_data;
+
 	assign	wb_sio_stall = 1'b0;
+
 	initial r_wb_sio_ack = 1'b0;
 	always	@(posedge i_clk)
 		r_wb_sio_ack <= (wb_stb)&&(wb_sio_sel);
 	assign	wb_sio_ack = r_wb_sio_ack;
-	reg	r_wb_sio_ack;
-	reg	[31:0]	r_wb_sio_data;
+
 	always	@(posedge i_clk)
-		// mask        = 0000000f
-		// lgdw        = 2
-		// unused_lsbs = 0
 		casez( wb_addr[3:0] )
 			4'h0: r_wb_sio_data <= buildtime_data;
 			4'h1: r_wb_sio_data <= buserr_data;
@@ -774,30 +774,30 @@ module	main(i_clk, i_reset,
 		endcase
 	assign	wb_sio_data = r_wb_sio_data;
 
-	assign	wb_dio_stall = 1'b0;
 	reg	[1:0]	r_wb_dio_ack;
+	reg	[4:0]	r_wb_dio_bus_select;
+	reg	[31:0]	r_wb_dio_data;
+	assign	wb_dio_stall = 1'b0;
 	always	@(posedge i_clk)
 		r_wb_dio_ack <= { r_wb_dio_ack[0], (wb_stb)&&(wb_dio_sel) };
 	assign	wb_dio_ack = r_wb_dio_ack[1];
-	reg	[31:0]	r_wb_dio_data;
-	always	@(posedge i_clk)
-		casez({		gck_ack,
-				mous_ack,
-				oled_ack,
-				rtc_ack,
-				gtb_ack,
-				hdmiin_ack,
-				edin_ack	}) // edout default
-			7'b1??????: r_wb_dio_data <= gck_data;
-			7'b01?????: r_wb_dio_data <= mous_data;
-			7'b001????: r_wb_dio_data <= oled_data;
-			7'b0001???: r_wb_dio_data <= rtc_data;
-			7'b00001??: r_wb_dio_data <= gtb_data;
-			7'b000001?: r_wb_dio_data <= hdmiin_data;
-			7'b0000001: r_wb_dio_data <= edin_data;
-			default: r_wb_dio_data <= edout_data;
+	always @(posedge i_clk)
+		r_wb_dio_bus_select <= wb_addr[7:3];
 
-		endcase
+	always	@(posedge i_clk)
+	casez(r_wb_dio_bus_select)
+		5'b00_000: r_wb_sio_data <= gck_data;
+		5'b00_001: r_wb_sio_data <= mous_data;
+		5'b00_010: r_wb_sio_data <= oled_data;
+		5'b00_011: r_wb_sio_data <= rtc_data;
+		5'b00_100: r_wb_sio_data <= gtb_data;
+		5'b00_11?: r_wb_sio_data <= hdmiin_data;
+		5'b01_???: r_wb_sio_data <= edin_data;
+		5'b1?_???: r_wb_sio_data <= edout_data;
+		default: r_wb_dio_data <= 0;
+
+	endcase
+
 	assign	wb_dio_data = r_wb_dio_data;
 
 	//
@@ -842,38 +842,63 @@ module	main(i_clk, i_reset,
 	// true.  Although we might choose to return zeros in that case, by
 	// returning something we can skimp a touch on the logic.
 	//
-	// Any peripheral component with a @SLAVE.TYPE value will be listed
-	// here.
+	// Any peripheral component with a @SLAVE.TYPE value of either OTHER
+	// or MEMORY will automatically be listed here.  In addition, the
+	// bus responses from @SLAVE.TYPE SINGLE (_sio_) and/or DOUBLE
+	// (_dio_) may also be listed here, depending upon components are
+	// connected to them.
 	//
-	always @(posedge i_clk)
-	begin
-		casez({		pmic_ack,
-				scop_edid_ack,
-				scope_hdmiin_ack,
-				scope_sdcard_ack,
-				flctl_ack,
-				gpsu_ack,
-				sdcard_ack,
-				wb_sio_ack,
-				cfg_ack,
-				mdio_ack,
-				wb_dio_ack,
-				bkram_ack	})
-			12'b1???????????: wb_idata <= pmic_data;
-			12'b01??????????: wb_idata <= scop_edid_data;
-			12'b001?????????: wb_idata <= scope_hdmiin_data;
-			12'b0001????????: wb_idata <= scope_sdcard_data;
-			12'b00001???????: wb_idata <= flctl_data;
-			12'b000001??????: wb_idata <= gpsu_data;
-			12'b0000001?????: wb_idata <= sdcard_data;
-			12'b00000001????: wb_idata <= wb_sio_data;
-			12'b000000001???: wb_idata <= cfg_data;
-			12'b0000000001??: wb_idata <= mdio_data;
-			12'b00000000001?: wb_idata <= wb_dio_data;
-			12'b000000000001: wb_idata <= bkram_data;
-			default: wb_idata <= flash_data;
+	reg [3:0]	r_wb_bus_select;
+	always	@(posedge i_clk)
+	if (wb_stb && ! wb_stall)
+		casez(wb_addr[22:18])
+			// 01f00000 & 00100000, pmic
+			5'b0_0001: r_wb_bus_select <= 4'd0;
+			// 01f00000 & 00200000, scop_edid
+			5'b0_0010: r_wb_bus_select <= 4'd1;
+			// 01f00000 & 00300000, scope_hdmiin
+			5'b0_0011: r_wb_bus_select <= 4'd2;
+			// 01f00000 & 00400000, scope_sdcard
+			5'b0_0100: r_wb_bus_select <= 4'd3;
+			// 01f00000 & 00500000, flctl
+			5'b0_0101: r_wb_bus_select <= 4'd4;
+			// 01f00000 & 00600000, gpsu
+			5'b0_0110: r_wb_bus_select <= 4'd5;
+			// 01f00000 & 00700000, sdcard
+			5'b0_0111: r_wb_bus_select <= 4'd6;
+			// 01f00000 & 00800000, wb_sio
+			5'b0_1000: r_wb_bus_select <= 4'd7;
+			// 01f00000 & 00900000, cfg
+			5'b0_1001: r_wb_bus_select <= 4'd8;
+			// 01f00000 & 00a00000, mdio
+			5'b0_1010: r_wb_bus_select <= 4'd9;
+			// 01f00000 & 00b00000, wb_dio
+			5'b0_1011: r_wb_bus_select <= 4'd10;
+			// 01f00000 & 00c00000, bkram
+			5'b0_1100: r_wb_bus_select <= 4'd11;
+			// 01000000 & 01000000, flash
+			5'b1_????: r_wb_bus_select <= 4'd12;
+			default: begin end
 		endcase
-	end
+
+	always @(posedge i_clk)
+	casez(r_wb_bus_select)
+		4'd0: wb_idata <= pmic_data;
+		4'd1: wb_idata <= scop_edid_data;
+		4'd2: wb_idata <= scope_hdmiin_data;
+		4'd3: wb_idata <= scope_sdcard_data;
+		4'd4: wb_idata <= flctl_data;
+		4'd5: wb_idata <= gpsu_data;
+		4'd6: wb_idata <= sdcard_data;
+		4'd7: wb_idata <= wb_sio_data;
+		4'd8: wb_idata <= cfg_data;
+		4'd9: wb_idata <= mdio_data;
+		4'd10: wb_idata <= wb_dio_data;
+		4'd11: wb_idata <= bkram_data;
+		4'd12: wb_idata <= flash_data;
+		default: wb_idata <= flash_data;
+	endcase
+
 	assign	wb_stall =	((pmic_sel)&&(pmic_stall))
 				||((scop_edid_sel)&&(scop_edid_stall))
 				||((scope_hdmiin_sel)&&(scope_hdmiin_stall))
@@ -921,6 +946,9 @@ module	main(i_clk, i_reset,
 		endcase
 
 	//
+	// No class DOUBLE peripherals on the "wbu" bus
+	//
+	//
 	// Finally, determine what the response is from the wbu bus
 	// bus
 	//
@@ -951,8 +979,11 @@ module	main(i_clk, i_reset,
 	// true.  Although we might choose to return zeros in that case, by
 	// returning something we can skimp a touch on the logic.
 	//
-	// Any peripheral component with a @SLAVE.TYPE value will be listed
-	// here.
+	// Any peripheral component with a @SLAVE.TYPE value of either OTHER
+	// or MEMORY will automatically be listed here.  In addition, the
+	// bus responses from @SLAVE.TYPE SINGLE (_sio_) and/or DOUBLE
+	// (_dio_) may also be listed here, depending upon components are
+	// connected to them.
 	//
 	always @(posedge i_clk)
 		if (wbu_dwb_ack)

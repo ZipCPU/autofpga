@@ -1248,7 +1248,12 @@ void	BUSINFO::writeout_bus_logic_v(FILE *fp) {
 
 	// Start with the slist
 	if (m_slist) {
-		fprintf(fp, "\tassign\t" PREFIX "%s_sio_stall = 1\'b0;\n", m_name->c_str());
+		fprintf(fp, "\treg\t\t" PREFIX "r_%s_sio_ack;\n",
+				m_name->c_str());
+		fprintf(fp, "\treg\t[%d:0]\t" PREFIX "r_%s_sio_data;\n\n",
+			m_data_width-1, m_name->c_str());
+
+		fprintf(fp, "\tassign\t" PREFIX "%s_sio_stall = 1\'b0;\n\n", m_name->c_str());
 		fprintf(fp, "\tinitial " PREFIX "r_%s_sio_ack = 1\'b0;\n"
 			"\talways\t@(posedge %s)\n"
 			"\t\t" PREFIX "r_%s_sio_ack <= (%s_stb)&&(" PREFIX "%s_sio_sel);\n",
@@ -1256,10 +1261,8 @@ void	BUSINFO::writeout_bus_logic_v(FILE *fp) {
 				m_clock->m_wire->c_str(),
 				m_name->c_str(),
 				m_name->c_str(), m_name->c_str());
-		fprintf(fp, "\tassign\t" PREFIX "%s_sio_ack = " PREFIX "r_%s_sio_ack;\n",
+		fprintf(fp, "\tassign\t" PREFIX "%s_sio_ack = " PREFIX "r_%s_sio_ack;\n\n",
 				m_name->c_str(), m_name->c_str());
-		fprintf(fp, "\treg\t" PREFIX "r_%s_sio_ack;\n",
-				m_name->c_str());
 
 		unsigned mask = 0, unused_lsbs = 0, lgdw;
 		for(unsigned k=0; k<m_slist->size(); k++) {
@@ -1268,15 +1271,13 @@ void	BUSINFO::writeout_bus_logic_v(FILE *fp) {
 			unused_lsbs++;
 		lgdw = nextlg(data_width())-3;
 
-		fprintf(fp, "\treg\t[%d:0]\t" PREFIX "r_%s_sio_data;\n",
-			m_data_width-1, m_name->c_str());
 		fprintf(fp, "\talways\t@(posedge %s)\n"
-			"\t\t// mask        = %08x\n"
-			"\t\t// lgdw        = %d\n"
-			"\t\t// unused_lsbs = %d\n"
+			// "\t\t// mask        = %08x\n"
+			// "\t\t// lgdw        = %d\n"
+			// "\t\t// unused_lsbs = %d\n"
 			"\t\tcasez( %s_addr[%d:%d] )\n",
 				m_clock->m_wire->c_str(),
-				mask, lgdw, unused_lsbs,
+				// mask, lgdw, unused_lsbs,
 				m_name->c_str(),
 				nextlg(mask)-1, unused_lsbs);
 		for(unsigned j=0; j<m_slist->size()-1; j++) {
@@ -1297,20 +1298,6 @@ void	BUSINFO::writeout_bus_logic_v(FILE *fp) {
 
 	// Then the dlist
 	if (m_dlist) {
-		//
-		// The stall line
-		fprintf(fp, "\tassign\t" PREFIX "%s_dio_stall = 1\'b0;\n", m_name->c_str());
-		//
-		// The ACK line
-		fprintf(fp, "\treg\t[1:0]\t" PREFIX "r_%s_dio_ack;\n",
-				m_name->c_str());
-		fprintf(fp, "\talways\t@(posedge %s)\n"
-			"\t\t" PREFIX "r_%s_dio_ack <= { " PREFIX "r_%s_dio_ack[0], (%s_stb)&&(" PREFIX "%s_dio_sel) };\n",
-				m_clock->m_wire->c_str(), m_name->c_str(),
-				m_name->c_str(), m_name->c_str(),
-				m_name->c_str());
-		fprintf(fp, "\tassign\t" PREFIX "%s_dio_ack = " PREFIX "r_%s_dio_ack[1];\n", m_name->c_str(), m_name->c_str());
-
 		unsigned mask = 0, unused_lsbs = 0, lgdw, maskbits;
 		for(unsigned k=0; k<m_dlist->size(); k++) {
 			mask |= (*m_dlist)[k]->p_mask;
@@ -1322,51 +1309,68 @@ void	BUSINFO::writeout_bus_logic_v(FILE *fp) {
 		// within them
 		lgdw = nextlg(data_width())-3;
 
-		//
-		// The data return lines
+
+		fprintf(fp, "\treg\t[1:0]\t" PREFIX "r_%s_dio_ack;\n",
+				m_name->c_str());
 		fprintf(fp, "\treg\t[%d:0]\t" PREFIX "r_%s_dio_bus_select;\n",
 			maskbits-1, m_name->c_str());
 		fprintf(fp, "\treg\t[%d:0]\t" PREFIX "r_%s_dio_data;\n",
 			m_data_width-1, m_name->c_str());
+
+		//
+		// The stall line
+		fprintf(fp, "\tassign\t" PREFIX "%s_dio_stall = 1\'b0;\n", m_name->c_str());
+		//
+		// The ACK line
+		fprintf(fp, "\talways\t@(posedge %s)\n"
+			"\t\t" PREFIX "r_%s_dio_ack <= { " PREFIX "r_%s_dio_ack[0], (%s_stb)&&(" PREFIX "%s_dio_sel) };\n",
+				m_clock->m_wire->c_str(), m_name->c_str(),
+				m_name->c_str(), m_name->c_str(),
+				m_name->c_str());
+		fprintf(fp, "\tassign\t" PREFIX "%s_dio_ack = " PREFIX "r_%s_dio_ack[1];\n", m_name->c_str(), m_name->c_str());
+
+		//
+		// The data return lines
 		fprintf(fp, "\talways @(posedge %s)\n"
 			"\t\tr_%s_dio_bus_select <= %s_addr[%d:%d];\n\n",
 				m_clock->m_wire->c_str(),
-				m_name->c_str(),
+				m_name->c_str(), m_name->c_str(),
 				nextlg(mask)-1, unused_lsbs);
 		fprintf(fp, "\talways\t@(posedge %s)\n"
-			"\t\tcasez(" PREFIX "r_%s_dio_bus_select)\n",
+			"\tcasez(" PREFIX "r_%s_dio_bus_select)\n",
 			m_clock->m_wire->c_str(),
 			m_name->c_str());
+
 		for(unsigned k=0; k<m_dlist->size(); k++) {
-			fprintf(fp, "\t\t\t%d'b", maskbits);
-			for(int b=0; b<maskbits; b++) {
-				int	shift = maskbits + unused_lsbs+lgdw-b-1;
+			fprintf(fp, "\t\t%d'b", maskbits);
+			for(unsigned b=0; b<maskbits; b++) {
+				unsigned	shift = maskbits + unused_lsbs-b-1;
 				if (((*m_dlist)[k]->p_mask & (1<<shift))==0)
 					fprintf(fp, "?");
-				else if ((*m_dlist)[k]->p_addr & (1<<shift))
+				else if ((*m_dlist)[k]->p_base & (1<<(shift+lgdw)))
 					fprintf(fp, "1");
 				else
 					fprintf(fp, "0");
 
-				if ((shift > lgdw)&&(((shift-lgdw)&3)=0)
+				if ((shift > lgdw)&&(((shift-lgdw)&3)==0)
 					&&(b<maskbits-1))
 					fprintf(fp, "_");
 			}
 			fprintf(fp, ": " PREFIX "r_%s_sio_data <= %s_data;\n",
-				((*m_dlist)[j]->p_base) >> (unused_lsbs + lgdw),
 				m_name->c_str(),
-				(*m_dlist)[j]->p_name->c_str());
+				(*m_dlist)[k]->p_name->c_str());
 		}
 
 		// fprintf(fp, "\t\t\tdefault: " PREFIX "r_%s_dio_data <= %s_data;\n\n",
 			// m_name->c_str(),
 			// (*m_dlist)[m_dlist->size()-1]->p_name->c_str());
-		fprintf(fp, "\t\t\tdefault: " PREFIX "r_%s_dio_data <= 0;\n\n",
-		fprintf(fp, "\t\tendcase\n");
+		fprintf(fp, "\t\tdefault: " PREFIX "r_%s_dio_data <= 0;\n\n",
+			m_name->c_str());
+		fprintf(fp, "\tendcase\n\n");
 		fprintf(fp, "\tassign\t" PREFIX "%s_dio_data = " PREFIX "r_%s_dio_data;\n\n",
 			m_name->c_str(), m_name->c_str());
 	} else
-		fprintf(fp, "\t//\n// No class DOUBLE peripherals on the %s bus\n\t//\n", m_name->c_str());
+		fprintf(fp, "\t//\n\t// No class DOUBLE peripherals on the \"%s\" bus\n\t//\n", m_name->c_str());
 
 
 
@@ -1437,6 +1441,9 @@ void	BUSINFO::writeout_bus_logic_v(FILE *fp) {
 				m_name->c_str(),
 				(*m_plist)[1]->p_name->c_str());
 		} else {
+			fprintf(fp,"\treg [%d:0]\t" PREFIX "r_%s_bus_select;\n",
+				nextlg(m_plist->size())-1, m_name->c_str());
+
 			unsigned mask = 0, unused_lsbs = 0, lgdw, maskbits;
 			for(unsigned k=0; k<m_plist->size(); k++) {
 				mask |= (*m_plist)[k]->p_mask;
@@ -1449,52 +1456,55 @@ void	BUSINFO::writeout_bus_logic_v(FILE *fp) {
 			// rather than the bytes within them
 			lgdw = nextlg(data_width())-3;
 
-			fprintf(fp,"\treg [%d:0]\t" PREFIX "r_%s_bus_select;\n",
-				nextlg(m_plist->size())-1, m_name->c_str());
 			fprintf(fp, "\talways\t@(posedge %s)\n"
 				"\tif (%s_stb && ! %s_stall)\n"
-				"\t\tcasez(" PREFIX "%s_addr)\n",
+				"\t\tcasez(" PREFIX "%s_addr[%d:%d])\n",
 				m_clock->m_wire->c_str(),
 				m_name->c_str(), m_name->c_str(),
-				m_name->c_str());
+				m_name->c_str(),
+				unused_lsbs+maskbits-1, unused_lsbs);
 			for(unsigned k=0; k<m_plist->size(); k++) {
+				fprintf(fp, "\t\t\t// %08lx & %08lx, %s\n",
+					((*m_plist)[k]->p_mask << lgdw),
+					(*m_plist)[k]->p_base,
+					(*m_plist)[k]->p_name->c_str());
 				fprintf(fp, "\t\t\t%d'b", maskbits);
-				for(int b=0; b<maskbits; b++) {
-					int	shift = maskbits + unused_lsbs+lgdw-b-1;
+				for(unsigned b=0; b<maskbits; b++) {
+					unsigned	shift = maskbits + unused_lsbs-b-1;
 					if (((*m_plist)[k]->p_mask & (1<<shift))==0)
 						fprintf(fp, "?");
-					else if ((*m_plist)[k]->p_addr & (1<<shift))
+					else if ((*m_plist)[k]->p_base & (1<<(shift+lgdw)))
 						fprintf(fp, "1");
 					else
 						fprintf(fp, "0");
 
-					if ((shift > lgdw)&&(((shift-lgdw)&3)=0)
+					if ((shift > lgdw)&&(((shift-lgdw)&3)==0)
 						&&(b<maskbits-1))
 						fprintf(fp, "_");
 				}
 				fprintf(fp, ": " PREFIX "r_%s_bus_select <= %d'd%d;\n",
-					((*m_plist)[j]->p_base) >> (unused_lsbs + lgdw),
-					m_name->c_str(), m_name->c_str(),
+					m_name->c_str(),
 					nextlg(m_plist->size()), k);
 			}
+			fprintf(fp, "\t\t\tdefault: begin end\n");
+			fprintf(fp, "\t\tendcase\n\n");
 
 			fprintf(fp, "\talways @(posedge %s)\n"
-				"\tbegin\n"
-				"\t\tcasez(" PREFIX "r_%s_bus_select)\n"
+				"\tcasez(" PREFIX "r_%s_bus_select)\n",
 					m_clock->m_wire->c_str(),
 					m_name->c_str());
 
 			for(unsigned i=0; i<m_plist->size(); i++) {
-				fprintf(fp, "\t\t\t%d\'d%d",
+				fprintf(fp, "\t\t%d\'d%d",
 					nextlg(m_plist->size()-1), i);
 				fprintf(fp, ": %s_idata <= %s_data;\n",
 					m_name->c_str(),
 					(*m_plist)[i]->p_name->c_str());
 			}
-			fprintf(fp, "\t\t\tdefault: %s_idata <= %s_data;\n",
+			fprintf(fp, "\t\tdefault: %s_idata <= %s_data;\n",
 				m_name->c_str(),
 				(*m_plist)[(m_plist->size()-1)]->p_name->c_str());
-			fprintf(fp, "\t\tendcase\n\tend\n");
+			fprintf(fp, "\tendcase\n\n");
 		}
 	} else
 		fprintf(fp, "\talways @(posedge %s)\n"

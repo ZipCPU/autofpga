@@ -772,7 +772,7 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 //	same order.
 //
 	// External declarations (input/output) for our various ports
-	fprintf(fp, "\tinput\twire\t\ti_clk;\n// verilator lint_off UNUSED\n\tinput\twire\t\ti_reset;\n\t// verilator lint_on UNUSED\n");
+	fprintf(fp, "\tinput\twire\t\ti_clk;\n\t// verilator lint_off UNUSED\n\tinput\twire\t\ti_reset;\n\t// verilator lint_on UNUSED\n");
 	str = "MAIN.IODECL";
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
 		STRINGP	strp;
@@ -786,7 +786,7 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 	fprintf(fp,
 "\t// Make Verilator happy ... defining bus wires for lots of components\n"
 "\t// often ends up with unused wires lying around.  We'll turn off\n"
-"\t// Verilator\'s lint warning here that checks for unused wires.\n"
+"\t// Ver1lator\'s lint warning here that checks for unused wires.\n"
 "\t// verilator lint_off UNUSED\n\n");
 
 	fprintf(fp,
