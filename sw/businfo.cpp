@@ -987,12 +987,12 @@ void	BUSINFO::writeout_bus_select_v(FILE *fp) {
 			unused_lsbs++;
 		for(unsigned i=0; i<m_slist->size(); i++) {
 			if ((*m_slist)[i]->p_mask == 0) {
-				fprintf(fp, "\tassign\t%12s_sel = 1\'b0; // ERR: (DIO) address mask == 0\n",
+				fprintf(fp, "\tassign\t%12s_sel = 1\'b0; // ERR: (SIO) address mask == 0\n",
 					(*m_slist)[i]->p_name->c_str());
 			} else {
 				assert(sbaw > unused_lsbs);
 				assert(sbaw > 0);
-				fprintf(fp, "\tassign\t%12s_sel = ((" PREFIX "%s_sio_sel)&&(%s_addr[%2d:%2d] == %2d\'h%0*lx));\n",
+				fprintf(fp, "\tassign\t%12s_sel = ((" PREFIX "%s_sio_sel)&&(%s_addr[%2d:%2d] == %2d\'h%0*lx)); ",
 					(*m_slist)[i]->p_name->c_str(), m_name->c_str(),
 					m_name->c_str(),
 					sbaw-1, unused_lsbs,
@@ -1019,7 +1019,7 @@ void	BUSINFO::writeout_bus_select_v(FILE *fp) {
 				assert(sbaw > unused_lsbs);
 				assert(sbaw > 0);
 				fprintf(fp, "\tassign\t%12s_sel "
-					"= ((" PREFIX "%s_dio_sel)&&((%s[%2d:%2d] & %2d\'h%lx) == %2d\'h%0*lx));\n",
+					"= ((" PREFIX "%s_dio_sel)&&((%s[%2d:%2d] & %2d\'h%lx) == %2d\'h%0*lx)); ",
 				(*m_dlist)[i]->p_name->c_str(),
 				m_name->c_str(),
 				addrbus.c_str(),
@@ -1275,23 +1275,23 @@ void	BUSINFO::writeout_bus_logic_v(FILE *fp) {
 			// "\t\t// mask        = %08x\n"
 			// "\t\t// lgdw        = %d\n"
 			// "\t\t// unused_lsbs = %d\n"
-			"\t\tcasez( %s_addr[%d:%d] )\n",
+			"\tcasez( %s_addr[%d:%d] )\n",
 				m_clock->m_wire->c_str(),
 				// mask, lgdw, unused_lsbs,
 				m_name->c_str(),
 				nextlg(mask)-1, unused_lsbs);
 		for(unsigned j=0; j<m_slist->size()-1; j++) {
-			fprintf(fp, "\t\t\t%d'h%lx: " PREFIX "r_%s_sio_data <= %s_data;\n",
+			fprintf(fp, "\t\t%d'h%lx: " PREFIX "r_%s_sio_data <= %s_data;\n",
 				nextlg(mask)-unused_lsbs,
 				((*m_slist)[j]->p_base) >> (unused_lsbs + lgdw),
 				m_name->c_str(),
 				(*m_slist)[j]->p_name->c_str());
 		}
 
-		fprintf(fp, "\t\t\tdefault: " PREFIX "r_%s_sio_data <= %s_data;\n",
+		fprintf(fp, "\t\tdefault: " PREFIX "r_%s_sio_data <= %s_data;\n",
 			m_name->c_str(),
 			(*m_slist)[m_slist->size()-1]->p_name->c_str());
-		fprintf(fp, "\t\tendcase\n");
+		fprintf(fp, "\tendcase\n");
 		fprintf(fp, "\tassign\t" PREFIX "%s_sio_data = " PREFIX "r_%s_sio_data;\n\n",
 			m_name->c_str(), m_name->c_str());
 	}
@@ -1304,6 +1304,8 @@ void	BUSINFO::writeout_bus_logic_v(FILE *fp) {
 		} for(unsigned tmp=mask; ((tmp!=0)&&((tmp & 1)==0)); tmp >>= 1)
 			unused_lsbs++;
 		maskbits = nextlg(mask)-unused_lsbs;
+		if (maskbits < 1)
+			maskbits=1;
 		// lgdw is the log of the data width in bytes.  We require it
 		// here because the bus addresses words rather than the bytes
 		// within them
@@ -1313,7 +1315,7 @@ void	BUSINFO::writeout_bus_logic_v(FILE *fp) {
 		fprintf(fp, "\treg\t[1:0]\t" PREFIX "r_%s_dio_ack;\n",
 				m_name->c_str());
 		fprintf(fp, "\treg\t[%d:0]\t" PREFIX "r_%s_dio_bus_select;\n",
-			maskbits-1, m_name->c_str());
+			nextlg(m_dlist->size())-1, m_name->c_str());
 		fprintf(fp, "\treg\t[%d:0]\t" PREFIX "r_%s_dio_data;\n",
 			m_data_width-1, m_name->c_str());
 
@@ -1323,24 +1325,24 @@ void	BUSINFO::writeout_bus_logic_v(FILE *fp) {
 		//
 		// The ACK line
 		fprintf(fp, "\talways\t@(posedge %s)\n"
+			"\tif (i_reset || !%s_cyc)\n"
+			"\t\t" PREFIX "r_%s_dio_ack <= 0;\n"
+			"\telse\n"
 			"\t\t" PREFIX "r_%s_dio_ack <= { " PREFIX "r_%s_dio_ack[0], (%s_stb)&&(" PREFIX "%s_dio_sel) };\n",
 				m_clock->m_wire->c_str(), m_name->c_str(),
 				m_name->c_str(), m_name->c_str(),
+				m_name->c_str(), m_name->c_str(),
 				m_name->c_str());
 		fprintf(fp, "\tassign\t" PREFIX "%s_dio_ack = " PREFIX "r_%s_dio_ack[1];\n", m_name->c_str(), m_name->c_str());
+		fprintf(fp, "\n");
 
 		//
 		// The data return lines
 		fprintf(fp, "\talways @(posedge %s)\n"
-			"\t\tr_%s_dio_bus_select <= %s_addr[%d:%d];\n\n",
+			"\tcasez(%s_addr[%d:%d])\n",
 				m_clock->m_wire->c_str(),
-				m_name->c_str(), m_name->c_str(),
+				m_name->c_str(),
 				nextlg(mask)-1, unused_lsbs);
-		fprintf(fp, "\talways\t@(posedge %s)\n"
-			"\tcasez(" PREFIX "r_%s_dio_bus_select)\n",
-			m_clock->m_wire->c_str(),
-			m_name->c_str());
-
 		for(unsigned k=0; k<m_dlist->size(); k++) {
 			fprintf(fp, "\t\t%d'b", maskbits);
 			for(unsigned b=0; b<maskbits; b++) {
@@ -1356,16 +1358,27 @@ void	BUSINFO::writeout_bus_logic_v(FILE *fp) {
 					&&(b<maskbits-1))
 					fprintf(fp, "_");
 			}
-			fprintf(fp, ": " PREFIX "r_%s_sio_data <= %s_data;\n",
+			fprintf(fp, ": " PREFIX "r_%s_dio_bus_select <= %d\'d%d;\n",
+				m_name->c_str(), nextlg(m_dlist->size()), k);
+		}
+		fprintf(fp, "\t\tdefault: " PREFIX "r_%s_dio_bus_select <= 0;\n",
+			m_name->c_str());
+		fprintf(fp, "\tendcase\n\n");
+
+		fprintf(fp, "\talways\t@(posedge %s)\n"
+			"\tcasez(" PREFIX "r_%s_dio_bus_select)\n",
+			m_clock->m_wire->c_str(), m_name->c_str());
+
+		for(unsigned k=0; k<m_dlist->size()-1; k++) {
+			fprintf(fp, "\t\t%d'd%d", nextlg(m_dlist->size()), k);
+			fprintf(fp, ": " PREFIX "r_%s_dio_data <= %s_data;\n",
 				m_name->c_str(),
 				(*m_dlist)[k]->p_name->c_str());
 		}
 
-		// fprintf(fp, "\t\t\tdefault: " PREFIX "r_%s_dio_data <= %s_data;\n\n",
-			// m_name->c_str(),
-			// (*m_dlist)[m_dlist->size()-1]->p_name->c_str());
-		fprintf(fp, "\t\tdefault: " PREFIX "r_%s_dio_data <= 0;\n\n",
-			m_name->c_str());
+		fprintf(fp, "\t\tdefault: " PREFIX "r_%s_dio_data <= %s_data;\n",
+			m_name->c_str(),
+			(*m_dlist)[m_dlist->size()-1]->p_name->c_str());
 		fprintf(fp, "\tendcase\n\n");
 		fprintf(fp, "\tassign\t" PREFIX "%s_dio_data = " PREFIX "r_%s_dio_data;\n\n",
 			m_name->c_str(), m_name->c_str());
@@ -1441,8 +1454,9 @@ void	BUSINFO::writeout_bus_logic_v(FILE *fp) {
 				m_name->c_str(),
 				(*m_plist)[1]->p_name->c_str());
 		} else {
+			int	sbits = nextlg(m_plist->size());
 			fprintf(fp,"\treg [%d:0]\t" PREFIX "r_%s_bus_select;\n",
-				nextlg(m_plist->size())-1, m_name->c_str());
+				sbits-1, m_name->c_str());
 
 			unsigned mask = 0, unused_lsbs = 0, lgdw, maskbits;
 			for(unsigned k=0; k<m_plist->size(); k++) {
@@ -1483,8 +1497,7 @@ void	BUSINFO::writeout_bus_logic_v(FILE *fp) {
 						fprintf(fp, "_");
 				}
 				fprintf(fp, ": " PREFIX "r_%s_bus_select <= %d'd%d;\n",
-					m_name->c_str(),
-					nextlg(m_plist->size()), k);
+					m_name->c_str(), sbits, k);
 			}
 			fprintf(fp, "\t\t\tdefault: begin end\n");
 			fprintf(fp, "\t\tendcase\n\n");
@@ -1495,8 +1508,7 @@ void	BUSINFO::writeout_bus_logic_v(FILE *fp) {
 					m_name->c_str());
 
 			for(unsigned i=0; i<m_plist->size(); i++) {
-				fprintf(fp, "\t\t%d\'d%d",
-					nextlg(m_plist->size()-1), i);
+				fprintf(fp, "\t\t%d\'d%d", sbits, i);
 				fprintf(fp, ": %s_idata <= %s_data;\n",
 					m_name->c_str(),
 					(*m_plist)[i]->p_name->c_str());
