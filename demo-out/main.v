@@ -595,48 +595,27 @@ module	main(i_clk, i_reset,
 	//
 	//
 	
-	assign	   buildtime_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h0));
- // 0x000000
-	assign	      buserr_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h1));
- // 0x000004
-	assign	      buspic_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h2));
- // 0x000008
-	assign	   clkhdmiin_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h3));
- // 0x00000c
-	assign	  clkhdmiout_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h4));
- // 0x000010
-	assign	        gpio_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h5));
- // 0x000014
-	assign	hdmi_scope_frame_offset_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h6));
- // 0x000018
-	assign	    pwrcount_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h7));
- // 0x00001c
-	assign	     rtcdate_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h8));
- // 0x000020
-	assign	        spio_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h9));
- // 0x000024
-	assign	  subseconds_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'ha));
- // 0x000028
-	assign	      sysclk_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'hb));
- // 0x00002c
-	assign	     version_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'hc));
- // 0x000030
-	assign	         gck_sel = ((wb_dio_sel)&&((wb_addr[ 7: 3] &  5'h1f) ==  5'h00));
- // 0x000000 - 0x00000f
-	assign	        mous_sel = ((wb_dio_sel)&&((wb_addr[ 7: 3] &  5'h1f) ==  5'h01));
- // 0x000020 - 0x00002f
-	assign	        oled_sel = ((wb_dio_sel)&&((wb_addr[ 7: 3] &  5'h1f) ==  5'h02));
- // 0x000040 - 0x00004f
-	assign	         rtc_sel = ((wb_dio_sel)&&((wb_addr[ 7: 3] &  5'h1f) ==  5'h03));
- // 0x000060 - 0x00006f
-	assign	         gtb_sel = ((wb_dio_sel)&&((wb_addr[ 7: 3] &  5'h1f) ==  5'h04));
- // 0x000080 - 0x00009f
-	assign	      hdmiin_sel = ((wb_dio_sel)&&((wb_addr[ 7: 3] &  5'h1e) ==  5'h06));
- // 0x0000c0 - 0x0000ff
-	assign	        edin_sel = ((wb_dio_sel)&&((wb_addr[ 7: 3] &  5'h18) ==  5'h08));
- // 0x000100 - 0x0001ff
-	assign	       edout_sel = ((wb_dio_sel)&&((wb_addr[ 7: 3] &  5'h10) ==  5'h10));
- // 0x000200 - 0x0003ff
+	assign	   buildtime_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h0));  // 0x000000
+	assign	      buserr_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h1));  // 0x000004
+	assign	      buspic_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h2));  // 0x000008
+	assign	   clkhdmiin_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h3));  // 0x00000c
+	assign	  clkhdmiout_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h4));  // 0x000010
+	assign	        gpio_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h5));  // 0x000014
+	assign	hdmi_scope_frame_offset_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h6));  // 0x000018
+	assign	    pwrcount_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h7));  // 0x00001c
+	assign	     rtcdate_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h8));  // 0x000020
+	assign	        spio_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h9));  // 0x000024
+	assign	  subseconds_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'ha));  // 0x000028
+	assign	      sysclk_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'hb));  // 0x00002c
+	assign	     version_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'hc));  // 0x000030
+	assign	         gck_sel = ((wb_dio_sel)&&((wb_addr[ 7: 3] &  5'h1f) ==  5'h00));  // 0x000000 - 0x00000f
+	assign	        mous_sel = ((wb_dio_sel)&&((wb_addr[ 7: 3] &  5'h1f) ==  5'h01));  // 0x000020 - 0x00002f
+	assign	        oled_sel = ((wb_dio_sel)&&((wb_addr[ 7: 3] &  5'h1f) ==  5'h02));  // 0x000040 - 0x00004f
+	assign	         rtc_sel = ((wb_dio_sel)&&((wb_addr[ 7: 3] &  5'h1f) ==  5'h03));  // 0x000060 - 0x00006f
+	assign	         gtb_sel = ((wb_dio_sel)&&((wb_addr[ 7: 3] &  5'h1f) ==  5'h04));  // 0x000080 - 0x00009f
+	assign	      hdmiin_sel = ((wb_dio_sel)&&((wb_addr[ 7: 3] &  5'h1e) ==  5'h06));  // 0x0000c0 - 0x0000ff
+	assign	        edin_sel = ((wb_dio_sel)&&((wb_addr[ 7: 3] &  5'h18) ==  5'h08));  // 0x000100 - 0x0001ff
+	assign	       edout_sel = ((wb_dio_sel)&&((wb_addr[ 7: 3] &  5'h10) ==  5'h10));  // 0x000200 - 0x0003ff
 	assign	        pmic_sel = ((wb_addr[22:18] &  5'h1f) ==  5'h01); // 0x100000 - 0x100007
 	assign	   scop_edid_sel = ((wb_addr[22:18] &  5'h1f) ==  5'h02); // 0x200000 - 0x200007
 	assign	scope_hdmiin_sel = ((wb_addr[22:18] &  5'h1f) ==  5'h03); // 0x300000 - 0x300007
@@ -775,27 +754,39 @@ module	main(i_clk, i_reset,
 	assign	wb_sio_data = r_wb_sio_data;
 
 	reg	[1:0]	r_wb_dio_ack;
-	reg	[4:0]	r_wb_dio_bus_select;
+	reg	[2:0]	r_wb_dio_bus_select;
 	reg	[31:0]	r_wb_dio_data;
 	assign	wb_dio_stall = 1'b0;
 	always	@(posedge i_clk)
+	if (i_reset || !wb_cyc)
+		r_wb_dio_ack <= 0;
+	else
 		r_wb_dio_ack <= { r_wb_dio_ack[0], (wb_stb)&&(wb_dio_sel) };
 	assign	wb_dio_ack = r_wb_dio_ack[1];
+
 	always @(posedge i_clk)
-		r_wb_dio_bus_select <= wb_addr[7:3];
+	casez(wb_addr[7:3])
+		5'b00_000: r_wb_dio_bus_select <= 3'd0;
+		5'b00_001: r_wb_dio_bus_select <= 3'd1;
+		5'b00_010: r_wb_dio_bus_select <= 3'd2;
+		5'b00_011: r_wb_dio_bus_select <= 3'd3;
+		5'b00_100: r_wb_dio_bus_select <= 3'd4;
+		5'b00_11?: r_wb_dio_bus_select <= 3'd5;
+		5'b01_???: r_wb_dio_bus_select <= 3'd6;
+		5'b1?_???: r_wb_dio_bus_select <= 3'd7;
+		default: r_wb_dio_bus_select <= 0;
+	endcase
 
 	always	@(posedge i_clk)
 	casez(r_wb_dio_bus_select)
-		5'b00_000: r_wb_sio_data <= gck_data;
-		5'b00_001: r_wb_sio_data <= mous_data;
-		5'b00_010: r_wb_sio_data <= oled_data;
-		5'b00_011: r_wb_sio_data <= rtc_data;
-		5'b00_100: r_wb_sio_data <= gtb_data;
-		5'b00_11?: r_wb_sio_data <= hdmiin_data;
-		5'b01_???: r_wb_sio_data <= edin_data;
-		5'b1?_???: r_wb_sio_data <= edout_data;
-		default: r_wb_dio_data <= 0;
-
+		3'd0: r_wb_dio_data <= gck_data;
+		3'd1: r_wb_dio_data <= mous_data;
+		3'd2: r_wb_dio_data <= oled_data;
+		3'd3: r_wb_dio_data <= rtc_data;
+		3'd4: r_wb_dio_data <= gtb_data;
+		3'd5: r_wb_dio_data <= hdmiin_data;
+		3'd6: r_wb_dio_data <= edin_data;
+		default: r_wb_dio_data <= edout_data;
 	endcase
 
 	assign	wb_dio_data = r_wb_dio_data;
