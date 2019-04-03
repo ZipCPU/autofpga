@@ -68,11 +68,12 @@ BUSLIST	*gbl_blist;
 
 // Look up the number of bits in the address bus of the given hash
 int	BUSINFO::address_width(void) {
-	gbl_msg.info("Requesting address width of %s\n", m_name->c_str());
-	if (!m_addresses_assigned)
+	if (!m_addresses_assigned) {
+		gbl_msg.info("Requesting address width of %s\n", m_name->c_str());
 		assign_addresses();
 
-	gbl_msg.info("Address width of %s is  ", m_name->c_str(), m_address_width);
+		gbl_msg.info("Address width of %s is %d\n", m_name->c_str(), m_address_width);
+	}
 	return m_address_width;
 }
 
@@ -1090,13 +1091,8 @@ void	mkselect(FILE *fp) {
 void	BUSINFO::writeout_no_slave_v(FILE *fp, STRINGP prefix) {
 	fprintf(fp, "\n");
 	fprintf(fp, "\t// In the case that there is no %s peripheral responding on the %s bus\n", prefix->c_str(), m_name->c_str());
-	fprintf(fp, "\treg\t" PREFIX "r_%s_ack;\n", prefix->c_str());
-	fprintf(fp, "\tinitial\t" PREFIX "r_%s_ack = 1\'b0;\n", prefix->c_str());
-	fprintf(fp, "\talways @(posedge %s)\t" PREFIX "r_%s_ack <= (%s_stb)&&(%s_sel);\n",
-		m_clock->m_wire->c_str(), prefix->c_str(),
-		m_name->c_str(), prefix->c_str());
-	fprintf(fp, "\tassign\t%s_ack   = " PREFIX "r_%s_ack;\n",
-			prefix->c_str(), prefix->c_str());
+	fprintf(fp, "\tassign\t%s_ack   = (%s_stb) && (%s_sel);\n",
+			prefix->c_str(), m_name->c_str(), prefix->c_str());
 	fprintf(fp, "\tassign\t%s_stall = 0;\n", prefix->c_str());
 	fprintf(fp, "\tassign\t%s_data  = 0;\n", prefix->c_str());
 	fprintf(fp, "\n");
@@ -1314,8 +1310,11 @@ void	BUSINFO::writeout_bus_logic_v(FILE *fp) {
 
 		fprintf(fp, "\treg\t[1:0]\t" PREFIX "r_%s_dio_ack;\n",
 				m_name->c_str());
+		fprintf(fp, "\t// # dlist = %d, nextlg(#dlist) = %d\n",
+			(int)m_dlist->size(),
+			nextlg(m_dlist->size()));
 		fprintf(fp, "\treg\t[%d:0]\t" PREFIX "r_%s_dio_bus_select;\n",
-			nextlg(m_dlist->size())-1, m_name->c_str());
+			nextlg((int)m_dlist->size())-1, m_name->c_str());
 		fprintf(fp, "\treg\t[%d:0]\t" PREFIX "r_%s_dio_data;\n",
 			m_data_width-1, m_name->c_str());
 
@@ -1342,7 +1341,7 @@ void	BUSINFO::writeout_bus_logic_v(FILE *fp) {
 			"\tcasez(%s_addr[%d:%d])\n",
 				m_clock->m_wire->c_str(),
 				m_name->c_str(),
-				nextlg(mask)-1, unused_lsbs);
+				maskbits+unused_lsbs-1, unused_lsbs);
 		for(unsigned k=0; k<m_dlist->size(); k++) {
 			fprintf(fp, "\t\t%d'b", maskbits);
 			for(unsigned b=0; b<maskbits; b++) {
