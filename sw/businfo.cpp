@@ -1151,6 +1151,7 @@ void	BUSINFO::writeout_bus_logic_v(FILE *fp) {
 		// Since this bus has no slaves, any attempt to access it
 		// needs to cause a bus error.
 		fprintf(fp,
+			"\t\t// No peripherals attached\n"
 			"\t\tassign\t%s_err   = %s_stb;\n"
 			"\t\tassign\t%s_stall = 1\'b0;\n"
 			"\t\talways @(*)\n\t\t\t%s_ack   <= 1\'b0;\n"
@@ -1164,6 +1165,7 @@ void	BUSINFO::writeout_bus_logic_v(FILE *fp) {
 		STRINGP	strp;
 
 		fprintf(fp,
+			"\t\t// Only one peripheral attached\n"
 			"\tassign\t%s_none_sel = 1\'b0;\n"
 			"\talways @(*)\n\t\t%s_many_ack = 1\'b0;\n",
 			m_name->c_str(), m_name->c_str());
