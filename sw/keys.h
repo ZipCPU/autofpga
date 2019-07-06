@@ -147,6 +147,8 @@ extern	const	STRING	KYXDC_FILE;
 extern	const	STRING	KYXDC_INSERT;
 extern	const	STRING	KYPCF_FILE;
 extern	const	STRING	KYPCF_INSERT;
+extern	const	STRING	KYLPF_FILE;
+extern	const	STRING	KYLPF_INSERT;
 extern	const	STRING	KYUCF_FILE;
 extern	const	STRING	KYUCF_INSERT;
 // Arbitrary output data files

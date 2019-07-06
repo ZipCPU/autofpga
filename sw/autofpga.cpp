@@ -1297,7 +1297,7 @@ void	build_pcf(MAPDHASH &master, FILE *fp, STRING &fname) {
 
 		// Ignore any lines that don't begin with #,
 		// Ignore any lines that start with two ##'s,
-		// Ignore any lines that don't have set_property within them
+		// Ignore any lines that don't have the SET_IO_KEY within them
 		if ((line[0] != '#')||(line[1] == '#')
 			||(NULL == (cptr= strstr(line, SET_IO_KEY)))) {
 			fprintf(fp, "%s\n", line);
@@ -1354,6 +1354,110 @@ void	build_pcf(MAPDHASH &master, FILE *fp, STRING &fname) {
 			str->c_str());
 	}
 	str = getstring(master, KYPCF_INSERT);
+	if (NULL != str) {
+		fprintf(fp, "## From the global level\n%s",
+			str->c_str());
+	}
+}
+
+void	build_lpf(MAPDHASH &master, FILE *fp, STRING &fname) {
+	MAPDHASH::iterator	kvpair;
+	STRINGP			str;
+	PORTLIST		ports;
+	FILE			*fpsrc;
+	char	line[512];
+
+	gbl_msg.info("\n\nBUILD-LPF\nLooking for ports:\n");
+	gbl_msg.flush();
+
+	get_portlist(master, ports);
+
+	str = getstring(master, KYLPF_FILE);
+	fpsrc = open_in(master, *str);
+
+	if (!fpsrc) {
+		gbl_msg.fatal("Could not find or open %s\n", str->c_str());
+	}
+
+	while(fgets(line, sizeof(line), fpsrc)) {
+		const char	*LOC_KEY = "LOCATE COMP",
+				*BUF_KEY = "IOBUF PORT";
+		const	char	*locp, *bufp, *keyp;
+
+		STRINGP	tmp = trim(STRING(line));
+		strcpy(line, tmp->c_str());
+		delete	tmp;
+
+
+		// Ignore any lines that don't begin with #,
+		// Ignore any lines that start with two ##'s,
+		// Ignore any lines that don't have either key within them
+		if ((line[0] != '#')||(line[1] == '#')
+			||((NULL == (locp= strcasestr(line, LOC_KEY)))
+			&&(NULL == (bufp= strcasestr(line, BUF_KEY))))) {
+			fprintf(fp, "%s\n", line);
+			continue;
+		}
+
+		bool	found = false;
+		keyp = LOC_KEY;
+		if (!locp) {
+			locp = bufp;
+			keyp = BUF_KEY;
+		}
+
+		if (strncmp(locp+strlen(keyp), " \"", 2)==0)
+			locp += 2;
+		char	*cpy = strdup(locp + strlen(keyp));
+		char		*ptr, *name;
+
+		name = strtok(cpy, " \t");
+
+		ptr = name;
+		while((*ptr)
+			&&(*ptr != '[')
+			&&(*ptr != '}')
+			&&(*ptr != ']')
+			&&(*ptr != '\"')
+			&&(!isspace(*ptr)))
+			ptr++;
+		*ptr = '\0';
+
+		gbl_msg.info("Found LOC port: %s\n", name);
+
+		// Now, let's check to see if this is in our set
+		for(unsigned k=0; k<ports.size(); k++) {
+			if (strcmp(ports[k]->c_str(), name)==0) {
+				found = true;
+				break;
+			}
+		} free(cpy);
+
+		if (found) {
+			int start = 0;
+			while((line[start])&&(
+					(line[start]=='#')
+					||(isspace(line[start]))))
+				start++;
+			fprintf(fp, "%s\n", &line[start]);
+		} else
+			fprintf(fp, "%s\n", line);
+	}
+
+	fclose(fpsrc);
+
+	fprintf(fp, "\n## Adding in any LPF_INSERT tags\n\n");
+	for(kvpair = master.begin(); kvpair != master.end(); kvpair++) {
+		if (kvpair->second.m_typ != MAPT_MAP)
+			continue;
+		str = getstring(kvpair->second, KYLPF_INSERT);
+		if (NULL == str)
+			continue;
+
+		fprintf(fp, "## From %s\n%s", kvpair->first.c_str(),
+			str->c_str());
+	}
+	str = getstring(master, KYLPF_INSERT);
 	if (NULL != str) {
 		fprintf(fp, "## From the global level\n%s",
 			str->c_str());
@@ -1641,6 +1745,14 @@ int	main(int argc, char **argv) {
 		str = subd->c_str(); str += "/build.pcf";
 		fp = fopen(str.c_str(), "w");
 		if (fp) { build_pcf(  master, fp, str); fclose(fp); }
+		else
+			gbl_msg.error("Cannot open %s !\n", str.c_str());
+	}
+
+	if (NULL != getstring(master, KYLPF_FILE)) {
+		str = subd->c_str(); str += "/build.lpf";
+		fp = fopen(str.c_str(), "w");
+		if (fp) { build_lpf(  master, fp, str); fclose(fp); }
 		else
 			gbl_msg.error("Cannot open %s !\n", str.c_str());
 	}
