@@ -124,21 +124,11 @@ void	build_access_ifdefs_v(MAPDHASH &master, FILE *fp) {
 	if (dephash.begin() != dephash.end()) {
 		fprintf(fp, "//\n//\n// The list of those things that have @DEPENDS tags\n//\n//\n");
 		fprintf(fp,
-"// Dependencies are listed within the @DEPENDS tag\n"
-"// Values prefixed by a !, yet with no spaces between the ! and the\n"
-"// dependency, are ifndef dependencies.  As an example, an\n"
-"// an access and depends tag such as:\n"
 "//\n"
-"// @ACCESS=  THIS_COMPONENT\n"
-"// @DEPENDS= MUST_HAVE_A !MUST_NOT_HAVE_B\n"
-"//\n"
-"// will turn into:\n"
-"//\n"
-"// `ifdef MUST_HAVE_A\n"
-"// `ifndef MUST_NOT_HAVE_B\n"
-"// `define THIS_COMPONENT\n"
-"// `endif // MUST_NOT_HAVE_B\n"
-"// `endif // MUST_HAVE_A\n"
+"// Dependencies\n"
+"// Any core with both an @ACCESS and a @DEPENDS tag will show up here.\n"
+"// The @DEPENDS tag will turn into a series of ifdef\'s, with the @ACCESS\n"
+"// being defined only if all of the ifdef\'s are true"
 "//\n");
 
 		bool	done;
@@ -164,10 +154,13 @@ void	build_access_ifdefs_v(MAPDHASH &master, FILE *fp) {
 
 				dependency = strtok(deplist, DELIMITERS);
 				while(dependency) {
-					char	*rawdep;
+					char	*rawdep, *baredep;
 
 					rawdep = dependency;
-					STRING	mstr = STRING(" ")+STRING(rawdep)
+					baredep = rawdep;
+					if (rawdep[0] == '!')
+						baredep = rawdep+1;
+					STRING	mstr = STRING(" ")+STRING(baredep)
 						+STRING(" ");
 					if (NULL == strstr(already_defined.c_str(),
 							mstr.c_str())) {
@@ -175,10 +168,19 @@ void	build_access_ifdefs_v(MAPDHASH &master, FILE *fp) {
 						break;
 					}
 
-					depstr += STRING("`ifdef\t")
-						+STRING(rawdep)
-						+STRING("\n");
-					endstr += STRING("`endif\n");
+					if (rawdep[0] == '!') {
+						depstr += STRING("`ifndef\t")
+							+ STRING(baredep)
+							+ STRING("\n");
+					} else {
+						depstr += STRING("`ifdef\t")
+							+ STRING(rawdep)
+							+ STRING("\n");
+					}
+					endstr = STRING("`endif\t// ")
+						+ STRING(rawdep)
+						+ STRING("\n")
+						+ endstr;
 					dependency = strtok(NULL, DELIMITERS);
 				}
 
