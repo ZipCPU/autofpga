@@ -130,7 +130,11 @@ void	build_rtl_make_inc(MAPDHASH &master, FILE *fp, STRING &fname) {
 			fprintf(fp, "%s := %s\n\n", mkgroup->c_str(), filstr.c_str());
 		}
 
-		allgroups = allgroups + STRING(" $(") + (*mkgroup) + STRING(")");	
+		STRING	mkgroupref = STRING("$(")
+					+ (*mkgroup)
+					+ STRING(")");
+		if (std::string::npos == allgroups.find(mkgroupref))
+			allgroups = allgroups + STRING(" ") + mkgroupref;
 		free(tokstr);
 	}
 
