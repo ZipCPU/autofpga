@@ -67,6 +67,12 @@ long AST_BRANCH::eval(void) {
 		case 'a':	return ((lft)&&(rht))?1:0;	break;
 		case 'e':	return ((lft)==(rht))?1:0;	break;
 		// ! ??
+		case 'N':	return (lft != rht)? 1:0;	break;
+		case 'L':	return (lft <= rht)? 1:0;	break;
+		case 'G':	return (lft >= rht)? 1:0;	break;
+		case '<':	return (lft <  rht)? 1:0;	break;
+		case '>':	return (lft >  rht)? 1:0;	break;
+		//
 		//
 		default:	fprintf(stderr, "ERR: AST Unknown operation, %c", m_op);
 			return lft;

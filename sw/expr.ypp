@@ -58,6 +58,8 @@
 %token UPSHIFT DOWNSHIFT
 %token BITWISEOR BITWISEAND BITWISEXOR BITWISENOT
 %token BOOLEANOR BOOLEANAND BOOLEANEQ BOOLEANNOT
+%token LOGICAL_NEQ LOGICAL_LT LOGICAL_LTE
+%token LOGICAL_GT LOGICAL_GTE
 %token COLON QUESTION
 %token IDENTIFIER INT
 
@@ -77,6 +79,8 @@
 %left BOOLEANEQ
 %left BOOLEANNOT
 %left UPSHIFT DOWNSHIFT
+%left LOGICAL_LT LOGICAL_GT LOGICAL_LTE LOGICAL_GTE
+%left LOGICAL_EQ LOGICAL_NEQ
 %left BITWISEOR BITWISEXOR
 %left BITWISEAND
 %left BITWISENOT
@@ -107,7 +111,12 @@ expr:
 |	expr DOWNSHIFT expr	{ $$ = new AST_BRANCH('d',$1,$3); }
 |	expr BOOLEANOR expr	{ $$ = new AST_BRANCH('o',$1,$3); }
 |	expr BOOLEANAND expr	{ $$ = new AST_BRANCH('a',$1,$3); }
-|	expr BOOLEANEQ expr	{ $$ = new AST_BRANCH('e',$1,$3); }
+|	expr LOGICAL_EQ expr	{ $$ = new AST_BRANCH('e',$1,$3); }
+|	expr LOGICAL_NEQ expr	{ $$ = new AST_BRANCH('N',$1,$3); }
+|	expr LOGICAL_LT expr	{ $$ = new AST_BRANCH('L',$1,$3); }
+|	expr LOGICAL_GT expr	{ $$ = new AST_BRANCH('G',$1,$3); }
+|	expr LOGICAL_LTE expr	{ $$ = new AST_BRANCH('<',$1,$3); }
+|	expr LOGICAL_GTE expr	{ $$ = new AST_BRANCH('>',$1,$3); }
 |	expr QUESTION expr COLON expr { $$ = new AST_TRIOP($1,$3,$5); }
 |	'(' expr ')'		{ $$ = $2; }
 ;

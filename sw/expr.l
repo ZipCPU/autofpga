@@ -80,6 +80,11 @@ extern "C" int	yywrap() { return 1;}
 "/"		{ return DIVIDE; }
 "<<"		{ return UPSHIFT; }
 ">>"		{ return DOWNSHIFT; }
+"!="		{ return LOGICAL_NEQ; }
+"<="		{ return LOGICAL_LTE; }
+">="		{ return LOGICAL_GTE; }
+"<"		{ return LOGICAL_LT; }
+">"		{ return LOGICAL_GT; }
 "&&"		{ return BOOLEANAND; }
 "||"		{ return BOOLEANOR; }
 "=="		{ return BOOLEANEQ; }
