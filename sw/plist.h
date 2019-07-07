@@ -99,6 +99,11 @@ public:
 		return m_address_width;
 	}
 	void	integrity_check(void);
+	/*
+	void	remove(std::vector<PERIPHP>::iterator ptr) {
+		std::vector<PERIPHP>::remove(ptr);
+	}
+	*/
 };
 
 // A pointer to a set of peripherals

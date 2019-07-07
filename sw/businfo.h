@@ -44,42 +44,60 @@
 #include <vector>
 #include <algorithm>
 
+class	BUSINFO;
+class	GENBUS;
+
 #include "parser.h"
 #include "mapdhash.h"
 #include "plist.h"
 #include "clockinfo.h"
 
+#include "genbus.h"
+
 class	BUSINFO {
-protected:
+public:
 	bool	m_addresses_assigned;
 	int	m_data_width, m_address_width;
-public:
-	PLISTP    m_plist, m_slist, m_dlist;
+
+	PLISTP    m_plist;
 	STRINGP   m_name, m_prefix, m_type;
+	GENBUS	*m_genbus;	// Bus logic generator
 	CLOCKINFO *m_clock; // , *m_bhash;
 	int	m_nullsz;
-	int	m_num_single, m_num_double, m_num_total;
-	bool	m_has_slist, m_has_dlist;
 	MAPDHASH	*m_hash;
 
 	BUSINFO(void) { // MAPDHASH *hash)
 		// m_bhash  = hash;
 		m_plist  = NULL;
-		m_slist  = NULL;
-		m_dlist  = NULL;
 		m_name   = NULL;
 		m_prefix = NULL;
 		m_type   = NULL;
 		m_clock  = NULL;
 		m_hash   = NULL;
+		m_genbus = NULL;
 		m_nullsz = 0;
 		m_data_width = 0;
 		m_addresses_assigned = false;
 		m_address_width = 0;
-		m_num_single = 0;
-		m_num_double = 0;
-		m_num_total  = 0;
 	}
+
+	BUSINFO(STRINGP name) {
+		m_plist  = NULL;
+		m_name   = name;
+		m_prefix = NULL;
+		m_type   = NULL;
+		m_clock  = NULL;
+		m_hash   = new MAPDHASH();
+		m_genbus = NULL;
+		m_nullsz = 0;
+		m_data_width = 0;
+		m_addresses_assigned = false;
+		m_address_width = 0;
+
+		setstring(m_hash, KY_NAME, name);
+	}
+
+	bool	need_translator(BUSINFO *b);
 
 	bool	get_base_address(MAPDHASH *phash, unsigned &base);
 	void	assign_addresses(void);
@@ -88,29 +106,20 @@ public:
 	void	add(void);
 	PERIPH *add(PERIPHP p);
 	PERIPH *add(MAPDHASH *phash);
-	PLIST	*create_sio(void);
-	PLIST	*create_dio(void);
 
-	void	post_countsio(void);
-	void	countsio(MAPDHASH *phash);
-
-	bool	need_translator(BUSINFO *b);
-	void	writeout_slave_defn_v(FILE *fp, const char *name, const char *errwire = NULL, const char *btyp="");
-	void	write_addr_range(FILE *fp, const PERIPHP p, const int dalinse);
 	void	writeout_bus_slave_defns_v(FILE *fp);
 	void	writeout_bus_master_defns_v(FILE *fp);
 	void	writeout_bus_defns_v(FILE *fp);
-	void	writeout_bus_select_v(FILE *fp);
 	void	writeout_bus_logic_v(FILE *fp);
 
 	void	writeout_no_slave_v(FILE *fp, STRINGP prefix);
 	void	writeout_no_master_v(FILE *fp);
-	bool	ismember_of(MAPDHASH *phash);
 
 	PERIPHP operator[](unsigned i);
 	unsigned size(void);
 	void	init(MAPDHASH *phash, MAPDHASH *bp);
 	void	integrity_check(void);
+	bool	ismember_of(MAPDHASH *phash);
 };
 
 class	BUSLIST : public std::vector<BUSINFO *>	{
@@ -126,9 +135,10 @@ public:
 	BUSINFO *addbus_aux(MAPDHASH *phash, STRINGP pname, MAPDHASH *bp);
 	void	addbus(MAPDHASH *phash);
 	void	addbus(MAPT &map);
-	void	countsio(MAPDHASH *phash);
-	void	countsio(MAPT &map);
+	// void	countsio(MAPDHASH *phash);
+	// void	countsio(MAPT &map);
 	BUSINFO *find_bus_of_peripheral(MAPDHASH *phash);
+	void	assign_bus_types(void);
 };
 
 extern	void	build_bus_list(MAPDHASH &master);

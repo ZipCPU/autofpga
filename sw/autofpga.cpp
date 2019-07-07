@@ -871,8 +871,6 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 	"\t//\n"
 	"\t// Peripheral address decoding\n\t//\n");
 
-	writeout_bus_select_v(fp);
-
 	writeout_bus_logic_v(fp);
 
 	fprintf(fp, "\t//\n\t// Declare the interrupt busses\n\t//\n"

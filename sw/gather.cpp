@@ -81,8 +81,6 @@ void	gather_peripherals(APLIST *alist, BUSINFO *bus, PLIST *plist) {
 			BUSINFO	*subbus;
 
 			subbus = (*plist)[k]->p_master_bus;
-			gather_peripherals(alist, bus, subbus->m_slist);
-			gather_peripherals(alist, bus, subbus->m_dlist);
 			gather_peripherals(alist, bus, subbus->m_plist);
 		}
 	}

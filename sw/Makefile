@@ -41,16 +41,17 @@ OBJDIR:= obj-pc
 YYMMDD:= `date +%Y%m%d`
 CXX:= g++
 SED:= sed
-CFLAGS:= -std=c++11 -g -Wall
+CFLAGS:= -std=c++11 -g -Wall -I bus/
 SOURCES := autofpga.cpp parser.cpp kveval.cpp keys.cpp mapdhash.cpp ast.cpp \
 	legalnotice.cpp ifdefs.cpp bldregdefs.cpp expr.tab.cpp lex.yy.cpp   \
-	plist.cpp bitlib.cpp bldtestb.cpp bldsim.cpp predicates.cpp	    \
-	businfo.cpp clockinfo.cpp subbus.cpp globals.cpp gather.cpp	   \
-	bldboardld.cpp bldrtlmake.cpp msgs.cpp bldcachable.cpp
+	bitlib.cpp bldtestb.cpp bldsim.cpp predicates.cpp		    \
+	clockinfo.cpp subbus.cpp globals.cpp gather.cpp			    \
+	bldboardld.cpp bldrtlmake.cpp msgs.cpp bldcachable.cpp		    \
+	businfo.cpp plist.cpp genbus.cpp $(wildcard bus/*.cpp)
 
 POSSHDRS:= $(subst .c,.h,$(subst .cpp,.h,$(SOURCES)))
 HEADERS := $(foreach header,$(POSSHDRS),$(wildcard $(header)))
-OBJECTS := $(addprefix $(OBJDIR)/,$(subst .c,.o,$(subst .cpp,.o,$(SOURCES))))
+OBJECTS := $(addprefix $(OBJDIR)/,$(subst bus/,,$(subst .c,.o,$(subst .cpp,.o,$(SOURCES)))))
 
 all: $(PROGRAMS)
 
@@ -65,6 +66,10 @@ $(OBJDIR)/lex.yy.o: lex.yy.cpp
 $(OBJDIR)/%.o: %.cpp
 	$(mk-objdir)
 	$(CXX) $(CFLAGS) -c $< -o $@
+
+$(OBJDIR)/%.o: bus/%.cpp
+	$(mk-objdir)
+	$(CXX) $(CFLAGS) -I. -c $< -o $@
 
 $(OBJDIR)/%.o: %.c
 	$(mk-objdir)
@@ -99,7 +104,7 @@ runme.sh: autofpga $(addprefix ../auto-data/,$(VDATA))
 	@echo "#!/bin/bash" > $@
 	@echo >> $@
 	@echo >> $@
-	@echo ./autofpga -o ../demo-out -I ../auto-data $(VDATA)  >> $@
+	@echo ./autofpga -d -o ../demo-out -I ../auto-data $(VDATA)  >> $@
 	@echo >> $@
 	@echo "echo \"exit code \" \$$?" >> $@
 

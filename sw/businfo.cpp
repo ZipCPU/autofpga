@@ -74,7 +74,7 @@ int	BUSINFO::address_width(void) {
 
 		gbl_msg.info("Address width of %s is %d\n", m_name->c_str(), m_address_width);
 	}
-	return m_address_width;
+	return m_genbus->address_width();
 }
 
 int	BUSINFO::data_width(void) {
@@ -88,100 +88,23 @@ int	BUSINFO::data_width(void) {
 }
 
 bool	BUSINFO::get_base_address(MAPDHASH *phash, unsigned &base) {
-	/*
-	if ((m_slist)&&(m_slist->get_base_address(base)))
-		return;
-	if ((m_dlist)&&(m_dlist->get_base_address(base)))
-		return;
-	*/
-	if (!m_plist) {
-		gbl_msg.error("BUS[%s] has no peripherals!\n",
+	if (!m_genbus) {
+		gbl_msg.error("BUS[%s] has no type\n",
 			m_name->c_str());
 		return false;
 	} else
-		return m_plist->get_base_address(phash, base);
+		return m_genbus->get_base_address(phash, base);
 }
 
 void	BUSINFO::assign_addresses(void) {
+	if (!m_genbus)
+		gbl_msg.fatal("Bus %s has no generator type defined\n",
+			m_name->c_str());
 
 	gbl_msg.info("Assigning addresses for bus %s\n", m_name->c_str());
-	if ((!m_plist)||(m_plist->size() < 1)) {
-		m_address_width = 0;
-	} else if (!m_addresses_assigned) {
-		int	dw = data_width();
-
-		if (m_slist)
-			m_slist->assign_addresses(dw, 0);
-		if (m_dlist)
-			m_dlist->assign_addresses(dw, 0);
-		m_plist->assign_addresses(dw, m_nullsz);
-		m_address_width = m_plist->get_address_width();
-		if (m_hash) {
-			setvalue(*m_hash, KY_AWID, m_address_width);
-			REHASH;
-		}
-	} m_addresses_assigned = true;
+	m_genbus->assign_addresses();
+	m_addresses_assigned = true;
 }
-
-PLIST *BUSINFO::create_sio(void) {
-	if (NULL == m_plist)
-		m_plist = new PLIST();
-	if (m_num_single <= 1)
-		return m_plist;
-	if (!m_slist) {
-		BUSINFO	*sbi;
-		SUBBUS	*subp;
-		STRINGP	name;
-		MAPDHASH *bushash;
-
-		name = new STRING(STRING("" PREFIX) + (*m_name) + "_sio");
-		bushash = new MAPDHASH();
-		setstring(*bushash, KYPREFIX, name);
-		setstring(*bushash, KYSLAVE_TYPE, new STRING(KYSINGLE));
-		sbi  = new BUSINFO();
-		sbi->m_name = name;
-		sbi->m_prefix = new STRING("_sio");;
-		sbi->m_data_width = m_data_width;
-		sbi->m_clock      = m_clock;
-		subp = new SUBBUS(bushash, name, sbi);
-		subp->p_slave_bus = this;
-		// subp->p_master_bus = set by the slave to be sbi
-		m_plist->add(subp);
-		// m_plist->integrity_check();
-		sbi->add();
-		m_slist = sbi->m_plist;
-	} return m_slist;
-}
-
-PLIST *BUSINFO::create_dio(void) {
-	if (NULL == m_plist)
-		m_plist = new PLIST();
-	if (m_num_double <= 1)
-		return m_plist;
-	if (!m_dlist) {
-		BUSINFO	*dbi;
-		SUBBUS	*subp;
-		STRINGP	name;
-		MAPDHASH	*bushash;
-
-		name = new STRING(STRING("" PREFIX) + (*m_name) + "_dio");
-		bushash = new MAPDHASH();
-		setstring(*bushash, KYPREFIX, name);
-		setstring(*bushash, KYSLAVE_TYPE, new STRING(KYDOUBLE));
-		dbi  = new BUSINFO();
-		dbi->m_name = name;
-		dbi->m_prefix = new STRING("_dio");;
-		dbi->m_data_width = m_data_width;
-		dbi->m_clock      = m_clock;
-		subp = new SUBBUS(bushash, name, dbi);
-		subp->p_slave_bus = this;
-		// subp->p_master_bus = set by the slave to be dbi
-		m_plist->add(subp);
-		dbi->add();
-		m_dlist = dbi->m_plist;
-	} return m_dlist;
-}
-
 
 void BUSINFO::add(void) {
 	if (!m_plist) {
@@ -191,7 +114,6 @@ void BUSINFO::add(void) {
 }
 
 PERIPH *BUSINFO::add(PERIPHP p) {
-	STRINGP	strp;
 	int	pi;
 	PLISTP	plist;
 
@@ -200,14 +122,6 @@ PERIPH *BUSINFO::add(PERIPHP p) {
 	else
 		m_plist->integrity_check();
 	plist = m_plist;
-
-	if ((p->p_phash)&&(NULL != (strp = getstring(*p->p_phash, KYSLAVE_TYPE)))) {
-		if (strp->compare(KYSINGLE)==0) {
-			plist = create_sio();
-		} else if (strp->compare(KYDOUBLE)==0) {
-			plist = create_dio();
-		}
-	}
 
 	pi = plist->add(p);
 	plist->integrity_check();
@@ -224,7 +138,6 @@ assert(NULL != p->p_phash);
 }
 
 PERIPH *BUSINFO::add(MAPDHASH *phash) {
-	STRINGP	strp;
 	PERIPH	*p;
 	int	pi;
 	PLISTP	plist;
@@ -234,20 +147,7 @@ PERIPH *BUSINFO::add(MAPDHASH *phash) {
 	plist = m_plist;
 	assert(plist);
 
-	if (NULL != (strp = getstring(phash, KYSLAVE_TYPE))) {
-		if (strp->compare(KYSINGLE)==0) {
-			plist = create_sio();
-			assert(plist);
-		} else if (strp->compare(KYDOUBLE)==0) {
-			plist = create_dio();
-			assert(plist);
-		}
-	}
-
-	plist->integrity_check();
 	pi = plist->add(phash);
-	plist->integrity_check();
-	m_plist->integrity_check();
 	if (pi >= 0) {
 		p = (*plist)[pi];
 		p->p_slave_bus = this;
@@ -257,36 +157,6 @@ PERIPH *BUSINFO::add(MAPDHASH *phash) {
 		return NULL;
 	}
 }
-
-void	BUSINFO::post_countsio(void) {
-	gbl_msg.info("BUSINFO::POST-COUNTSIO[%4s]: SINGLE=%2d, DOUBLE=%2d, TOTAL=%2d (PRE)\n",
-		m_name->c_str(), m_num_single, m_num_double, m_num_total);
-	if (m_num_total == m_num_single + m_num_double) {
-		m_num_double = 0;
-	} if (m_num_total + m_num_single + m_num_double < 8) {
-		m_num_single = 0;
-		m_num_double = 0;
-	}
-	gbl_msg.info("BUSINFO::POST-COUNTSIO[%4s]: SINGLE=%2d, DOUBLE=%2d, TOTAL=%2d\n",
-		m_name->c_str(), m_num_single, m_num_double, m_num_total);
-}
-
-void	BUSINFO::countsio(MAPDHASH *phash) {
-	STRINGP	strp;
-
-	strp = getstring(phash, KYSLAVE_TYPE);
-	if (NULL != strp) {
-		if (0==strp->compare(KYSINGLE)) {
-			m_num_single++;
-		} else if (0==strp->compare(KYDOUBLE)) {
-			m_num_double++;
-		} m_num_total++;
-		// else if (str->compare(KYMEMORY))
-		//	m_num_memory++;
-	} else
-		m_num_total++;	// Default to OTHER if no type is given
-}
-
 
 bool	BUSINFO::need_translator(BUSINFO *m) {
 	// If they are the same bus, then no translator is necessary
@@ -316,20 +186,6 @@ bool	BUSINFO::need_translator(BUSINFO *m) {
 PERIPHP	BUSINFO::operator[](unsigned k) {
 	unsigned	idx = k;
 
-	if (m_slist) {
-		if (idx < m_slist->size())
-			return (*m_slist)[idx];
-		else
-			idx -= m_slist->size();
-	}
-
-	if (m_dlist) {
-		if (idx < m_dlist->size())
-			return (*m_dlist)[idx];
-		else
-			idx -= m_dlist->size();
-	}
-
 	if (idx < m_plist->size())
 		return (*m_plist)[idx];
 
@@ -338,10 +194,6 @@ PERIPHP	BUSINFO::operator[](unsigned k) {
 
 unsigned	BUSINFO::size(void) {
 	unsigned sz = m_plist->size();
-	if (m_slist)
-		sz += m_slist->size();
-	if (m_dlist)
-		sz += m_dlist->size();
 
 	return sz;
 }
@@ -383,7 +235,7 @@ void	BUSINFO::init(MAPDHASH *phash, MAPDHASH *bp) {
 			if ((getvalue(*bp, KY_NULLSZ, value))&&(m_nullsz != value)) {
 				gbl_msg.info("BUSINFO::INIT(%s).NULLSZ "
 					"FOUND: %d\n", prefix->c_str(), value);
-				m_nullsz = value;
+				m_nullsz = (value > m_nullsz) ? value : m_nullsz;
 				// m_addresses_assigned = false;
 				//
 				elm.m_typ = MAPT_INT;
@@ -540,64 +392,6 @@ unsigned	BUSLIST::get_base_address(MAPDHASH *phash) {
 	return 0;
 }
 
-void	BUSLIST::countsio(MAPDHASH *phash) {
-	STRINGP	prefix;
-	BUSINFO	*bi;
-
-	prefix = getstring(phash, KYPREFIX);
-	if (prefix == NULL)
-		prefix = new STRING("(No name)");
-
-	// Ignore everything that isn't a bus slave
-	if (NULL == getmap(phash, KYSLAVE)) {
-		return;
-	}
-
-	// Insist on the existence of a default bus
-	assert((*this)[0]);
-
-	MAPDHASH::iterator	kvpair;
-	kvpair = findkey(*phash, KYSLAVE_BUS);
-	if (kvpair == phash->end()) {
-		// Use the default bus if no bus name is given
-		bi = (*this)[0];
-		assert(bi);
-	} else if (kvpair->second.m_typ == MAPT_MAP) {
-		bi = find_bus(kvpair->second.u.m_m);
-		if (!bi) {
-			MAPDHASH::iterator kvbus;
-			for(kvbus = kvpair->second.u.m_m->begin();
-					kvbus != kvpair->second.u.m_m->end();
-					kvbus++) {
-				if ((kvbus->second.m_typ == MAPT_MAP)
-					&&(NULL != (bi = find_bus(kvbus->second.u.m_m)))) {
-					bi->countsio(phash);
-				}
-			} return;
-		}
-		assert(bi);
-	} else if (kvpair->second.m_typ == MAPT_STRING) {
-		bi = find_bus(kvpair->second.u.m_s);
-		if (!bi) {
-			gbl_msg.fatal("Could not find %s bus, needed by %s\n", kvpair->second.u.m_s->c_str(), prefix->c_str());
-		}
-	} else {
-		gbl_msg.fatal("Internal error\n");
-	}
-
-
-	// Use this peripheral, and count the number of each peripheral
-	// type
-	assert(bi);
-	bi->countsio(phash);
-}
-
-void	BUSLIST::countsio(MAPT &map) {
-	if (map.m_typ == MAPT_MAP)
-		countsio(map.u.m_m);
-}
-
-
 void	BUSLIST::addperipheral(MAPDHASH *phash) {
 	STRINGP	pname;
 	BUSINFO	*bi;
@@ -644,10 +438,6 @@ void	BUSLIST::addperipheral(MAPDHASH *phash) {
 	bi->add(phash);
 	assert(bi->m_plist);
 
-	if (NULL != bi->m_slist)
-		bi->m_slist->integrity_check();
-	if (NULL != bi->m_dlist)
-		bi->m_dlist->integrity_check();
 	bi->m_plist->integrity_check();
 }
 void	BUSLIST::addperipheral(MAPT &map) {
@@ -870,76 +660,10 @@ void assign_addresses(void) {
 		(*gbl_blist)[i]->assign_addresses();
 }
 
-void	BUSINFO::writeout_slave_defn_v(FILE *fp, const char* pname, const char *errwire, const char *btyp) {
-	fprintf(fp, "\t// Wishbone slave definitions for bus %s%s, slave %s\n",
-		m_name->c_str(), btyp, pname);
-	fprintf(fp, "\twire\t\t%s_sel, %s_ack, %s_stall",
-			pname, pname, pname);
-	if ((errwire)&&(errwire[0] != '\0'))
-		fprintf(fp, ", %s;\n", errwire);
-	else
-		fprintf(fp, ";\n");
-	fprintf(fp, "\twire\t[%d:0]\t%s_data;\n\n", data_width()-1, pname);
-}
-
-void	BUSINFO::writeout_bus_slave_defns_v(FILE *fp) {
-	if (m_slist) {
-		for(PLIST::iterator pp=m_slist->begin();
-				pp != m_slist->end(); pp++) {
-			STRINGP	errwire = getstring((*pp)->p_phash, KYERROR_WIRE);
-			writeout_slave_defn_v(fp, (*pp)->p_name->c_str(),
-				(errwire)?errwire->c_str(): NULL,
-				"(SIO)");
-		}
-	}
-
-	if (m_dlist) {
-		for(PLIST::iterator pp=m_dlist->begin();
-				pp != m_dlist->end(); pp++) {
-			STRINGP	errwire = getstring((*pp)->p_phash, KYERROR_WIRE);
-			writeout_slave_defn_v(fp, (*pp)->p_name->c_str(),
-				(errwire)?errwire->c_str(): NULL,
-				"(DIO)");
-		}
-	}
-
-	if (m_plist) {
-		for(PLIST::iterator pp=m_plist->begin(); pp != m_plist->end(); pp++) {
-			STRINGP	errwire = getstring((*pp)->p_phash, KYERROR_WIRE);
-			writeout_slave_defn_v(fp, (*pp)->p_name->c_str(),
-				(errwire) ? errwire->c_str() : NULL);
-		}
-	} else {
-		gbl_msg.error("%s has no slaves\n", m_name->c_str());
-	}
-}
-
-void	BUSINFO::writeout_bus_master_defns_v(FILE *fp) {
-	unsigned aw = address_width();
-	fprintf(fp, "\t// Wishbone master wire definitions for bus: %s\n",
-		m_name->c_str());
-	fprintf(fp, "\twire\t\t%s_cyc, %s_stb, %s_we, %s_stall, %s_err,\n"
-			"\t\t\t%s_none_sel;\n"
-			"\treg\t\t%s_many_ack;\n"
-			"\twire\t[%d:0]\t%s_addr;\n"
-			"\twire\t[%d:0]\t%s_data;\n"
-			"\treg\t[%d:0]\t%s_idata;\n"
-			"\twire\t[%d:0]\t%s_sel;\n"
-			"\treg\t\t%s_ack;\n\n",
-			m_name->c_str(), m_name->c_str(), m_name->c_str(),
-			m_name->c_str(), m_name->c_str(), m_name->c_str(),
-			m_name->c_str(),
-			aw-1,
-			m_name->c_str(),
-			data_width()-1, m_name->c_str(),
-			data_width()-1, m_name->c_str(),
-			(data_width()/8)-1,
-			m_name->c_str(), m_name->c_str());
-}
-
 void	BUSINFO::writeout_bus_defns_v(FILE *fp) {
-	writeout_bus_master_defns_v(fp);
-	writeout_bus_slave_defns_v(fp);
+	if (!m_genbus)
+		gbl_msg.error("No bus type defined for bus %s\n", m_name->c_str());
+	m_genbus->writeout_bus_defns_v(fp);
 }
 
 void	writeout_bus_defns_v(FILE *fp) {
@@ -951,189 +675,22 @@ void	writeout_bus_defns_v(FILE *fp) {
 	}
 }
 
-void	BUSINFO::write_addr_range(FILE *fp, const PERIPHP p, const int dalines) {
-	unsigned w = address_width();
-	w = (w+3)/4;
-	if (p->p_naddr == 1)
-		fprintf(fp, " // 0x%0*lx", w, p->p_base);
-	else
-		fprintf(fp, " // 0x%0*lx - 0x%0*lx",
-			w, p->p_base, w, p->p_base + (p->p_naddr<<(dalines))-1);
-
-}
-
-void	BUSINFO::writeout_bus_select_v(FILE *fp) {
-	STRING	addrbus = STRING(*m_name)+"_addr";
-	unsigned	sbaw = address_width();
-	unsigned	dw   = data_width();
-	unsigned	dalines = nextlg(dw/8);
-	unsigned	unused_lsbs = 0, mask = 0;
-
-	if (NULL == m_plist) {
-		gbl_msg.error("Bus[%s] has no peripherals\n", m_name->c_str());
-		return;
-	}
-
-	fprintf(fp, "\t//\n\t//\n\t//\n\t// Select lines for bus: %s\n\t//\n", m_name->c_str());
-	fprintf(fp, "\t// Address width: %d\n",
-		m_plist->get_address_width());
-	fprintf(fp, "\t// Data width:    %d\n\t//\n\t//\n\t\n",
-		m_data_width);
-	if (m_slist) {
-		sbaw = m_slist->get_address_width();
-		mask = 0; unused_lsbs = 0;
-		for(unsigned i=0; i<m_slist->size(); i++)
-			mask |= (*m_slist)[i]->p_mask;
-		for(unsigned tmp=mask; ((tmp)&&((tmp&1)==0)); tmp>>=1)
-			unused_lsbs++;
-		for(unsigned i=0; i<m_slist->size(); i++) {
-			if ((*m_slist)[i]->p_mask == 0) {
-				fprintf(fp, "\tassign\t%12s_sel = 1\'b0; // ERR: (SIO) address mask == 0\n",
-					(*m_slist)[i]->p_name->c_str());
-			} else {
-				assert(sbaw > unused_lsbs);
-				assert(sbaw > 0);
-				fprintf(fp, "\tassign\t%12s_sel = ((" PREFIX "%s_sio_sel)&&(%s_addr[%2d:%2d] == %2d\'h%0*lx)); ",
-					(*m_slist)[i]->p_name->c_str(), m_name->c_str(),
-					m_name->c_str(),
-					sbaw-1, unused_lsbs,
-					sbaw-unused_lsbs,
-					(sbaw-unused_lsbs+3)/4,
-					(*m_slist)[i]->p_base >> (unused_lsbs+dalines));
-					write_addr_range(fp, (*m_slist)[i], dalines);
-					fprintf(fp, "\n");
-			}
-		}
-
-	} if (m_dlist) {
-		sbaw = m_dlist->get_address_width();
-		mask = 0; unused_lsbs = 0;
-		for(unsigned i=0; i<m_dlist->size(); i++)
-			mask |= (*m_dlist)[i]->p_mask;
-		for(unsigned tmp=mask; ((tmp)&&((tmp&1)==0)); tmp>>=1)
-			unused_lsbs++;
-		for(unsigned i=0; i<m_dlist->size(); i++) {
-			if ((*m_dlist)[i]->p_mask == 0) {
-				fprintf(fp, "\tassign\t%12s_sel = 1\'b0; // ERR: (DIO) address mask == 0\n",
-					(*m_dlist)[i]->p_name->c_str());
-			} else {
-				assert(sbaw > unused_lsbs);
-				assert(sbaw > 0);
-				fprintf(fp, "\tassign\t%12s_sel "
-					"= ((" PREFIX "%s_dio_sel)&&((%s[%2d:%2d] & %2d\'h%lx) == %2d\'h%0*lx)); ",
-				(*m_dlist)[i]->p_name->c_str(),
-				m_name->c_str(),
-				addrbus.c_str(),
-				sbaw-1,
-				unused_lsbs,
-				sbaw-unused_lsbs, (*m_dlist)[i]->p_mask >> unused_lsbs,
-				sbaw-unused_lsbs,
-				(sbaw-unused_lsbs+3)/4,
-				(*m_dlist)[i]->p_base>>(dalines+unused_lsbs));
-				write_addr_range(fp, (*m_dlist)[i], dalines);
-				fprintf(fp, "\n");
-			}
-		}
-	}
-
-	sbaw = address_width();
-	mask = 0; unused_lsbs = 0;
-	for(unsigned i=0; i<m_plist->size(); i++)
-		mask |= (*m_plist)[i]->p_mask;
-	for(unsigned tmp=mask; ((tmp)&&((tmp&1)==0)); tmp>>=1)
-		unused_lsbs++;
-
-	if (m_plist->size() == 1) {
-		if ((*m_plist)[0]->p_name)
-			fprintf(fp, "\tassign\t%12s_sel = (%s_cyc); "
-					"// Only one peripheral on this bus\n",
-				(*m_plist)[0]->p_name->c_str(),
-				m_name->c_str());
-	} else for(unsigned i=0; i< m_plist->size(); i++) {
-		if ((*m_plist)[i]->p_name) {
-			if ((*m_plist)[i]->p_mask == 0) {
-				fprintf(fp, "\tassign\t%12s_sel = 1\'b0; // ERR: address mask == 0\n",
-					(*m_plist)[i]->p_name->c_str());
-			} else {
-				assert(sbaw > unused_lsbs);
-				assert(sbaw > 0);
-				fprintf(fp, "\tassign\t%12s_sel "
-					"= ((%s[%2d:%2d] & %2d\'h%lx) == %2d\'h%0*lx);",
-					(*m_plist)[i]->p_name->c_str(),
-					addrbus.c_str(),
-					sbaw-1,
-					unused_lsbs,
-					sbaw-unused_lsbs, (*m_plist)[i]->p_mask >> unused_lsbs,
-					sbaw-unused_lsbs,
-					(sbaw-unused_lsbs+3)/4,
-					(*m_plist)[i]->p_base>>(dalines+unused_lsbs));
-				write_addr_range(fp, (*m_plist)[i], dalines);
-				fprintf(fp, "\n");
-			}
-		} if ((*m_plist)[i]->p_master_bus) {
-			fprintf(fp, "//x2\tWas a master bus as well\n");
-		}
-	} fprintf(fp, "\t//\n\n");
-
-}
-
-void	writeout_bus_select_v(FILE *fp) {
-	BUSLIST	*bl = gbl_blist;
-	for(BUSLIST::iterator bp=bl->begin(); bp != bl->end(); bp++)
-		(*bp)->writeout_bus_select_v(fp);
-}
-
-void	mkselect(FILE *fp) {
-	for(BUSLIST::iterator bp=gbl_blist->begin(); bp != gbl_blist->end(); bp++)
-		(*bp)->writeout_bus_select_v(fp);
-}
-
 void	BUSINFO::writeout_no_slave_v(FILE *fp, STRINGP prefix) {
-	fprintf(fp, "\n");
-	fprintf(fp, "\t// In the case that there is no %s peripheral responding on the %s bus\n", prefix->c_str(), m_name->c_str());
-	fprintf(fp, "\tassign\t%s_ack   = (%s_stb) && (%s_sel);\n",
-			prefix->c_str(), m_name->c_str(), prefix->c_str());
-	fprintf(fp, "\tassign\t%s_stall = 0;\n", prefix->c_str());
-	fprintf(fp, "\tassign\t%s_data  = 0;\n", prefix->c_str());
-	fprintf(fp, "\n");
+	if (!m_genbus)
+		gbl_msg.error("No slaves assigned to bus %s\n", m_name->c_str());
+	else
+		m_genbus->writeout_no_slave_v(fp, prefix);
 }
 
 void	BUSINFO::writeout_no_master_v(FILE *fp) {
-	if (!m_name)
-		gbl_msg.error("(Unnamed bus) has no name!\n");
-	fprintf(fp, "\n");
-	fprintf(fp, "\t// In the case that nothing drives the %s bus ...\n", m_name->c_str());
-	fprintf(fp, "\tassign\t%s_cyc = 1\'b0;\n", m_name->c_str());
-	fprintf(fp, "\tassign\t%s_stb = 1\'b0;\n", m_name->c_str());
-	fprintf(fp, "\tassign\t%s_we  = 1\'b0;\n", m_name->c_str());
-	fprintf(fp, "\tassign\t%s_sel = 0;\n", m_name->c_str());
-	fprintf(fp, "\tassign\t%s_addr= 0;\n", m_name->c_str());
-	fprintf(fp, "\tassign\t%s_data= 0;\n", m_name->c_str());
-
-	fprintf(fp, "\t// verilator lint_off UNUSED\n");
-	fprintf(fp, "\twire\t[%d:0]\tunused_bus_%s;\n",
-			3+m_data_width, m_name->c_str());
-	fprintf(fp, "\tassign\tunused_bus_%s = "
-		"{ %s_ack, %s_stall, %s_err, %s_data };\n",
-		m_name->c_str(), m_name->c_str(), m_name->c_str(),
-		m_name->c_str(), m_name->c_str());
-	fprintf(fp, "\t// verilator lint_on  UNUSED\n");
-	fprintf(fp, "\n");
+	if (!m_genbus)
+		gbl_msg.error("No slaves assigned to bus %s\n",
+			(m_name) ? m_name->c_str() : "(Unnamed-bus)");
+	else
+		m_genbus->writeout_no_master_v(fp);
 }
 
 bool	BUSINFO::ismember_of(MAPDHASH *phash) {
-	if ((m_slist)&&(m_slist->size() > 0)) {
-		for(unsigned i=0; i<m_slist->size(); i++)
-			if ((*m_slist)[i]->p_phash == phash)
-				return true;
-	}
-
-	if ((m_dlist)&&(m_dlist->size() > 0)) {
-		for(unsigned i=0; i<m_dlist->size(); i++)
-			if ((*m_dlist)[i]->p_phash == phash)
-				return true;
-	}
-
 	for(unsigned i=0; i<m_plist->size(); i++)
 		if ((*m_plist)[i]->p_phash == phash)
 			return true;
@@ -1142,462 +699,10 @@ bool	BUSINFO::ismember_of(MAPDHASH *phash) {
 }
 
 void	BUSINFO::writeout_bus_logic_v(FILE *fp) {
-	PLIST::iterator	pp;
-
-	if (NULL == m_plist)
-		return;
-
-	if (m_plist->size() == 0) {
-		// Since this bus has no slaves, any attempt to access it
-		// needs to cause a bus error.
-		fprintf(fp,
-			"\t\t// No peripherals attached\n"
-			"\t\tassign\t%s_err   = %s_stb;\n"
-			"\t\tassign\t%s_stall = 1\'b0;\n"
-			"\t\talways @(*)\n\t\t\t%s_ack   <= 1\'b0;\n"
-			"\t\tassign\t%s_idata = 0;\n"
-			"\tassign\t%s_none_sel = 1\'b1;\n",
-			m_name->c_str(), m_name->c_str(),
-			m_name->c_str(), m_name->c_str(),
-			m_name->c_str(), m_name->c_str());
-		return;
-	} else if (m_plist->size() == 1) {
-		STRINGP	strp;
-
-		fprintf(fp,
-			"\t\t// Only one peripheral attached\n"
-			"\tassign\t%s_none_sel = 1\'b0;\n"
-			"\talways @(*)\n\t\t%s_many_ack = 1\'b0;\n",
-			m_name->c_str(), m_name->c_str());
-		if (NULL != (strp = getstring((*m_plist)[0]->p_phash,
-						KYERROR_WIRE))) {
-			fprintf(fp, "\tassign\t%s_err = %s;\n",
-				m_name->c_str(), strp->c_str());
-		} else
-			fprintf(fp, "\tassign\t%s_err = 1\'b0;\n",
-				m_name->c_str());
-		fprintf(fp,
-			"\tassign\t%s_stall = %s_stall;\n"
-			"\talways @(*)\n\t\t%s_ack = %s_ack;\n"
-			"\talways @(*)\n\t\t%s_idata = %s_data;\n",
-			m_name->c_str(), (*m_plist)[0]->p_name->c_str(),
-			m_name->c_str(), (*m_plist)[0]->p_name->c_str(),
-			m_name->c_str(), (*m_plist)[0]->p_name->c_str());
-		return;
-	}
-
-	// none_sel
-	fprintf(fp, "\tassign\t%s_none_sel = (%s_stb)&&({\n",
-		m_name->c_str(), m_name->c_str());
-	for(unsigned k=0; k<m_plist->size(); k++) {
-		fprintf(fp, "\t\t\t\t%s_sel", (*m_plist)[k]->p_name->c_str());
-		if (k != m_plist->size()-1)
-			fprintf(fp, ",\n");
-
-	} fprintf(fp, "} == 0);\n\n");
-
-	// many_ack
-	if (m_plist->size() < 2) {
-		fprintf(fp, "\talways @(*)\n\t\t%s_many_ack <= 1'b0;\n",
-			m_name->c_str());
-	} else {
-		fprintf(fp,
-"\t//\n"
-"\t// many_ack\n"
-"\t//\n"
-"\t// It is also a violation of the bus protocol to produce multiple\n"
-"\t// acks at once and on the same clock.  In that case, the bus\n"
-"\t// can't decide which result to return.  Worse, if someone is waiting\n"
-"\t// for a return value, that value will never come since another ack\n"
-"\t// masked it.\n"
-"\t//\n"
-"\t// The other error that isn't tested for here, no would I necessarily\n"
-"\t// know how to test for it, is when peripherals return values out of\n"
-"\t// order.  Instead, I propose keeping that from happening by\n"
-"\t// guaranteeing, in software, that two peripherals are not accessed\n"
-"\t// immediately one after the other.\n"
-"\t//\n");
-		fprintf(fp,
-"\talways @(posedge %s)\n"
-"\t\tcase({\t\t%s_ack,\n", m_clock->m_wire->c_str(), (*m_plist)[0]->p_name->c_str());
-		for(unsigned k=1; k<m_plist->size(); k++) {
-			fprintf(fp, "\t\t\t\t%s_ack", (*m_plist)[k]->p_name->c_str());
-			if (k != m_plist->size()-1)
-				fprintf(fp, ",\n");
-		} fprintf(fp, "})\n");
-
-		fprintf(fp, "\t\t\t%d\'b%0*d: %s_many_ack <= 1\'b0;\n",
-			(int)m_plist->size(), (int)m_plist->size(), 0,
-			m_name->c_str());
-		for(unsigned k=0; k<m_plist->size(); k++) {
-			fprintf(fp, "\t\t\t%d\'b", (int)m_plist->size());
-			for(unsigned j=0; j<m_plist->size(); j++)
-				fprintf(fp, "%s", (j==k)?"1":"0");
-			fprintf(fp, ": %s_many_ack <= 1\'b0;\n",
-				m_name->c_str());
-		}
-
-		fprintf(fp, "\t\t\tdefault: %s_many_ack <= (%s_cyc);\n",
-			m_name->c_str(), m_name->c_str());
-		fprintf(fp, "\t\tendcase\n\n");
-	}
-
-
-
-	// Start with the slist
-	if (m_slist) {
-		fprintf(fp, "\treg\t\t" PREFIX "r_%s_sio_ack;\n",
-				m_name->c_str());
-		fprintf(fp, "\treg\t[%d:0]\t" PREFIX "r_%s_sio_data;\n\n",
-			m_data_width-1, m_name->c_str());
-
-		fprintf(fp, "\tassign\t" PREFIX "%s_sio_stall = 1\'b0;\n\n", m_name->c_str());
-		fprintf(fp, "\tinitial " PREFIX "r_%s_sio_ack = 1\'b0;\n"
-			"\talways\t@(posedge %s)\n"
-			"\t\t" PREFIX "r_%s_sio_ack <= (%s_stb)&&(" PREFIX "%s_sio_sel);\n",
-				m_name->c_str(),
-				m_clock->m_wire->c_str(),
-				m_name->c_str(),
-				m_name->c_str(), m_name->c_str());
-		fprintf(fp, "\tassign\t" PREFIX "%s_sio_ack = " PREFIX "r_%s_sio_ack;\n\n",
-				m_name->c_str(), m_name->c_str());
-
-		unsigned mask = 0, unused_lsbs = 0, lgdw;
-		for(unsigned k=0; k<m_slist->size(); k++) {
-			mask |= (*m_slist)[k]->p_mask;
-		} for(unsigned tmp=mask; ((tmp!=0)&&((tmp & 1)==0)); tmp >>= 1)
-			unused_lsbs++;
-		lgdw = nextlg(data_width())-3;
-
-		fprintf(fp, "\talways\t@(posedge %s)\n"
-			// "\t\t// mask        = %08x\n"
-			// "\t\t// lgdw        = %d\n"
-			// "\t\t// unused_lsbs = %d\n"
-			"\tcasez( %s_addr[%d:%d] )\n",
-				m_clock->m_wire->c_str(),
-				// mask, lgdw, unused_lsbs,
-				m_name->c_str(),
-				nextlg(mask)-1, unused_lsbs);
-		for(unsigned j=0; j<m_slist->size()-1; j++) {
-			fprintf(fp, "\t\t%d'h%lx: " PREFIX "r_%s_sio_data <= %s_data;\n",
-				nextlg(mask)-unused_lsbs,
-				((*m_slist)[j]->p_base) >> (unused_lsbs + lgdw),
-				m_name->c_str(),
-				(*m_slist)[j]->p_name->c_str());
-		}
-
-		fprintf(fp, "\t\tdefault: " PREFIX "r_%s_sio_data <= %s_data;\n",
-			m_name->c_str(),
-			(*m_slist)[m_slist->size()-1]->p_name->c_str());
-		fprintf(fp, "\tendcase\n");
-		fprintf(fp, "\tassign\t" PREFIX "%s_sio_data = " PREFIX "r_%s_sio_data;\n\n",
-			m_name->c_str(), m_name->c_str());
-	}
-
-	// Then the dlist
-	if (m_dlist) {
-		unsigned mask = 0, unused_lsbs = 0, lgdw, maskbits;
-		for(unsigned k=0; k<m_dlist->size(); k++) {
-			mask |= (*m_dlist)[k]->p_mask;
-		} for(unsigned tmp=mask; ((tmp!=0)&&((tmp & 1)==0)); tmp >>= 1)
-			unused_lsbs++;
-		maskbits = nextlg(mask)-unused_lsbs;
-		if (maskbits < 1)
-			maskbits=1;
-		// lgdw is the log of the data width in bytes.  We require it
-		// here because the bus addresses words rather than the bytes
-		// within them
-		lgdw = nextlg(data_width())-3;
-
-
-		fprintf(fp, "\treg\t[1:0]\t" PREFIX "r_%s_dio_ack;\n",
-				m_name->c_str());
-		fprintf(fp, "\t// # dlist = %d, nextlg(#dlist) = %d\n",
-			(int)m_dlist->size(),
-			nextlg(m_dlist->size()));
-		fprintf(fp, "\treg\t[%d:0]\t" PREFIX "r_%s_dio_bus_select;\n",
-			nextlg((int)m_dlist->size())-1, m_name->c_str());
-		fprintf(fp, "\treg\t[%d:0]\t" PREFIX "r_%s_dio_data;\n",
-			m_data_width-1, m_name->c_str());
-
-		//
-		// The stall line
-		fprintf(fp, "\tassign\t" PREFIX "%s_dio_stall = 1\'b0;\n", m_name->c_str());
-		//
-		// The ACK line
-		fprintf(fp, "\talways\t@(posedge %s)\n"
-			"\tif (i_reset || !%s_cyc)\n"
-			"\t\t" PREFIX "r_%s_dio_ack <= 0;\n"
-			"\telse\n"
-			"\t\t" PREFIX "r_%s_dio_ack <= { " PREFIX "r_%s_dio_ack[0], (%s_stb)&&(" PREFIX "%s_dio_sel) };\n",
-				m_clock->m_wire->c_str(), m_name->c_str(),
-				m_name->c_str(), m_name->c_str(),
-				m_name->c_str(), m_name->c_str(),
-				m_name->c_str());
-		fprintf(fp, "\tassign\t" PREFIX "%s_dio_ack = " PREFIX "r_%s_dio_ack[1];\n", m_name->c_str(), m_name->c_str());
-		fprintf(fp, "\n");
-
-		//
-		// The data return lines
-		fprintf(fp, "\talways @(posedge %s)\n"
-			"\tcasez(%s_addr[%d:%d])\n",
-				m_clock->m_wire->c_str(),
-				m_name->c_str(),
-				maskbits+unused_lsbs-1, unused_lsbs);
-		for(unsigned k=0; k<m_dlist->size(); k++) {
-			fprintf(fp, "\t\t%d'b", maskbits);
-			for(unsigned b=0; b<maskbits; b++) {
-				unsigned	shift = maskbits + unused_lsbs-b-1;
-				if (((*m_dlist)[k]->p_mask & (1<<shift))==0)
-					fprintf(fp, "?");
-				else if ((*m_dlist)[k]->p_base & (1<<(shift+lgdw)))
-					fprintf(fp, "1");
-				else
-					fprintf(fp, "0");
-
-				if ((shift > lgdw)&&(((shift-lgdw)&3)==0)
-					&&(b<maskbits-1))
-					fprintf(fp, "_");
-			}
-			fprintf(fp, ": " PREFIX "r_%s_dio_bus_select <= %d\'d%d;\n",
-				m_name->c_str(), nextlg(m_dlist->size()), k);
-		}
-		fprintf(fp, "\t\tdefault: " PREFIX "r_%s_dio_bus_select <= 0;\n",
-			m_name->c_str());
-		fprintf(fp, "\tendcase\n\n");
-
-		fprintf(fp, "\talways\t@(posedge %s)\n"
-			"\tcasez(" PREFIX "r_%s_dio_bus_select)\n",
-			m_clock->m_wire->c_str(), m_name->c_str());
-
-		for(unsigned k=0; k<m_dlist->size()-1; k++) {
-			fprintf(fp, "\t\t%d'd%d", nextlg(m_dlist->size()), k);
-			fprintf(fp, ": " PREFIX "r_%s_dio_data <= %s_data;\n",
-				m_name->c_str(),
-				(*m_dlist)[k]->p_name->c_str());
-		}
-
-		fprintf(fp, "\t\tdefault: " PREFIX "r_%s_dio_data <= %s_data;\n",
-			m_name->c_str(),
-			(*m_dlist)[m_dlist->size()-1]->p_name->c_str());
-		fprintf(fp, "\tendcase\n\n");
-		fprintf(fp, "\tassign\t" PREFIX "%s_dio_data = " PREFIX "r_%s_dio_data;\n\n",
-			m_name->c_str(), m_name->c_str());
-	} else
-		fprintf(fp, "\t//\n\t// No class DOUBLE peripherals on the \"%s\" bus\n\t//\n", m_name->c_str());
-
-
-
-	fprintf(fp, ""
-	"\t//\n"
-	"\t// Finally, determine what the response is from the %s bus\n"
-	"\t// bus\n"
-	"\t//\n"
-	"\t//\n", m_name->c_str());
-
-
-	fprintf(fp, ""
-	"\t//\n"
-	"\t// %s_ack\n"
-	"\t//\n"
-	"\t// The returning wishbone ack is equal to the OR of every component that\n"
-	"\t// might possibly produce an acknowledgement, gated by the CYC line.\n"
-	"\t//\n"
-	"\t// To return an ack here, a component must have a @SLAVE.TYPE tag.\n"
-	"\t// Acks from any @SLAVE.TYPE of SINGLE and DOUBLE components have been\n"
-	"\t// collected together (above) into " PREFIX "%s_sio_ack and " PREFIX "%s_dio_ack\n"
-	"\t// respectively, which will appear ahead of any other device acks.\n"
-	"\t//\n",
-	m_name->c_str(), m_name->c_str(), m_name->c_str());
-
-	fprintf(fp, "\talways @(posedge %s)\n\t\t%s_ack <= "
-			"(%s_cyc)&&(|{ ",
-			m_clock->m_wire->c_str(),
-			m_name->c_str(), m_name->c_str());
-	for(unsigned k=0; k<m_plist->size()-1; k++)
-		fprintf(fp, "%s_ack,\n\t\t\t\t",
-			(*m_plist)[k]->p_name->c_str());
-	fprintf(fp, "%s_ack });\n",
-		(*m_plist)[m_plist->size()-1]->p_name->c_str());
-
-
-	fprintf(fp, ""
-	"\t//\n"
-	"\t// %s_idata\n"
-	"\t//\n"
-	"\t// This is the data returned on the bus.  Here, we select between a\n"
-	"\t// series of bus sources to select what data to return.  The basic\n"
-	"\t// logic is simply this: the data we return is the data for which the\n"
-	"\t// ACK line is high.\n"
-	"\t//\n"
-	"\t// The last item on the list is chosen by default if no other ACK's are\n"
-	"\t// true.  Although we might choose to return zeros in that case, by\n"
-	"\t// returning something we can skimp a touch on the logic.\n"
-	"\t//\n"
-	"\t// Any peripheral component with a @SLAVE.TYPE value of either OTHER\n"
-	"\t// or MEMORY will automatically be listed here.  In addition, the\n"
-	"\t// bus responses from @SLAVE.TYPE SINGLE (_sio_) and/or DOUBLE\n"
-	"\t// (_dio_) may also be listed here, depending upon components are\n"
-	"\t// connected to them.\n"
-	"\t//\n", m_name->c_str());
-
-	if ((m_plist)&&(m_plist->size() > 0)) {
-		if (m_plist->size() == 1) {
-			fprintf(fp, "\talways @(*)\n\t\t%s_idata <= %s_data;\n",
-				m_name->c_str(),
-				(*m_plist)[0]->p_name->c_str());
-		} else if (m_plist->size() == 2) {
-			fprintf(fp, "\talways @(posedge %s)\n\t\tif (%s_ack)\n\t\t\t%s_idata <= %s_data;\n\t\telse\n\t\t\t%s_idata <= %s_data;\n",
-				m_clock->m_wire->c_str(),
-				(*m_plist)[0]->p_name->c_str(),
-				m_name->c_str(),
-				(*m_plist)[0]->p_name->c_str(),
-				m_name->c_str(),
-				(*m_plist)[1]->p_name->c_str());
-		} else {
-			int	sbits = nextlg(m_plist->size());
-			fprintf(fp,"\treg [%d:0]\t" PREFIX "r_%s_bus_select;\n",
-				sbits-1, m_name->c_str());
-
-			unsigned mask = 0, unused_lsbs = 0, lgdw, maskbits;
-			for(unsigned k=0; k<m_plist->size(); k++) {
-				mask |= (*m_plist)[k]->p_mask;
-			} for(unsigned tmp=mask; ((tmp!=0)&&((tmp & 1)==0));
-					tmp >>= 1)
-				unused_lsbs++;
-			maskbits = nextlg(mask)-unused_lsbs;
-			// lgdw is the log of the data width in bytes.  We
-			// require it here because the bus addresses words
-			// rather than the bytes within them
-			lgdw = nextlg(data_width())-3;
-
-			fprintf(fp, "\talways\t@(posedge %s)\n"
-				"\tif (%s_stb && ! %s_stall)\n"
-				"\t\tcasez(" PREFIX "%s_addr[%d:%d])\n",
-				m_clock->m_wire->c_str(),
-				m_name->c_str(), m_name->c_str(),
-				m_name->c_str(),
-				unused_lsbs+maskbits-1, unused_lsbs);
-			for(unsigned k=0; k<m_plist->size(); k++) {
-				fprintf(fp, "\t\t\t// %08lx & %08lx, %s\n",
-					((*m_plist)[k]->p_mask << lgdw),
-					(*m_plist)[k]->p_base,
-					(*m_plist)[k]->p_name->c_str());
-				fprintf(fp, "\t\t\t%d'b", maskbits);
-				for(unsigned b=0; b<maskbits; b++) {
-					unsigned	shift = maskbits + unused_lsbs-b-1;
-					if (((*m_plist)[k]->p_mask & (1<<shift))==0)
-						fprintf(fp, "?");
-					else if ((*m_plist)[k]->p_base & (1<<(shift+lgdw)))
-						fprintf(fp, "1");
-					else
-						fprintf(fp, "0");
-
-					if ((shift > lgdw)&&(((shift-lgdw)&3)==0)
-						&&(b<maskbits-1))
-						fprintf(fp, "_");
-				}
-				fprintf(fp, ": " PREFIX "r_%s_bus_select <= %d'd%d;\n",
-					m_name->c_str(), sbits, k);
-			}
-			fprintf(fp, "\t\t\tdefault: begin end\n");
-			fprintf(fp, "\t\tendcase\n\n");
-
-			fprintf(fp, "\talways @(posedge %s)\n"
-				"\tcasez(" PREFIX "r_%s_bus_select)\n",
-					m_clock->m_wire->c_str(),
-					m_name->c_str());
-
-			for(unsigned i=0; i<m_plist->size(); i++) {
-				fprintf(fp, "\t\t%d\'d%d", sbits, i);
-				fprintf(fp, ": %s_idata <= %s_data;\n",
-					m_name->c_str(),
-					(*m_plist)[i]->p_name->c_str());
-			}
-			fprintf(fp, "\t\tdefault: %s_idata <= %s_data;\n",
-				m_name->c_str(),
-				(*m_plist)[(m_plist->size()-1)]->p_name->c_str());
-			fprintf(fp, "\tendcase\n\n");
-		}
-	} else
-		fprintf(fp, "\talways @(posedge %s)\n"
-			"\t\t%s_idata <= 32\'h0\n",
-			m_clock->m_wire->c_str(), m_name->c_str());
-
-	// The stall line
-	fprintf(fp, "\tassign\t%s_stall =\t((%s_sel)&&(%s_stall))",
-		m_name->c_str(), (*m_plist)[0]->p_name->c_str(),
-		(*m_plist)[0]->p_name->c_str());
-	if (m_plist->size() <= 1)
-		fprintf(fp, ";\n\n");
-	else {
-		for(unsigned i=1; i<m_plist->size(); i++)
-			fprintf(fp, "\n\t\t\t\t||((%s_sel)&&(%s_stall))",
-				(*m_plist)[i]->p_name->c_str(),
-				(*m_plist)[i]->p_name->c_str());
-
-		fprintf(fp, ";\n\n");
-	}
-
-	// Bus errors
-	{
-		STRING	err_bus("");
-		STRINGP	strp;
-		int	ecount = 0;
-
-		if (m_slist) for(PLIST::iterator sp=m_slist->begin();
-					sp != m_slist->end(); sp++) {
-			if (NULL == (strp = getstring((*sp)->p_phash,
-						KYERROR_WIRE)))
-				continue;
-			if (ecount == 0)
-				err_bus = STRING("(");
-			else
-				err_bus = err_bus + STRING(")||(");
-			err_bus = err_bus + (*strp);
-			ecount++;
-		}
-
-		if (m_dlist) for(PLIST::iterator dp=m_dlist->begin();
-					dp != m_dlist->end(); dp++) {
-			if (NULL == (strp = getstring((*dp)->p_phash,
-						KYERROR_WIRE)))
-				continue;
-			if (ecount == 0)
-				err_bus = STRING("(");
-			else
-				err_bus = err_bus + STRING(")||(");
-			err_bus = err_bus + (*strp);
-			ecount++;
-		}
-
-		for(PLIST::iterator pp=m_plist->begin();
-					pp != m_plist->end(); pp++) {
-			if (NULL == (strp = getstring((*pp)->p_phash,
-						KYERROR_WIRE)))
-				continue;
-			if (ecount == 0)
-				err_bus = STRING("(");
-			else
-				err_bus = err_bus + STRING(")||(");
-			err_bus = err_bus + (*strp);
-			ecount++;
-		}
-
-		if (ecount > 0)
-			err_bus = STRING("(") + err_bus + STRING(")");
-
-		fprintf(fp, "\tassign %s_err = ((%s_stb)&&(%s_none_sel))||(%s_many_ack)",
-			m_name->c_str(), m_name->c_str(), m_name->c_str(),
-			m_name->c_str());
-		if (ecount == 0) {
-			fprintf(fp, ";\n");
-		} else if (ecount == 1) {
-			fprintf(fp, "||%s);\n", err_bus.c_str());
-		} else
-			fprintf(fp, "\n\t\t\t||%s; // ecount = %d",
-				err_bus.c_str(), ecount);
-	}
+	if (!m_genbus)
+		gbl_msg.error("No slaves assigned to bus %s\n", m_name->c_str());
+	else
+		m_genbus->writeout_bus_logic_v(fp);
 }
 
 void	writeout_bus_logic_v(FILE *fp) {
@@ -1831,6 +936,24 @@ void	assign_bus_master(MAPDHASH &master, MAPDHASH *bus_master) {
 	}
 }
 
+void	BUSLIST::assign_bus_types(void) {
+	if (num_bus_classes == 0)
+		gbl_msg.warning("No bus classes defined!\n");
+	for(unsigned k = 0; k < size(); k++) {
+		bool	found= false;
+		for(unsigned tst=0; tst<num_bus_classes; tst++) {
+			if (busclass_list[tst]->matches((*this)[k])) {
+				found = true;
+				(*this)[k]->m_genbus = busclass_list[tst]->create((*this)[k]);
+				break;
+			}
+		} if (!found) {
+			gbl_msg.error("No bus logic generator found for bus %s\n", (*this)[k]->m_name->c_str());
+		}
+	}
+	
+}
+
 void	build_bus_list(MAPDHASH &master) {
 	MAPDHASH::iterator	kvpair, kvaccess, kvsearch;
 	BUSLIST	*bl = new BUSLIST;
@@ -1913,21 +1036,11 @@ void	build_bus_list(MAPDHASH &master) {
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
 		if (!isperipheral(kvpair->second))
 			continue;
-		bl->countsio(kvpair->second);
-	}
-
-	for(BUSLIST::iterator bp=bl->begin(); bp != bl->end(); bp++) {
-		(*bp)->post_countsio();
-	}
-
-	//
-	//
-	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
-		if (!isperipheral(kvpair->second))
-			continue;
 		bl->addperipheral(kvpair->second);
 	}
 	reeval(master);
+
+	bl->assign_bus_types();
 
 	for(unsigned i=0; i< bl->size(); i++) {
 		(*bl)[i]->assign_addresses();
