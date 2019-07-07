@@ -15,7 +15,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017, Gisselquist Technology, LLC
+## Copyright (C) 2017-2019, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -41,10 +41,13 @@
 ##
 @$GPSPORT_OFFSET=2
 @PREFIX=gck
+@DEVID=GPSTRK
+@ACCESS=@$(DEVID)_ACCESS
 @NADDR=4
 @SLAVE.TYPE=DOUBLE
 @SLAVE.BUS=wb
-@ACCESS=GPS_CLOCK
+@CLOCK.NAME=clk
+@$CLKFREQHZ=@$(CLOCK.FREQUENCY)
 @$GPS_STEP_EXPONENT=10
 @$GPS_STEP=((((1<<60)/@$CLKFREQHZ)>>(@$.GPS_STEP_EXPONENT-4))&0x0fffffff)|((@$.GPS_STEP_EXPONENT&0x0f)<<28)
 @GPS_STEP.FORMAT=32'h%08x
@@ -60,6 +63,7 @@
 	wire	gps_pps, gps_led, gps_locked, gps_tracking;
 	wire	[63:0]	gps_now, gps_err, gps_step;
 	wire	[1:0]	gps_dbg_tick;
+	wire		ck_pps;
 @MAIN.INSERT=
 	wire	[1:0]	ck_dbg;
 
@@ -69,6 +73,8 @@
 				gck_ack, gck_stall, gck_data,
 			gps_tracking, gps_now, gps_step, gps_err, gps_locked,
 			ck_dbg);
+
+	assign	ck_pps2= ck_pps;
 @MAIN.ALT=
 	wire	[31:0]	pre_step;
 	assign	pre_step = { 16'h00, (({GPSCLOCK_DEFAULT_STEP[27:0],20'h00})
@@ -82,7 +88,7 @@
 	assign	gps_led    = 1'b0;
 	assign	gps_locked = 1'b0;
 
-@INT.PPS.WIRE=ck_pps
+@INT.PPS.WIRE=ck_pps2
 @INT.PPS.PIC=syspic
 @REGS.NOTE= // GPS clock tracker, control loop settings registers
 @REGS.N=4
@@ -94,16 +100,26 @@
 typedef	struct	GPSTRACKER_S	{
 	unsigned	g_alpha, g_beta, g_gamma, g_step;
 } GPSTRACKER;
-@BDEF.IONAME=io_gps
+@BDEF.INSERT=
+#define	SYSINT_PPS	SYSINT(@$(INT.PPS.syspic.ID))
+@BDEF.IONAME=_gps
+@BDEF.IOTYPE= GPSTRACKER
+@BDEF.OSVAL=
+static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME) = ((@$BDEF.IOTYPE *)@$[0x%08x]REGBASE);
+##
+##
+##
 @PREFIX=gtb
 @NADDR=8
 @SLAVE.TYPE=DOUBLE
 @SLAVE.BUS=wb
+@CLOCK.NAME=clk
 @MAIN.DEFNS=
 	wire	tb_pps;
 @MAIN.INSERT=
-`ifdef	GPS_CLOCK
-	gpsclock_tb ppstb(i_clk, ck_pps, tb_pps,
+`ifdef	GPSTRK_ACCESS
+	gpsclock_tb #(.CLOCK_FREQUENCY_HZ(@$(CLOCK.FREQUENCY)))
+		ppstb(i_clk, ck_pps, tb_pps,
 			(wb_stb)&&(gtb_sel), wb_we, wb_addr[2:0], wb_data,
 				gtb_ack, gtb_stall, gtb_data,
 			gps_err, gps_now, gps_step);
@@ -131,13 +147,17 @@ typedef	struct	GPSTB_S	{
 	unsigned	tb_maxcount, tb_jump;
 	unsigned long	tb_err, tb_count, tb_step;
 } GPSTB;
-@BDEF.IONAME=io_gpstb
+@BDEF.IONAME=_gpstb
+@BDEF.IOTYPE=GPSTB
+@BDEF.OSVAL=static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME) = ((@$(BDEF.IOTYPE) *)@$[0x%08x](REGBASE));
 #
 #
 #
 @PREFIX=gpsu
 @INCLUDEFILE=wbuart.txt
 @$BAUDRATE=9600
+@CLOCK.NAME=clk
+@$UARTSETUP=@$(CLOCK.FREQUENCY)/@$(BAUDRATE)
 @ACCESS=GPSUART_ACCESS
 @INT.INTLIST= GPSRX GPSTX GPSRXF GPSTXF
 @INT.GPSRX.WIRE=  gpsurx_int
@@ -146,7 +166,7 @@ typedef	struct	GPSTB_S	{
 @INT.GPSTXF.WIRE= gpsutxf_int
 @INT.GPSRX.PIC=  altpic
 @INT.GPSTX.PIC=  altpic
-@INT.GPSRXF.PIC= syspic
+@INT.GPSRXF.PIC= altpic
 @INT.GPSTXF.PIC= altpic
 # Clear the other inherited wires, as we don't need them any more.
 @INT.UARTRX.WIRE=
@@ -157,6 +177,11 @@ typedef	struct	GPSTB_S	{
 @INT.UARTTX.PIC=
 @INT.UARTRXF.PIC=
 @INT.UARTTXF.PIC=
+@BDEF.INSERT=
+#define	SYSINT_GPSRXF	ALTINT(@$(INT.GPSRXF.syspic.ID))
+#define	SYSINT_GPSTXF	ALTINT(@$(INT.GPSTXF.altpic.ID))
+#define	SYSINT_GPSRX	ALTINT(@$(INT.GPSRX.altpic.ID))
+#define	SYSINT_GPSTX	ALTINT(@$(INT.GPSTX.altpic.ID))
 @TOP.PORTLIST=
 		// The GPS-UART
 		i_@$(PREFIX)_rx, o_@$(PREFIX)_tx
@@ -177,12 +202,15 @@ typedef	struct	GPSTB_S	{
 @REGS.1= 1 R_GPSU_FIFO   GPSFIFO
 @REGS.2= 2 R_GPSU_UARTRX GPSRX
 @REGS.3= 3 R_GPSU_UARTTX GPSTX
-@BDEF.IONAME=gpsu
+@BDEF.IONAME=_@$(PREFIX)
 @BDEF.OSDEF=_BOARD_HAS_GPS_UART
+@BDEF.OSVAL=static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME) = ((@$(BDEF.IOTYPE) *)(@$[0x%08x](REGBASE)));
 @$SIM.PORTOFFSET=@/GPSPORT_OFFSET
 @SIM.INIT=
 #ifdef	@$(ACCESS)
 		m_@$(PREFIX) = new UARTSIM(FPGAPORT+@$(SIM.PORTOFFSET));
-		m_@$(PREFIX)->setup(@$(SIM.UARTSETUP));
-#endif
+		m_@$(PREFIX)->setup(@$[0x%08x](UARTSETUP));
+#endif // @$(ACCESS)
 #
+@RTL.MAKE.GROUP=GPS
+@RTL.MAKE.FILES=gpsclock_tb.v gpsclock.v bigadd.v bigsub.v bigsmpy.v

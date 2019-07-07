@@ -11,7 +11,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017, Gisselquist Technology, LLC
+## Copyright (C) 2017-2019, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -35,11 +35,27 @@
 ################################################################################
 ##
 ##
+@PREFIX=iclock
+@CLOCK.NAME=clk
+@CLOCK.WIRE=i_clk
+@CLOCK.FREQUENCY=100000000
+@CLOCK.TOP=i_clk
+#
+#
 @PREFIX=hdmiin
 @NADDR=16
 @ACCESS=HDMIIN_ACCESS
 @SLAVE.TYPE=DOUBLE
 @SLAVE.BUS=wb
+@MASTER.TYPE=VIDEO
+@MASTER.BUS.NAME=vid
+@MASTER.BUS.WIDTH=128
+@BUS.NAME=vid
+@BUS.WIDTH=128
+@BUS.TYPE=wb
+@BUS.CLOCK=clk
+@CBUS=@$(SLAVE.BUS.NAME)
+@VBUS=@$(MASTER.BUS.NAME)
 @TOP.PORTLIST=
 		// HDMI input clock, and then data
 		i_hdmi_in_clk_n, i_hdmi_in_clk_p,
@@ -57,14 +73,12 @@
 	wire	[4:0]	w_hdmi_in_delay, w_hdmi_in_actual_delay_r,
 			w_hdmi_in_actual_delay_g, w_hdmi_in_actual_delay_b;
 	//
-	wire	s_clk_200mhz, s_clk_200mhz_unbuffered,
-		sysclk_locked, sysclk_feedback;
 	wire		w_hdmi_in_pll_locked;
 @TOP.MAIN=
 		// HDMI input clock
 		w_hdmi_in_logic_clk,
 		w_hdmi_in_red, w_hdmi_in_green, w_hdmi_in_blue,
-		w_hdmi_in_hsclk, s_clk_200mhz,
+		w_hdmi_in_hsclk,
 		// HDMI input (sink) delay
 		w_hdmi_in_actual_delay_r, w_hdmi_in_actual_delay_g,
 		w_hdmi_in_actual_delay_b, w_hdmi_in_delay
@@ -113,42 +127,24 @@
 	*/
 	IDELAYCTRL dlyctrl(.REFCLK(s_clk_200mhz), .RDY(), .RST(delay_reset));
 
-	// But ... the delay controller requires a 200 MHz reference clock,
-	// so ... let's create one
-	PLLE2_BASE #(
-		.CLKFBOUT_MULT(8),
-		.CLKFBOUT_PHASE(0.0),
-		.CLKIN1_PERIOD(10),
-		.CLKOUT0_DIVIDE(4),
-		.CLKOUT1_DIVIDE(2),
-		.CLKOUT2_DIVIDE(8)) gen_sysclk(
-			.CLKIN1(i_clk),
-			.CLKOUT0(s_clk_200mhz_unbuffered),
-			.CLKOUT1(s_clk4x_unbuffered),
-			.CLKOUT2(s_clksync_unbuffered),
-			.PWRDWN(1'b0), .RST(1'b0),
-			.CLKFBOUT(sysclk_feedback),
-			.CLKFBIN(sysclk_feedback),
-			.LOCKED(sysclk_locked));
-
-	BUFG	sysbuf(.I(s_clk_200mhz_unbuffered), .O(s_clk_200mhz));
-
 
 @MAIN.PORTLIST=
 		// HDMI input ports
 		i_hdmi_in_clk,
 		i_hdmi_in_r, i_hdmi_in_g, i_hdmi_in_b,
-		i_hdmi_in_hsclk, i_clk_200mhz,
+		i_hdmi_in_hsclk,
 		// HDMI input delay control
 		i_hdmi_in_actual_delay_r, i_hdmi_in_actual_delay_g,
 		i_hdmi_in_actual_delay_b, o_hdmi_in_delay
-@CLOCK.NAME=hdmi_in_clk hdmi_in_hsclk clk_200mhz
-@CLOCK.FREQUENCY=148500000 1485000000 200000000
+@CLOCK.NAME=hdmi_in_clk hdmi_in_hsclk
+@CLOCK.FREQUENCY=148500000 1485000000
 @MAIN.IODECL=
 	// HDMI input ports
 	input	wire		i_hdmi_in_clk;
 	input	wire	[9:0]	i_hdmi_in_r, i_hdmi_in_g, i_hdmi_in_b;
-	input	wire		i_hdmi_in_hsclk, i_clk_200mhz;
+	// verilator lint_off UNUSED
+	input	wire		i_hdmi_in_hsclk;
+	// verilator lint_on  UNUSED
 	// Sub-pixel delay control
 	input	wire	[4:0]	i_hdmi_in_actual_delay_r;
 	input	wire	[4:0]	i_hdmi_in_actual_delay_g;
@@ -162,7 +158,7 @@
 	wire	[9:0]	hdmi_in_b;
 @MAIN.INSERT=
 	// HDMI input processor
-	hdmiin	thehdmmiin(i_clk, i_hdmi_in_clk, ck_pps,
+	hdmiin	the@$(PREFIX)(i_clk, i_hdmi_in_clk, ck_pps,
 			//
 			i_hdmi_in_actual_delay_r,
 			i_hdmi_in_actual_delay_g,
@@ -170,9 +166,12 @@
 			o_hdmi_in_delay,
 			//
 			i_hdmi_in_r, i_hdmi_in_g, i_hdmi_in_b,
-			wb_cyc, (wb_stb)&&(hdmiin_sel), wb_we, wb_addr[3:0],
-				wb_data, wb_sel,
+			@$(CBUS)_cyc, (@$(CBUS)_stb)&&(hdmiin_sel), @$(CBUS)_we, @$(CBUS)_addr[3:0],
+				@$(CBUS)_data, @$(CBUS)_sel,
 			hdmiin_ack, hdmiin_stall, hdmiin_data,
+			@$(VBUS)_cyc, @$(VBUS)_stb, @$(VBUS)_we,
+				@$(VBUS)_addr, @$(VBUS)_data, @$(VBUS)_sel,
+				@$(VBUS)_ack, @$(VBUS)_stall, @$(VBUS)_err,
 			hdmiin_int,
 			hin_pixels, hin_dbg_scope);
 
@@ -188,13 +187,13 @@
 @REGS.0=   0	R_HIN_FRAMEADDR	HINFRAME
 @REGS.1=   1	R_HIN_ORIGIN	HINORIGIN
 @REGS.2=   2	R_HIN_MAXSZ	HINMAXSZ
-@REGS.3=   3	R_HIN_RESERVED	HINRESERVED
+@REGS.3=   3	R_HIN_BYTESPLINE HINBYTESPLINE
 @REGS.4=   4	R_HIN_SYNC_CTRL	HINSYNCC    HINDLY
 @REGS.5=   5	R_HIN_SLIP	HINSYNCM    HINMANUALSYNC HINMSYNC HINSLIP
 @REGS.6=   6	R_HIN_SYNC_DATA	HINSYNCD    HINSYNCDATA   HINSYNC
 @REGS.7=   7	R_HIN_SYNCQ	HINSYNCQ
 @REGS.8=   8	R_HIN_CKWORD	HINCW HINCKWORD HINPIXCLK
-// 9-111
+# 9-111
 @REGS.9=  12	R_HIN_COLUMNS	HINCOLS
 @REGS.10= 13	R_HIN_ROWS	HINROWS
 @REGS.11= 14	R_HIN_HMODE	HINHMODE
@@ -223,11 +222,11 @@ typedef	struct	HDMI_IN_S {
 @SIM.DEFNS=
 #ifdef	@$(ACCESS)
 	HDMIINSIM	*m_@$(PREFIX);
-#endif
+#endif // @$(ACCESS)
 @SIM.INIT=
 #ifdef	@$(ACCESS)
-	m_@$(PREFIX) = new HDMIINSIM("frames/hdmidata.32t", 2200*1125);
-#endif
+		m_@$(PREFIX) = new HDMIINSIM("frames/hdmidata.32t", 2200*1125);
+#endif // @$(ACCESS)
 @SIM.TICK=
 		// HDMI input simulation
 		{ unsigned	r, g, b;
@@ -236,8 +235,22 @@ typedef	struct	HDMI_IN_S {
 		m_core->i_hdmi_in_g = g;
 		m_core->i_hdmi_in_b = b;
 		}
-#
-#
+@SIM.DBGCONDITION=
+		writeout = (writeout)||(m_core->VVAR(_thehdmiin__DOT__copypix__DOT__frame_en_pipe));
+		writeout = (writeout)||(m_core->VVAR(_vid_cyc));
+@SIM.DEBUG=
+			printf("%s%s %s%s @%08x ",
+				m_core->VVAR(_vid_cyc)?"CYC":"   ",
+				m_core->VVAR(_vid_stb)?"STB":"   ",
+				m_core->VVAR(_vid_bus_ack)?"ACK":"   ",
+				m_core->VVAR(_vid_bus_stall)?"STALL":"     ",
+				m_core->VVAR(_vid_addr));
+			for(int @$(PREFIX)j = 0; @$(PREFIX)j<4; @$(PREFIX)j++) {
+				printf("%08x%c",
+					m_core->VVAR(_vid_data)[@$(PREFIX)j],
+					(3==@$(PREFIX)j)?':':' ');
+			}
+			printf("\n");
 #
 #
 #
@@ -287,10 +300,10 @@ typedef	struct	HDMI_IN_S {
 			@$(PREFIX)_pre_trigger <= 1'b0;
 		end
 
-	transferstb @$(PREFIX)_clearctri(i_clk, i_hdmi_in_clk, 
+	transferstb @$(PREFIX)_clearctri(i_clk, i_hdmi_in_clk,
 		((wb_stb)&&(scope_hdmiin_sel)&&(wb_we)&&(!wb_addr[0])),
 		@$(PREFIX)_clear_stb);
-				
+
 	initial	@$(PREFIX)_count_triggered = 1'b0;
 	always @(posedge i_hdmi_in_clk)
 		if (@$(PREFIX)_clear_stb)
@@ -298,12 +311,14 @@ typedef	struct	HDMI_IN_S {
 		else if (@$(PREFIX)_pre_trigger)
 			@$(PREFIX)_count_triggered <= 1'b1;
 
+	initial	@$(PREFIX)_counter = 32'hffff_ffff;
 	always @(posedge i_hdmi_in_clk)
 		if (!@$(PREFIX)_count_triggered)
 			@$(PREFIX)_counter <= hdmi_scope_frame_offset_data;
 		else if (@$(PREFIX)_counter != 0)
 			@$(PREFIX)_counter <= @$(PREFIX)_counter - 1'b1;
 
+	initial	@$(PREFIX)_trigger = 1'b0;
 	always @(posedge i_hdmi_in_clk)
 		@$(PREFIX)_trigger <= (@$(PREFIX)_counter == 0);
 
@@ -384,8 +399,10 @@ typedef	struct	HDMI_IN_S {
 		// HDMI output pixels
 		o_hdmi_out_r, o_hdmi_out_g, o_hdmi_out_b
 @MAIN.IODECL=
+	// Verilator lint_off UNUSED
 	// HDMI output clock
 	input	wire	i_hdmi_out_clk;
+	// Verilator lint_on  UNUSED
 	// HDMI output pixels
 	output	wire	[9:0]	o_hdmi_out_r, o_hdmi_out_g, o_hdmi_out_b;
 @CLOCK.NAME=hdmi_out_clk
@@ -462,7 +479,7 @@ typedef	struct	HDMI_IN_S {
 @SLAVE.TYPE=DOUBLE
 @SLAVE.BUS=wb
 @INT.EDID.WIRE=	edid_out_int
-@INT.EDID.PIC=	syspic
+@INT.EDID.PIC=	altpic
 @ACCESS=HDMI_OUT_EDID_ACCESS
 @TOP.PORTLIST=
 		// HDMI output EDID I2C ports
@@ -495,7 +512,7 @@ typedef	struct	HDMI_IN_S {
 @MAIN.DEFNS=
 	wire	[31:0]	edido_dbg;
 @MAIN.INSERT=
-	wbi2cmaster	#(.READ_ONLY(1'b1),.MEM_ADDR_BITS(8)) the_@$(PREFIX)(i_clk, 1'b0,
+	wbi2cmaster	#(.READ_ONLY(1'b1),.MEM_ADDR_BITS(8)) the_@$(PREFIX)(i_clk,
 		wb_cyc, (wb_stb)&&(@$(PREFIX)_sel), wb_we, wb_addr[6:0], wb_data,
 			wb_sel, @$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_data,
 		i_hdmi_out_scl, i_hdmi_out_sda, o_hdmi_out_scl, o_hdmi_out_sda,
@@ -563,6 +580,7 @@ typedef	struct	EDID_SRC_S {
 #
 #
 @PREFIX=clkhdmiin
+@DEVID=HDMI_INCLK
 @INCLUDEFILE=clkcounter.txt
 @REGS.NOTE= // HDMI-IN Clock Counter (measures clock speed)
 @REGS.0 = 0 R_HDMI_INCLK HCLKIN
@@ -572,6 +590,7 @@ typedef	struct	EDID_SRC_S {
 #
 #
 @PREFIX=clkhdmiout
+@DEVID=HDMI_OUTCLK
 @INCLUDEFILE=clkcounter.txt
 # @TSTCLOCK= i_hdmi_out_clk
 # @TSTCLOCK= i_hdmi_in_hsclk

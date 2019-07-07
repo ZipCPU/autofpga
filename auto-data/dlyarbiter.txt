@@ -11,7 +11,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017-2018, Gisselquist Technology, LLC
+## Copyright (C) 2017-2019, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -55,9 +55,6 @@
 @MASTER.TYPE=ARBITER
 @MASTER.BUS=wb
 @BUS.NAME=wb
-@MASTER.TYPE=ARBITER
-@MASTER.BUS=wb
-@BUS.NAME=wb
 @BUS.WIDTH=32
 @BUS.TYPE=wb
 @BUS.CLOCK=clk
@@ -77,13 +74,13 @@
 	// And an arbiter to decide who gets access to the bus
 	//
 	//
-	// Clock speed = @$(CLOCK.FREQUENCY)
+	// Clock speed = @$(CLOCK.FREQUENCY) Hz
 	wbpriarbiter #(32,@$(AWID))	bus_arbiter(i_clk,
 		// The Zip CPU bus master --- gets the priority slot
 		zip_cyc, (zip_stb)&&(zip_dwb_sel), zip_we, zip_addr, zip_data, zip_sel,
 			zip_dwb_ack, zip_dwb_stall, zip_dwb_err,
 		// The UART interface master
-		(@$(SLAVE.BUS.NAME)_cyc)&&(@$(PREFIX)_sel),
+		(@$(SLAVE.BUS.NAME)_cyc),
 			(@$(SLAVE.BUS.NAME)_stb)&&(@$(PREFIX)_sel),
 			@$(SLAVE.BUS.NAME)_we,
 			@$(SLAVE.BUS.NAME)_addr[(@$(AWID)-1):0],
@@ -141,5 +138,5 @@
 	assign	zip_dwb_data = @$(PREFIX)i_idata;
 `endif
 @RTL.MAKE.GROUP= BUSDLY
-@RTL.MAKE.FILES= busdelay.v
+@RTL.MAKE.FILES= busdelay.v wbpriarbiter.v
 @RTL.MAKE.SUBD=cpu

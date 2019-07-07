@@ -13,7 +13,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017-2018, Gisselquist Technology, LLC
+## Copyright (C) 2017-2019, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -47,7 +47,8 @@
 		o_eth_mdclk, io_eth_mdio
 @TOP.IODECL=
 	// Ethernet control (MDIO)
-	output	wire		o_eth_mdclk, io_eth_mdio;
+	output	wire		o_eth_mdclk;
+	inout	wire		io_eth_mdio;
 @TOP.DEFNS=
 	// Ethernet control (MDIO)
 	wire		w_mdio, w_mdwe;
@@ -72,31 +73,43 @@
 @MAIN.ALT=
 	assign	o_mdclk = 1'b1;
 	assign	o_mdio  = 1'b1;
-	assign	o_mdwe  = 1'b0;;
+	assign	o_mdwe  = 1'b0;
 @REGS.NOTE= // Ethernet configuration (MDIO) port
-@REGS.N=18
+@REGS.N=30
 @REGS.0=  0 R_MDIO_BMCR  	BMCR
 @REGS.1=  1 R_MDIO_BMSR 	BMSR
 @REGS.2=  2 R_MDIO_PHYIDR1	PHYIDR1
 @REGS.3=  3 R_MDIO_PHYIDR2	PHYIDR2
 @REGS.4=  4 R_MDIO_ANAR		ANAR
 @REGS.5=  5 R_MDIO_ANLPAR	ANLPAR
-# // 5 is also the ANLPARNP register
 @REGS.6=  6 R_MDIO_ANER		ANER
 @REGS.7=  7 R_MDIO_ANNPTR	ANNPTR
-# // Registers 8-15 are reserved, and so not defined here
-@REGS.8= 16 R_MDIO_PHYSTS	PHYSYTS
-# // Registers 17-19 are reserved
-@REGS.9= 20 R_MDIO_FCSCR	FCSCR
-@REGS.10=21 R_MDIO_RECR		RECR
-@REGS.11=22 R_MDIO_PCSR		PCSR
-@REGS.12=23 R_MDIO_RBR		RBR
-@REGS.13=24 R_MDIO_LEDCR	LEDCR
-@REGS.14=25 R_MDIO_PHYCR	PHYCR
-@REGS.15=26 R_MDIO_BTSCR	BTSCR
-@REGS.16=27 R_MDIO_CDCTRL	CDCTRL
-# // 28 is reserved
-@REGS.17=29 R_MDIO_EDCR		EDCR
+@REGS.8=  8 R_MDIO_ANNPRR	ANNPRR
+@REGS.9=  9 R_MDIO_GBCR		GBCR
+@REGS.10= 10 R_MDIO_GBSR	GBSR
+@REGS.11= 13 R_MDIO_MACR	MACR
+@REGS.12= 14 R_MDIO_MAADR	MAADR
+@REGS.13= 15 R_MDIO_GBESR	GBESR
+@REGS.14= 16 R_MDIO_PHYCR	PHYCR
+@REGS.15= 17 R_MDIO_PHYSR	PHYSR
+@REGS.16= 18 R_MDIO_INER	INER
+@REGS.17= 19 R_MDIO_INSR	INSR
+## 20-23 are reserved
+@REGS.18=24 R_MDIO_RXERC	RXERC
+## 25-26 are reserved
+@REGS.19=27 R_MDIO_LDPSR	LDPSR
+@REGS.20=30 R_MDIO_EPAGSR	EPAGSR
+@REGS.21=31 R_MDIO_PAGSEL	PAGSEL
+##
+@REGS.22=0 R_XMDIO_PC1R		XPC1R
+@REGS.23=1 R_XMDIO_PS1R		XPS1R
+@REGS.24=20 R_XMDIO_EEECR	XEEECR
+@REGS.25=16 R_XMDIO_EEEWER	XEEEWER
+@REGS.26=60 R_XMDIO_EEEAR	XEEEAR
+@REGS.27=61 R_XMDIO_EEELPAR	XEEELPAR
+@REGS.28=26 R_XMDIO_LACR	XLACR
+@REGS.29=28 R_XMDIO_LCR		XLCR
+@REGS.30=45 R_XMDIO_ACCR	XACCR
 @BDEF.DEFN=
 //
 // The Ethernet MDIO interface
@@ -107,19 +120,31 @@
 #define MDIO_PHYIDR2	0x03
 #define MDIO_ANAR	0x04
 #define MDIO_ANLPAR	0x05
-#define MDIO_ANLPARNP	0x05	// Duplicate register address
 #define MDIO_ANER	0x06
 #define MDIO_ANNPTR	0x07
-#define MDIO_PHYSTS	0x10
-#define MDIO_FCSCR	0x14
-#define MDIO_RECR	0x15
-#define MDIO_PCSR	0x16
-#define MDIO_RBR	0x17
-#define MDIO_LEDCR	0x18
-#define MDIO_PHYCR	0x19
-#define MDIO_BTSCR	0x1a
-#define MDIO_CDCTRL	0x1b
-#define MDIO_EDCR	0x1d
+#define MDIO_ANNPRR	0x08
+#define MDIO_GBCR	0x09
+#define MDIO_GBSR	0x0a
+#define MDIO_MACR	0x0d
+#define MDIO_MAADR	0x0e
+#define MDIO_GBESR	0x0f
+#define MDIO_PHYCR	0x10
+#define MDIO_PHYSR	0x11
+#define MDIO_INER	0x12
+#define MDIO_INSR	0x13
+#define MDIO_LDPSR	0x1b
+#define MDIO_EPAGSR	0x1e
+#define MDIO_PAGSEL	0x1f
+
+#define XMDIO_PC1R	0x00
+#define XMDIO_PS1R	0x01
+#define XMDIO_EEECR	0x14
+#define XMDIO_EEEWER	0x10
+// #define XMDIO_EEEAR	0x
+// #define XMDIO_EEELPAR	0x18
+#define XMDIO_LACR	0x1a
+#define XMDIO_LCR	0x1c
+// #define XMDIO_ACCR	0x1b
 
 typedef struct ENETMDIO_S {
 	unsigned	e_v[32];
@@ -129,5 +154,24 @@ typedef struct ENETMDIO_S {
 @BDEF.IONAME= io_netmdio
 @BDEF.OSDEF= _BOARD_HAS_NETMDIO
 @BDEF.OSVAL= static volatile @$THIS.BDEF.IOTYPE *const _mdio = ((@$THIS.BDEF.IOTYPE *)@$THIS.BASE);
+@SIM.CLOCK=clk
+@SIM.INCLUDE=
+#include "enetctrlsim.h"
+@SIM.DEFNS=
+#ifdef	@$(ACCESS)
+	ENETCTRLSIM	*m_mdio;
+#endif // @$(ACCESS)
+@SIM.INIT=
+#ifdef	@$(ACCESS)
+		m_mdio = new ENETCTRLSIM;
+#endif // @$(ACCESS)
+@SIM.TICK=
+#ifdef	@$(ACCESS)
+		m_core->i_mdio = (*m_mdio)((m_core->o_net_reset_n==0)?1:0,
+				m_core->o_mdclk,
+				((m_core->o_mdwe)&&(!m_core->o_mdio))?0:1);
+#else
+		m_core->i_mdio = ((m_core->o_mdwe)&&(!m_core->o_mdio))?0:1;
+#endif // @$(ACCESS)
 @RTL.MAKE.GROUP=ENETMDIO
 @RTL.MAKE.FILES=enetctrl.v

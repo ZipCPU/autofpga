@@ -14,7 +14,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017-2018, Gisselquist Technology, LLC
+## Copyright (C) 2017-2019, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -44,6 +44,7 @@
 @SYSPIC= syspic
 @PREFIX=zip
 @ACCESS=INCLUDE_ZIPCPU
+@DBGBUS=wbu
 @MASTER.TYPE=CPU
 @MASTER.BUS=zip
 @BUS.NAME=zip
@@ -51,12 +52,13 @@
 @BUS.CLOCK=clk
 @SCOPE.TRIGGER=zip_trigger
 @SCOPE.DATA=zip_debug
-@$RESET_ADDRESS=@$(flash.REGBASE)+(4<<20)
+@CPURESET=i_cpu_reset
+@$RESET_ADDRESS=@$(flash.REGBASE)+(6<<20)
 @INT.ZIP.WIRE=zip_cpu_int
 @INT.ZIP.BUS=buspic
 @CACHABLE.FILE=iscachable.v
 @LGICACHE=10
-@LGDCACHE=10
+@LGDCACHE=0
 @TOP.PORTLIST=
 # 		// A reset wire for the ZipCPU
 # 		i_cpu_resetn
@@ -67,9 +69,9 @@
  		// Reset wire for the ZipCPU
  		s_reset
 @MAIN.PORTLIST=
-		i_cpu_reset
+		@$(CPURESET)
 @MAIN.IODECL=
-	input	wire		i_cpu_reset;
+	input	wire		@$(CPURESET);
 @MAIN.PARAM=
 	//
 	//
@@ -78,7 +80,11 @@
 	//
 	// A 32-bit address indicating where the ZipCPU should start running
 	// from
+`ifdef	FLASH_ACCESS
 	localparam	RESET_ADDRESS = @$RESET_ADDRESS;
+`else
+	localparam	RESET_ADDRESS = @$(/bkram.REGBASE);
+`endif
 	//
 	// The number of valid bits on the bus
 	localparam	ZIP_ADDRESS_WIDTH = @$(BUS.AWID); // Zip-CPU address width
@@ -95,7 +101,7 @@
 	// All we define here is a set of scope wires
 	wire	[31:0]	zip_debug;
 	wire		zip_trigger;
-	wire	[15:0] zip_int_vector;
+	wire	[ZIP_INTS-1:0] zip_int_vector;
 @MAIN.INSERT=
 	//
 	//
@@ -105,15 +111,15 @@
 	assign	zip_int_vector = { alt_int_vector[14:8], sys_int_vector[14:6] };
 	zipsystem #(RESET_ADDRESS,ZIP_ADDRESS_WIDTH,@$(LGICACHE),@$(LGDCACHE),
 			ZIP_START_HALTED,ZIP_INTS)
-		swic(i_clk, (i_reset)||(i_cpu_reset),
+		swic(i_clk, (i_reset)||(@$(CPURESET)),
 			// Zippys wishbone interface
 			zip_cyc, zip_stb, zip_we, zip_addr, zip_data, zip_sel,
 					zip_ack, zip_stall, zip_idata, zip_err,
 			zip_int_vector, zip_cpu_int,
 			// Debug wishbone interface
-			(wbu_cyc), ((wbu_stb)&&(zip_dbg_sel)),wbu_we,
-			wbu_addr[0],
-			wbu_data, zip_dbg_ack, zip_dbg_stall, zip_dbg_data,
+			(@$(DBGBUS)_cyc), ((@$(DBGBUS)_stb)&&(zip_dbg_sel)),@$(DBGBUS)_we,
+			@$(DBGBUS)_addr[0],
+			@$(DBGBUS)_data, zip_dbg_ack, zip_dbg_stall, zip_dbg_data,
 			zip_debug);
 	assign	zip_trigger = zip_debug[31];
 @BDEF.INCLUDE=
@@ -149,7 +155,11 @@
 #define	CPU_uCC		0x001e
 #define	CPU_uPC		0x001f
 
+#ifdef	FLASH_ACCESS
 #define	RESET_ADDRESS	@$[0x%08x](RESET_ADDRESS)
+#else
+#define	RESET_ADDRESS	@$[0x%08x](bkram.REGBASE)
+#endif
 
 
 @SIM.INCLUDE=
@@ -210,7 +220,7 @@
 @SIM.CLRRESET=
 		m_core->i_cpu_reset = 0;
 @SIM.METHODS=
-
+#ifdef	@$(ACCESS)
 	void	loadelf(const char *elfname) {
 		ELFSECTION	**secpp, *secp;
 		uint32_t	entry;
@@ -381,7 +391,7 @@
 				m_core->cpu_upc);
 		} fflush(stdout);
 	}
-
+#endif // @$(ACCESS)
 @SIM.TICK=
 #ifdef	@$(ACCESS)
 		// ZipCPU Sim instruction support

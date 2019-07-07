@@ -14,7 +14,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017, Gisselquist Technology, LLC
+## Copyright (C) 2017-2019, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -39,10 +39,11 @@
 ##
 ##
 @PREFIX=sysclk
+@DEVID=SYSCLK
 @NADDR=	1
 @SLAVE.TYPE=	SINGLE
 @SLAVE.BUS=	wb
-@DEPENDS=	GPS_CLOCK
+@DEPENDS=	GPSTRK_ACCESS
 @TSTCLOCK=i_clk
 # @SINGLE.INPUTS=	ck_pps
 @MAIN.DEFNS=
@@ -55,6 +56,7 @@
 	assign	@$(PREFIX)_stall = 1'b0;
 @REGS.NOTE = // SYSCLK Clock Counter (measures clock speed)
 @REGS.N = 1
-@REGS.0 = 0 R_SYSCLK SYSCLK
-@BDEF.IONAME= io_sysclk
+@REGS.0 = 0 R_@$(DEVID) @$(DEVID)
+@BDEF.IONAME=_@$(PREFIX)
 @BDEF.IOTYPE= unsigned
+@BDEF..OSVAL=static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME) = ((@$(BDEF.IOTYPE) *)@$[0x08x](REGBASE));

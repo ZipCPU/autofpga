@@ -11,7 +11,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017-2018, Gisselquist Technology, LLC
+## Copyright (C) 2017-2019, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -38,10 +38,10 @@
 @PREFIX=buspic
 @DEVID=BUSPIC
 @NADDR=1
+@BUSP=wb
 @ACCESS=BUSPIC_ACCESS
 @SLAVE.TYPE=SINGLE
-@SLAVE.BUS=wb
-@DEVID=BUSPIC
+@SLAVE.BUS=@$(BUSP)
 @PIC.BUS= bus_int_vector
 @PIC.MAX= 15
 @INT.BUS.WIRE= w_bus_int
@@ -53,8 +53,10 @@
 	//
 	// The BUS Interrupt controller
 	//
-	icontrol #(15)	@$(PREFIX)i(i_clk, 1'b0, (wb_stb)&&(@$(PREFIX)_sel),
-			wb_data, @$(PREFIX)_data, bus_int_vector, w_bus_int);
+	icontrol #(15)	@$(PREFIX)i(@$(SLAVE.BUS.CLOCK.WIRE), 1'b0, (@$(BUSP)_stb)&&(@$(PREFIX)_sel),
+			@$(BUSP)_we, @$(BUSP)_data,
+			@$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_data,
+			bus_int_vector, w_bus_int);
 @MAIN.ALT=
 @REGS.N=1
 @REGS.0= 0 R_PIC PIC

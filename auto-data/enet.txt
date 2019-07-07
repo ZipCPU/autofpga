@@ -35,11 +35,13 @@
 ################################################################################
 ##
 ##
+## Be able to support 2^14, or 16384 byte packets
+@$LGPKTBUFSZB=14
+##
 @PREFIX=netb
-@NADDR=0x1000
-# Technically, this could be DOUBLE memory.  It meets the requirements.
-# Here, we place it into OTHER anyway, to guarantee it gets shuffled into
-# an address last.
+@$LGBUFSZ=@$(/LGPKTBUFSZB)
+@$MEMORY_ADDRESS_WIDTH=@$(LGBUFSZ)
+@$NADDR=(1<<@$MEMORY_ADDRESS_WIDTH)/2
 @SLAVE.TYPE=OTHER
 @SLAVE.BUS=wb
 @MAIN.INSERT=
@@ -50,59 +52,116 @@
 	// itself isnt defined.  Otherwise, the access is accomplished by the
 	// ethernet module
 
-	memdev #(13)
+	memdev #(@$(MEMORY_ADDRESS_WIDTH))
 		enet_buffers(i_clk,
-			(wb_cyc), (wb_stb)&&(netb_sel),(wb_we)&&(wb_addr[11]),
-				wb_addr[11:0], wb_data, wb_sel,
+			(wb_cyc), (wb_stb)&&(netb_sel),
+				(wb_we)&&(wb_addr[@$(MEMORY_ADDRESS_WIDTH)-1]),
+				wb_addr[@$(MEMORY_ADDRESS_WIDTH)-2:0], wb_data, wb_sel,
 				netb_ack, netb_stall, netb_data);
 
 `else
 
 	assign	netb_ack   = 1'b0;
 	assign	netb_stall = 1'b0;
-	assign	netb_data  = 0;
+	assign	netb_data  = netp_data;
 
 `endif
 
 @REGS.N=2
 @REGS.0= 0	R_NET_RXBUF NETRXB
-@REGS.1= 0x800	R_NET_TXBUF NETTXB
+@$TXREG=(1<< @$(MEMORY_ADDRESS_WIDTH))/4
+@REGS.1= @$(TXREG) R_NET_TXBUF NETTXB
+@BDEF.IONAME=_netb
+@BDEF.OSDEF=_BOARD_HAS_ENETB
+@BDEF.OSVAL=
+static volatile unsigned *const @$(BDEF.IONAME)rx = ((unsigned *)@$[0x%08x](REGBASE));
+static volatile unsigned *const @$(BDEF.IONAME)tx = ((unsigned *)(@$[0x%08x](REGBASE) + (@$[0x%04x](NADDR)<<1)));
+##
+##
+##
 @PREFIX=netp
+@DEVID=ETHERNET
+@ACCESS=@$(DEVID)_ACCESS
+@$LGBUFSZ=@$(/LGPKTBUFSZB)
 @INT.NETRX.WIRE=netrx_int
 @INT.NETTX.WIRE=nettx_int
 @INT.NETRX.PIC=syspic
 @INT.NETTX.PIC=syspic
 @NADDR=8
-@SLAVE.TYPE=DOUBLE
+@SLAVE.TYPE=OTHER
 @SLAVE.BUS=wb
-@ACCESS=ETHERNET_ACCESS
+@TOP.PORTLIST=
+		// Ethernet control (packets) lines
+		o_net_reset_n,
+		// eth_int_b	// Interrupt, leave floating
+		// eth_pme_b	// Power management event, leave floating
+		i_net_rx_clk, i_net_rx_ctl, i_net_rxd,
+		o_net_tx_clk, o_net_tx_ctl, o_net_txd
+@TOP.IODECL=
+	// Ethernet (RGMII) port wires
+	output	wire		o_net_reset_n;
+	input	wire		i_net_rx_clk, i_net_rx_ctl;
+	input	wire	[3:0]	i_net_rxd;
+	output	wire		o_net_tx_clk, o_net_tx_ctl;
+	output	wire	[3:0]	o_net_txd;
+@TOP.DEFNS=
+	// Ethernet (RGMII) port wires
+	wire	[7:0]		w_net_rxd,  w_net_txd;
+	wire			w_net_rxdv, w_net_rxerr,
+				w_net_txctl;
+	wire	[1:0]		w_net_tx_clk;
+@TOP.MAIN=
+		// Ethernet (RGMII) connections
+		o_net_reset_n,
+		i_net_rx_clk, w_net_rxdv,  w_net_rxdv ^ w_net_rxerr, w_net_rxd,
+		w_net_tx_clk, w_net_txctl, w_net_txd
+@TOP.INSERT=
+
+	xiddr	rx0(i_net_rx_clk, i_net_rxd[0], { w_net_rxd[4], w_net_rxd[0] });
+	xiddr	rx1(i_net_rx_clk, i_net_rxd[1], { w_net_rxd[5], w_net_rxd[1] });
+	xiddr	rx2(i_net_rx_clk, i_net_rxd[2], { w_net_rxd[6], w_net_rxd[2] });
+	xiddr	rx3(i_net_rx_clk, i_net_rxd[3], { w_net_rxd[7], w_net_rxd[3] });
+	xiddr	rxc(i_net_rx_clk, i_net_rx_ctl, { w_net_rxdv,   w_net_rxerr });
+
+	xoddr	tx0(s_clk_125mhz, { w_net_txd[0], w_net_txd[4] }, o_net_txd[0]);
+	xoddr	tx1(s_clk_125mhz, { w_net_txd[1], w_net_txd[5] }, o_net_txd[1]);
+	xoddr	tx2(s_clk_125mhz, { w_net_txd[2], w_net_txd[6] }, o_net_txd[2]);
+	xoddr	tx3(s_clk_125mhz, { w_net_txd[3], w_net_txd[7] }, o_net_txd[3]);
+	xoddr	txc(s_clk_125mhz, { w_net_txctl,  w_net_txctl  }, o_net_tx_ctl);
+	xoddr	txck(s_clk_125d,{w_net_tx_clk[1],w_net_tx_clk[0]},o_net_tx_clk);
+
+
 @MAIN.PORTLIST=
 		// Ethernet control (packets) lines
-		o_net_reset_n, i_net_rx_clk, i_net_col, i_net_crs, i_net_dv,
-			i_net_rxd, i_net_rxerr,
-		i_net_tx_clk, o_net_tx_en, o_net_txd
+		o_net_reset_n,
+		// eth_int_b	// Interrupt, leave floating
+		// eth_pme_b	// Power management event, leave floating
+		i_net_rx_clk, i_net_rx_dv, i_net_rx_err, i_net_rxd,
+		o_net_tx_clk, o_net_tx_ctl, o_net_txd
 @MAIN.IODECL=
-	// Ethernet control
+	// Ethernet (RGMII) control
 	output	wire		o_net_reset_n;
-	input	wire		i_net_rx_clk, i_net_col, i_net_crs, i_net_dv;
+	input	wire		i_net_rx_clk, i_net_rx_dv, i_net_rx_err;
 	input	wire	[7:0]	i_net_rxd;
-	input	wire		i_net_rxerr;
-	input	wire		i_net_tx_clk;
-	output	wire		o_net_tx_en;
+	output	wire	[1:0]	o_net_tx_clk;
+	output	wire		o_net_tx_ctl;
 	output	wire	[7:0]	o_net_txd;
 @MAIN.DEFNS=
 	//
+	wire		netp_debug_clk;
 	wire	[31:0]	netp_debug;
+@MAWB= @$(netb.MEMORY_ADDRESS_WIDTH)
 @MAIN.INSERT=
-	enetpackets	#(12)
-		netctrl(i_clk, i_reset, wb_cyc,(wb_stb)&&((netp_sel)||(netb_sel)),
-			wb_we, { (netb_sel), wb_addr[10:0] }, wb_data, wb_sel,
+	enetpackets	#(.MEMORY_ADDRESS_WIDTH(@$(MAWB)))
+		netctrl(i_clk, i_reset,
+			wb_cyc,(wb_stb)&&((netp_sel)||(netb_sel)),
+			wb_we, { (netb_sel), wb_addr[@$(MAWB)-2:0] }, wb_data, wb_sel,
 				netp_ack, netp_stall, netp_data,
 			o_net_reset_n,
-			i_net_rx_clk, i_net_col, i_net_crs, i_net_dv, i_net_rxd,
-				i_net_rxerr,
-			i_net_tx_clk, o_net_tx_en, o_net_txd,
-			netrx_int, nettx_int, netp_debug);
+			i_net_rx_clk, i_net_rx_dv, i_net_rx_err, i_net_rxd,
+			i_clk_125mhz, o_net_tx_clk, o_net_tx_ctl, o_net_txd,
+			netrx_int, nettx_int, netp_debug_clk, netp_debug);
+
 @REGS.N=8
 @REGS.0= 0 R_NET_RXCMD	RXCMD,NETRX
 @REGS.1= 1 R_NET_TXCMD	TXCMD,NETTX
@@ -110,8 +169,29 @@
 @REGS.3= 3 R_NET_MACLO	MACLO
 @REGS.4= 4 R_NET_RXMISS	NETMISS
 @REGS.5= 5 R_NET_RXERR	NETERR
-@REGS.6= 6 R_NET_RXCRC	NETCRCERR
+@REGS.6= 6 R_NET_RXCRC	NETCRCER
 @REGS.7= 7 R_NET_TXCOL	NETCOL
+@REGDEFS.H.INSERT=
+// Network packet interface
+#define	ENET_TXGO		0x004000
+#define	ENET_TXBUSY		0x004000
+#define	ENET_NOHWCRC		0x008000
+#define	ENET_NOHWMAC		0x010000
+#define	ENET_RESET		0x020000
+#define	ENET_NOHWIPCHK		0x040000
+#define	ENET_TXCMD(LEN)		((LEN)|ENET_TXGO)
+#define	ENET_TXCLR		0x038000
+#define	ENET_TXCANCEL		0x000000
+#define	ENET_RXAVAIL		0x004000
+#define	ENET_RXBUSY		0x008000
+#define	ENET_RXMISS		0x010000
+#define	ENET_RXERR		0x020000
+#define	ENET_RXCRC		0x040000	// Set on a CRC error
+#define	ENET_RXLEN		rxcmd & 0x0ffff
+#define	ENET_RXCLR		0x004000
+#define	ENET_RXBROADCAST	0x080000
+#define	ENET_RXCLRERR		0x078000
+
 @BDEF.DEFN=
 // Network packet interface
 #define	ENET_TXGO		0x004000
@@ -139,7 +219,39 @@ typedef	struct ENETPACKET_S {
 	unsigned long	n_mac;
 	unsigned	n_rxmiss, n_rxerr, n_rxcrc, n_txcol;
 } ENETPACKET;
+
+#define	SYSINT_ENETRX	SYSINT(@$(INT.NETRX.syspic.ID))
+#define	SYSINT_ENETTX	SYSINT(@$(INT.NETTX.syspic.ID))
+
+@SIM.CLOCK=net_rx_clk
+@SIM.TICK=
+		m_core->i_net_rx_dv  = m_core->o_net_tx_ctl;
+		m_core->i_net_rx_err = 0;
+		m_core->i_net_rxd    = m_core->o_net_txd;
+
 @BDEF.IONAME=io_enet
 @BDEF.IOTYPE=ENETPACKET
 @BDEF.OSDEF=_BOARD_HAS_ENETP
-@BDEF.OSVAL=static volatile ENETPACKET *const _netp = ((ENETPACKET *)@$[0x%08x](REGBASE));
+@BDEF.OSVAL=static volatile @$(BDEF.IOTYPE) *const _netp = ((ENETPACKET *)@$[0x%08x](REGBASE));
+@RTL.MAKE.GROUP=ENET
+@RTL.MAKE.SUBD=ethernet
+@RTL.MAKE.FILES= enetpackets.v
+	addecrc.v addemac.v addepad.v addepreamble.v
+	rxecrc.v rxehwmac.v rxeipchk.v rxemin.v rxepreambl.v rxewrite.v
+	xiddr.v xoddr.v txespeed.v txeaddr.v
+@CLOCK.NAME=net_rx_clk
+@$CLOCK.FREQUENCY=125000000
+@XDC.INSERT=
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *netctrl/tx*}]              -to [get_cells -hier -filter {NAME=~*netctrl/n_tx*}]               8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *netctrl/hw_mac*}]          -to [get_cells -hier -filter {NAME=~*netctrl/txmaci/r_hw*}]        8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *netctrl/tfrtxspd/r_aval*}] -to [get_cells -hier -filter {NAME=~*netctrl/tfrtxspd/r_val*}]     8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *netctrl/config_hw_mac*}]   -to [get_cells -hier -filter {NAME=~*netctrl/n_tx_config_hw_mac*}] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *netctrl/config_hw_crc*}]   -to [get_cells -hier -filter {NAME=~*netctrl/n_tx_config_hw_crc*}] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *netctrl/tfrtxspd/r_*}]     -to [get_cells -hier -filter {NAME=~*netctrl/tfrtxspd/q_*}]        8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *netctrl/tx_cmd*}]          -to [get_cells -hier -filter {NAME=~*netctrl/r_tx_cmd*}]           8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *netctrl/tx_cancel*}]       -to [get_cells -hier -filter {NAME=~*netctrl/r_tx_cancel*}]        8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *netctrl/n_still_busy*}]    -to [get_cells -hier -filter {NAME=~*netctrl/r_tx_busy*}]          8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *netctrl/txspdi/o_ck*}]    -to [get_cells -hier -filter {NAME=~*txck/ODDRi*}]          8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *o_sys_reset*}]            -to [get_cells -hier -filter {NAME=~*netctrl/q_tx_reset*}]          8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *o_sys_reset*}]            -to [get_cells -hier -filter {NAME=~*netctrl/q_rx_reset*}]          8.0
+#

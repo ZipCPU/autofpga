@@ -11,7 +11,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017-2018, Gisselquist Technology, LLC
+## Copyright (C) 2017-2019, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -35,9 +35,9 @@
 ################################################################################
 ##
 ##
-@PREFIX= flash
+@PREFIX=flash
 @DEVID=FLASH
-@ACCESS= FLASH_ACCESS
+@ACCESS=@$(DEVID)_ACCESS
 @$LGFLASHSZ=24
 @$NADDR=(1<<(@$LGFLASHSZ-2))
 @$NBYTES=(1<<@$LGFLASHSZ)
@@ -45,15 +45,9 @@
 @ACCESS= FLASH_ACCESS
 @SLAVE.TYPE=MEMORY
 @SLAVE.BUS=wb
-@LD.PERM=rx
-@INT.FLASH.WIRE= flash_interrupt
-@INT.FLASH.PIC= buspic
-@$ISPIF_EN.EXPR=@$ISPIF_DIS|0x80000000
-@ISPIF_EN.FORMAT=0x%08x
-@$ISPIF_DIS.EXPR=(@$ISPIF_CLR)|((@$ISPIF_CLR)<<16)
-@ISPIF_DIS.FORMAT=0x%08x
-@$ISPIF_CLR.EXPR=(1<<(@$INT.FLASH.buspic.ID))
-@ISPIF_CLR.FORMAT=0x%08x
+@NDUMMY=6
+@RDDELAY=1
+@STARTUP_SCRIPT="spansion.hex"
 @TOP.PORTLIST=
 		// Top level Quad-SPI I/O ports
 		o_qspi_cs_n, io_qspi_dat
@@ -140,22 +134,35 @@
 	);
 
 @MAIN.PORTLIST=
-		// The QSPI Flash
+		// The Universal QSPI Flash
 		o_qspi_cs_n, o_qspi_sck, o_qspi_dat, i_qspi_dat, o_qspi_mod
 @MAIN.IODECL=
-	// The QSPI flash
+	// The Universal QSPI flash
 	output	wire		o_qspi_cs_n, o_qspi_sck;
 	output	wire	[3:0]	o_qspi_dat;
 	input	wire	[3:0]	i_qspi_dat;
 	output	wire	[1:0]	o_qspi_mod;
+@MAIN.DEFNS=
+	// Definitions for the @$(PREFIX) debug port
+	wire		@$(PREFIX)_dbg_trigger;
+	wire	[31:0]	@$(PREFIX)_debug;
 @MAIN.INSERT=
-	wbqspiflash #(@$LGFLASHSZ)
-		flashmem(i_clk,
-			(wb_cyc), (wb_stb)&&(flash_sel), (wb_stb)&&(flctl_sel),wb_we,
+	qflexpress #(.LGFLASHSZ(@$LGFLASHSZ), .OPT_CLKDIV(1),
+		.NDUMMY(@$(NDUMMY)), .RDDELAY(@$(RDDELAY)),
+		.OPT_STARTUP_FILE(@$(STARTUP_SCRIPT)),
+`ifdef	FLASHCFG_ACCESS
+		.OPT_CFG(1'b1)
+`else
+		.OPT_CFG(1'b0)
+`endif
+		)
+		@$(PREFIX)i(i_clk, i_reset,
+			(wb_cyc), (wb_stb)&&(@$(PREFIX)_sel),
+			(wb_stb)&&(flashcfg_sel), wb_we,
 			wb_addr[(@$LGFLASHSZ-3):0], wb_data,
 			@$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_data,
 			o_qspi_sck, o_qspi_cs_n, o_qspi_mod, o_qspi_dat, i_qspi_dat,
-			flash_interrupt);
+			flash_dbg_trigger, flash_debug);
 @MAIN.ALT=
 	assign	o_qspi_sck  = 1'b1;
 	assign	o_qspi_cs_n = 1'b1;
@@ -168,47 +175,52 @@
 #define	@$(DEVID)BASE	@$[0x%08x](REGBASE)
 #define	@$(DEVID)LEN	@$NBYTES
 #define	@$(DEVID)LGLEN	@$LGFLASHSZ
+//
+#define	FLASH_RDDELAY	@$(RDDELAY)
+#define	FLASH_NDUMMY	@$(NDUMMY)
+//
 @REGS.0= 0 R_@$(DEVID) @$(DEVID)
 @BDEF.OSDEF=_BOARD_HAS_@$(DEVID)
 @BDEF.OSVAL=extern int _@$(PREFIX)[1];
 @LD.PERM=	rx
-@LD.NAME=	flash
-@REGDEFS.H.INSERT=
-
-#define	R_ICONTROL	R_PIC
-#define	ISPIF_EN	@$ISPIF_EN
-#define	ISPIF_DIS	@$ISPIF_DIS
-#define	ISPIF_CLR	@$ISPIF_CLR
-@SIM.INCLUDE+=
-#include "qspiflashsim.h"
-@SIM.DEFNS+=
+@LD.NAME=	@$(PREFIX)
+@SIM.INCLUDE=
+#include "flashsim.h"
+@SIM.DEFNS=
 #ifdef	@$(ACCESS)
-	QSPIFLASHSIM	*m_@$(MEM.NAME);
+	FLASHSIM	*m_@$(MEM.NAME);
 #endif // @$(ACCESS)
-@SIM.INIT+=
+@SIM.INIT=
 #ifdef	@$(ACCESS)
-		m_@$(MEM.NAME) = new QSPIFLASHSIM(FLASHLGLEN);
+		m_@$(MEM.NAME) = new FLASHSIM(FLASHLGLEN, false, @$RDDELAY, @$NDUMMY);
 #endif // @$(ACCESS)
-@SIM.TICK +=
+@SIM.TICK=
 #ifdef	@$(ACCESS)
-		m_core->i_qspi_dat = (*m_@$(MEM.NAME))(m_core->o_qspi_cs_n,
-			m_core->o_qspi_sck, m_core->o_qspi_dat);
-#endif
-@SIM.LOAD +=
+		m_core->i_qspi_dat = m_@$(MEM.NAME)->simtick(
+			m_core->o_qspi_cs_n,
+			m_core->o_qspi_sck,
+			m_core->o_qspi_dat,
+			m_core->o_qspi_mod);
+#endif // @$(ACCESS)
+@SIM.LOAD=
 #ifdef	@$(ACCESS)
 			m_@$(MEM.NAME)->load(start, &buf[offset], wlen);
 #endif // @$(ACCESS)
-#
-#
-#
-#
-#
-# Now, the control interface
-@PREFIX= flctl
-@NADDR= 4
+##
+##
+##
+##
+## Now the control interface
+@PREFIX=flashcfg
+@NADDR=1
+@DEVID=FLASHCFG
+@ACCESS=@$(DEVID)_ACCESS
 @DEPENDS= FLASH_ACCESS
-# This cannot be a DOUBLE peripheral type, since our response may take more than
-# two clock cycles.
+## Although this is really a SLAVE.TYPE=SINGLE interface, it receives its
+## acknowledgements from the flash above.  SLAVE.TYPE=SINGLE will create
+## acknowledgements in the interconnect, resulting in bus errors.  As a result,
+## this must be a SLAVE.TYPE=OTHER
+##
 @SLAVE.TYPE=OTHER
 @SLAVE.BUS=wb
 @MAIN.INSERT=
@@ -216,23 +228,13 @@
 	// flash interface itself.  Hence, we always return zero here.
 	assign	@$(PREFIX)_ack   = 1'b0;
 	assign	@$(PREFIX)_stall = 1'b0;
-	assign	@$(PREFIX)_data  = 0;
+	assign	@$(PREFIX)_data  = flash_data;
 @REGS.NOTE= // FLASH erase/program configuration registers
-@REGS.N= 4
-@REGS.0= 0 R_QSPI_EREG QSPIE
-@REGS.1= 1 R_QSPI_CREG QSPIC
-@REGS.2= 2 R_QSPI_SREG QSPIS
-@REGS.3= 3 R_QSPI_IDREG QSPII
-@BDEF.DEFN=
-typedef struct FLASHCTL_S {
-	unsigned	f_ereg, f_config, f_status, f_id;
-} FLASHCTL;
+@REGS.N= 1
+@REGS.0= 0 R_@$(DEVID) @$(DEVID) QSPIC
 @REGDEFS.H.INSERT=
 // Flash control constants
-#define	ERASEFLAG	0x80000000
-#define	DISABLEWP	0x10000000
-#define	ENABLEWP	0x00000000
-
+#define	QSPI_FLASH	// This core and hardware support a Quad SPI flash
 #define	SZPAGEB		256
 #define	PGLENB		256
 #define	SZPAGEW		64
@@ -249,5 +251,6 @@ typedef struct FLASHCTL_S {
 @BDEF.OSDEF= _BOARD_HAS_@$(DEVID)
 @BDEF.IOTYPE=unsigned
 @BDEF.OSVAL=static volatile @$(BDEF.IOTYPE) * const @$(BDEF.IONAME) = ((@$BDEF.IOTYPE *)(@$[0x%08x](REGBASE)));
+##
 @RTL.MAKE.GROUP= FLASH
-@RTL.MAKE.FILES= wbqspiflash.v llqspi.v flashconfig.v
+@RTL.MAKE.FILES= qflexpress.v
