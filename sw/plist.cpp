@@ -83,6 +83,8 @@ bool	PERIPH::isdouble(void) {
 		return false;
 	if (str->compare(KYDOUBLE)!=0)
 		return false;
+	if (NULL != (str = getstring(*p_phash, KYERROR_WIRE)))
+		return false;
 	return true;
 }
 

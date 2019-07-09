@@ -68,6 +68,7 @@ bool	BUSCLASS::matches(BUSINFO *bi) {
 	PLIST *pl = bi->m_plist;
 	if (!pl) {
 		gbl_msg.info("No bus class match for empty slave list");
+printf("NO MATCH: EMPTY SLAVE LIST\n");
 		return false;
 	}
 
@@ -80,6 +81,19 @@ bool	BUSCLASS::matches(BUSINFO *bi) {
 		p = (*pl)[pi];
 
 		if (p->p_phash->end() != (kvpair = findkey(*p->p_phash, KYSLAVE_BUS))) {
+			// Check any slaves of this bus to see if we can
+			// handle them
+			bname = getstring(kvpair->second.u.m_m, KY_NAME);
+			if (bname && bname->compare(*bi->m_name)==0) {
+				bfail = matchfail(kvpair->second.u.m_m);
+				if (bfail)
+					return false;
+			}
+		}
+
+		if (p->p_phash->end() != (kvpair = findkey(*p->p_phash, KYMASTER_BUS))) {
+			// Check any masters of this bus to see if we can
+			// handle them
 			bname = getstring(kvpair->second.u.m_m, KY_NAME);
 			if (bname && bname->compare(*bi->m_name)==0) {
 				bfail = matchfail(kvpair->second.u.m_m);
@@ -89,6 +103,7 @@ bool	BUSCLASS::matches(BUSINFO *bi) {
 		}
 
 		if (p->p_phash->end() != (kvpair = findkey(*p->p_phash, KYBUS))) {
+			// Check any other bus references, for the same purpose
 			bname = getstring(kvpair->second.u.m_m, KY_NAME);
 			if (bname && bname->compare(*bi->m_name)==0) {
 				bfail = matchfail(kvpair->second.u.m_m);

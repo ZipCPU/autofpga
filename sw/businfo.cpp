@@ -87,6 +87,31 @@ int	BUSINFO::data_width(void) {
 	return	32;
 }
 
+STRINGP	name(void) {
+	STRINGP	str;
+	str = getstring(m_hash, KYNAME);
+	if (!m_name)
+		m_name = str;
+	else if (str->compare(*m_name) != 0) {
+		gbl_msg.error("Bus name %s has changed to %s\n", m_name->c_str(), str->c_str());
+		m_name = str;
+	}
+	return	str;
+}
+
+STRINGP	btype(void) {
+	STRINGP	str;
+	str = getstring(m_hash, KYTYPE);
+	if (!m_type)
+		m_type = str;
+	else if (str->compare(*m_type) != 0) {
+		gbl_msg.error("Bus %s type has changed from %s to %s\n",
+			name()->c_str(), m_type->c_str(), str->c_str());
+		m_name = str;
+	}
+	return	str;
+}
+
 bool	BUSINFO::get_base_address(MAPDHASH *phash, unsigned &base) {
 	if (!m_genbus) {
 		gbl_msg.error("BUS[%s] has no type\n",
@@ -136,6 +161,14 @@ assert(NULL != p->p_phash);
 		return NULL;
 	}
 }
+
+// void	BUSINFO::merge(STRINGP src, MAPDHASH *hash) {
+//
+//	Merge description of bus from multiple disparate sources
+//
+//	Set name, prefix, type, clock, nullsz, data width
+//	
+// }
 
 PERIPH *BUSINFO::add(MAPDHASH *phash) {
 	PERIPH	*p;
@@ -440,6 +473,7 @@ void	BUSLIST::addperipheral(MAPDHASH *phash) {
 
 	bi->m_plist->integrity_check();
 }
+
 void	BUSLIST::addperipheral(MAPT &map) {
 	if (map.m_typ == MAPT_MAP)
 		addperipheral(map.u.m_m);
@@ -942,11 +976,13 @@ void	BUSLIST::assign_bus_types(void) {
 	for(unsigned k = 0; k < size(); k++) {
 		bool	found= false;
 		for(unsigned tst=0; tst<num_bus_classes; tst++) {
+// printf("Looking for a bus generator for %s\n", (*this)[k]->m_name->c_str());
 			if (busclass_list[tst]->matches((*this)[k])) {
 				found = true;
 				(*this)[k]->m_genbus = busclass_list[tst]->create((*this)[k]);
 				break;
 			}
+// printf("No match to class, %s %s\n", (*this)[k]->m_name->c_str(), busclass_list[tst]->name()->c_str());
 		} if (!found) {
 			gbl_msg.error("No bus logic generator found for bus %s\n", (*this)[k]->m_name->c_str());
 		}

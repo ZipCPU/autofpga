@@ -1,0 +1,206 @@
+################################################################################
+##
+## Filename: 	sdramxclk.txt
+##
+## Project:	VideoZip, a ZipCPU SoC supporting video functionality
+##
+## Purpose:	To describe how to provide access to an SDRAM controller
+##		from the Wishbone bus, where such SDRAM controller uses a
+##	different clock from the Wishbone bus itself.
+##
+## Creator:	Dan Gisselquist, Ph.D.
+##		Gisselquist Technology, LLC
+##
+################################################################################
+##
+## Copyright (C) 2017-2019, Gisselquist Technology, LLC
+##
+## This program is free software (firmware): you can redistribute it and/or
+## modify it under the terms of  the GNU General Public License as published
+## by the Free Software Foundation, either version 3 of the License, or (at
+## your option) any later version.
+##
+## This program is distributed in the hope that it will be useful, but WITHOUT
+## ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY or
+## FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+## for more details.
+##
+## You should have received a copy of the GNU General Public License along
+## with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
+## target there if the PDF file isn't present.)  If not, see
+## <http://www.gnu.org/licenses/> for a copy.
+##
+## License:	GPL, v3, as defined and found on www.gnu.org,
+##		http://www.gnu.org/licenses/gpl.html
+##
+##
+################################################################################
+##
+##
+@$CLKFREQHZ=100000000
+@CLOCK.NAME=clk
+@CLOCK.FREQUENCY=@$(CLKFREQHZ)
+@PREFIX=sdram
+@DEVID=SDRAM
+@ACCESS=@$(DEVID)_ACCESS
+@$LGMEMSZ=29
+@LGMEMSZ.FORMAT=%d
+@$NADDR=((1<<(LGMEMSZ-4)))
+@$NBYTES=(1<<(@$LGMEMSZ))
+@NBYTES.FORMAT=0x%08x
+@$MADDR= @$(REGBASE)
+@MADDR.FORMAT=0x%08x
+@SLAVE.TYPE=MEMORY
+@SLAVE.BUS=sdr
+@CLOCK.NAME=clk
+@CLOCK.FREQUENCY = 100000000
+# SDRAM bus transactions are 128 bits wide
+# Hence we need 4 fewer bus wires than would be necessary for
+@BUS.NAME=sdr
+@$BUS.WIDTH=128
+@BUS.CLOCK=clk
+@ERROR.WIRE=@$(PREFIX)_err
+# 8-bit byte accesses
+@LD.PERM=wx
+@TOP.PORTLIST=
+		// SDRAM I/O port wires
+		ddr3_ck_p, ddr3_ck_n,
+		ddr3_reset_n, ddr3_cke,
+		ddr3_ras_n, ddr3_cas_n, ddr3_we_n,
+		ddr3_ba, ddr3_addr, ddr3_odt, ddr3_dm,
+		ddr3_dqs_p, ddr3_dqs_n,
+		ddr3_dq,
+		i_cpu_resetn
+@TOP.IODECL=
+	// I/O declarations for the SDRAM
+	output	wire	ddr3_ck_p, ddr3_ck_n, ddr3_reset_n, ddr3_cke,
+		ddr3_ras_n, ddr3_cas_n, ddr3_we_n;
+	output	wire	[2:0]	ddr3_ba;
+	output	wire	[14:0]	ddr3_addr;
+	output	wire	[0:0]	ddr3_odt;
+	output	wire	[1:0]	ddr3_dm;
+	inout	wire	[1:0]	ddr3_dqs_p, ddr3_dqs_n;
+	inout	wire	[15:0]	ddr3_dq;
+	input	wire		i_cpu_resetn;
+@TOP.DEFNS=
+	// Wires necessary to run the SDRAM
+	//
+	wire	@$(PREFIX)_cyc, @$(PREFIX)_stb, @$(PREFIX)_we,
+		@$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_err;
+	wire	[(@$(BUS.AWID)-1):0]	@$(PREFIX)_addr;
+	wire	[(@$(BUS.WIDTH)-1):0]	@$(PREFIX)_data,
+					@$(PREFIX)_idata;
+	wire	[(@$(BUS.WIDTH)/8-1):0]	@$(PREFIX)_sel;
+
+	wire	s_clk, s_reset;
+
+@TOP.MAIN=
+		// The SDRAM interface to an toplevel AXI4 module
+		//
+		@$(PREFIX)_cyc, @$(PREFIX)_stb, @$(PREFIX)_we,
+			@$(PREFIX)_addr, @$(PREFIX)_data, @$(PREFIX)_sel,
+			@$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_idata
+@TOP.INSERT=
+	wire	[31:0]	@$(PREFIX)_debug;
+
+	migsdram #(.AXIDWIDTH(5), .WBDATAWIDTH(@$(BUS.WIDTH)),
+			.DDRWIDTH(16),
+			.RAMABITS(@$(LGMEMSZ))) @$(PREFIX)i(
+		.i_clk(i_clk_buffered),
+		.i_clk_200mhz(s_clk_200mhz),
+		.o_sys_clk(s_clk),
+		// .i_rst(!i_cpu_resetn),
+		.i_rst(upper_plls_stable[3:2]!=2'b11),
+		.o_sys_reset(s_reset),
+		.i_wb_cyc(@$(PREFIX)_cyc),
+		.i_wb_stb(@$(PREFIX)_stb),
+		.i_wb_we(@$(PREFIX)_we),
+		.i_wb_addr(@$(PREFIX)_addr),
+		.i_wb_data(@$(PREFIX)_data),
+		.i_wb_sel(@$(PREFIX)_sel),
+		.o_wb_ack(@$(PREFIX)_ack),
+		.o_wb_stall(@$(PREFIX)_stall),
+		.o_wb_data(@$(PREFIX)_idata),
+		.o_wb_err(@$(PREFIX)_err),
+		.o_ddr_ck_p(ddr3_ck_p),
+		.o_ddr_ck_n(ddr3_ck_n),
+		.o_ddr_reset_n(ddr3_reset_n),
+		.o_ddr_cke(ddr3_cke),
+		// .o_ddr_cs_n(ddr3_cs_n),
+		.o_ddr_ras_n(ddr3_ras_n),
+		.o_ddr_cas_n(ddr3_cas_n),
+		.o_ddr_we_n(ddr3_we_n),
+		.o_ddr_ba(ddr3_ba),
+		.o_ddr_addr(ddr3_addr),
+		.o_ddr_odt(ddr3_odt),
+		.o_ddr_dm(ddr3_dm),
+		.io_ddr_dqs_p(ddr3_dqs_p),
+		.io_ddr_dqs_n(ddr3_dqs_n),
+		.io_ddr_data(ddr3_dq)
+		// , .o_ram_dbg(@$(PREFIX)_debug)
+		);
+	
+@MAIN.PORTLIST=
+		o_@$(PREFIX)_cyc, o_@$(PREFIX)_stb, o_@$(PREFIX)_we,
+				o_@$(PREFIX)_addr, o_@$(PREFIX)_data, o_@$(PREFIX)_sel,
+			i_@$(PREFIX)_ack, i_@$(PREFIX)_stall, i_@$(PREFIX)_data
+@MAIN.IODECL=
+	output	wire	o_@$(PREFIX)_cyc, o_@$(PREFIX)_stb, o_@$(PREFIX)_we;
+	output	wire	[(@$(BUS.AWID)-1):0]	o_@$(PREFIX)_addr;
+	output	wire	[(@$(BUS.WIDTH)-1):0]	o_@$(PREFIX)_data;
+	output	wire	[(@$(BUS.WIDTH)/8)-1:0]	o_@$(PREFIX)_sel;
+	//
+	input	wire	i_@$(PREFIX)_ack;
+	input	wire	i_@$(PREFIX)_stall;
+	input	wire	[(@$(BUS.WIDTH)-1):0]	i_@$(PREFIX)_data;
+@MAIN.INSERT=
+	assign	o_@$(PREFIX)_cyc  = @$(SLAVE.BUS.NAME)_cyc;
+	assign	o_@$(PREFIX)_stb  =(@$(SLAVE.BUS.NAME)_stb)&&(@$(PREFIX)_sel);
+	assign	o_@$(PREFIX)_we   = @$(SLAVE.BUS.NAME)_we;
+	assign	o_@$(PREFIX)_addr = @$(SLAVE.BUS.NAME)_addr;
+	assign	o_@$(PREFIX)_data = @$(SLAVE.BUS.NAME)_data;
+	assign	o_@$(PREFIX)_sel  = @$(SLAVE.BUS.NAME)_sel;
+	assign	@$(PREFIX)_ack   = i_@$(PREFIX)_ack;
+	assign	@$(PREFIX)_stall = i_@$(PREFIX)_stall;
+	assign	@$(PREFIX)_data = i_@$(PREFIX)_data;
+	 assign	@$(PREFIX)_err   = 1'b0; // i_@$(PREFIX)_err;
+
+@REGS.N=1
+@REGS.0= 0 R_@$(DEVID) @$(DEVID)
+@REGDEFS.H.DEFNS=
+#define	@$(DEVID)BASE	@$(MADDR)
+#define	@$(DEVID)LEN	@$(NBYTES)
+// And ... since the SDRAM defines the clock rate
+#define	CLKFREQHZ	@$(CLOCK.FREQUENCY)
+@BDEF.DEFN=
+#define	CLKFREQHZ	@$(CLOCK.FREQUENCY)
+@BDEF.OSDEF=_BOARD_HAS_@$(DEVID)
+@BDEF.OSVAL=extern char	_@$(PREFIX)[@$NBYTES];
+@LDSCRIPT.PSTR=	wx
+@LDSCRIPT.PTR=	@$(PREFIX)
+@LDSCRIPT.DEF=
+_@$(PREFIX) = ORIGIN(@$(PREFIX));
+@SIM.INCLUDE=
+#include "memsim.h"
+@SIM.DEFNS=
+#ifdef	@$(ACCESS)
+	MEMSIM	*m_sdram;
+#endif	// @$(ACCESS)
+@SIM.INIT=
+		m_sdram = new MEMSIM(@$(NBYTES));
+@SIM.CLOCK=@$(SLAVE.BUS.CLOCK.NAME)
+@SIM.TICK=
+#ifdef	@$(ACCESS)
+		(*m_sdram)(m_core->o_@$(PREFIX)_cyc,
+			m_core->o_@$(PREFIX)_stb,
+			m_core->o_@$(PREFIX)_we,
+			m_core->o_@$(PREFIX)_addr,
+			m_core->o_@$(PREFIX)_data,
+			m_core->o_@$(PREFIX)_sel,
+			m_core->i_@$(PREFIX)_ack,
+			m_core->i_@$(PREFIX)_stall,
+			m_core->i_@$(PREFIX)_data);
+#endif	// @$(ACCESS)
+@SIM.LOAD=
+			// Need to byte swap data to get it into the memory
+			m_sdram->load(start, &buf[offset], wlen >> 2);

@@ -1,0 +1,77 @@
+################################################################################
+##
+## Filename: 	xpander.txt
+##
+## Project:	VideoZip, a ZipCPU SoC supporting video functionality
+##
+## Purpose:	To describe a simple peripheral capable of expanding a bus from
+##		one data width (32) to another (128)
+##
+## Creator:	Dan Gisselquist, Ph.D.
+##		Gisselquist Technology, LLC
+##
+################################################################################
+##
+## Copyright (C) 2017-2019, Gisselquist Technology, LLC
+##
+## This program is free software (firmware): you can redistribute it and/or
+## modify it under the terms of  the GNU General Public License as published
+## by the Free Software Foundation, either version 3 of the License, or (at
+## your option) any later version.
+##
+## This program is distributed in the hope that it will be useful, but WITHOUT
+## ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY or
+## FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+## for more details.
+##
+## You should have received a copy of the GNU General Public License along
+## with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
+## target there if the PDF file isn't present.)  If not, see
+## <http://www.gnu.org/licenses/> for a copy.
+##
+## License:	GPL, v3, as defined and found on www.gnu.org,
+##		http://www.gnu.org/licenses/gpl.html
+##
+##
+################################################################################
+##
+##
+@PREFIX=xpand
+@$NADDR=(1<<@$(AWID))
+@SLAVE.TYPE=OTHER
+@SLAVE.BUS=wb
+@SLAVE.CLOCK=clk
+# @MASTER.BUS=wbsdr
+@MASTER.BUS=xpand_bus
+@MASTER.BUS.CLOCK=clk
+@MASTER.TYPE=SUBBUS
+# XPand bus transactions are 128 bits wide
+# Hence we need 4 fewer bus wires than would be necessary for
+@BUS.NAME=xpand_bus
+@BUS.WIDTH=128
+@BUS.CLOCK=clk
+@$AWID=@$(MASTER.BUS.AWID)+2
+@ERROR.WIRE=@$(PREFIX)_err
+@MAIN.INSERT=
+	busexpander #(.AWIN(@$(AWID)), .DWIN(@$(SLAVE.BUS.WIDTH)),
+			.DWOUT(@$(MASTER.BUS.WIDTH)))
+		@$(PREFIX)i@$(SLAVE.BUS.WIDTH)x@$(MASTER.BUS.WIDTH)(
+			@$(SLAVE.BUS.CLOCK.WIRE),
+			(@$(SLAVE.BUS.NAME)_cyc),
+			(@$(SLAVE.BUS.NAME)_stb)&&(@$(PREFIX)_sel),
+			@$(SLAVE.BUS.NAME)_we,
+			@$(SLAVE.BUS.NAME)_addr[(@$(AWID)-1):0],
+			@$(SLAVE.BUS.NAME)_data, @$(SLAVE.BUS.NAME)_sel,
+			@$(PREFIX)_ack, @$(PREFIX)_stall,
+			@$(PREFIX)_data, @$(PREFIX)_err,
+			//
+			@$(MASTER.BUS.NAME)_cyc,
+			@$(MASTER.BUS.NAME)_stb,
+			@$(MASTER.BUS.NAME)_we,
+			@$(MASTER.BUS.NAME)_addr,
+			@$(MASTER.BUS.NAME)_data,
+			@$(MASTER.BUS.NAME)_sel,
+			@$(MASTER.BUS.NAME)_ack,
+			@$(MASTER.BUS.NAME)_stall,
+			@$(MASTER.BUS.NAME)_idata,
+			@$(MASTER.BUS.NAME)_err);

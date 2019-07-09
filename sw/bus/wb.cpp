@@ -142,6 +142,10 @@ WBBUS::WBBUS(BUSINFO *bi) {
 
 	BUSINFO	*sbi = NULL, *dbi = NULL;
 
+	gbl_msg.info("Generating bus logic generator for %s\n",
+		(m_info->m_name) ? m_info->m_name->c_str() : "(No-name)");
+	printf("Generating bus logic generator for %s\n",
+		(m_info->m_name) ? m_info->m_name->c_str() : "(No-name)");
 	countsio();
 
 	if (m_num_single <= 2) {
@@ -170,14 +174,6 @@ WBBUS::WBBUS(BUSINFO *bi) {
 	assert(m_num_double < 50);
 	assert(m_num_total >= m_num_single + m_num_double);
 
-	printf("%d singls and %d doubles identified of %d total\n", m_num_single, m_num_double, m_num_total);
-	if (m_is_single)
-		printf("This is a single only bus\n");
-	if (m_is_double)
-		printf("This is a double only bus\n");
-	if (!m_is_single && !m_is_double)
-		printf("This bus is heterogeneous\n");
-
 	//
 	// Master of multiple classes
 	//
@@ -191,31 +187,33 @@ WBBUS::WBBUS(BUSINFO *bi) {
 		dbi = create_dio();
 	}
 
-	for(unsigned pi = 0; pi< pl->size(); pi++) {
+	if (!m_is_double && !m_is_single)
+			for(unsigned pi = 0; pi< pl->size(); pi++) {
 		PERIPHP	p = (*pl)[pi];
 		STRINGP	ptyp;
 
 		ptyp = getstring(p->p_phash, KYSLAVE_TYPE);
-printf("SLAVE-TYPE: %s\n", (ptyp) ? ptyp->c_str() : "(Null)");
+// printf("SLAVE-TYPE: %s\n", (ptyp) ? ptyp->c_str() : "(Null)");
 		if (m_slist && ptyp != NULL
 				&& ptyp->compare(KYSINGLE) == 0) {
 			m_info->m_plist->erase(pl->begin()+pi);
 			pi--;
 			m_slist->add(p);
-			printf("Adjusted slist, plist has %d and slist has %d now\n", (int)pl->size(), (int)m_slist->size());
+			// printf("Adjusted slist, plist has %d and slist has %d now\n", (int)pl->size(), (int)m_slist->size());
 		} else if (m_dlist && ptyp != NULL
 						&& ptyp->compare(KYDOUBLE) == 0) {
 			m_info->m_plist->erase(pl->begin()+pi);
 			pi--;
 			m_dlist->add(p);
-			printf("Adjusted dlist, plist has %d and dlist has %d now\n", (int)pl->size(), (int)m_dlist->size());
+			// printf("Adjusted dlist, plist has %d and dlist has %d now\n", (int)pl->size(), (int)m_dlist->size());
 		} else {
 			// Leave this peripheral in m_info->m_plist
 		}
 	}
 
 	countsio();
-	printf("After reallocation, %d, %d, %d\n", m_num_single, m_num_double, m_num_total-m_num_single-m_num_double);
+//	printf("PLIST now has %d entries\n", (int)m_info->m_plist->size());
+//	printf("After reallocation, %d, %d, %d\n", m_num_single, m_num_double, m_num_total-m_num_single-m_num_double);
 
 	if (sbi)
 		sbi->m_genbus = wbclass.create(sbi);
@@ -321,6 +319,11 @@ void	WBBUS::countsio(void) {
 	PLIST	*pl = m_info->m_plist;
 	STRINGP	strp;
 
+	m_num_single = 0;
+	m_num_double = 0;
+	m_num_total = 0;
+
+// printf("COUNTSIO: PLIST has %d entries\n", (int)m_info->m_plist->size());
 	for(unsigned pi=0; pi< pl->size(); pi++) {
 		strp = getstring((*pl)[pi]->p_phash, KYSLAVE_TYPE);
 		if (NULL != strp) {
@@ -1063,6 +1066,7 @@ bool	WBBUSCLASS::matchtype(STRINGP str) {
 		return true;
 	if (str->compare("wbp")==0)
 		return true;
+// printf("ERR: No match for bus type %s\n",str->c_str());
 	return false;
 }
 

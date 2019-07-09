@@ -51,6 +51,7 @@ class	GENBUS;
 #include "mapdhash.h"
 #include "plist.h"
 #include "clockinfo.h"
+#include "keys.h"
 
 #include "genbus.h"
 
@@ -59,7 +60,11 @@ public:
 	bool	m_addresses_assigned;
 	int	m_data_width, m_address_width;
 
+	// List of peripherals on the bus
 	PLISTP    m_plist;
+	// List of bus masters
+	MLISTP		m_mlist;
+	//
 	STRINGP   m_name, m_prefix, m_type;
 	GENBUS	*m_genbus;	// Bus logic generator
 	CLOCKINFO *m_clock; // , *m_bhash;
@@ -120,6 +125,8 @@ public:
 	void	init(MAPDHASH *phash, MAPDHASH *bp);
 	void	integrity_check(void);
 	bool	ismember_of(MAPDHASH *phash);
+	STRINGP	name(void);
+	STRINGP	btype(void);
 };
 
 class	BUSLIST : public std::vector<BUSINFO *>	{
