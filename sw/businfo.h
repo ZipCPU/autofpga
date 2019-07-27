@@ -103,7 +103,7 @@ public:
 	void	writeout_bus_select_v(FILE *fp);
 	void	writeout_bus_logic_v(FILE *fp);
 
-	void	writeout_no_slave_v(FILE *fp, STRINGP prefix);
+	void	writeout_no_slave_v(FILE *fp, STRINGP prefix, STRINGP errwire);
 	void	writeout_no_master_v(FILE *fp);
 	bool	ismember_of(MAPDHASH *phash);
 

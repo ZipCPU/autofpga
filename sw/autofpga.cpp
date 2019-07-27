@@ -1004,9 +1004,18 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 			if (isperipheral(kvpair->second)) {
 				BUSINFO *bi = find_bus_of_peripheral(kvpair->second.u.m_m);
 				STRINGP	pfx = getstring(*kvpair->second.u.m_m,
-							KYPREFIX);
+							KYPREFIX),
+					errwire=getstring(*kvpair->second.u.m_m,
+						KYERROR_WIRE),
+					styp=getstring(*kvpair->second.u.m_m,
+						KYSLAVE_TYPE);
+
+				if (styp->compare(KYSINGLE)==0)
+					errwire = NULL;
+				else if (styp->compare(KYDOUBLE)==0)
+					errwire = NULL;
 				if ((bi)&&(pfx)) {
-					bi->writeout_no_slave_v(fp, pfx);
+					bi->writeout_no_slave_v(fp, pfx,errwire);
 				}
 			}
 			kvint    = kvpair->second.u.m_m->find(KY_INT);

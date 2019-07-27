@@ -1088,13 +1088,19 @@ void	mkselect(FILE *fp) {
 		(*bp)->writeout_bus_select_v(fp);
 }
 
-void	BUSINFO::writeout_no_slave_v(FILE *fp, STRINGP prefix) {
+void	BUSINFO::writeout_no_slave_v(FILE *fp, STRINGP prefix, STRINGP errwire) {
 	fprintf(fp, "\n");
 	fprintf(fp, "\t// In the case that there is no %s peripheral responding on the %s bus\n", prefix->c_str(), m_name->c_str());
-	fprintf(fp, "\tassign\t%s_ack   = (%s_stb) && (%s_sel);\n",
-			prefix->c_str(), m_name->c_str(), prefix->c_str());
 	fprintf(fp, "\tassign\t%s_stall = 0;\n", prefix->c_str());
 	fprintf(fp, "\tassign\t%s_data  = 0;\n", prefix->c_str());
+	if (NULL != errwire) {
+		fprintf(fp, "\tassign\t%s_ack   = 1\'b0;\n", prefix->c_str());
+		fprintf(fp, "\tassign\t%s = (%s_stb) && (%s_sel);\n",
+			errwire->c_str(), m_name->c_str(), prefix->c_str());
+	} else {
+		fprintf(fp, "\tassign\t%s_ack   = (%s_stb) && (%s_sel);\n",
+			prefix->c_str(), m_name->c_str(), prefix->c_str());
+	}
 	fprintf(fp, "\n");
 }
 
@@ -1111,10 +1117,9 @@ void	BUSINFO::writeout_no_master_v(FILE *fp) {
 	fprintf(fp, "\tassign\t%s_data= 0;\n", m_name->c_str());
 
 	fprintf(fp, "\t// verilator lint_off UNUSED\n");
-	fprintf(fp, "\twire\t[%d:0]\tunused_bus_%s;\n",
-			3+m_data_width, m_name->c_str());
+	fprintf(fp, "\twire\tunused_bus_%s;\n", m_name->c_str());
 	fprintf(fp, "\tassign\tunused_bus_%s = "
-		"{ %s_ack, %s_stall, %s_err, %s_data };\n",
+		"&{ 1\'b0, %s_ack, %s_stall, %s_err, %s_data };\n",
 		m_name->c_str(), m_name->c_str(), m_name->c_str(),
 		m_name->c_str(), m_name->c_str());
 	fprintf(fp, "\t// verilator lint_on  UNUSED\n");
@@ -1545,31 +1550,13 @@ void	BUSINFO::writeout_bus_logic_v(FILE *fp) {
 		STRINGP	strp;
 		int	ecount = 0;
 
-		if (m_slist) for(PLIST::iterator sp=m_slist->begin();
-					sp != m_slist->end(); sp++) {
-			if (NULL == (strp = getstring((*sp)->p_phash,
-						KYERROR_WIRE)))
-				continue;
-			if (ecount == 0)
-				err_bus = STRING("(");
-			else
-				err_bus = err_bus + STRING(")||(");
-			err_bus = err_bus + (*strp);
-			ecount++;
-		}
-
-		if (m_dlist) for(PLIST::iterator dp=m_dlist->begin();
-					dp != m_dlist->end(); dp++) {
-			if (NULL == (strp = getstring((*dp)->p_phash,
-						KYERROR_WIRE)))
-				continue;
-			if (ecount == 0)
-				err_bus = STRING("(");
-			else
-				err_bus = err_bus + STRING(")||(");
-			err_bus = err_bus + (*strp);
-			ecount++;
-		}
+		//
+		// The slist is not allowed to create bus errors
+		//
+		// Neither is the dlist allowed to create bus errors
+		//
+		// Only the m_plist may generate bus errors
+		//
 
 		for(PLIST::iterator pp=m_plist->begin();
 					pp != m_plist->end(); pp++) {
