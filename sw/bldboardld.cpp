@@ -117,6 +117,10 @@ static void	build_script_ld(MAPDHASH &master, MAPDHASH &busmaster, FILE *fp, STR
 			p->p_regbase,
 			(p->naddr()*(p->p_slave_bus->data_width()/8)));
 
+		if (perm != NULL && (perm->compare("wx") != 0)
+				&& (perm->compare("rx") != 0))
+			gbl_msg.warning("%s.LD.PERM=%s is not supported",
+				name->c_str(), perm);
 		if ((perm == NULL) || (tolower(perm->c_str()[0]) != 'w')) {
 			// Read only memory must be flash
 			if (!bootmem)
@@ -222,7 +226,7 @@ static void	build_script_ld(MAPDHASH &master, MAPDHASH &busmaster, FILE *fp, STR
 			}
 		} if (!found) {
 			reset_address = 0;
-			gbl_msg.warning("WARNING: RESET_ADDRESS NOT FOUND, assuming address zero\n");
+			gbl_msg.warning("RESET_ADDRESS NOT FOUND, assuming address zero\n");
 		}
 	}
 
