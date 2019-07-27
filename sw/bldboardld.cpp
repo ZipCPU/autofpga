@@ -119,8 +119,8 @@ static void	build_script_ld(MAPDHASH &master, MAPDHASH &busmaster, FILE *fp, STR
 
 		if (perm != NULL && (perm->compare("wx") != 0)
 				&& (perm->compare("rx") != 0))
-			gbl_msg.warning("%s.LD.PERM=%s is not supported",
-				name->c_str(), perm);
+			gbl_msg.warning("%s.LD.PERM=%s is not supported.\nUse either wx or rx as defined by ld\n",
+				name->c_str(), perm->c_str());
 		if ((perm == NULL) || (tolower(perm->c_str()[0]) != 'w')) {
 			// Read only memory must be flash
 			if (!bootmem)
@@ -350,7 +350,7 @@ void	build_ld_files(MAPDHASH &master, STRINGP subd) {
 			gbl_msg.error("Could not write linker script, %s\n", fname.c_str());
 		else {
 			build_script_ld(master, *kvpair->second.u.m_m,
-				fp, fname);
+				fp, *fnamep);
 			fclose(fp);
 		}
 	}
