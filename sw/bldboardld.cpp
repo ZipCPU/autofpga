@@ -117,7 +117,7 @@ static void	build_script_ld(MAPDHASH &master, MAPDHASH &busmaster, FILE *fp, STR
 			p->p_regbase,
 			(p->naddr()*(p->p_slave_bus->data_width()/8)));
 
-		if (tolower(perm->c_str()[0]) != 'w') {
+		if ((perm == NULL) || (tolower(perm->c_str()[0]) != 'w')) {
 			// Read only memory must be flash
 			if (!bootmem)
 				bootmem = p;
@@ -145,11 +145,11 @@ static void	build_script_ld(MAPDHASH &master, MAPDHASH &busmaster, FILE *fp, STR
 	// Define pointers to these memories
 	for(unsigned i=0; i<alist->size(); i++) {
 		PERIPHP	p = (*alist)[i];
+		STRINGP	name = getstring(*p->p_phash, KYLD_NAME);
 
 		if (!ismemory(*p->p_phash))
 			continue;
 
-		STRINGP	name = getstring(*p->p_phash, KYLD_NAME);
 		if (NULL == name)
 			name = p->p_name;
 
@@ -161,7 +161,7 @@ static void	build_script_ld(MAPDHASH &master, MAPDHASH &busmaster, FILE *fp, STR
 	defns = getstring(master, KYLD_DEFNS);
 	if (NULL != defns) {
 		ldfile = getstring(master, KYLD_FILE);
-		if ((NULL == ldfile)||(strcmp(ldfile->c_str(), fname.c_str())==0))
+		if ((NULL == ldfile)||(ldfile->compare(fname)==0))
 			fprintf(fp, "%s\n", defns->c_str());
 	}
 
@@ -170,7 +170,7 @@ static void	build_script_ld(MAPDHASH &master, MAPDHASH &busmaster, FILE *fp, STR
 		if (NULL == defns)
 			continue;
 		ldfile = getstring(kvpair->second, KYLD_FILE);
-		if ((NULL == ldfile)||(strcmp(ldfile->c_str(), fname.c_str())==0))
+		if ((NULL == ldfile)||(ldfile->compare(fname)==0))
 			fprintf(fp, "%s\n", defns->c_str());
 	}
 
@@ -346,8 +346,9 @@ void	build_ld_files(MAPDHASH &master, STRINGP subd) {
 			gbl_msg.error("Could not write linker script, %s\n", fname.c_str());
 		else {
 			build_script_ld(master, *kvpair->second.u.m_m,
-				fp, *fnamep);
+				fp, fname);
 			fclose(fp);
 		}
 	}
 }
+
