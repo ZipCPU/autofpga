@@ -50,6 +50,7 @@ class	GENBUS;
 #include "parser.h"
 #include "mapdhash.h"
 #include "plist.h"
+#include "mlist.h"
 #include "clockinfo.h"
 #include "keys.h"
 

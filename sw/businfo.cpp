@@ -61,6 +61,7 @@
 #include "globals.h"
 #include "subbus.h"
 #include "msgs.h"
+#include "clockinfo.h"
 
 BUSLIST	*gbl_blist;
 
@@ -87,9 +88,9 @@ int	BUSINFO::data_width(void) {
 	return	32;
 }
 
-STRINGP	name(void) {
+STRINGP	BUSINFO::name(void) {
 	STRINGP	str;
-	str = getstring(m_hash, KYNAME);
+	str = getstring(m_hash, KY_NAME);
 	if (!m_name)
 		m_name = str;
 	else if (str->compare(*m_name) != 0) {
@@ -99,15 +100,15 @@ STRINGP	name(void) {
 	return	str;
 }
 
-STRINGP	btype(void) {
+STRINGP	BUSINFO::btype(void) {
 	STRINGP	str;
-	str = getstring(m_hash, KYTYPE);
+	str = getstring(m_hash, KY_TYPE);
 	if (!m_type)
 		m_type = str;
 	else if (str->compare(*m_type) != 0) {
 		gbl_msg.error("Bus %s type has changed from %s to %s\n",
 			name()->c_str(), m_type->c_str(), str->c_str());
-		m_name = str;
+		m_type = str;
 	}
 	return	str;
 }
@@ -312,25 +313,24 @@ void	BUSINFO::init(MAPDHASH *phash, MAPDHASH *bp) {
 					strp->c_str());
 				assert(strp);
 				m_clock = getclockinfo(strp);
+				if (m_clock == NULL)
+					m_clock = CLOCKINFO::new_clock(kvpair->second.u.m_s);
+				gbl_msg.info("BUSINFO::INIT(%s)."
+					"CLOCK(%s) FOUND, FREQ = %d\n",
+					prefix->c_str(), strp->c_str(),
+					m_clock->frequency());
 				elm.m_typ = MAPT_MAP;
-				if (m_clock != NULL) {
-					gbl_msg.info("BUSINFO::INIT(%s)."
-						"CLOCK(%s) FOUND, FREQ = %d\n",
-						prefix->c_str(), strp->c_str(),
-						m_clock->frequency());
-					elm.m_typ = MAPT_MAP;
-					elm.u.m_m = m_clock->m_hash;
+				elm.u.m_m = m_clock->m_hash;
 
-					if (NULL == m_hash) {
-						gbl_msg.error("Undefined bus as a part of %s (no name given?)\n",
-							prefix->c_str());
-					} else
-						m_hash->insert(KEYVALUE(KY_CLOCK, elm));
-					kvpair->second.m_typ = MAPT_MAP;
-					kvpair->second.u.m_m = m_clock->m_hash;
-					REHASH;
-					kvpair = bp->begin();
-				}
+				if (NULL == m_hash) {
+					gbl_msg.error("Undefined bus as a part of %s (no name given?)\n",
+						prefix->c_str());
+				} else
+					m_hash->insert(KEYVALUE(KY_CLOCK, elm));
+				kvpair->second.m_typ = MAPT_MAP;
+				kvpair->second.u.m_m = m_clock->m_hash;
+				REHASH;
+				kvpair = bp->begin();
 				continue;
 			}
 		}

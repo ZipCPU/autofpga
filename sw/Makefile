@@ -47,7 +47,7 @@ SOURCES := autofpga.cpp parser.cpp kveval.cpp keys.cpp mapdhash.cpp ast.cpp \
 	bitlib.cpp bldtestb.cpp bldsim.cpp predicates.cpp		    \
 	clockinfo.cpp subbus.cpp globals.cpp gather.cpp			    \
 	bldboardld.cpp bldrtlmake.cpp msgs.cpp bldcachable.cpp		    \
-	businfo.cpp plist.cpp genbus.cpp $(wildcard bus/*.cpp)
+	businfo.cpp plist.cpp mlist.cpp genbus.cpp $(wildcard bus/*.cpp)
 
 POSSHDRS:= $(subst .c,.h,$(subst .cpp,.h,$(SOURCES)))
 HEADERS := $(foreach header,$(POSSHDRS),$(wildcard $(header)))

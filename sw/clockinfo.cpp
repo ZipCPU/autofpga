@@ -53,12 +53,26 @@ const	unsigned long	CLOCKINFO::PICOSECONDS_PER_SECOND = 1000000000000ul;
 CLKLIST	cklist;
 
 CLOCKINFO::CLOCKINFO(void) {
-	m_hash = new MAPDHASH();
-	m_name = NULL;
-	m_wire = NULL;
-	m_top  = NULL;
+	m_hash  = new MAPDHASH();
+	m_name  = NULL;
+	m_reset = NULL;
+	m_wire  = NULL;
+	m_top   = NULL;
 	m_simclass = NULL;
 	m_interval_ps = UNKNOWN_PS;
+}
+
+CLOCKINFO *CLOCKINFO::new_clock(STRINGP name) {
+	CLOCKINFO *ci;
+	if (NULL != (ci = getclockinfo(name)))
+		return ci;
+
+	unsigned	id = cklist.size();
+	cklist.push_back(CLOCKINFO());
+	ci = &cklist[id];
+	ci->setname(new STRING(*name));
+
+	return	ci;
 }
 
 unsigned long CLOCKINFO::setfrequency(unsigned long frequency_hz) {
@@ -93,6 +107,13 @@ void	CLOCKINFO::setname(STRINGP name) {
 		m_name = strp;
 	} else if (!m_name)
 		m_name = name;
+}
+
+STRINGP	CLOCKINFO::reset(void) {
+	STRINGP	strp;
+
+	strp = getstring(*m_hash, KY_RESET);
+	return strp;
 }
 
 void	CLOCKINFO::setwire(STRINGP wire) {

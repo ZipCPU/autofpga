@@ -446,11 +446,14 @@ void	PLIST::assign_addresses(unsigned dwidth, unsigned nullsz) {
 				if (pa < min_awd)
 					pa = min_awd;
 
-				// p_base is in octets
+				// p_base is the base address of this
+				// peripheral, expressed in octets
 				(*this)[i]->p_base = start_address + ((1ul<<pa)-1);
 				(*this)[i]->p_base &= (-1l<<pa);
 				start_address = (*this)[i]->p_base + (1ul<<pa);
 
+				// p_mask are the bits that matter when decoding
+				// this peripheral
 				(*this)[i]->p_mask = (-1)<<(pa-daddr_abits);
 				assert((*this)[i]->p_mask != 0);
 			}
@@ -463,6 +466,9 @@ void	PLIST::assign_addresses(unsigned dwidth, unsigned nullsz) {
 		// One more pass, now that we know the last address
 		for(unsigned i=0; i<size(); i++) {
 
+			//
+			// Trim the bits necessary to express the relevant
+			// bits of this address
 			(*this)[i]->p_mask &= master_mask;
 
 			gbl_msg.info("  %20s -> %08lx & 0x%08lx\n",

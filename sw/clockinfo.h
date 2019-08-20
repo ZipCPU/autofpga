@@ -40,9 +40,12 @@
 
 #include "parser.h"
 #include "mapdhash.h"
+#include "keys.h"
 
 
 class	CLOCKINFO {
+private:
+	STRINGP		m_reset;
 public:
 	MAPDHASH	*m_hash;
 	unsigned long	m_interval_ps;
@@ -51,6 +54,7 @@ public:
 			PICOSECONDS_PER_SECOND;
 
 	CLOCKINFO(void);
+	static CLOCKINFO *new_clock(STRINGP name);
 
 	unsigned long	interval_ps(void) {
 		return m_interval_ps;
@@ -79,6 +83,7 @@ public:
 	}
 
 	unsigned frequency(void);
+	STRINGP	reset(void);
 };
 typedef	std::vector<CLOCKINFO>	CLKLIST;
 

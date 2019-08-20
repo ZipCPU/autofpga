@@ -1,11 +1,11 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	mlist.h
+// Filename: 	mlist.cpp
 //
 // Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 //
-// Purpose:	An MLIST is a list of bus masters.  This file defines the
-//		methods associated with such a list.
+// Purpose:	An MLIST is a list (i.e. std::vector<>) of bus masters.  This
+//		file defines the methods associated with such a list.
 //
 //
 // Creator:	Dan Gisselquist, Ph.D.
@@ -37,31 +37,11 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 //
-#ifndef	MLIST_H
-#define	MLIST_H
-
-#include <vector>
-
 #include "parser.h"
+#include "mlist.h"
+#include "mapdhash.h"
+#include "keys.h"
 
-class	BUSINFO;
-
-//
-// The MLIST, made of B(us)MASTER(s)
-//
-// A structure to contain information about lists of bus masters
-//
-class	BMASTER {
-public:
-	MAPDHASH	*m_hash;
-	STRINGP		name(void);
-};
-
-typedef	BMASTER *BMASTERP;
-
-typedef	std::vector<BMASTERP> MLIST;
-
-// A pointer to a set of peripherals
-typedef	MLIST *MLISTP;
-
-#endif	// MLIST_H
+STRINGP		BMASTER::name(void) {
+	return getstring(*m_hash, KY_NAME);
+}

@@ -4,7 +4,9 @@
 //
 // Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 //
-// Purpose:	
+// Purpose:	Defines a generic bus class, from which other buses may derive.
+//		More importantly, describes a way that different potential
+//	bus classes/implementations may be searched for an appropriate one.
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
@@ -38,13 +40,15 @@
 #include "genbus.h"
 #include "msgs.h"
 #include "bus/wb.h"
+#include "bus/axil.h"
 #include "keys.h"
 #include "mapdhash.h"
 
 WBBUSCLASS	wbclass;
+AXILBUSCLASS	axilclass;
 
-unsigned	num_bus_classes = 1;
-BUSCLASS	*busclass_list[] = { &wbclass };
+BUSCLASS	*busclass_list[NUM_BUS_CLASSES] = { &wbclass, &axilclass };
+unsigned	num_bus_classes = NUM_BUS_CLASSES;
 
 /*
 void	GENBUS::integrity_check(void) {

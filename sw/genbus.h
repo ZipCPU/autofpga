@@ -119,6 +119,7 @@ public:
 	virtual	GENBUS	*create(BUSINFO *bi) = 0;
 };
 
+#define	NUM_BUS_CLASSES	2
 extern	unsigned	num_bus_classes;
-extern	BUSCLASS	*busclass_list[1];
+extern	BUSCLASS	*busclass_list[NUM_BUS_CLASSES];
 #endif	// GENBUS_H
