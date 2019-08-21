@@ -18,7 +18,7 @@
 //	// string of case-insensitive options
 //		ROM	(slave has no write ports)
 //		WOM	(slave has no read ports)
-//		FULL	(slave has no all ports, not just the ports used)
+//		FULL	(default:slave has no all ports, not just the ports used)
 //	SLAVE.SHARE=
 //	// slave shares parts of the interface with the other listed slaves
 //
@@ -263,9 +263,9 @@ void	AXILBUS::assign_addresses(void) {
 }
 
 BUSINFO *AXILBUS::create_sio(void) {
-	gbl_msg.error("ERR: AXI-lite bus does not support slaves of type SINGLE\n");
-	return NULL;
-	/*
+	// gbl_msg.error("ERR: AXI-lite bus does not support slaves of type SINGLE\n");
+	// return NULL;
+
 	assert(m_info);
 
 	BUSINFO	*sbi;
@@ -290,13 +290,12 @@ BUSINFO *AXILBUS::create_sio(void) {
 	m_slist = sbi->m_plist;
 
 	return sbi;
-	*/
 }
 
 BUSINFO *AXILBUS::create_dio(void) {
-	gbl_msg.error("ERR: AXI-lite bus does not (yet) support slaves of type DOUBLE\n");
-	return NULL;
-	/*
+	// gbl_msg.error("ERR: AXI-lite bus does not (yet) support slaves of type DOUBLE\n");
+	// return NULL;
+
 	assert(m_info);
 
 	BUSINFO	*dbi;
@@ -320,7 +319,6 @@ BUSINFO *AXILBUS::create_dio(void) {
 	m_dlist = dbi->m_plist;
 
 	return dbi;
-	*/
 }
 
 void	AXILBUS::countsio(void) {
@@ -354,31 +352,33 @@ void	AXILBUS::integrity_check(void) {
 	}
 }
 
-void	AXILBUS::writeout_defn_v(FILE *fp, const char* pname, const char *btyp){
+void	AXILBUS::writeout_defn_v(FILE *fp, const char *pname,
+		const char* busp, const char *btyp){
 	STRINGP	n = m_info->m_name;
 	int	aw = address_width();
 
-	fprintf(fp, "\t//\t// AXI-lite slave definitions for bus %s%s, slave %s\n\t//\n",
-		n->c_str(), btyp, pname);
+	fprintf(fp, "\t//\t// AXI-lite slave definitions for bus %s%s,\n"
+		"\t// slave %s, with prefix %s\n\t//\n",
+		n->c_str(), btyp, pname, busp);
 	fprintf(fp, "\twire\t\t%s_arready, %s_awready, %s_wready",
-			pname, pname, pname);
+			busp, busp, busp);
 	fprintf(fp, "\twire\t\t%s_bvalid, %s_rvalid;",
-			pname, pname);
+			busp, busp);
 	fprintf(fp, "\twire\t[1:0]\t%s_bresp, %s_rresp;",
-			pname, pname);
-	fprintf(fp, "\twire\t[%d:0]\t%s_rdata;\n\n", m_info->data_width()-1, pname);
+			busp, busp);
+	fprintf(fp, "\twire\t[%d:0]\t%s_rdata;\n\n", m_info->data_width()-1, busp);
 	fprintf(fp, "\twire\t\t%s_arvalid, %s_awvalid, %s_wvalid,\n"
 		"\t\t\t%s_bready, %s_rready;\n"
 		"\twire\t[%d:0]\t%s_araddr, %s_awaddr;\n"
 		"\twire\t[2:0]\t%s_arprot, %s_awprot;\n"
 		"\twire\t[%d:0]\t%s_wdata;\n"
 		"\twire\t[%d:0]\t%s_wstrb;\n\n",
-		pname, pname, pname,
-		pname, pname,
-			aw-1, pname, pname,
-		pname, pname,
-			m_info->data_width()-1, pname,
-			(m_info->data_width()/8)-1, pname);
+		busp, busp, busp,
+		busp, busp,
+			aw-1, busp, busp,
+		busp, busp,
+			m_info->data_width()-1, busp,
+			(m_info->data_width()/8)-1, busp);
 }
 
 void	AXILBUS::writeout_bus_slave_defns_v(FILE *fp) {
@@ -389,7 +389,7 @@ void	AXILBUS::writeout_bus_slave_defns_v(FILE *fp) {
 		for(PLIST::iterator pp=m_slist->begin();
 				pp != m_slist->end(); pp++) {
 			writeout_defn_v(fp, (*pp)->p_name->c_str(),
-				"(SIO)");
+				(*pp)->bus_prefix()->c_str(), "(SIO)");
 		}
 	}
 
@@ -397,13 +397,14 @@ void	AXILBUS::writeout_bus_slave_defns_v(FILE *fp) {
 		for(PLIST::iterator pp=m_dlist->begin();
 				pp != m_dlist->end(); pp++) {
 			writeout_defn_v(fp, (*pp)->p_name->c_str(),
-				"(DIO)");
+				(*pp)->bus_prefix()->c_str(), "(DIO)");
 		}
 	}
 
 	if (p) {
 		for(PLIST::iterator pp=p->begin(); pp != p->end(); pp++) {
-			writeout_defn_v(fp, (*pp)->p_name->c_str());
+			writeout_defn_v(fp, (*pp)->p_name->c_str(),
+				(*pp)->bus_prefix()->c_str());
 		}
 	} else {
 		gbl_msg.error("%s has no slaves\n", n->c_str());
@@ -417,7 +418,8 @@ void	AXILBUS::writeout_bus_master_defns_v(FILE *fp) {
 	if (m) {
 		for(MLIST::iterator pp=m->begin(); pp != m->end(); pp++) {
 			STRINGP	n = getstring((*pp)->m_hash, KY_NAME);
-			writeout_defn_v(fp, n->c_str());
+			writeout_defn_v(fp, n->c_str(),
+			(*pp)->bus_prefix()->c_str());
 		}
 	} else {
 		gbl_msg.error("%s has no slaves\n", n->c_str());
@@ -458,21 +460,25 @@ STRINGP	AXILBUS::master_name(int k) {
 }
 
 void AXILBUS::xbarcon_master(FILE *fp, const char *tabs,
-			const char *pfx,const char *sig) {
+			const char *pfx,const char *sig, bool comma) {
 	STRING lcase = STRING(sig);
 
 	for(unsigned k=0; k<lcase.size(); k++)
 		lcase[k] = tolower(lcase[k]);
 
 	fprintf(fp, "%s%s%s({\n", tabs, pfx, "");
-	for(unsigned k=m_info->m_mlist->size()-1; k> 0; k--)
-		fprintf(fp, "%s\t%s_%s,\n", tabs, master_name(k)->c_str(), lcase.c_str());
-	fprintf(fp, "%s\t%s_%s\n", tabs, master_name(0)->c_str(), lcase.c_str());
-	fprintf(fp, "%s})", tabs);
+	for(unsigned k=m_info->m_mlist->size()-1; k> 0; k--) {
+		BMASTER *m = (*m_info->m_mlist)[k];
+		STRINGP busp = m->bus_prefix();
+		fprintf(fp, "%s\t%s_%s,\n", tabs, busp->c_str(), lcase.c_str());
+	}
+	fprintf(fp, "%s\t%s_%s\n", tabs, (*m_info->m_mlist)[0]->bus_prefix()->c_str(),
+		lcase.c_str());
+	fprintf(fp, "%s})%s\n", tabs, comma ? ",":"");
 }
 
 void AXILBUS::xbarcon_slave(FILE *fp, PLIST *pl, const char *tabs,
-			const char *pfx,const char *sig) {
+			const char *pfx,const char *sig, bool comma) {
 	STRING lcase = STRING(sig);
 
 	for(unsigned k=0; k<lcase.size(); k++)
@@ -480,9 +486,9 @@ void AXILBUS::xbarcon_slave(FILE *fp, PLIST *pl, const char *tabs,
 
 	fprintf(fp, "%s%s%s({\n", tabs, pfx, "");
 	for(unsigned k=pl->size()-1; k> 0; k--)
-		fprintf(fp, "%s\t%s_%s,\n", tabs, (*pl)[k]->p_name->c_str(), lcase.c_str());
-	fprintf(fp, "%s\t%s_%s\n", tabs, (*pl)[0]->p_name->c_str(), lcase.c_str());
-	fprintf(fp, "%s})", tabs);
+		fprintf(fp, "%s\t%s_%s,\n", tabs, (*pl)[k]->bus_prefix()->c_str(), lcase.c_str());
+	fprintf(fp, "%s\t%s_%s\n", tabs, (*pl)[0]->bus_prefix()->c_str(), lcase.c_str());
+	fprintf(fp, "%s})%s\n", tabs, comma ? ",":"");
 }
 
 void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
@@ -497,10 +503,11 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 		return;
 
 	if (NULL == (rst = getstring(m_info->m_hash, KY_RESET))) {
-	if (NULL == (rst = getstring(c->m_hash, KY_RESET))) {
+	// if (NULL == (rst = getstring(c->m_hash, KY_RESET))) {
+		gbl_msg.warning("Bus %s has no associated reset wire, using \'i_reset\'", n->c_str());
 		rst = new STRING("i_reset");
 		setstring(m_info->m_hash, KY_RESET, rst);
-	}}
+	}//}
 
 	//
 	// This AXI-lite bus implementation doesn't select slaves with
@@ -547,8 +554,8 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 		// Can only simplify if there's only one peripheral and only
 		// one master
 		//
-		STRINGP	slv  = (*m_plist)[0]->p_name;
-		STRINGP	mstr = master_name(0);
+		STRINGP	slv  = (*m_plist)[0]->bus_prefix();
+		STRINGP	mstr = (*m_mlist)[0]->bus_prefix();
 
 		fprintf(fp,
 		"//\n"
@@ -579,7 +586,7 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 		"assign	%s_rdata  = %s_rdata;\n"
 		"assign	%s_rresp  = %s_rresp;\n"
 		"\n\n",
-		n->c_str(), mstr->c_str(), slv->c_str(),
+		n->c_str(), master_name(0)->c_str(), (*m_plist)[0]->p_name->c_str(),
 		//
 		slv->c_str(),  mstr->c_str(),
 		mstr->c_str(), slv->c_str(),
@@ -684,17 +691,19 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 
 		for(int k=m_slist->size(); k>0; k--) {
 			PERIPHP p = (*m_slist)[k-1];
-			const char *pn = p->p_name->c_str();
+			const char *pn = p->p_name->c_str(),
+				*ns = n->c_str();
 
 			fprintf(fp, "\t// %s\n", pn);
+			pn = p->bus_prefix()->c_str();
 			fprintf(fp, "\tassign %s_awaddr = 0;\n", pn);
-			fprintf(fp, "\tassign %s_awprot = %s_siow_awprot;\n", pn, n->c_str());
+			fprintf(fp, "\tassign %s_awprot = %s_siow_awprot;\n", pn, ns);
 			fprintf(fp, "\tassign %s_wvalid = %s_awvalid;\n", pn, pn);
-			fprintf(fp, "\tassign %s_wdata = %s_siow_wdata;\n", pn, n->c_str());
-			fprintf(fp, "\tassign %s_wstrb = %s_siow_wstrb;\n", pn, n->c_str());
+			fprintf(fp, "\tassign %s_wdata = %s_siow_wdata;\n", pn, ns);
+			fprintf(fp, "\tassign %s_wstrb = %s_siow_wstrb;\n", pn, ns);
 			fprintf(fp, "\tassign %s_bready = 1\'b1;\n", pn);
 			fprintf(fp, "\tassign %s_araddr = 0;\n", pn);
-			fprintf(fp, "\tassign %s_arprot = %s_siow_arprot;\n", pn, n->c_str());
+			fprintf(fp, "\tassign %s_arprot = %s_siow_arprot;\n", pn, ns);
 			fprintf(fp, "\tassign %s_rready = 1\'b1;\n", pn);
 		}
 	}
@@ -826,11 +835,38 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 	} fprintf(fp, "\t\t\t{ %d\'h%*lx }\n",
 			address_width(), (address_width()+3)/4,
 			((*m_plist)[0]->p_mask << unused_lsbs));
-	fprintf(fp, "\t\t})\n");
+	fprintf(fp, "\t\t})");
+
+	if (bus_option(KY_OPT_LOWPOWER)) {
+		STRINGP	str;
+		int	val;
+		if (getvalue(*m_info->m_hash, KY_OPT_LOWPOWER, val))
+			fprintf(fp, ",\n\t\t.OPT_LOWPOWER(%d)", val);
+		else if (NULL != (str = getstring(*m_info->m_hash, KY_OPT_LOWPOWER)))
+			fprintf(fp, ",\n\t\t.OPT_LOWPOWER(%s)", str->c_str());
+		else
+			fprintf(fp, ",\n\t\t.OPT_LOWPOWER(1\'b1)");
+	}
+	if (bus_option(KY_OPT_LINGER)) {
+		STRINGP	str;
+		int	val;
+		if (getvalue(*m_info->m_hash, KY_OPT_LOWPOWER, val))
+			fprintf(fp, ",\n\t\t.OPT_LINGER(%d)", val);
+		else if (NULL != (str = getstring(*m_info->m_hash, KY_OPT_LINGER)))
+			fprintf(fp, ",\n\t\t.OPT_LINGER(%s)", str->c_str());
+		else
+			gbl_msg.warning("OPT_LINGER parameter not understood for bus %s\n", n->c_str());
+	} if (bus_option(KY_OPT_LGMAXBURST)) {
+		STRINGP	str;
+		int	val;
+		if (getvalue(*m_info->m_hash, KY_OPT_LGMAXBURST, val))
+			fprintf(fp, ",\n\t\t.OPT_LOWPOWER(%d)", val);
+		else if (NULL != (str = getstring(*m_info->m_hash, KY_OPT_LGMAXBURST)))
+			fprintf(fp, ",\n\t\t.OPT_LOWPOWER(%s)", str->c_str());
+		else
+			gbl_msg.warning("OPT_LGMAXBURST parameter found with no value in %d\n", n->c_str());
+	}
 	//
-	//	.OPT_LOWPOWER(%d),
-	//	.OPT_LINGER(%d),
-	//	.LGMAXBURST(%d))
 	fprintf(fp,
 	"\t) %s_xbar(\n"
 		"\t\t.S_AXI_ACLK(%s)\n",
@@ -890,6 +926,176 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","RDATA"); fprintf(fp, ",\n");
 	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","RRESP");
 	fprintf(fp, "\t\t);\n\n");
+
+	for(unsigned k=0; k<m_plist->size(); k++) {
+		PERIPHP p = (*m_plist)[k];
+		STRINGP	busp = p->bus_prefix();
+
+		if (p->write_only()) {
+			fprintf(fp,
+			"\tassign %s_awready = %s_bvalid & %s_bready;\n"
+			"\tassign %s_wready = %s_awready;\n"
+			"\tassign %s_bvalid = %s_awvalid & %s_wvalid;\n"
+			"\tassign %s_bresp  = 2\'b10; // SLVERR\n",
+				busp->c_str(), busp->c_str(), busp->c_str(),
+				busp->c_str(), busp->c_str(),
+				busp->c_str(), busp->c_str(), busp->c_str(),
+				busp->c_str());
+		}
+		if (p->read_only()) {
+			fprintf(fp,
+			"\tassign %s_arready = %s_rready;\n"
+			"\tassign %s_rvalid  = %s_arvalid;\n"
+			"\tassign %s_bresp  = 2\'b10; // SLVERR\n",
+					busp->c_str(), busp->c_str(),
+					busp->c_str(), busp->c_str(),
+					busp->c_str());
+		}
+	}
+}
+
+STRINGP	AXILBUS::master_portlist(BMASTERP m) {
+	STRING	str;
+
+	if (!m->read_only())
+		str = str + STRING(
+	"//\n"
+	"\t\t@$(MASTER.PREFIX)_awvalid,\n"
+	"\t\t@$(MASTER.PREFIX)_awready,\n"
+	"\t\t@$(MASTER.PREFIX)_awaddr,\n"
+	"\t\t@$(MASTER.PREFIX)_awprot,\n"
+	"//\n"
+	"\t\t@$(MASTER.PREFIX)_wvalid,\n"
+	"\t\t@$(MASTER.PREFIX)_wready,\n"
+	"\t\t@$(MASTER.PREFIX)_wdata,\n"
+	"\t\t@$(MASTER.PREFIX)_wstrb,\n"
+	"//\n"
+	"\t\t@$(MASTER.PREFIX)_bvalid,\n"
+	"\t\t@$(MASTER.PREFIX)_bready,\n"
+	"\t\t@$(MASTER.PREFIX)_bresp,\n");
+	if (!m->read_only() && !m->write_only())
+		str = str + STRING("// Read connections\n");
+	if (!m->write_only())
+		str = str + STRING(
+	"\t\t@$(MASTER.PREFIX)_arvalid,\n"
+	"\t\t@$(MASTER.PREFIX)_arready,\n"
+	"\t\t@$(MASTER.PREFIX)_araddr,\n"
+	"\t\t@$(MASTER.PREFIX)_arprot,\n"
+	"//\n"
+	"\t\t@$(MASTER.PREFIX)_rvalid,\n"
+	"\t\t@$(MASTER.PREFIX)_rready,\n"
+	"\t\t@$(MASTER.PREFIX)_rdata,\n"
+	"\t\t@$(MASTER.PREFIX)_rresp");
+
+	return new STRING(str);
+}
+
+STRINGP	AXILBUS::master_ascii_portlist(BMASTERP m) {
+	STRING	str;
+
+	if (!m->read_only())
+		str = str + STRING(
+	"//\n"
+	"\t\t.@$(MASTER.IASCII)@$(MASTER.ASCPREFIX)AWVALID(@$(MASTER.PREFIX)_awvalid),\n"
+	"\t\t.@$(MASTER.OASCII)@$(MASTER.ASCPREFIX)AWREADY(@$(MASTER.PREFIX)_awready),\n"
+	"\t\t.@$(MASTER.IASCII)@$(MASTER.ASCPREFIX)AWADDR( @$(MASTER.PREFIX)_awaddr),\n"
+	"\t\t.@$(MASTER.IASCII)@$(MASTER.ASCPREFIX)AWPROT( @$(MASTER.PREFIX)_awprot),\n"
+	"//\n"
+	"\t\t.@$(MASTER.IASCII)@$(MASTER.ASCPREFIX)WVALID(@$(MASTER.PREFIX)_wvalid),\n"
+	"\t\t.@$(MASTER.OASCII)@$(MASTER.ASCPREFIX)WREADY(@$(MASTER.PREFIX)_wready),\n"
+	"\t\t.@$(MASTER.IASCII)@$(MASTER.ASCPREFIX)WDATA( @$(MASTER.PREFIX)_wdata),\n"
+	"\t\t.@$(MASTER.IASCII)@$(MASTER.ASCPREFIX)WSTRB( @$(MASTER.PREFIX)_wstrb),\n"
+	"//\n"
+	"\t\t.@$(MASTER.OASCII)@$(MASTER.ASCPREFIX)BVALID(@$(MASTER.PREFIX)_bvalid),\n"
+	"\t\t.@$(MASTER.IASCII)@$(MASTER.ASCPREFIX)BREADY(@$(MASTER.PREFIX)_bready),\n"
+	"\t\t.@$(MASTER.OASCII)@$(MASTER.ASCPREFIX)BRESP( @$(MASTER.PREFIX)_bresp),\n");
+	if (!m->read_only() && !m->write_only())
+		str = str + STRING("\t\t// Read connections\n");
+	if (!m->write_only())
+		str = str + STRING(
+	"\t\t.@$(MASTER.IASCII)@$(MASTER.ASCPREFIX)ARVALID(@$(MASTER.PREFIX)_arvalid),\n"
+	"\t\t.@$(MASTER.OASCII)@$(MASTER.ASCPREFIX)ARREADY(@$(MASTER.PREFIX)_arready),\n"
+	"\t\t.@$(MASTER.IASCII)@$(MASTER.ASCPREFIX)ARADDR( @$(MASTER.PREFIX)_araddr),\n"
+	"\t\t.@$(MASTER.IASCII)@$(MASTER.ASCPREFIX)ARPROT( @$(MASTER.PREFIX)_arprot),\n"
+	"//\n"
+	"\t\t.@$(MASTER.OASCII)@$(MASTER.ASCPREFIX)RVALID(@$(MASTER.PREFIX)_rvalid),\n"
+	"\t\t.@$(MASTER.IASCII)@$(MASTER.ASCPREFIX)RREADY(@$(MASTER.PREFIX)_rready),\n"
+	"\t\t.@$(MASTER.OASCII)@$(MASTER.ASCPREFIX)RDATA( @$(MASTER.PREFIX)_rdata),\n"
+	"\t\t.@$(MASTER.OASCII)@$(MASTER.ASCPREFIX)RRESP( @$(MASTER.PREFIX)_rresp)");
+
+	return new STRING(str);
+}
+
+STRINGP	AXILBUS::slave_portlist(PERIPHP p) {
+	STRING	str;
+
+	if (!p->read_only())
+		str = str + STRING(
+	"//\n"
+	"\t\t@$(SLAVE.PREFIX)_awvalid,\n"
+	"\t\t@$(SLAVE.PREFIX)_awready,\n"
+	"\t\t@$(SLAVE.PREFIX)_awaddr,\n"
+	"\t\t@$(SLAVE.PREFIX)_awprot,\n"
+	"//\n"
+	"\t\t@$(SLAVE.PREFIX)_wvalid,\n"
+	"\t\t@$(SLAVE.PREFIX)_wready,\n"
+	"\t\t@$(SLAVE.PREFIX)_wdata,\n"
+	"\t\t@$(SLAVE.PREFIX)_wstrb,\n"
+	"//\n"
+	"\t\t@$(SLAVE.PREFIX)_bvalid,\n"
+	"\t\t@$(SLAVE.PREFIX)_bready,\n"
+	"\t\t@$(SLAVE.PREFIX)_bresp,\n");
+	if (!p->read_only() && !p->write_only())
+		str = str + STRING("// Read connections\n");
+	if (!p->write_only())
+		str = str + STRING(
+	"\t\t@$(SLAVE.PREFIX)_arvalid,\n"
+	"\t\t@$(SLAVE.PREFIX)_arready,\n"
+	"\t\t@$(SLAVE.PREFIX)_araddr,\n"
+	"\t\t@$(SLAVE.PREFIX)_arprot,\n"
+	"//\n"
+	"\t\t@$(SLAVE.PREFIX)_rvalid,\n"
+	"\t\t@$(SLAVE.PREFIX)_rready,\n"
+	"\t\t@$(SLAVE.PREFIX)_rdata,\n"
+	"\t\t@$(SLAVE.PREFIX)_rresp");
+
+	return new STRING(str);
+}
+
+STRINGP	AXILBUS::slave_ascii_portlist(PERIPHP p) {
+	STRING	str;
+
+	if (!p->read_only())
+		str = str + STRING(
+	"//\n"
+	"\t\t.@$(SLAVE.IASCII)@$(SLAVE.ASCPREFIX)AWVALID(@$(SLAVE.PREFIX)_awvalid),\n"
+	"\t\t.@$(SLAVE.OASCII)@$(SLAVE.ASCPREFIX)AWREADY(@$(SLAVE.PREFIX)_awready),\n"
+	"\t\t.@$(SLAVE.IASCII)@$(SLAVE.ASCPREFIX)AWADDR( @$(SLAVE.PREFIX)_awaddr),\n"
+	"\t\t.@$(SLAVE.IASCII)@$(SLAVE.ASCPREFIX)AWPROT( @$(SLAVE.PREFIX)_awprot),\n"
+	"//\n"
+	"\t\t.@$(SLAVE.IASCII)@$(SLAVE.ASCPREFIX)WVALID(@$(SLAVE.PREFIX)_wvalid),\n"
+	"\t\t.@$(SLAVE.OASCII)@$(SLAVE.ASCPREFIX)WREADY(@$(SLAVE.PREFIX)_wready),\n"
+	"\t\t.@$(SLAVE.IASCII)@$(SLAVE.ASCPREFIX)WDATA( @$(SLAVE.PREFIX)_wdata),\n"
+	"\t\t.@$(SLAVE.IASCII)@$(SLAVE.ASCPREFIX)WSTRB( @$(SLAVE.PREFIX)_wstrb),\n"
+	"//\n"
+	"\t\t.@$(SLAVE.OASCII)@$(SLAVE.ASCPREFIX)BVALID(@$(SLAVE.PREFIX)_bvalid),\n"
+	"\t\t.@$(SLAVE.IASCII)@$(SLAVE.ASCPREFIX)BREADY(@$(SLAVE.PREFIX)_bready),\n"
+	"\t\t.@$(SLAVE.OASCII)@$(SLAVE.ASCPREFIX)BRESP( @$(SLAVE.PREFIX)_bresp),\n");
+	if (!p->read_only() && !p->write_only())
+		str = str + STRING("\t\t// Read connections\n");
+	if (!p->write_only())
+		str = str + STRING(
+	"\t\t.@$(SLAVE.IASCII)@$(SLAVE.ASCPREFIX)ARVALID(@$(SLAVE.PREFIX)_arvalid),\n"
+	"\t\t.@$(SLAVE.OASCII)@$(SLAVE.ASCPREFIX)ARREADY(@$(SLAVE.PREFIX)_arready),\n"
+	"\t\t.@$(SLAVE.IASCII)@$(SLAVE.ASCPREFIX)ARADDR( @$(SLAVE.PREFIX)_araddr),\n"
+	"\t\t.@$(SLAVE.IASCII)@$(SLAVE.ASCPREFIX)ARPROT( @$(SLAVE.PREFIX)_arprot),\n"
+	"//\n"
+	"\t\t.@$(SLAVE.OASCII)@$(SLAVE.ASCPREFIX)RVALID(@$(SLAVE.PREFIX)_rvalid),\n"
+	"\t\t.@$(SLAVE.IASCII)@$(SLAVE.ASCPREFIX)RREADY(@$(SLAVE.PREFIX)_rready),\n"
+	"\t\t.@$(SLAVE.OASCII)@$(SLAVE.ASCPREFIX)RDATA( @$(SLAVE.PREFIX)_rdata),\n"
+	"\t\t.@$(SLAVE.OASCII)@$(SLAVE.ASCPREFIX)RRESP( @$(SLAVE.PREFIX)_rresp)");
+
+	return new STRING(str);
 }
 
 STRINGP	AXILBUSCLASS::name(void) {

@@ -41,7 +41,40 @@
 #include "mlist.h"
 #include "mapdhash.h"
 #include "keys.h"
+#include "predicates.h"
 
 STRINGP		BMASTER::name(void) {
 	return getstring(*m_hash, KY_NAME);
+}
+
+STRINGP		BMASTER::bus_prefix(void) {
+	STRINGP	pfx;
+
+	pfx = getstring(*m_hash, KYMASTER_PREFIX);
+	if (NULL == pfx) {
+		STRINGP	bus = getstring(*m_hash, KYMASTER_BUS_NAME);
+		if (NULL == bus)
+			return NULL;
+		pfx = new STRING(*bus + STRING("_") + *name());
+		setstring(*m_hash, KYMASTER_PREFIX, pfx);
+	}
+	return pfx;
+}
+
+bool	BMASTER::read_only(void) {
+	STRINGP	options;
+
+	options = getstring(*m_hash, KYMASTER_OPTIONS);
+	if (NULL != options)
+		return read_only_option(options);
+	return false;
+}
+
+bool	BMASTER::write_only(void) {
+	STRINGP	options;
+
+	options = getstring(*m_hash, KYMASTER_OPTIONS);
+	if (NULL != options)
+		return write_only_option(options);
+	return false;
 }

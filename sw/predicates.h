@@ -98,4 +98,11 @@ bool	refclock(MAPT &pmap);
 // Does the toplevel map contain a CPU?
 bool	has_cpu(MAPDHASH &phash);
 
+// Does the option set describe a read-only peripheral
+bool	read_only_option(STRINGP op);
+// bool	read_only_option(MAPDHASH &phash);
+// Does the option set describe a write-only peripheral
+bool	write_only_option(STRINGP op);
+// bool	write_only_option(MAPDHASH &phash);
+
 #endif	// PREDICATES_H

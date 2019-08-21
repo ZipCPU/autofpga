@@ -283,6 +283,44 @@ void	PERIPH::integrity_check(void) {
 	assert(NULL != p_slave_bus);
 }
 
+STRINGP	PERIPH::bus_prefix(void) {
+	STRINGP	pfx;
+	pfx = getstring(p_phash, KYSLAVE_PREFIX);
+	if (NULL == pfx) {
+		STRINGP	bus = p_master_bus->name();
+		if (NULL == bus)
+			return NULL;
+		// Assume a prefix if it isnt given
+		pfx = new STRING(STRING(*bus)+STRING("_")+STRING(*p_name));
+		setstring(p_phash, KYSLAVE_PREFIX, pfx);
+	}
+
+	return pfx;
+}
+
+bool	PERIPH::read_only(void) {
+	STRINGP	options;
+
+	options = getstring(*p_phash, KYMASTER_OPTIONS);
+	if (NULL != options)
+		return read_only_option(options);
+	return false;
+}
+
+bool	PERIPH::write_only(void) {
+	STRINGP	options;
+
+	options = getstring(*p_phash, KYMASTER_OPTIONS);
+	if (NULL != options)
+		return write_only_option(options);
+	return false;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// Logic on sets of peripherals
+//
+////////////////////////////////////////////////////////////////////////////////
 void	PLIST::integrity_check(void) {
 	assert(NULL != this);
 	for(unsigned k=0; k<size(); k++) {
@@ -430,30 +468,56 @@ void	PLIST::assign_addresses(unsigned dwidth, unsigned nullsz) {
 			}
 		}
 
-		// Do our calculation in octets
+		//
+		// Now we're ready to do the actual address assignment
+		//
+		// We'll do the calculation in calculation in octets, where
+		// the conversion from the one to the next is daddr_abits--the
+		// number of address bits required to advance one bus word.
+
+		// We'll start assigning addresses after skipping some number
+		// of addresses assigned to the null address.  This is user
+		// selectable, and may be zero.
 		start_address = nullsz;
 		for(unsigned i=0; i<size(); i++) {
 			unsigned	pa;
 
-			// Number of address lines ... were the bus to be
-			// done in octets
+			// pa is the width in the number of address bits
+			// required to address one octet of this peripheral.
 			pa = (*this)[i]->get_slave_address_width()+daddr_abits;
 			if (pa <= 0) {
 				// p_base is in octets
 				(*this)[i]->p_base = start_address;
 				(*this)[i]->p_mask = 0;
 			} else {
+				//
+				// If our address increment is smaller than the
+				// minimum increment we calculated above, then
+				// bump it up to that minimum increment
 				if (pa < min_awd)
 					pa = min_awd;
 
 				// p_base is the base address of this
 				// peripheral, expressed in octets
-				(*this)[i]->p_base = start_address + ((1ul<<pa)-1);
+				(*this)[i]->p_base =start_address+((1ul<<pa)-1);
+				//
+				// Trim p_base back down to just the addresses
+				// we'd use--that way the upper address bits
+				// don't change across this peripherals address
+				// range
 				(*this)[i]->p_base &= (-1l<<pa);
+				//
+				// Now, advance the start address to the next
+				// open address after this peripheral
 				start_address = (*this)[i]->p_base + (1ul<<pa);
 
+				//
 				// p_mask are the bits that matter when decoding
-				// this peripheral
+				// this peripheral.  It's basically all ones
+				// up-shifted by the number of bits this
+				// peripheral uses--we'll trim it back down
+				// to the minimum required bits in a mask in
+				// a moment
 				(*this)[i]->p_mask = (-1)<<(pa-daddr_abits);
 				assert((*this)[i]->p_mask != 0);
 			}

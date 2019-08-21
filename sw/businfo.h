@@ -75,6 +75,7 @@ public:
 	BUSINFO(void) { // MAPDHASH *hash)
 		// m_bhash  = hash;
 		m_plist  = NULL;
+		m_mlist  = NULL;
 		m_name   = NULL;
 		m_prefix = NULL;
 		m_type   = NULL;
@@ -112,6 +113,13 @@ public:
 	void	add(void);
 	PERIPH *add(PERIPHP p);
 	PERIPH *add(MAPDHASH *phash);
+	void	addmaster(MAPDHASH *hash) {
+		if (!m_mlist) {
+			m_mlist = new MLIST();
+		}
+
+		m_mlist->push_back(new BMASTER(hash));
+	}
 
 	void	writeout_bus_slave_defns_v(FILE *fp);
 	void	writeout_bus_master_defns_v(FILE *fp);
@@ -128,6 +136,7 @@ public:
 	bool	ismember_of(MAPDHASH *phash);
 	STRINGP	name(void);
 	STRINGP	btype(void);
+	STRINGP	reset_wire(void);
 };
 
 class	BUSLIST : public std::vector<BUSINFO *>	{

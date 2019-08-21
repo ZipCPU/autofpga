@@ -44,6 +44,11 @@ class	WBBUS : public GENBUS {
 	PLIST	*m_plist, *m_slist, *m_dlist;
 	unsigned	m_num_total, m_num_double, m_num_single;
 	bool		m_is_single, m_is_double;
+
+	void	xbarcon_master(FILE *fp, const char *,
+				const char *, const char *, bool comma = true);
+	void	xbarcon_slave(FILE *fp, PLIST *pl, const char *,
+				const char *, const char *, bool comma = true);
 public:
 	WBBUS(BUSINFO *bi);
 	~WBBUS() {};
@@ -54,7 +59,8 @@ public:
 
 	void		write_addr_range(FILE *fp, const PERIPHP p,
 				const int dalines);
-	void		writeout_slave_defn_v(FILE *fp, const char *pname,
+	void		writeout_defn_v(FILE *fp, const char *pname,
+				const char *pfx, const int aw, const int dw,
 				const char *ewire, const char *btyp = "");
 	virtual	void	writeout_bus_slave_defns_v(FILE *fp);
 	virtual	void	writeout_bus_master_defns_v(FILE *fp);
@@ -66,6 +72,10 @@ public:
 	virtual	void	writeout_no_master_v(FILE *fp);
 	//
 	//
+	virtual	STRINGP	master_portlist(BMASTERP);
+	virtual	STRINGP	master_ascii_portlist(BMASTERP);
+	virtual	STRINGP	slave_portlist(PERIPHP);
+	virtual	STRINGP	slave_ascii_portlist(PERIPHP);
 	virtual	void	integrity_check(void);
 
 	BUSINFO *create_sio(void);

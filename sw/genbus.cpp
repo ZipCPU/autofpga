@@ -68,6 +68,13 @@ void	GENBUS::integrity_check(void) {
 }
 */
 
+bool	GENBUS::bus_option(const STRING &ky) {
+	MAPDHASH	*option;
+
+	option = getmap(m_info->m_hash, ky);
+	return	(option != NULL);
+}
+
 bool	BUSCLASS::matches(BUSINFO *bi) {
 	PLIST *pl = bi->m_plist;
 	if (!pl) {

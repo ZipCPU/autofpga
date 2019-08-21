@@ -65,14 +65,18 @@ public:
 	BUSINFO		*p_slave_bus;
 	BUSINFO		*p_master_bus;
 
+	STRINGP	name(void) { return p_name; };
 	virtual	bool	issingle(void);
 	virtual	bool	isdouble(void);
 	virtual	bool	isbus(void);
 	virtual	bool	ismemory(void);
+	virtual	bool	read_only(void);
+	virtual	bool	write_only(void);
 	virtual unsigned get_slave_address_width(void);
 		unsigned awid(void) { return get_slave_address_width(); }
 		unsigned naddr(void);
 	virtual	void	integrity_check(void);
+	STRINGP	bus_prefix(void);
 };
 
 typedef	PERIPH *PERIPHP;

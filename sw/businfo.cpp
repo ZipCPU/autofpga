@@ -113,6 +113,17 @@ STRINGP	BUSINFO::btype(void) {
 	return	str;
 }
 
+STRINGP	BUSINFO::reset_wire(void) {
+	STRINGP	str;
+	str = getstring(m_hash, KY_RESET);
+	if (NULL != str)
+		return str;
+
+	if (m_clock)
+		str = getstring(m_clock->m_hash, KY_RESET);
+	return str;
+}
+
 bool	BUSINFO::get_base_address(MAPDHASH *phash, unsigned &base) {
 	if (!m_genbus) {
 		gbl_msg.error("BUS[%s] has no type\n",

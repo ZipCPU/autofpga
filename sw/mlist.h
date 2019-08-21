@@ -55,6 +55,11 @@ class	BMASTER {
 public:
 	MAPDHASH	*m_hash;
 	STRINGP		name(void);
+	STRINGP		bus_prefix(void);
+	bool		read_only(void);
+	bool		write_only(void);
+
+	BMASTER(MAPDHASH *hash) : m_hash(hash) {};
 };
 
 typedef	BMASTER *BMASTERP;

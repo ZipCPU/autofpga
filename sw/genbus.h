@@ -90,23 +90,12 @@ public:
 	virtual	void	writeout_no_master_v(FILE *fp) = 0;
 
 
-	virtual	void	integrity_check(void) {
-		/*
-		if (!m_info) {
-			gbl_msg.error("Bus logic generator with no bus info structure\n");
-			return;
-		}
-
-		if (!m_info->m_plist)
-			gbl_msg.error("Bus logic generator with no peripherals attached\n");
-
-		if (!m_info->m_name)
-			gbl_msg.error("Bus has no name!\n");
-
-		if (!m_info->m_clock)
-			gbl_msg.error("Bus has no assigned clock!\n");
-		*/
-	}
+	virtual	STRINGP	master_portlist(BMASTERP m) { return NULL; }
+	virtual	STRINGP	master_ascii_portlist(BMASTERP m) { return NULL; }
+	virtual	STRINGP	slave_portlist(PERIPHP p) { return NULL; }
+	virtual	STRINGP	slave_ascii_portlist(PERIPHP p) { return NULL; }
+	virtual	void	integrity_check(void) {};
+	bool	bus_option(const STRING &str);
 };
 
 class	BUSCLASS {

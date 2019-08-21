@@ -203,3 +203,37 @@ bool	has_cpu(MAPDHASH &phash) {
 			return true;
 	} return false;
 }
+
+bool	read_only_option(STRINGP op) {
+	char 	*cstr, *tok;
+	const char	DELIMITERS[] = ", \t\r\n";
+	bool	read_only = false;
+
+	cstr = strdup(op->c_str());
+	tok = strtok(cstr, DELIMITERS);
+	while(NULL != tok) {
+		if (strcasecmp(tok, "RO")==0)
+			read_only = true;
+		strtok(NULL, DELIMITERS);
+	}
+
+	free(cstr);
+	return read_only;
+}
+
+bool	write_only_option(STRINGP op) {
+	char 	*cstr, *tok;
+	const char	DELIMITERS[] = ", \t\r\n";
+	bool	write_only = false;
+
+	cstr = strdup(op->c_str());
+	tok = strtok(cstr, DELIMITERS);
+	while(NULL != tok) {
+		if (strcasecmp(tok, "WO")==0)
+			write_only = true;
+		strtok(NULL, DELIMITERS);
+	}
+
+	free(cstr);
+	return write_only;
+}
