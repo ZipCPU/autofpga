@@ -1092,9 +1092,9 @@ module	main(i_clk, i_reset,
 	assign	o_sd_data  = 4'hf;
 
 	// In the case that there is no sdcard peripheral responding on the wb bus
-	assign	sdcard_ack   = (wb_stb) && (sdcard_sel);
 	assign	sdcard_stall = 0;
 	assign	sdcard_data  = 0;
+	assign	sdcard_ack   = (wb_stb) && (sdcard_sel);
 
 	assign	sdcard_int = 1'b0;	// sdcard.INT.SDCARD.WIRE
 `endif	// SDSPI_ACCESS
@@ -1120,9 +1120,9 @@ module	main(i_clk, i_reset,
 	assign	rtc_ppd = 1'b0;
 
 	// In the case that there is no rtc peripheral responding on the wb bus
-	assign	rtc_ack   = (wb_stb) && (rtc_sel);
 	assign	rtc_stall = 0;
 	assign	rtc_data  = 0;
+	assign	rtc_ack   = (wb_stb) && (rtc_sel);
 
 	assign	rtc_int = 1'b0;	// rtc.INT.RTC.WIRE
 `endif	// RTC_ACCESS
@@ -1142,9 +1142,9 @@ module	main(i_clk, i_reset,
 	assign	o_mic_sck    = 1'b1;
 
 	// In the case that there is no pmic peripheral responding on the wb bus
-	assign	pmic_ack   = (wb_stb) && (pmic_sel);
 	assign	pmic_stall = 0;
 	assign	pmic_data  = 0;
+	assign	pmic_ack   = (wb_stb) && (pmic_sel);
 
 	assign	pmic_int = 1'b0;	// pmic.INT.MIC.WIRE
 `endif	// MICROPHONE_ACCESS
@@ -1165,9 +1165,9 @@ module	main(i_clk, i_reset,
 `else	// GPIO_ACCESS
 
 	// In the case that there is no gpio peripheral responding on the wb bus
-	assign	gpio_ack   = (wb_stb) && (gpio_sel);
 	assign	gpio_stall = 0;
 	assign	gpio_data  = 0;
+	assign	gpio_ack   = (wb_stb) && (gpio_sel);
 
 	assign	gpio_int = 1'b0;	// gpio.INT.GPIO.WIRE
 `endif	// GPIO_ACCESS
@@ -1206,9 +1206,9 @@ module	main(i_clk, i_reset,
 	assign	o_hdmi_out_sda = 1'b1;
 
 	// In the case that there is no edout peripheral responding on the wb bus
-	assign	edout_ack   = (wb_stb) && (edout_sel);
 	assign	edout_stall = 0;
 	assign	edout_data  = 0;
+	assign	edout_ack   = (wb_stb) && (edout_sel);
 
 	assign	edid_out_int = 1'b0;	// edout.INT.EDID.WIRE
 `endif	// HDMI_OUT_EDID_ACCESS
@@ -1231,9 +1231,9 @@ module	main(i_clk, i_reset,
 `else	// BKRAM_ACCESS
 
 	// In the case that there is no bkram peripheral responding on the wb bus
-	assign	bkram_ack   = (wb_stb) && (bkram_sel);
 	assign	bkram_stall = 0;
 	assign	bkram_data  = 0;
+	assign	bkram_ack   = (wb_stb) && (bkram_sel);
 
 `endif	// BKRAM_ACCESS
 
@@ -1261,9 +1261,9 @@ module	main(i_clk, i_reset,
 
 
 	// In the case that there is no gck peripheral responding on the wb bus
-	assign	gck_ack   = (wb_stb) && (gck_sel);
 	assign	gck_stall = 0;
 	assign	gck_data  = 0;
+	assign	gck_ack   = (wb_stb) && (gck_sel);
 
 	assign	ck_pps = 1'b0;	// gck.INT.PPS.WIRE
 `endif	// GPS_CLOCK
@@ -1324,9 +1324,9 @@ module	main(i_clk, i_reset,
 	assign	o_ps2          = 2'b11;
 
 	// In the case that there is no mous peripheral responding on the wb bus
-	assign	mous_ack   = (wb_stb) && (mous_sel);
 	assign	mous_stall = 0;
 	assign	mous_data  = 0;
+	assign	mous_ack   = (wb_stb) && (mous_sel);
 
 	assign	mous_interrupt = 1'b0;	// mous.INT.MOUSE.WIRE
 `endif	// MOUSE_ACCESS
@@ -1345,9 +1345,9 @@ module	main(i_clk, i_reset,
 	assign	o_hdmi_in_sda = 1'b1;
 
 	// In the case that there is no edin peripheral responding on the wb bus
-	assign	edin_ack   = (wb_stb) && (edin_sel);
 	assign	edin_stall = 0;
 	assign	edin_data  = 0;
+	assign	edin_ack   = (wb_stb) && (edin_sel);
 
 `endif	// HDMI_IN_EDID_ACCESS
 
@@ -1371,9 +1371,9 @@ module	main(i_clk, i_reset,
 `else	// SDSPI_SCOPE
 
 	// In the case that there is no scope_sdcard peripheral responding on the wb bus
-	assign	scope_sdcard_ack   = (wb_stb) && (scope_sdcard_sel);
 	assign	scope_sdcard_stall = 0;
 	assign	scope_sdcard_data  = 0;
+	assign	scope_sdcard_ack   = (wb_stb) && (scope_sdcard_sel);
 
 	assign	scope_sdcard_int = 1'b0;	// scope_sdcard.INT.SDSCOPE.WIRE
 `endif	// SDSPI_SCOPE
@@ -1419,8 +1419,8 @@ module	main(i_clk, i_reset,
 	assign	wbu_addr= 0;
 	assign	wbu_data= 0;
 	// verilator lint_off UNUSED
-	wire	[35:0]	unused_bus_wbu;
-	assign	unused_bus_wbu = { wbu_ack, wbu_stall, wbu_err, wbu_data };
+	wire	unused_bus_wbu;
+	assign	unused_bus_wbu = &{ 1'b0, wbu_ack, wbu_stall, wbu_err, wbu_data };
 	// verilator lint_on  UNUSED
 
 `endif	// WBUBUS_MASTER
@@ -1440,9 +1440,9 @@ module	main(i_clk, i_reset,
 	assign	o_qspi_dat  = 4'b1111;
 
 	// In the case that there is no flash peripheral responding on the wb bus
-	assign	flash_ack   = (wb_stb) && (flash_sel);
 	assign	flash_stall = 0;
 	assign	flash_data  = 0;
+	assign	flash_ack   = (wb_stb) && (flash_sel);
 
 	assign	flash_interrupt = 1'b0;	// flash.INT.FLASH.WIRE
 `endif	// FLASH_ACCESS
@@ -1458,9 +1458,9 @@ module	main(i_clk, i_reset,
 `else	// PWRCOUNT_ACCESS
 
 	// In the case that there is no pwrcount peripheral responding on the wb bus
-	assign	pwrcount_ack   = (wb_stb) && (pwrcount_sel);
 	assign	pwrcount_stall = 0;
 	assign	pwrcount_data  = 0;
+	assign	pwrcount_ack   = (wb_stb) && (pwrcount_sel);
 
 `endif	// PWRCOUNT_ACCESS
 
@@ -1474,9 +1474,9 @@ module	main(i_clk, i_reset,
 `else	// RTCDATE_ACCESS
 
 	// In the case that there is no rtcdate peripheral responding on the wb bus
-	assign	rtcdate_ack   = (wb_stb) && (rtcdate_sel);
 	assign	rtcdate_stall = 0;
 	assign	rtcdate_data  = 0;
+	assign	rtcdate_ack   = (wb_stb) && (rtcdate_sel);
 
 `endif	// RTCDATE_ACCESS
 
@@ -1514,9 +1514,9 @@ module	main(i_clk, i_reset,
 `else	// HDMIIN_ACCESS
 
 	// In the case that there is no hdmiin peripheral responding on the wb bus
-	assign	hdmiin_ack   = (wb_stb) && (hdmiin_sel);
 	assign	hdmiin_stall = 0;
 	assign	hdmiin_data  = 0;
+	assign	hdmiin_ack   = (wb_stb) && (hdmiin_sel);
 
 	assign	hdmiin_int = 1'b0;	// hdmiin.INT.VSYNC.WIRE
 `endif	// HDMIIN_ACCESS
@@ -1538,9 +1538,9 @@ module	main(i_clk, i_reset,
 `else	// CFG_ACCESS
 
 	// In the case that there is no cfg peripheral responding on the wb bus
-	assign	cfg_ack   = (wb_stb) && (cfg_sel);
 	assign	cfg_stall = 0;
 	assign	cfg_data  = 0;
+	assign	cfg_ack   = (wb_stb) && (cfg_sel);
 
 `endif	// CFG_ACCESS
 
@@ -1574,8 +1574,8 @@ module	main(i_clk, i_reset,
 	assign	zip_addr= 0;
 	assign	zip_data= 0;
 	// verilator lint_off UNUSED
-	wire	[35:0]	unused_bus_zip;
-	assign	unused_bus_zip = { zip_ack, zip_stall, zip_err, zip_data };
+	wire	unused_bus_zip;
+	assign	unused_bus_zip = &{ 1'b0, zip_ack, zip_stall, zip_err, zip_data };
 	// verilator lint_on  UNUSED
 
 	assign	zip_cpu_int = 1'b0;	// zip.INT.ZIP.WIRE
@@ -1602,9 +1602,9 @@ module	main(i_clk, i_reset,
 
 
 	// In the case that there is no oled peripheral responding on the wb bus
-	assign	oled_ack   = (wb_stb) && (oled_sel);
 	assign	oled_stall = 0;
 	assign	oled_data  = 0;
+	assign	oled_ack   = (wb_stb) && (oled_sel);
 
 	assign	oled_int = 1'b0;	// oled.INT.OLED.WIRE
 `endif	// OLEDBW_ACCESS
@@ -1692,9 +1692,9 @@ module	main(i_clk, i_reset,
 `else	// BUSPIC_ACCESS
 
 	// In the case that there is no buspic peripheral responding on the wb bus
-	assign	buspic_ack   = (wb_stb) && (buspic_sel);
 	assign	buspic_stall = 0;
 	assign	buspic_data  = 0;
+	assign	buspic_ack   = (wb_stb) && (buspic_sel);
 
 	assign	w_bus_int = 1'b0;	// buspic.INT.BUS.WIRE
 `endif	// BUSPIC_ACCESS
@@ -1713,9 +1713,9 @@ module	main(i_clk, i_reset,
 	assign	w_gpsu_rts_n = 1'b0;
 
 	// In the case that there is no gpsu peripheral responding on the wb bus
-	assign	gpsu_ack   = (wb_stb) && (gpsu_sel);
 	assign	gpsu_stall = 0;
 	assign	gpsu_data  = 0;
+	assign	gpsu_ack   = (wb_stb) && (gpsu_sel);
 
 	assign	gpsutx_int = 1'b0;	// gpsu.INT.GPSTX.WIRE
 	assign	gpsutxf_int = 1'b0;	// gpsu.INT.GPSTXF.WIRE
@@ -1750,9 +1750,9 @@ module	main(i_clk, i_reset,
 	assign	o_mdwe  = 1'b0;;
 
 	// In the case that there is no mdio peripheral responding on the wb bus
-	assign	mdio_ack   = (wb_stb) && (mdio_sel);
 	assign	mdio_stall = 0;
 	assign	mdio_data  = 0;
+	assign	mdio_ack   = (wb_stb) && (mdio_sel);
 
 `endif	// NETCTRL_ACCESS
 
@@ -1767,9 +1767,9 @@ module	main(i_clk, i_reset,
 	assign	o_led    = 8'h0;
 
 	// In the case that there is no spio peripheral responding on the wb bus
-	assign	spio_ack   = (wb_stb) && (spio_sel);
 	assign	spio_stall = 0;
 	assign	spio_data  = 0;
+	assign	spio_ack   = (wb_stb) && (spio_sel);
 
 	assign	spio_int = 1'b0;	// spio.INT.SPIO.WIRE
 `endif	// SPIO_ACCESS
