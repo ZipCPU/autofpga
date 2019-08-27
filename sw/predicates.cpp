@@ -65,7 +65,14 @@
 // To be a bus master, it must have a @MTYPE field.
 //
 bool	isbusmaster(MAPDHASH &phash) {
-	return (NULL != getstring(phash, KYMASTER_TYPE));
+	STRINGP styp;
+
+	styp = getstring(phash, KYMASTER_TYPE);
+	if (NULL == styp)
+		return false;
+	if (KYSCRIPT.compare(*styp) == 0)
+		return false;
+	return true;
 }
 //
 // Does the given location describe access to a bus lying beneath it?

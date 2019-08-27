@@ -91,9 +91,10 @@ public:
 
 
 	virtual	STRINGP	master_portlist(BMASTERP m) { return NULL; }
-	virtual	STRINGP	master_ascii_portlist(BMASTERP m) { return NULL; }
+	virtual	STRINGP	master_ansi_portlist(BMASTERP m) { return NULL; }
 	virtual	STRINGP	slave_portlist(PERIPHP p) { return NULL; }
-	virtual	STRINGP	slave_ascii_portlist(PERIPHP p) { return NULL; }
+	virtual	STRINGP	slave_ansi_portlist(PERIPHP p) { return NULL; }
+		STRINGP	name(void);
 	virtual	void	integrity_check(void) {};
 	bool	bus_option(const STRING &str);
 };

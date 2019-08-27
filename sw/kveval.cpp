@@ -263,7 +263,8 @@ bool	subresults_into(MAPSTACK stack, MAPDHASH *here, STRINGP &sval) {
 					break;
 				} endpos = kylen+1+kystart-sloc;
 				if (ptr[kylen] != ')') {
-					gbl_msg.fatal("Closing parentheses for %*s not found\n", kylen, ptr);
+					gbl_msg.error("%s <<--\n", sval->c_str());
+					gbl_msg.error("Closing parentheses for %*s not found\n", kylen, ptr);
 				}
 			} else {
 				if ((ptr[kylen] == '+')

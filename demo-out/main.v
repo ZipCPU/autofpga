@@ -166,13 +166,13 @@ module	main(i_clk, i_reset,
 	// A 32-bit address indicating where the ZipCPU should start running
 	// from
 `ifdef	FLASH_ACCESS
-	localparam	RESET_ADDRESS = 408944640;
+	localparam	RESET_ADDRESS = 23068672;
 `else
-	localparam	RESET_ADDRESS = 369098752;
+	localparam	RESET_ADDRESS = @$(/bkram.REGBASE);
 `endif
 	//
 	// The number of valid bits on the bus
-	localparam	ZIP_ADDRESS_WIDTH = 28; // Zip-CPU address width
+	localparam	ZIP_ADDRESS_WIDTH = 23; // Zip-CPU address width
 	//
 	// Number of ZipCPU interrupts
 	localparam	ZIP_INTS = 16;
@@ -321,7 +321,7 @@ module	main(i_clk, i_reset,
 	reg	r_clkhdmiout_ack;
 	wire	[5-1:0]	w_btn;
 	wire	[8-1:0]	w_led;
-	reg	[28-1:0]	r_buserr_addr;
+	reg	[23-1:0]	r_buserr_addr;
 // BUILDTIME doesnt need to include builddate.v a second time
 // `include "builddate.v"
 	wire	gps_pps, gps_led, gps_locked, gps_tracking;
@@ -394,7 +394,7 @@ module	main(i_clk, i_reset,
 	// Bus arbiter's internal lines
 	wire		wbu_dwbi_cyc, wbu_dwbi_stb, wbu_dwbi_we,
 			wbu_dwbi_ack, wbu_dwbi_stall, wbu_dwbi_err;
-	wire	[(28-1):0]	wbu_dwbi_addr;
+	wire	[(23-1):0]	wbu_dwbi_addr;
 	wire	[(32-1):0]	wbu_dwbi_odata, wbu_dwbi_idata;
 	wire	[(4-1):0]	wbu_dwbi_sel;
 	// Bus arbiter's internal lines
@@ -424,235 +424,360 @@ module	main(i_clk, i_reset,
 	//
 
 	// Bus wb
-	// Wishbone master wire definitions for bus: wb
-	wire		wb_cyc, wb_stb, wb_we, wb_stall, wb_err,
-			wb_none_sel;
-	reg		wb_many_ack;
-	wire	[27:0]	wb_addr;
-	wire	[31:0]	wb_data;
-	reg	[31:0]	wb_idata;
-	wire	[3:0]	wb_sel;
-	reg		wb_ack;
-
-	// Wishbone slave definitions for bus wb(SIO), slave buildtime
-	wire		buildtime_sel, buildtime_ack, buildtime_stall;
-	wire	[31:0]	buildtime_data;
-
-	// Wishbone slave definitions for bus wb(SIO), slave buserr
-	wire		buserr_sel, buserr_ack, buserr_stall;
-	wire	[31:0]	buserr_data;
-
-	// Wishbone slave definitions for bus wb(SIO), slave buspic
-	wire		buspic_sel, buspic_ack, buspic_stall;
-	wire	[31:0]	buspic_data;
-
-	// Wishbone slave definitions for bus wb(SIO), slave clkhdmiin
-	wire		clkhdmiin_sel, clkhdmiin_ack, clkhdmiin_stall;
-	wire	[31:0]	clkhdmiin_data;
-
-	// Wishbone slave definitions for bus wb(SIO), slave clkhdmiout
-	wire		clkhdmiout_sel, clkhdmiout_ack, clkhdmiout_stall;
-	wire	[31:0]	clkhdmiout_data;
-
-	// Wishbone slave definitions for bus wb(SIO), slave gpio
-	wire		gpio_sel, gpio_ack, gpio_stall;
-	wire	[31:0]	gpio_data;
-
-	// Wishbone slave definitions for bus wb(SIO), slave hdmi_scope_frame_offset
-	wire		hdmi_scope_frame_offset_sel, hdmi_scope_frame_offset_ack, hdmi_scope_frame_offset_stall;
-	wire	[31:0]	hdmi_scope_frame_offset_data;
-
-	// Wishbone slave definitions for bus wb(SIO), slave pwrcount
-	wire		pwrcount_sel, pwrcount_ack, pwrcount_stall;
-	wire	[31:0]	pwrcount_data;
-
-	// Wishbone slave definitions for bus wb(SIO), slave rtcdate
-	wire		rtcdate_sel, rtcdate_ack, rtcdate_stall;
-	wire	[31:0]	rtcdate_data;
-
-	// Wishbone slave definitions for bus wb(SIO), slave spio
-	wire		spio_sel, spio_ack, spio_stall;
-	wire	[31:0]	spio_data;
-
-	// Wishbone slave definitions for bus wb(SIO), slave subseconds
-	wire		subseconds_sel, subseconds_ack, subseconds_stall;
-	wire	[31:0]	subseconds_data;
-
-	// Wishbone slave definitions for bus wb(SIO), slave sysclk
-	wire		sysclk_sel, sysclk_ack, sysclk_stall;
-	wire	[31:0]	sysclk_data;
-
-	// Wishbone slave definitions for bus wb(SIO), slave version
-	wire		version_sel, version_ack, version_stall;
-	wire	[31:0]	version_data;
-
-	// Wishbone slave definitions for bus wb(DIO), slave gck
-	wire		gck_sel, gck_ack, gck_stall;
-	wire	[31:0]	gck_data;
-
-	// Wishbone slave definitions for bus wb(DIO), slave mous
-	wire		mous_sel, mous_ack, mous_stall;
-	wire	[31:0]	mous_data;
-
-	// Wishbone slave definitions for bus wb(DIO), slave oled
-	wire		oled_sel, oled_ack, oled_stall;
-	wire	[31:0]	oled_data;
-
-	// Wishbone slave definitions for bus wb(DIO), slave rtc
-	wire		rtc_sel, rtc_ack, rtc_stall;
-	wire	[31:0]	rtc_data;
-
-	// Wishbone slave definitions for bus wb(DIO), slave gtb
-	wire		gtb_sel, gtb_ack, gtb_stall;
-	wire	[31:0]	gtb_data;
-
-	// Wishbone slave definitions for bus wb(DIO), slave hdmiin
-	wire		hdmiin_sel, hdmiin_ack, hdmiin_stall;
-	wire	[31:0]	hdmiin_data;
-
-	// Wishbone slave definitions for bus wb(DIO), slave wb_sio
-	wire		wb_sio_sel, wb_sio_ack, wb_sio_stall;
+	// Wishbone definitions for bus wb, component wbu_dwb
+	wire		wb_wbu_dwb_cyc, wb_wbu_dwb_stb, wb_wbu_dwb_we;
+	wire	[22:0]	wb_wbu_dwb_addr;
+	wire	[31:0]	wb_wbu_dwb_data;
+	wire	[3:0]	wb_wbu_dwb_sel;
+	wire		wb_wbu_dwb_stall, wb_wbu_dwb_ack, wb_wbu_dwb_err;
+	wire	[31:0]	wb_wbu_dwb_idata;
+	// Wishbone definitions for bus wb, component zip_dwb
+	wire		wb_zip_dwb_cyc, wb_zip_dwb_stb, wb_zip_dwb_we;
+	wire	[22:0]	wb_zip_dwb_addr;
+	wire	[31:0]	wb_zip_dwb_data;
+	wire	[3:0]	wb_zip_dwb_sel;
+	wire		wb_zip_dwb_stall, wb_zip_dwb_ack, wb_zip_dwb_err;
+	wire	[31:0]	wb_zip_dwb_idata;
+	// Wishbone definitions for bus wb(SIO), component buildtime
+	wire		wb_buildtime_cyc, wb_buildtime_stb, wb_buildtime_we;
+	wire	[22:0]	wb_buildtime_addr;
+	wire	[31:0]	wb_buildtime_data;
+	wire	[3:0]	wb_buildtime_sel;
+	wire		wb_buildtime_stall, wb_buildtime_ack, wb_buildtime_err;
+	wire	[31:0]	wb_buildtime_idata;
+	// Wishbone definitions for bus wb(SIO), component buserr
+	wire		wb_buserr_cyc, wb_buserr_stb, wb_buserr_we;
+	wire	[22:0]	wb_buserr_addr;
+	wire	[31:0]	wb_buserr_data;
+	wire	[3:0]	wb_buserr_sel;
+	wire		wb_buserr_stall, wb_buserr_ack, wb_buserr_err;
+	wire	[31:0]	wb_buserr_idata;
+	// Wishbone definitions for bus wb(SIO), component clkhdmiin
+	wire		wb_clkhdmiin_cyc, wb_clkhdmiin_stb, wb_clkhdmiin_we;
+	wire	[22:0]	wb_clkhdmiin_addr;
+	wire	[31:0]	wb_clkhdmiin_data;
+	wire	[3:0]	wb_clkhdmiin_sel;
+	wire		wb_clkhdmiin_stall, wb_clkhdmiin_ack, wb_clkhdmiin_err;
+	wire	[31:0]	wb_clkhdmiin_idata;
+	// Wishbone definitions for bus wb(SIO), component clkhdmiout
+	wire		wb_clkhdmiout_cyc, wb_clkhdmiout_stb, wb_clkhdmiout_we;
+	wire	[22:0]	wb_clkhdmiout_addr;
+	wire	[31:0]	wb_clkhdmiout_data;
+	wire	[3:0]	wb_clkhdmiout_sel;
+	wire		wb_clkhdmiout_stall, wb_clkhdmiout_ack, wb_clkhdmiout_err;
+	wire	[31:0]	wb_clkhdmiout_idata;
+	// Wishbone definitions for bus wb(SIO), component gpio
+	wire		wb_gpio_cyc, wb_gpio_stb, wb_gpio_we;
+	wire	[22:0]	wb_gpio_addr;
+	wire	[31:0]	wb_gpio_data;
+	wire	[3:0]	wb_gpio_sel;
+	wire		wb_gpio_stall, wb_gpio_ack, wb_gpio_err;
+	wire	[31:0]	wb_gpio_idata;
+	// Wishbone definitions for bus wb(SIO), component hdmi_scope_frame_offset
+	wire		wb_hdmi_scope_frame_offset_cyc, wb_hdmi_scope_frame_offset_stb, wb_hdmi_scope_frame_offset_we;
+	wire	[22:0]	wb_hdmi_scope_frame_offset_addr;
+	wire	[31:0]	wb_hdmi_scope_frame_offset_data;
+	wire	[3:0]	wb_hdmi_scope_frame_offset_sel;
+	wire		wb_hdmi_scope_frame_offset_stall, wb_hdmi_scope_frame_offset_ack, wb_hdmi_scope_frame_offset_err;
+	wire	[31:0]	wb_hdmi_scope_frame_offset_idata;
+	// Wishbone definitions for bus wb(SIO), component pwrcount
+	wire		wb_pwrcount_cyc, wb_pwrcount_stb, wb_pwrcount_we;
+	wire	[22:0]	wb_pwrcount_addr;
+	wire	[31:0]	wb_pwrcount_data;
+	wire	[3:0]	wb_pwrcount_sel;
+	wire		wb_pwrcount_stall, wb_pwrcount_ack, wb_pwrcount_err;
+	wire	[31:0]	wb_pwrcount_idata;
+	// Wishbone definitions for bus wb(SIO), component rtcdate
+	wire		wb_rtcdate_cyc, wb_rtcdate_stb, wb_rtcdate_we;
+	wire	[22:0]	wb_rtcdate_addr;
+	wire	[31:0]	wb_rtcdate_data;
+	wire	[3:0]	wb_rtcdate_sel;
+	wire		wb_rtcdate_stall, wb_rtcdate_ack, wb_rtcdate_err;
+	wire	[31:0]	wb_rtcdate_idata;
+	// Wishbone definitions for bus wb(SIO), component spio
+	wire		wb_spio_cyc, wb_spio_stb, wb_spio_we;
+	wire	[22:0]	wb_spio_addr;
+	wire	[31:0]	wb_spio_data;
+	wire	[3:0]	wb_spio_sel;
+	wire		wb_spio_stall, wb_spio_ack, wb_spio_err;
+	wire	[31:0]	wb_spio_idata;
+	// Wishbone definitions for bus wb(SIO), component subseconds
+	wire		wb_subseconds_cyc, wb_subseconds_stb, wb_subseconds_we;
+	wire	[22:0]	wb_subseconds_addr;
+	wire	[31:0]	wb_subseconds_data;
+	wire	[3:0]	wb_subseconds_sel;
+	wire		wb_subseconds_stall, wb_subseconds_ack, wb_subseconds_err;
+	wire	[31:0]	wb_subseconds_idata;
+	// Wishbone definitions for bus wb(SIO), component sysclk
+	wire		wb_sysclk_cyc, wb_sysclk_stb, wb_sysclk_we;
+	wire	[22:0]	wb_sysclk_addr;
+	wire	[31:0]	wb_sysclk_data;
+	wire	[3:0]	wb_sysclk_sel;
+	wire		wb_sysclk_stall, wb_sysclk_ack, wb_sysclk_err;
+	wire	[31:0]	wb_sysclk_idata;
+	// Wishbone definitions for bus wb(SIO), component version
+	wire		wb_version_cyc, wb_version_stb, wb_version_we;
+	wire	[22:0]	wb_version_addr;
+	wire	[31:0]	wb_version_data;
+	wire	[3:0]	wb_version_sel;
+	wire		wb_version_stall, wb_version_ack, wb_version_err;
+	wire	[31:0]	wb_version_idata;
+	// Wishbone definitions for bus wb(DIO), component gck
+	wire		wb_gck_cyc, wb_gck_stb, wb_gck_we;
+	wire	[22:0]	wb_gck_addr;
+	wire	[31:0]	wb_gck_data;
+	wire	[3:0]	wb_gck_sel;
+	wire		wb_gck_stall, wb_gck_ack, wb_gck_err;
+	wire	[31:0]	wb_gck_idata;
+	// Wishbone definitions for bus wb(DIO), component mous
+	wire		wb_mous_cyc, wb_mous_stb, wb_mous_we;
+	wire	[22:0]	wb_mous_addr;
+	wire	[31:0]	wb_mous_data;
+	wire	[3:0]	wb_mous_sel;
+	wire		wb_mous_stall, wb_mous_ack, wb_mous_err;
+	wire	[31:0]	wb_mous_idata;
+	// Wishbone definitions for bus wb(DIO), component oled
+	wire		wb_oled_cyc, wb_oled_stb, wb_oled_we;
+	wire	[22:0]	wb_oled_addr;
+	wire	[31:0]	wb_oled_data;
+	wire	[3:0]	wb_oled_sel;
+	wire		wb_oled_stall, wb_oled_ack, wb_oled_err;
+	wire	[31:0]	wb_oled_idata;
+	// Wishbone definitions for bus wb(DIO), component rtc
+	wire		wb_rtc_cyc, wb_rtc_stb, wb_rtc_we;
+	wire	[22:0]	wb_rtc_addr;
+	wire	[31:0]	wb_rtc_data;
+	wire	[3:0]	wb_rtc_sel;
+	wire		wb_rtc_stall, wb_rtc_ack, wb_rtc_err;
+	wire	[31:0]	wb_rtc_idata;
+	// Wishbone definitions for bus wb(DIO), component hdmiin
+	wire		wb_hdmiin_cyc, wb_hdmiin_stb, wb_hdmiin_we;
+	wire	[22:0]	wb_hdmiin_addr;
+	wire	[31:0]	wb_hdmiin_data;
+	wire	[3:0]	wb_hdmiin_sel;
+	wire		wb_hdmiin_stall, wb_hdmiin_ack, wb_hdmiin_err;
+	wire	[31:0]	wb_hdmiin_idata;
+	// Wishbone definitions for bus wb(DIO), component wb_sio
+	wire		wb_sio_cyc, wb_sio_stb, wb_sio_we;
+	wire	[22:0]	wb_sio_addr;
 	wire	[31:0]	wb_sio_data;
-
-	// Wishbone slave definitions for bus wb(DIO), slave edin
-	wire		edin_sel, edin_ack, edin_stall;
-	wire	[31:0]	edin_data;
-
-	// Wishbone slave definitions for bus wb(DIO), slave edout
-	wire		edout_sel, edout_ack, edout_stall;
-	wire	[31:0]	edout_data;
-
-	// Wishbone slave definitions for bus wb, slave flashcfg
-	wire		flashcfg_sel, flashcfg_ack, flashcfg_stall;
-	wire	[31:0]	flashcfg_data;
-
-	// Wishbone slave definitions for bus wb, slave pmic
-	wire		pmic_sel, pmic_ack, pmic_stall;
-	wire	[31:0]	pmic_data;
-
-	// Wishbone slave definitions for bus wb, slave scop_edid
-	wire		scop_edid_sel, scop_edid_ack, scop_edid_stall;
-	wire	[31:0]	scop_edid_data;
-
-	// Wishbone slave definitions for bus wb, slave scope_hdmiin
-	wire		scope_hdmiin_sel, scope_hdmiin_ack, scope_hdmiin_stall;
-	wire	[31:0]	scope_hdmiin_data;
-
-	// Wishbone slave definitions for bus wb, slave scope_sdcard
-	wire		scope_sdcard_sel, scope_sdcard_ack, scope_sdcard_stall;
-	wire	[31:0]	scope_sdcard_data;
-
-	// Wishbone slave definitions for bus wb, slave gpsu
-	wire		gpsu_sel, gpsu_ack, gpsu_stall;
-	wire	[31:0]	gpsu_data;
-
-	// Wishbone slave definitions for bus wb, slave sdcard
-	wire		sdcard_sel, sdcard_ack, sdcard_stall;
-	wire	[31:0]	sdcard_data;
-
-	// Wishbone slave definitions for bus wb, slave cfg
-	wire		cfg_sel, cfg_ack, cfg_stall;
-	wire	[31:0]	cfg_data;
-
-	// Wishbone slave definitions for bus wb, slave mdio
-	wire		mdio_sel, mdio_ack, mdio_stall;
-	wire	[31:0]	mdio_data;
-
-	// Wishbone slave definitions for bus wb, slave wb_dio
-	wire		wb_dio_sel, wb_dio_ack, wb_dio_stall;
+	wire	[3:0]	wb_sio_sel;
+	wire		wb_sio_stall, wb_sio_ack, wb_sio_err;
+	wire	[31:0]	wb_sio_idata;
+	// Wishbone definitions for bus wb(DIO), component edin
+	wire		wb_edin_cyc, wb_edin_stb, wb_edin_we;
+	wire	[22:0]	wb_edin_addr;
+	wire	[31:0]	wb_edin_data;
+	wire	[3:0]	wb_edin_sel;
+	wire		wb_edin_stall, wb_edin_ack, wb_edin_err;
+	wire	[31:0]	wb_edin_idata;
+	// Wishbone definitions for bus wb(DIO), component edout
+	wire		wb_edout_cyc, wb_edout_stb, wb_edout_we;
+	wire	[22:0]	wb_edout_addr;
+	wire	[31:0]	wb_edout_data;
+	wire	[3:0]	wb_edout_sel;
+	wire		wb_edout_stall, wb_edout_ack, wb_edout_err;
+	wire	[31:0]	wb_edout_idata;
+	// Wishbone definitions for bus wb, component flashcfg
+	wire		wb_flashcfg_cyc, wb_flashcfg_stb, wb_flashcfg_we;
+	wire	[22:0]	wb_flashcfg_addr;
+	wire	[31:0]	wb_flashcfg_data;
+	wire	[3:0]	wb_flashcfg_sel;
+	wire		wb_flashcfg_stall, wb_flashcfg_ack, wb_flashcfg_err;
+	wire	[31:0]	wb_flashcfg_idata;
+	// Wishbone definitions for bus wb, component pmic
+	wire		wb_pmic_cyc, wb_pmic_stb, wb_pmic_we;
+	wire	[22:0]	wb_pmic_addr;
+	wire	[31:0]	wb_pmic_data;
+	wire	[3:0]	wb_pmic_sel;
+	wire		wb_pmic_stall, wb_pmic_ack, wb_pmic_err;
+	wire	[31:0]	wb_pmic_idata;
+	// Wishbone definitions for bus wb, component scop_edid
+	wire		wb_scop_edid_cyc, wb_scop_edid_stb, wb_scop_edid_we;
+	wire	[22:0]	wb_scop_edid_addr;
+	wire	[31:0]	wb_scop_edid_data;
+	wire	[3:0]	wb_scop_edid_sel;
+	wire		wb_scop_edid_stall, wb_scop_edid_ack, wb_scop_edid_err;
+	wire	[31:0]	wb_scop_edid_idata;
+	// Wishbone definitions for bus wb, component scope_hdmiin
+	wire		wb_scope_hdmiin_cyc, wb_scope_hdmiin_stb, wb_scope_hdmiin_we;
+	wire	[22:0]	wb_scope_hdmiin_addr;
+	wire	[31:0]	wb_scope_hdmiin_data;
+	wire	[3:0]	wb_scope_hdmiin_sel;
+	wire		wb_scope_hdmiin_stall, wb_scope_hdmiin_ack, wb_scope_hdmiin_err;
+	wire	[31:0]	wb_scope_hdmiin_idata;
+	// Wishbone definitions for bus wb, component scope_sdcard
+	wire		wb_scope_sdcard_cyc, wb_scope_sdcard_stb, wb_scope_sdcard_we;
+	wire	[22:0]	wb_scope_sdcard_addr;
+	wire	[31:0]	wb_scope_sdcard_data;
+	wire	[3:0]	wb_scope_sdcard_sel;
+	wire		wb_scope_sdcard_stall, wb_scope_sdcard_ack, wb_scope_sdcard_err;
+	wire	[31:0]	wb_scope_sdcard_idata;
+	// Wishbone definitions for bus wb, component sdcard
+	wire		wb_sdcard_cyc, wb_sdcard_stb, wb_sdcard_we;
+	wire	[22:0]	wb_sdcard_addr;
+	wire	[31:0]	wb_sdcard_data;
+	wire	[3:0]	wb_sdcard_sel;
+	wire		wb_sdcard_stall, wb_sdcard_ack, wb_sdcard_err;
+	wire	[31:0]	wb_sdcard_idata;
+	// Wishbone definitions for bus wb, component xpand
+	wire		wb_xpand_cyc, wb_xpand_stb, wb_xpand_we;
+	wire	[22:0]	wb_xpand_addr;
+	wire	[31:0]	wb_xpand_data;
+	wire	[3:0]	wb_xpand_sel;
+	wire		wb_xpand_stall, wb_xpand_ack, wb_xpand_err, xpand_err;
+	assign		wb_xpand_err = xpand_err;
+	wire	[31:0]	wb_xpand_idata;
+	// Wishbone definitions for bus wb, component cfg
+	wire		wb_cfg_cyc, wb_cfg_stb, wb_cfg_we;
+	wire	[22:0]	wb_cfg_addr;
+	wire	[31:0]	wb_cfg_data;
+	wire	[3:0]	wb_cfg_sel;
+	wire		wb_cfg_stall, wb_cfg_ack, wb_cfg_err;
+	wire	[31:0]	wb_cfg_idata;
+	// Wishbone definitions for bus wb, component mdio
+	wire		wb_mdio_cyc, wb_mdio_stb, wb_mdio_we;
+	wire	[22:0]	wb_mdio_addr;
+	wire	[31:0]	wb_mdio_data;
+	wire	[3:0]	wb_mdio_sel;
+	wire		wb_mdio_stall, wb_mdio_ack, wb_mdio_err;
+	wire	[31:0]	wb_mdio_idata;
+	// Wishbone definitions for bus wb, component wb_dio
+	wire		wb_dio_cyc, wb_dio_stb, wb_dio_we;
+	wire	[22:0]	wb_dio_addr;
 	wire	[31:0]	wb_dio_data;
-
-	// Wishbone slave definitions for bus wb, slave bkram
-	wire		bkram_sel, bkram_ack, bkram_stall;
-	wire	[31:0]	bkram_data;
-
-	// Wishbone slave definitions for bus wb, slave flash
-	wire		flash_sel, flash_ack, flash_stall;
-	wire	[31:0]	flash_data;
-
-	// Wishbone slave definitions for bus wb, slave xpand
-	wire		xpand_sel, xpand_ack, xpand_stall, xpand_err;
-	wire	[31:0]	xpand_data;
-
+	wire	[3:0]	wb_dio_sel;
+	wire		wb_dio_stall, wb_dio_ack, wb_dio_err;
+	wire	[31:0]	wb_dio_idata;
+	// Wishbone definitions for bus wb, component flash
+	wire		wb_flash_cyc, wb_flash_stb, wb_flash_we;
+	wire	[22:0]	wb_flash_addr;
+	wire	[31:0]	wb_flash_data;
+	wire	[3:0]	wb_flash_sel;
+	wire		wb_flash_stall, wb_flash_ack, wb_flash_err;
+	wire	[31:0]	wb_flash_idata;
+	// Wishbone definitions for bus wb, component buspic
+	wire		wb_buspic_cyc, wb_buspic_stb, wb_buspic_we;
+	wire	[22:0]	wb_buspic_addr;
+	wire	[31:0]	wb_buspic_data;
+	wire	[3:0]	wb_buspic_sel;
+	wire		wb_buspic_stall, wb_buspic_ack, wb_buspic_err;
+	wire	[31:0]	wb_buspic_idata;
+	// Wishbone definitions for bus wb, component gpsu
+	wire		wb_gpsu_cyc, wb_gpsu_stb, wb_gpsu_we;
+	wire	[22:0]	wb_gpsu_addr;
+	wire	[31:0]	wb_gpsu_data;
+	wire	[3:0]	wb_gpsu_sel;
+	wire		wb_gpsu_stall, wb_gpsu_ack, wb_gpsu_err;
+	wire	[31:0]	wb_gpsu_idata;
+	// Wishbone definitions for bus wb, component bkram
+	wire		wb_bkram_cyc, wb_bkram_stb, wb_bkram_we;
+	wire	[22:0]	wb_bkram_addr;
+	wire	[31:0]	wb_bkram_data;
+	wire	[3:0]	wb_bkram_sel;
+	wire		wb_bkram_stall, wb_bkram_ack, wb_bkram_err;
+	wire	[31:0]	wb_bkram_idata;
+	// Wishbone definitions for bus wb, component gtb
+	wire		wb_gtb_cyc, wb_gtb_stb, wb_gtb_we;
+	wire	[22:0]	wb_gtb_addr;
+	wire	[31:0]	wb_gtb_data;
+	wire	[3:0]	wb_gtb_sel;
+	wire		wb_gtb_stall, wb_gtb_ack, wb_gtb_err;
+	wire	[31:0]	wb_gtb_idata;
 	// Bus wbu
-	// Wishbone master wire definitions for bus: wbu
-	wire		wbu_cyc, wbu_stb, wbu_we, wbu_stall, wbu_err,
-			wbu_none_sel;
-	reg		wbu_many_ack;
-	wire	[28:0]	wbu_addr;
-	wire	[31:0]	wbu_data;
-	reg	[31:0]	wbu_idata;
-	wire	[3:0]	wbu_sel;
-	reg		wbu_ack;
-
-	// Wishbone slave definitions for bus wbu, slave wbu_dwb
-	wire		wbu_dwb_sel, wbu_dwb_ack, wbu_dwb_stall, wbu_dwb_err;
-	wire	[31:0]	wbu_dwb_data;
-
-	// Wishbone slave definitions for bus wbu, slave zip_dbg
-	wire		zip_dbg_sel, zip_dbg_ack, zip_dbg_stall;
-	wire	[31:0]	zip_dbg_data;
-
+	// Wishbone definitions for bus wbu, component wbu
+	wire		wbu_wbu_cyc, wbu_wbu_stb, wbu_wbu_we;
+	wire	[23:0]	wbu_wbu_addr;
+	wire	[31:0]	wbu_wbu_data;
+	wire	[3:0]	wbu_wbu_sel;
+	wire		wbu_wbu_stall, wbu_wbu_ack, wbu_wbu_err;
+	wire	[31:0]	wbu_wbu_idata;
+	// Wishbone definitions for bus wbu, component wbu_dwb
+	wire		wbu_wbu_dwb_cyc, wbu_wbu_dwb_stb, wbu_wbu_dwb_we;
+	wire	[23:0]	wbu_wbu_dwb_addr;
+	wire	[31:0]	wbu_wbu_dwb_data;
+	wire	[3:0]	wbu_wbu_dwb_sel;
+	wire		wbu_wbu_dwb_stall, wbu_wbu_dwb_ack, wbu_wbu_dwb_err, wbu_dwb_err;
+	assign		wbu_wbu_dwb_err = wbu_dwb_err;
+	wire	[31:0]	wbu_wbu_dwb_idata;
+	// Wishbone definitions for bus wbu, component zip_dbg
+	wire		wbu_zip_dbg_cyc, wbu_zip_dbg_stb, wbu_zip_dbg_we;
+	wire	[23:0]	wbu_zip_dbg_addr;
+	wire	[31:0]	wbu_zip_dbg_data;
+	wire	[3:0]	wbu_zip_dbg_sel;
+	wire		wbu_zip_dbg_stall, wbu_zip_dbg_ack, wbu_zip_dbg_err;
+	wire	[31:0]	wbu_zip_dbg_idata;
 	// Bus xpand_bus
-	// Wishbone master wire definitions for bus: xpand_bus
-	wire		xpand_bus_cyc, xpand_bus_stb, xpand_bus_we, xpand_bus_stall, xpand_bus_err,
-			xpand_bus_none_sel;
-	reg		xpand_bus_many_ack;
-	wire	[24:0]	xpand_bus_addr;
-	wire	[127:0]	xpand_bus_data;
-	reg	[127:0]	xpand_bus_idata;
-	wire	[15:0]	xpand_bus_sel;
-	reg		xpand_bus_ack;
-
-	// Wishbone slave definitions for bus xpand_bus, slave sdram_arbiter
-	wire		sdram_arbiter_sel, sdram_arbiter_ack, sdram_arbiter_stall, sdram_arbiter_err;
-	wire	[127:0]	sdram_arbiter_data;
-
+	// Wishbone definitions for bus xpand_bus, component xpand
+	wire		xpand_bus_xpand_cyc, xpand_bus_xpand_stb, xpand_bus_xpand_we;
+	wire	[-1:0]	xpand_bus_xpand_addr;
+	wire	[127:0]	xpand_bus_xpand_data;
+	wire	[15:0]	xpand_bus_xpand_sel;
+	wire		xpand_bus_xpand_stall, xpand_bus_xpand_ack, xpand_bus_xpand_err;
+	wire	[127:0]	xpand_bus_xpand_idata;
+	// Wishbone definitions for bus xpand_bus, component sdram_arbiter
+	wire		xpand_bus_sdram_arbiter_cyc, xpand_bus_sdram_arbiter_stb, xpand_bus_sdram_arbiter_we;
+	wire	[-1:0]	xpand_bus_sdram_arbiter_addr;
+	wire	[127:0]	xpand_bus_sdram_arbiter_data;
+	wire	[15:0]	xpand_bus_sdram_arbiter_sel;
+	wire		xpand_bus_sdram_arbiter_stall, xpand_bus_sdram_arbiter_ack, xpand_bus_sdram_arbiter_err, sdram_arbiter_err;
+	assign		xpand_bus_sdram_arbiter_err = sdram_arbiter_err;
+	wire	[127:0]	xpand_bus_sdram_arbiter_idata;
 	// Bus vid
-	// Wishbone master wire definitions for bus: vid
-	wire		vid_cyc, vid_stb, vid_we, vid_stall, vid_err,
-			vid_none_sel;
-	reg		vid_many_ack;
-	wire	[24:0]	vid_addr;
-	wire	[127:0]	vid_data;
-	reg	[127:0]	vid_idata;
-	wire	[15:0]	vid_sel;
-	reg		vid_ack;
-
-	// Wishbone slave definitions for bus vid, slave vid_bus
-	wire		vid_bus_sel, vid_bus_ack, vid_bus_stall, vid_bus_err;
-	wire	[127:0]	vid_bus_data;
-
+	// Wishbone definitions for bus vid, component hdmiin
+	wire		vid_hdmiin_cyc, vid_hdmiin_stb, vid_hdmiin_we;
+	wire	[24:0]	vid_hdmiin_addr;
+	wire	[127:0]	vid_hdmiin_data;
+	wire	[15:0]	vid_hdmiin_sel;
+	wire		vid_hdmiin_stall, vid_hdmiin_ack, vid_hdmiin_err;
+	wire	[127:0]	vid_hdmiin_idata;
+	// Wishbone definitions for bus vid, component vid_bus
+	wire		vid_vid_bus_cyc, vid_vid_bus_stb, vid_vid_bus_we;
+	wire	[24:0]	vid_vid_bus_addr;
+	wire	[127:0]	vid_vid_bus_data;
+	wire	[15:0]	vid_vid_bus_sel;
+	wire		vid_vid_bus_stall, vid_vid_bus_ack, vid_vid_bus_err, vid_bus_err;
+	assign		vid_vid_bus_err = vid_bus_err;
+	wire	[127:0]	vid_vid_bus_idata;
 	// Bus zip
-	// Wishbone master wire definitions for bus: zip
-	wire		zip_cyc, zip_stb, zip_we, zip_stall, zip_err,
-			zip_none_sel;
-	reg		zip_many_ack;
-	wire	[27:0]	zip_addr;
-	wire	[31:0]	zip_data;
-	reg	[31:0]	zip_idata;
-	wire	[3:0]	zip_sel;
-	reg		zip_ack;
-
-	// Wishbone slave definitions for bus zip, slave zip_dwb
-	wire		zip_dwb_sel, zip_dwb_ack, zip_dwb_stall, zip_dwb_err;
-	wire	[31:0]	zip_dwb_data;
-
+	// Wishbone definitions for bus zip, component zip
+	wire		zip_zip_cyc, zip_zip_stb, zip_zip_we;
+	wire	[22:0]	zip_zip_addr;
+	wire	[31:0]	zip_zip_data;
+	wire	[3:0]	zip_zip_sel;
+	wire		zip_zip_stall, zip_zip_ack, zip_zip_err;
+	wire	[31:0]	zip_zip_idata;
+	// Wishbone definitions for bus zip, component zip_dwb
+	wire		zip_zip_dwb_cyc, zip_zip_dwb_stb, zip_zip_dwb_we;
+	wire	[22:0]	zip_zip_dwb_addr;
+	wire	[31:0]	zip_zip_dwb_data;
+	wire	[3:0]	zip_zip_dwb_sel;
+	wire		zip_zip_dwb_stall, zip_zip_dwb_ack, zip_zip_dwb_err, zip_dwb_err;
+	assign		zip_zip_dwb_err = zip_dwb_err;
+	wire	[31:0]	zip_zip_dwb_idata;
 	// Bus sdr
-	// Wishbone master wire definitions for bus: sdr
-	wire		sdr_cyc, sdr_stb, sdr_we, sdr_stall, sdr_err,
-			sdr_none_sel;
-	reg		sdr_many_ack;
-	wire	[24:0]	sdr_addr;
-	wire	[127:0]	sdr_data;
-	reg	[127:0]	sdr_idata;
-	wire	[15:0]	sdr_sel;
-	reg		sdr_ack;
-
-	// Wishbone slave definitions for bus sdr, slave sdram
-	wire		sdram_sel, sdram_ack, sdram_stall, sdram_err;
-	wire	[127:0]	sdram_data;
-
+	// Wishbone definitions for bus sdr, component vid_bus
+	wire		sdr_vid_bus_cyc, sdr_vid_bus_stb, sdr_vid_bus_we;
+	wire	[24:0]	sdr_vid_bus_addr;
+	wire	[127:0]	sdr_vid_bus_data;
+	wire	[15:0]	sdr_vid_bus_sel;
+	wire		sdr_vid_bus_stall, sdr_vid_bus_ack, sdr_vid_bus_err;
+	wire	[127:0]	sdr_vid_bus_idata;
+	// Wishbone definitions for bus sdr, component sdram_arbiter
+	wire		sdr_sdram_arbiter_cyc, sdr_sdram_arbiter_stb, sdr_sdram_arbiter_we;
+	wire	[24:0]	sdr_sdram_arbiter_addr;
+	wire	[127:0]	sdr_sdram_arbiter_data;
+	wire	[15:0]	sdr_sdram_arbiter_sel;
+	wire		sdr_sdram_arbiter_stall, sdr_sdram_arbiter_ack, sdr_sdram_arbiter_err;
+	wire	[127:0]	sdr_sdram_arbiter_idata;
+	// Wishbone definitions for bus sdr, component sdram
+	wire		sdr_sdram_cyc, sdr_sdram_stb, sdr_sdram_we;
+	wire	[24:0]	sdr_sdram_addr;
+	wire	[127:0]	sdr_sdram_data;
+	wire	[15:0]	sdr_sdram_sel;
+	wire		sdr_sdram_stall, sdr_sdram_ack, sdr_sdram_err, sdram_err;
+	assign		sdr_sdram_err = sdram_err;
+	wire	[127:0]	sdr_sdram_idata;
 
 	//
 	// Peripheral address decoding
@@ -661,115 +786,8 @@ module	main(i_clk, i_reset,
 	// BUS-LOGIC for wb
 	//
 	//
+	// wb Bus logic to handle SINGLE slaves
 	//
-	//
-	// Select lines for bus: wb
-	//
-	// Address width: 28
-	// Data width:    32
-	//
-	//
-	
-	assign	   buildtime_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h0));  // 0x0000000
-	assign	      buserr_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h1));  // 0x0000004
-	assign	      buspic_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h2));  // 0x0000008
-	assign	   clkhdmiin_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h3));  // 0x000000c
-	assign	  clkhdmiout_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h4));  // 0x0000010
-	assign	        gpio_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h5));  // 0x0000014
-	assign	hdmi_scope_frame_offset_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h6));  // 0x0000018
-	assign	    pwrcount_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h7));  // 0x000001c
-	assign	     rtcdate_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h8));  // 0x0000020
-	assign	        spio_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'h9));  // 0x0000024
-	assign	  subseconds_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'ha));  // 0x0000028
-	assign	      sysclk_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'hb));  // 0x000002c
-	assign	     version_sel = ((wb_sio_sel)&&(wb_addr[ 3: 0] ==  4'hc));  // 0x0000030
-	assign	         gck_sel = ((wb_dio_sel)&&((wb_addr[ 7: 2] &  6'h3f) ==  6'h00));  // 0x0000000 - 0x000000f
-	assign	        mous_sel = ((wb_dio_sel)&&((wb_addr[ 7: 2] &  6'h3f) ==  6'h01));  // 0x0000010 - 0x000001f
-	assign	        oled_sel = ((wb_dio_sel)&&((wb_addr[ 7: 2] &  6'h3f) ==  6'h02));  // 0x0000020 - 0x000002f
-	assign	         rtc_sel = ((wb_dio_sel)&&((wb_addr[ 7: 2] &  6'h3f) ==  6'h03));  // 0x0000030 - 0x000003f
-	assign	         gtb_sel = ((wb_dio_sel)&&((wb_addr[ 7: 2] &  6'h3e) ==  6'h04));  // 0x0000040 - 0x000005f
-	assign	      hdmiin_sel = ((wb_dio_sel)&&((wb_addr[ 7: 2] &  6'h3c) ==  6'h08));  // 0x0000080 - 0x00000bf
-	assign	      wb_sio_sel = ((wb_dio_sel)&&((wb_addr[ 7: 2] &  6'h3c) ==  6'h0c));  // 0x00000c0 - 0x00000ff
-	assign	        edin_sel = ((wb_dio_sel)&&((wb_addr[ 7: 2] &  6'h30) ==  6'h10));  // 0x0000100 - 0x00001ff
-	assign	       edout_sel = ((wb_dio_sel)&&((wb_addr[ 7: 2] &  6'h20) ==  6'h20));  // 0x0000200 - 0x00003ff
-	assign	    flashcfg_sel = ((wb_addr[27:23] &  5'h1f) ==  5'h01); // 0x2000000
-	assign	        pmic_sel = ((wb_addr[27:23] &  5'h1f) ==  5'h02); // 0x4000000 - 0x4000007
-	assign	   scop_edid_sel = ((wb_addr[27:23] &  5'h1f) ==  5'h03); // 0x6000000 - 0x6000007
-	assign	scope_hdmiin_sel = ((wb_addr[27:23] &  5'h1f) ==  5'h04); // 0x8000000 - 0x8000007
-	assign	scope_sdcard_sel = ((wb_addr[27:23] &  5'h1f) ==  5'h05); // 0xa000000 - 0xa000007
-	assign	        gpsu_sel = ((wb_addr[27:23] &  5'h1f) ==  5'h06); // 0xc000000 - 0xc00000f
-	assign	      sdcard_sel = ((wb_addr[27:23] &  5'h1f) ==  5'h07); // 0xe000000 - 0xe00000f
-	assign	         cfg_sel = ((wb_addr[27:23] &  5'h1f) ==  5'h08); // 0x10000000 - 0x1000007f
-	assign	        mdio_sel = ((wb_addr[27:23] &  5'h1f) ==  5'h09); // 0x12000000 - 0x1200007f
-	assign	      wb_dio_sel = ((wb_addr[27:23] &  5'h1f) ==  5'h0a); // 0x14000000 - 0x140003ff
-//x2	Was a master bus as well
-	assign	       bkram_sel = ((wb_addr[27:23] &  5'h1f) ==  5'h0b); // 0x16000000 - 0x160fffff
-	assign	       flash_sel = ((wb_addr[27:23] &  5'h1f) ==  5'h0c); // 0x18000000 - 0x18ffffff
-	assign	       xpand_sel = ((wb_addr[27:23] &  5'h10) ==  5'h10); // 0x20000000 - 0x3fffffff
-//x2	Was a master bus as well
-	//
-
-	assign	wb_none_sel = (wb_stb)&&({
-				flashcfg_sel,
-				pmic_sel,
-				scop_edid_sel,
-				scope_hdmiin_sel,
-				scope_sdcard_sel,
-				gpsu_sel,
-				sdcard_sel,
-				cfg_sel,
-				mdio_sel,
-				wb_dio_sel,
-				bkram_sel,
-				flash_sel,
-				xpand_sel} == 0);
-
-	//
-	// WB: many_ack
-	//
-	// It is also a violation of the bus protocol to produce multiple
-	// acks at once and on the same clock.  In that case, the bus
-	// can't decide which result to return.  Worse, if someone is waiting
-	// for a return value, that value will never come since another ack
-	// masked it.
-	//
-	// The other error that isn't tested for here, no would I necessarily
-	// know how to test for it, is when peripherals return values out of
-	// order.  Instead, I propose keeping that from happening by
-	// guaranteeing, in software, that two peripherals are not accessed
-	// immediately one after the other.
-	//
-	always @(posedge i_clk)
-		case({		flashcfg_ack,
-				pmic_ack,
-				scop_edid_ack,
-				scope_hdmiin_ack,
-				scope_sdcard_ack,
-				gpsu_ack,
-				sdcard_ack,
-				cfg_ack,
-				mdio_ack,
-				wb_dio_ack,
-				bkram_ack,
-				flash_ack,
-				xpand_ack})
-			13'b0000000000000: wb_many_ack <= 1'b0;
-			13'b1000000000000: wb_many_ack <= 1'b0;
-			13'b0100000000000: wb_many_ack <= 1'b0;
-			13'b0010000000000: wb_many_ack <= 1'b0;
-			13'b0001000000000: wb_many_ack <= 1'b0;
-			13'b0000100000000: wb_many_ack <= 1'b0;
-			13'b0000010000000: wb_many_ack <= 1'b0;
-			13'b0000001000000: wb_many_ack <= 1'b0;
-			13'b0000000100000: wb_many_ack <= 1'b0;
-			13'b0000000010000: wb_many_ack <= 1'b0;
-			13'b0000000001000: wb_many_ack <= 1'b0;
-			13'b0000000000100: wb_many_ack <= 1'b0;
-			13'b0000000000010: wb_many_ack <= 1'b0;
-			13'b0000000000001: wb_many_ack <= 1'b0;
-			default: wb_many_ack <= (wb_cyc);
-		endcase
-
 	reg		r_wb_sio_ack;
 	reg	[31:0]	r_wb_sio_data;
 
@@ -777,377 +795,682 @@ module	main(i_clk, i_reset,
 
 	initial r_wb_sio_ack = 1'b0;
 	always	@(posedge i_clk)
-		r_wb_sio_ack <= (wb_stb)&&(wb_sio_sel);
+		r_wb_sio_ack <= (wb_sio_stb);
 	assign	wb_sio_ack = r_wb_sio_ack;
 
 	always	@(posedge i_clk)
-	casez( wb_addr[3:0] )
-		4'h0: r_wb_sio_data <= buildtime_data;
-		4'h1: r_wb_sio_data <= buserr_data;
-		4'h2: r_wb_sio_data <= buspic_data;
-		4'h3: r_wb_sio_data <= clkhdmiin_data;
-		4'h4: r_wb_sio_data <= clkhdmiout_data;
-		4'h5: r_wb_sio_data <= gpio_data;
-		4'h6: r_wb_sio_data <= hdmi_scope_frame_offset_data;
-		4'h7: r_wb_sio_data <= pwrcount_data;
-		4'h8: r_wb_sio_data <= rtcdate_data;
-		4'h9: r_wb_sio_data <= spio_data;
-		4'ha: r_wb_sio_data <= subseconds_data;
-		4'hb: r_wb_sio_data <= sysclk_data;
-		default: r_wb_sio_data <= version_data;
+	casez( wb_sio_addr[3:0] )
+		4'h0: r_wb_sio_data <= wb_buildtime_data;
+		4'h1: r_wb_sio_data <= wb_buserr_data;
+		4'h2: r_wb_sio_data <= wb_clkhdmiin_data;
+		4'h3: r_wb_sio_data <= wb_clkhdmiout_data;
+		4'h4: r_wb_sio_data <= wb_gpio_data;
+		4'h5: r_wb_sio_data <= wb_hdmi_scope_frame_offset_data;
+		4'h6: r_wb_sio_data <= wb_pwrcount_data;
+		4'h7: r_wb_sio_data <= wb_rtcdate_data;
+		4'h8: r_wb_sio_data <= wb_spio_data;
+		4'h9: r_wb_sio_data <= wb_subseconds_data;
+		4'ha: r_wb_sio_data <= wb_sysclk_data;
+		4'hb: r_wb_sio_data <= wb_version_data;
 	endcase
-	assign	wb_sio_data = r_wb_sio_data;
+	assign	wb_sio_idata = r_wb_sio_data;
 
+
+	//
+	// Now to translate this logic to the various SIO slaves
+	//
+	// In this case, the SIO bus has the prefix wb_sio
+	// and all of the slaves have various wires beginning
+	// with their own respective bus prefixes.
+	// Our goal here is to make certain that all of
+	// the slave bus inputs match the SIO bus wires
+	assign	wb_buildtime_cyc = wb_sio_cyc;
+	assign	wb_buildtime_stb = wb_sio_stb && (wb_sio_addr[ 3: 0] ==  4'h0);  // 0x000000
+	assign	wb_buildtime_we  = wb_sio_we;
+	assign	wb_buildtime_data= wb_sio_data;
+	assign	wb_buildtime_sel = wb_sio_sel;
+	assign	wb_buserr_cyc = wb_sio_cyc;
+	assign	wb_buserr_stb = wb_sio_stb && (wb_sio_addr[ 3: 0] ==  4'h1);  // 0x000004
+	assign	wb_buserr_we  = wb_sio_we;
+	assign	wb_buserr_data= wb_sio_data;
+	assign	wb_buserr_sel = wb_sio_sel;
+	assign	wb_clkhdmiin_cyc = wb_sio_cyc;
+	assign	wb_clkhdmiin_stb = wb_sio_stb && (wb_sio_addr[ 3: 0] ==  4'h2);  // 0x000008
+	assign	wb_clkhdmiin_we  = wb_sio_we;
+	assign	wb_clkhdmiin_data= wb_sio_data;
+	assign	wb_clkhdmiin_sel = wb_sio_sel;
+	assign	wb_clkhdmiout_cyc = wb_sio_cyc;
+	assign	wb_clkhdmiout_stb = wb_sio_stb && (wb_sio_addr[ 3: 0] ==  4'h3);  // 0x00000c
+	assign	wb_clkhdmiout_we  = wb_sio_we;
+	assign	wb_clkhdmiout_data= wb_sio_data;
+	assign	wb_clkhdmiout_sel = wb_sio_sel;
+	assign	wb_gpio_cyc = wb_sio_cyc;
+	assign	wb_gpio_stb = wb_sio_stb && (wb_sio_addr[ 3: 0] ==  4'h4);  // 0x000010
+	assign	wb_gpio_we  = wb_sio_we;
+	assign	wb_gpio_data= wb_sio_data;
+	assign	wb_gpio_sel = wb_sio_sel;
+	assign	wb_hdmi_scope_frame_offset_cyc = wb_sio_cyc;
+	assign	wb_hdmi_scope_frame_offset_stb = wb_sio_stb && (wb_sio_addr[ 3: 0] ==  4'h5);  // 0x000014
+	assign	wb_hdmi_scope_frame_offset_we  = wb_sio_we;
+	assign	wb_hdmi_scope_frame_offset_data= wb_sio_data;
+	assign	wb_hdmi_scope_frame_offset_sel = wb_sio_sel;
+	assign	wb_pwrcount_cyc = wb_sio_cyc;
+	assign	wb_pwrcount_stb = wb_sio_stb && (wb_sio_addr[ 3: 0] ==  4'h6);  // 0x000018
+	assign	wb_pwrcount_we  = wb_sio_we;
+	assign	wb_pwrcount_data= wb_sio_data;
+	assign	wb_pwrcount_sel = wb_sio_sel;
+	assign	wb_rtcdate_cyc = wb_sio_cyc;
+	assign	wb_rtcdate_stb = wb_sio_stb && (wb_sio_addr[ 3: 0] ==  4'h7);  // 0x00001c
+	assign	wb_rtcdate_we  = wb_sio_we;
+	assign	wb_rtcdate_data= wb_sio_data;
+	assign	wb_rtcdate_sel = wb_sio_sel;
+	assign	wb_spio_cyc = wb_sio_cyc;
+	assign	wb_spio_stb = wb_sio_stb && (wb_sio_addr[ 3: 0] ==  4'h8);  // 0x000020
+	assign	wb_spio_we  = wb_sio_we;
+	assign	wb_spio_data= wb_sio_data;
+	assign	wb_spio_sel = wb_sio_sel;
+	assign	wb_subseconds_cyc = wb_sio_cyc;
+	assign	wb_subseconds_stb = wb_sio_stb && (wb_sio_addr[ 3: 0] ==  4'h9);  // 0x000024
+	assign	wb_subseconds_we  = wb_sio_we;
+	assign	wb_subseconds_data= wb_sio_data;
+	assign	wb_subseconds_sel = wb_sio_sel;
+	assign	wb_sysclk_cyc = wb_sio_cyc;
+	assign	wb_sysclk_stb = wb_sio_stb && (wb_sio_addr[ 3: 0] ==  4'ha);  // 0x000028
+	assign	wb_sysclk_we  = wb_sio_we;
+	assign	wb_sysclk_data= wb_sio_data;
+	assign	wb_sysclk_sel = wb_sio_sel;
+	assign	wb_version_cyc = wb_sio_cyc;
+	assign	wb_version_stb = wb_sio_stb && (wb_sio_addr[ 3: 0] ==  4'hb);  // 0x00002c
+	assign	wb_version_we  = wb_sio_we;
+	assign	wb_version_data= wb_sio_data;
+	assign	wb_version_sel = wb_sio_sel;
+	//
+	// wb Bus logic to handle 8 DOUBLE slaves
+	//
+	//
 	reg	[1:0]	r_wb_dio_ack;
-	// # dlist = 9, nextlg(#dlist) = 4
-	reg	[3:0]	r_wb_dio_bus_select;
+	// # dlist = 8, nextlg(#dlist) = 3
+	reg	[2:0]	r_wb_dio_bus_select;
 	reg	[31:0]	r_wb_dio_data;
+
+	// DOUBLE peripherals are not allowed to stall.
 	assign	wb_dio_stall = 1'b0;
+
+	// DOUBLE peripherals return their acknowledgments in two
+	// clocks--always, allowing us to collect this logic together
+	// in a slave independent manner.  Here, the acknowledgment
+	// is treated as a two stage shift register, cleared on any
+	// reset, or any time the cycle line drops.  (Dropping the
+	// cycle line aborts the transaction.)
+	initial	r_wb_dio_ack <= 0;
 	always	@(posedge i_clk)
-	if (i_reset || !wb_cyc)
+	if (i_reset || !wb_dio_cyc)
 		r_wb_dio_ack <= 0;
 	else
-		r_wb_dio_ack <= { r_wb_dio_ack[0], (wb_stb)&&(wb_dio_sel) };
+		r_wb_dio_ack <= { r_wb_dio_ack[0], (wb_dio_stb) };
 	assign	wb_dio_ack = r_wb_dio_ack[1];
 
+	// Since it costs us two clocks to go through this
+	// logic, we'll take one of those clocks here to set
+	// a selection index, and then on the next clock we'll
+	// use this index to select from among the vaious
+	// possible bus return values
 	always @(posedge i_clk)
-	casez(wb_addr[7:2])
-		6'b00_0000: r_wb_dio_bus_select <= 4'd0;
-		6'b00_0001: r_wb_dio_bus_select <= 4'd1;
-		6'b00_0010: r_wb_dio_bus_select <= 4'd2;
-		6'b00_0011: r_wb_dio_bus_select <= 4'd3;
-		6'b00_010?: r_wb_dio_bus_select <= 4'd4;
-		6'b00_10??: r_wb_dio_bus_select <= 4'd5;
-		6'b00_11??: r_wb_dio_bus_select <= 4'd6;
-		6'b01_????: r_wb_dio_bus_select <= 4'd7;
-		6'b1?_????: r_wb_dio_bus_select <= 4'd8;
-		default: r_wb_dio_bus_select <= 0;
+	casez(wb_dio_addr[7:3])
+	5'b00_000: r_wb_dio_bus_select <= 3'd0;
+	5'b00_001: r_wb_dio_bus_select <= 3'd1;
+	5'b00_010: r_wb_dio_bus_select <= 3'd2;
+	5'b00_011: r_wb_dio_bus_select <= 3'd3;
+	5'b00_10?: r_wb_dio_bus_select <= 3'd4;
+	5'b00_11?: r_wb_dio_bus_select <= 3'd5;
+	5'b01_???: r_wb_dio_bus_select <= 3'd6;
+	5'b1?_???: r_wb_dio_bus_select <= 3'd7;
+	default: r_wb_dio_bus_select <= 0;
 	endcase
 
 	always	@(posedge i_clk)
 	casez(r_wb_dio_bus_select)
-		4'd0: r_wb_dio_data <= gck_data;
-		4'd1: r_wb_dio_data <= mous_data;
-		4'd2: r_wb_dio_data <= oled_data;
-		4'd3: r_wb_dio_data <= rtc_data;
-		4'd4: r_wb_dio_data <= gtb_data;
-		4'd5: r_wb_dio_data <= hdmiin_data;
-		4'd6: r_wb_dio_data <= wb_sio_data;
-		4'd7: r_wb_dio_data <= edin_data;
-		default: r_wb_dio_data <= edout_data;
+	3'd0: r_wb_dio_data <= wb_gck_data;
+	3'd1: r_wb_dio_data <= wb_mous_data;
+	3'd2: r_wb_dio_data <= wb_oled_data;
+	3'd3: r_wb_dio_data <= wb_rtc_data;
+	3'd4: r_wb_dio_data <= wb_hdmiin_data;
+	3'd5: r_wb_dio_data <= wb_sio_data;
+	3'd6: r_wb_dio_data <= wb_edin_data;
+	default: r_wb_dio_data <= edout_data;
 	endcase
 
-	assign	wb_dio_data = r_wb_dio_data;
+	assign	wb_dio_idata = r_wb_dio_data;
 
+	assign	wb_gck_cyc = wb_dio_cyc;
+	assign	wb_gck_stb = wb_dio_stb && (wb_dio_addr[ 7: 3] ==  5'h00);  // 0x000000 - 0x00000f
+	assign	wb_gck_we  = wb_dio_we;
+	assign	wb_gck_data= wb_dio_data;
+	assign	wb_gck_sel = wb_dio_sel;
+	assign	wb_mous_cyc = wb_dio_cyc;
+	assign	wb_mous_stb = wb_dio_stb && (wb_dio_addr[ 7: 3] ==  5'h01);  // 0x000020 - 0x00002f
+	assign	wb_mous_we  = wb_dio_we;
+	assign	wb_mous_data= wb_dio_data;
+	assign	wb_mous_sel = wb_dio_sel;
+	assign	wb_oled_cyc = wb_dio_cyc;
+	assign	wb_oled_stb = wb_dio_stb && (wb_dio_addr[ 7: 3] ==  5'h02);  // 0x000040 - 0x00004f
+	assign	wb_oled_we  = wb_dio_we;
+	assign	wb_oled_data= wb_dio_data;
+	assign	wb_oled_sel = wb_dio_sel;
+	assign	wb_rtc_cyc = wb_dio_cyc;
+	assign	wb_rtc_stb = wb_dio_stb && (wb_dio_addr[ 7: 3] ==  5'h03);  // 0x000060 - 0x00006f
+	assign	wb_rtc_we  = wb_dio_we;
+	assign	wb_rtc_data= wb_dio_data;
+	assign	wb_rtc_sel = wb_dio_sel;
+	assign	wb_hdmiin_cyc = wb_dio_cyc;
+	assign	wb_hdmiin_stb = wb_dio_stb && (wb_dio_addr[ 7: 3] ==  5'h04);  // 0x000080 - 0x0000bf
+	assign	wb_hdmiin_we  = wb_dio_we;
+	assign	wb_hdmiin_data= wb_dio_data;
+	assign	wb_hdmiin_sel = wb_dio_sel;
+	assign	wb_sio_cyc = wb_dio_cyc;
+	assign	wb_sio_stb = wb_dio_stb && (wb_dio_addr[ 7: 3] ==  5'h06);  // 0x0000c0 - 0x0000ff
+	assign	wb_sio_we  = wb_dio_we;
+	assign	wb_sio_data= wb_dio_data;
+	assign	wb_sio_sel = wb_dio_sel;
+	assign	wb_edin_cyc = wb_dio_cyc;
+	assign	wb_edin_stb = wb_dio_stb && (wb_dio_addr[ 7: 3] ==  5'h08);  // 0x000100 - 0x0001ff
+	assign	wb_edin_we  = wb_dio_we;
+	assign	wb_edin_data= wb_dio_data;
+	assign	wb_edin_sel = wb_dio_sel;
+	assign	wb_edout_cyc = wb_dio_cyc;
+	assign	wb_edout_stb = wb_dio_stb && (wb_dio_addr[ 7: 3] ==  5'h10);  // 0x000200 - 0x0003ff
+	assign	wb_edout_we  = wb_dio_we;
+	assign	wb_edout_data= wb_dio_data;
+	assign	wb_edout_sel = wb_dio_sel;
 	//
-	// Finally, determine what the response is from the wb bus
-	// bus
+	// Connect the wb bus components together using the wbxbar()
 	//
 	//
-	//
-	// wb_ack
-	//
-	// The returning wishbone ack is equal to the OR of every component that
-	// might possibly produce an acknowledgement, gated by the CYC line.
-	//
-	// To return an ack here, a component must have a @SLAVE.TYPE tag.
-	// Acks from any @SLAVE.TYPE of SINGLE and DOUBLE components have been
-	// collected together (above) into wb_sio_ack and wb_dio_ack
-	// respectively, which will appear ahead of any other device acks.
-	//
-	always @(posedge i_clk)
-		wb_ack <= (wb_cyc)&&(|{ flashcfg_ack,
-				pmic_ack,
-				scop_edid_ack,
-				scope_hdmiin_ack,
-				scope_sdcard_ack,
-				gpsu_ack,
-				sdcard_ack,
-				cfg_ack,
-				mdio_ack,
-				wb_dio_ack,
-				bkram_ack,
-				flash_ack,
-				xpand_ack });
-	//
-	// wb_idata
-	//
-	// This is the data returned on the bus.  Here, we select between a
-	// series of bus sources to select what data to return.  The basic
-	// logic is simply this: the data we return is the data for which the
-	// ACK line is high.
-	//
-	// The last item on the list is chosen by default if no other ACK's are
-	// true.  Although we might choose to return zeros in that case, by
-	// returning something we can skimp a touch on the logic.
-	//
-	// Any peripheral component with a @SLAVE.TYPE value of either OTHER
-	// or MEMORY will automatically be listed here.  In addition, the
-	// bus responses from @SLAVE.TYPE SINGLE (_sio_) and/or DOUBLE
-	// (_dio_) may also be listed here, depending upon components are
-	// connected to them.
-	//
-	reg [3:0]	r_wb_bus_select;
-	always	@(posedge i_clk)
-	if (wb_stb && ! wb_stall)
-		casez(wb_addr[27:23])
-			// 3e000000 & 02000000, flashcfg
-			5'b00_001: r_wb_bus_select <= 4'd0;
-			// 3e000000 & 04000000, pmic
-			5'b00_010: r_wb_bus_select <= 4'd1;
-			// 3e000000 & 06000000, scop_edid
-			5'b00_011: r_wb_bus_select <= 4'd2;
-			// 3e000000 & 08000000, scope_hdmiin
-			5'b00_100: r_wb_bus_select <= 4'd3;
-			// 3e000000 & 0a000000, scope_sdcard
-			5'b00_101: r_wb_bus_select <= 4'd4;
-			// 3e000000 & 0c000000, gpsu
-			5'b00_110: r_wb_bus_select <= 4'd5;
-			// 3e000000 & 0e000000, sdcard
-			5'b00_111: r_wb_bus_select <= 4'd6;
-			// 3e000000 & 10000000, cfg
-			5'b01_000: r_wb_bus_select <= 4'd7;
-			// 3e000000 & 12000000, mdio
-			5'b01_001: r_wb_bus_select <= 4'd8;
-			// 3e000000 & 14000000, wb_dio
-			5'b01_010: r_wb_bus_select <= 4'd9;
-			// 3e000000 & 16000000, bkram
-			5'b01_011: r_wb_bus_select <= 4'd10;
-			// 3e000000 & 18000000, flash
-			5'b01_100: r_wb_bus_select <= 4'd11;
-			// 20000000 & 20000000, xpand
-			5'b1?_???: r_wb_bus_select <= 4'd12;
-			default: begin end
-		endcase
+	wbxbar #(
+		.NM(2),.NS(15), .AW(23), .DW(32),
+		.SLAVE_ADDR({
+			{ 23'h     0 },
+			{ 23'h     0 },
+			{ 23'h     0 },
+			{ 23'h     0 },
+			{ 23'h400000 },
+			{ 23'h280000 },
+			{ 23'h240000 },
+			{ 23'h200000 },
+			{ 23'h1c0000 },
+			{ 23'h180000 },
+			{ 23'h140000 },
+			{ 23'h100000 },
+			{ 23'h c0000 },
+			{ 23'h 80000 },
+			{ 23'h 40000 }
+		}),
+		.SLAVE_MASK({
+			{ 23'h14ca0910080b189d },
+			{ 23'h14ca0910080b189d },
+			{ 23'h15905314ca091008 },
+			{ 23'h1314ca0910080b1a },
+			{ 23'h100000 },
+			{ 23'h1f0000 },
+			{ 23'h1f0000 },
+			{ 23'h1f0000 },
+			{ 23'h1f0000 },
+			{ 23'h1f0000 },
+			{ 23'h1f0000 },
+			{ 23'h1f0000 },
+			{ 23'h1f0000 },
+			{ 23'h1f0000 },
+			{ 23'h1f0000 }
+		}))
+	wb_xbar(
+		.i_clk(i_clk), .i_reset(i_reset),
+		.i_mcyc({
+			wb_zip_dwb_cyc,
+			wb_wbu_dwb_cyc
+		}),
+		.i_mstb({
+			wb_zip_dwb_stb,
+			wb_wbu_dwb_stb
+		}),
+		.i_mwe({
+			wb_zip_dwb_we,
+			wb_wbu_dwb_we
+		}),
+		.i_maddr({
+			wb_zip_dwb_addr,
+			wb_wbu_dwb_addr
+		}),
+		.i_mdata({
+			wb_zip_dwb_data,
+			wb_wbu_dwb_data
+		}),
+		.i_msel({
+			wb_zip_dwb_sel,
+			wb_wbu_dwb_sel
+		}),
+		.o_mstall({
+			wb_zip_dwb_stall,
+			wb_wbu_dwb_stall
+		}),
+		.o_mack({
+			wb_zip_dwb_ack,
+			wb_wbu_dwb_ack
+		}),
+		.o_mdata({
+			wb_zip_dwb_idata,
+			wb_wbu_dwb_idata
+		}),
+		.o_merr({
+			wb_zip_dwb_err,
+			wb_wbu_dwb_err
+		}),
+		// Slave connections
+		.o_scyc({
+			wb_gtb_cyc,
+			wb_bkram_cyc,
+			wb_gpsu_cyc,
+			wb_buspic_cyc,
+			wb_flash_cyc,
+			wb_dio_cyc,
+			wb_mdio_cyc,
+			wb_cfg_cyc,
+			wb_xpand_cyc,
+			wb_sdcard_cyc,
+			wb_scope_sdcard_cyc,
+			wb_scope_hdmiin_cyc,
+			wb_scop_edid_cyc,
+			wb_pmic_cyc,
+			wb_flashcfg_cyc
+		}),
+		.o_sstb({
+			wb_gtb_stb,
+			wb_bkram_stb,
+			wb_gpsu_stb,
+			wb_buspic_stb,
+			wb_flash_stb,
+			wb_dio_stb,
+			wb_mdio_stb,
+			wb_cfg_stb,
+			wb_xpand_stb,
+			wb_sdcard_stb,
+			wb_scope_sdcard_stb,
+			wb_scope_hdmiin_stb,
+			wb_scop_edid_stb,
+			wb_pmic_stb,
+			wb_flashcfg_stb
+		}),
+		.o_swe({
+			wb_gtb_we,
+			wb_bkram_we,
+			wb_gpsu_we,
+			wb_buspic_we,
+			wb_flash_we,
+			wb_dio_we,
+			wb_mdio_we,
+			wb_cfg_we,
+			wb_xpand_we,
+			wb_sdcard_we,
+			wb_scope_sdcard_we,
+			wb_scope_hdmiin_we,
+			wb_scop_edid_we,
+			wb_pmic_we,
+			wb_flashcfg_we
+		}),
+		.o_saddr({
+			wb_gtb_addr,
+			wb_bkram_addr,
+			wb_gpsu_addr,
+			wb_buspic_addr,
+			wb_flash_addr,
+			wb_dio_addr,
+			wb_mdio_addr,
+			wb_cfg_addr,
+			wb_xpand_addr,
+			wb_sdcard_addr,
+			wb_scope_sdcard_addr,
+			wb_scope_hdmiin_addr,
+			wb_scop_edid_addr,
+			wb_pmic_addr,
+			wb_flashcfg_addr
+		}),
+		.o_sdata({
+			wb_gtb_data,
+			wb_bkram_data,
+			wb_gpsu_data,
+			wb_buspic_data,
+			wb_flash_data,
+			wb_dio_data,
+			wb_mdio_data,
+			wb_cfg_data,
+			wb_xpand_data,
+			wb_sdcard_data,
+			wb_scope_sdcard_data,
+			wb_scope_hdmiin_data,
+			wb_scop_edid_data,
+			wb_pmic_data,
+			wb_flashcfg_data
+		}),
+		.o_ssel({
+			wb_gtb_sel,
+			wb_bkram_sel,
+			wb_gpsu_sel,
+			wb_buspic_sel,
+			wb_flash_sel,
+			wb_dio_sel,
+			wb_mdio_sel,
+			wb_cfg_sel,
+			wb_xpand_sel,
+			wb_sdcard_sel,
+			wb_scope_sdcard_sel,
+			wb_scope_hdmiin_sel,
+			wb_scop_edid_sel,
+			wb_pmic_sel,
+			wb_flashcfg_sel
+		}),
+		.i_sstall({
+			wb_gtb_stall,
+			wb_bkram_stall,
+			wb_gpsu_stall,
+			wb_buspic_stall,
+			wb_flash_stall,
+			wb_dio_stall,
+			wb_mdio_stall,
+			wb_cfg_stall,
+			wb_xpand_stall,
+			wb_sdcard_stall,
+			wb_scope_sdcard_stall,
+			wb_scope_hdmiin_stall,
+			wb_scop_edid_stall,
+			wb_pmic_stall,
+			wb_flashcfg_stall
+		}),
+		.i_sack({
+			wb_gtb_ack,
+			wb_bkram_ack,
+			wb_gpsu_ack,
+			wb_buspic_ack,
+			wb_flash_ack,
+			wb_dio_ack,
+			wb_mdio_ack,
+			wb_cfg_ack,
+			wb_xpand_ack,
+			wb_sdcard_ack,
+			wb_scope_sdcard_ack,
+			wb_scope_hdmiin_ack,
+			wb_scop_edid_ack,
+			wb_pmic_ack,
+			wb_flashcfg_ack
+		}),
+		.i_sdata({
+			wb_gtb_idata,
+			wb_bkram_idata,
+			wb_gpsu_idata,
+			wb_buspic_idata,
+			wb_flash_idata,
+			wb_dio_idata,
+			wb_mdio_idata,
+			wb_cfg_idata,
+			wb_xpand_idata,
+			wb_sdcard_idata,
+			wb_scope_sdcard_idata,
+			wb_scope_hdmiin_idata,
+			wb_scop_edid_idata,
+			wb_pmic_idata,
+			wb_flashcfg_idata
+		}),
+		.i_serr({
+			wb_gtb_err,
+			wb_bkram_err,
+			wb_gpsu_err,
+			wb_buspic_err,
+			wb_flash_err,
+			wb_dio_err,
+			wb_mdio_err,
+			wb_cfg_err,
+			wb_xpand_err,
+			wb_sdcard_err,
+			wb_scope_sdcard_err,
+			wb_scope_hdmiin_err,
+			wb_scop_edid_err,
+			wb_pmic_err,
+			wb_flashcfg_err
+		})
+		);
 
-	always @(posedge i_clk)
-	casez(r_wb_bus_select)
-		4'd0: wb_idata <= flashcfg_data;
-		4'd1: wb_idata <= pmic_data;
-		4'd2: wb_idata <= scop_edid_data;
-		4'd3: wb_idata <= scope_hdmiin_data;
-		4'd4: wb_idata <= scope_sdcard_data;
-		4'd5: wb_idata <= gpsu_data;
-		4'd6: wb_idata <= sdcard_data;
-		4'd7: wb_idata <= cfg_data;
-		4'd8: wb_idata <= mdio_data;
-		4'd9: wb_idata <= wb_dio_data;
-		4'd10: wb_idata <= bkram_data;
-		4'd11: wb_idata <= flash_data;
-		4'd12: wb_idata <= xpand_data;
-		default: wb_idata <= xpand_data;
-	endcase
-
-	assign	wb_stall =	((flashcfg_sel)&&(flashcfg_stall))
-				||((pmic_sel)&&(pmic_stall))
-				||((scop_edid_sel)&&(scop_edid_stall))
-				||((scope_hdmiin_sel)&&(scope_hdmiin_stall))
-				||((scope_sdcard_sel)&&(scope_sdcard_stall))
-				||((gpsu_sel)&&(gpsu_stall))
-				||((sdcard_sel)&&(sdcard_stall))
-				||((cfg_sel)&&(cfg_stall))
-				||((mdio_sel)&&(mdio_stall))
-				||((wb_dio_sel)&&(wb_dio_stall))
-				||((bkram_sel)&&(bkram_stall))
-				||((flash_sel)&&(flash_stall))
-				||((xpand_sel)&&(xpand_stall));
-
-	assign wb_err = ((wb_stb)&&(wb_none_sel))||(wb_many_ack)||((xpand_err));
 	//
 	// BUS-LOGIC for wbu
 	//
 	//
+	// No class SINGLE peripherals on the "wbu" bus
 	//
-	//
-	// Select lines for bus: wbu
-	//
-	// Address width: 29
-	// Data width:    32
-	//
-	//
-	
-	assign	     wbu_dwb_sel = ((wbu_addr[28:27] &  2'h2) ==  2'h0); // 0x00000000 - 0x3fffffff
-//x2	Was a master bus as well
-	assign	     zip_dbg_sel = ((wbu_addr[28:27] &  2'h3) ==  2'h2); // 0x40000000 - 0x40000007
-	//
-
-	assign	wbu_none_sel = (wbu_stb)&&({
-				wbu_dwb_sel,
-				zip_dbg_sel} == 0);
-
-	//
-	// WB: many_ack
-	//
-	// It is also a violation of the bus protocol to produce multiple
-	// acks at once and on the same clock.  In that case, the bus
-	// can't decide which result to return.  Worse, if someone is waiting
-	// for a return value, that value will never come since another ack
-	// masked it.
-	//
-	// The other error that isn't tested for here, no would I necessarily
-	// know how to test for it, is when peripherals return values out of
-	// order.  Instead, I propose keeping that from happening by
-	// guaranteeing, in software, that two peripherals are not accessed
-	// immediately one after the other.
-	//
-	always @(posedge i_clk)
-		case({		wbu_dwb_ack,
-				zip_dbg_ack})
-			2'b00: wbu_many_ack <= 1'b0;
-			2'b10: wbu_many_ack <= 1'b0;
-			2'b01: wbu_many_ack <= 1'b0;
-			default: wbu_many_ack <= (wbu_cyc);
-		endcase
 
 	//
 	// No class DOUBLE peripherals on the "wbu" bus
 	//
-	//
-	// Finally, determine what the response is from the wbu bus
-	// bus
-	//
-	//
-	//
-	// wbu_ack
-	//
-	// The returning wishbone ack is equal to the OR of every component that
-	// might possibly produce an acknowledgement, gated by the CYC line.
-	//
-	// To return an ack here, a component must have a @SLAVE.TYPE tag.
-	// Acks from any @SLAVE.TYPE of SINGLE and DOUBLE components have been
-	// collected together (above) into wbu_sio_ack and wbu_dio_ack
-	// respectively, which will appear ahead of any other device acks.
-	//
-	always @(posedge i_clk)
-		wbu_ack <= (wbu_cyc)&&(|{ wbu_dwb_ack,
-				zip_dbg_ack });
-	//
-	// wbu_idata
-	//
-	// This is the data returned on the bus.  Here, we select between a
-	// series of bus sources to select what data to return.  The basic
-	// logic is simply this: the data we return is the data for which the
-	// ACK line is high.
-	//
-	// The last item on the list is chosen by default if no other ACK's are
-	// true.  Although we might choose to return zeros in that case, by
-	// returning something we can skimp a touch on the logic.
-	//
-	// Any peripheral component with a @SLAVE.TYPE value of either OTHER
-	// or MEMORY will automatically be listed here.  In addition, the
-	// bus responses from @SLAVE.TYPE SINGLE (_sio_) and/or DOUBLE
-	// (_dio_) may also be listed here, depending upon components are
-	// connected to them.
-	//
-	always @(posedge i_clk)
-		if (wbu_dwb_ack)
-			wbu_idata <= wbu_dwb_data;
-		else
-			wbu_idata <= zip_dbg_data;
-	assign	wbu_stall =	((wbu_dwb_sel)&&(wbu_dwb_stall))
-				||((zip_dbg_sel)&&(zip_dbg_stall));
 
-	assign wbu_err = ((wbu_stb)&&(wbu_none_sel))||(wbu_many_ack)||((wbu_dwb_err));
+	//
+	// Connect the wbu bus components together using the wbxbar()
+	//
+	//
+	wbxbar #(
+		.NM(1),.NS(2), .AW(24), .DW(32),
+		.SLAVE_ADDR({
+			{ 24'h800000 },
+			{ 24'h     0 }
+		}),
+		.SLAVE_MASK({
+			{ 24'h200000 },
+			{ 24'h200000 }
+		}))
+	wbu_xbar(
+		.i_clk(i_clk), .i_reset(i_reset),
+		.i_mcyc({
+			wbu_wbu_cyc
+		}),
+		.i_mstb({
+			wbu_wbu_stb
+		}),
+		.i_mwe({
+			wbu_wbu_we
+		}),
+		.i_maddr({
+			wbu_wbu_addr
+		}),
+		.i_mdata({
+			wbu_wbu_data
+		}),
+		.i_msel({
+			wbu_wbu_sel
+		}),
+		.o_mstall({
+			wbu_wbu_stall
+		}),
+		.o_mack({
+			wbu_wbu_ack
+		}),
+		.o_mdata({
+			wbu_wbu_idata
+		}),
+		.o_merr({
+			wbu_wbu_err
+		}),
+		// Slave connections
+		.o_scyc({
+			wbu_zip_dbg_cyc,
+			wbu_wbu_dwb_cyc
+		}),
+		.o_sstb({
+			wbu_zip_dbg_stb,
+			wbu_wbu_dwb_stb
+		}),
+		.o_swe({
+			wbu_zip_dbg_we,
+			wbu_wbu_dwb_we
+		}),
+		.o_saddr({
+			wbu_zip_dbg_addr,
+			wbu_wbu_dwb_addr
+		}),
+		.o_sdata({
+			wbu_zip_dbg_data,
+			wbu_wbu_dwb_data
+		}),
+		.o_ssel({
+			wbu_zip_dbg_sel,
+			wbu_wbu_dwb_sel
+		}),
+		.i_sstall({
+			wbu_zip_dbg_stall,
+			wbu_wbu_dwb_stall
+		}),
+		.i_sack({
+			wbu_zip_dbg_ack,
+			wbu_wbu_dwb_ack
+		}),
+		.i_sdata({
+			wbu_zip_dbg_idata,
+			wbu_wbu_dwb_idata
+		}),
+		.i_serr({
+			wbu_zip_dbg_err,
+			wbu_wbu_dwb_err
+		})
+		);
+
 	//
 	// BUS-LOGIC for xpand_bus
 	//
-	//
-	//
-	//
-	// Select lines for bus: xpand_bus
-	//
-	// Address width: 25
-	// Data width:    128
-	//
-	//
-	
-	assign	sdram_arbiter_sel = (xpand_bus_cyc); // Only one peripheral on this bus
-	//
-
-	assign	xpand_bus_none_sel = 1'b0;
-	always @(*)
-		xpand_bus_many_ack = 1'b0;
-	assign	xpand_bus_err = sdram_arbiter_err;
-	assign	xpand_bus_stall = sdram_arbiter_stall;
-	always @(*)
-		xpand_bus_ack = sdram_arbiter_ack;
-	always @(*)
-		xpand_bus_idata = sdram_arbiter_data;
+//
+// Bus xpand_bus has only one master (xpand_bus_xpand) and one slave (xpand_bus_sdram_arbiter)
+// connected to it -- skipping the interconnect
+//
+	assign	xpand_bus_sdram_arbiter_err = sdram_arbiter_err;
+	assign	xpand_bus_xpand_err = xpand_bus_sdram_arbiter_err;
+	assign	xpand_bus_xpand_stall = xpand_bus_sdram_arbiter_stall;
+	assign	xpand_bus_xpand_ack   = xpand_bus_sdram_arbiter_ack;
+	assign	xpand_bus_xpand_idata = xpand_bus_sdram_arbiter_data;
 	//
 	// BUS-LOGIC for vid
 	//
-	//
-	//
-	//
-	// Select lines for bus: vid
-	//
-	// Address width: 25
-	// Data width:    128
-	//
-	//
-	
-	assign	     vid_bus_sel = (vid_cyc); // Only one peripheral on this bus
-	//
-
-	assign	vid_none_sel = 1'b0;
-	always @(*)
-		vid_many_ack = 1'b0;
-	assign	vid_err = vid_bus_err;
-	assign	vid_stall = vid_bus_stall;
-	always @(*)
-		vid_ack = vid_bus_ack;
-	always @(*)
-		vid_idata = vid_bus_data;
+//
+// Bus vid has only one master (vid_hdmiin) and one slave (vid_vid_bus)
+// connected to it -- skipping the interconnect
+//
+	assign	vid_vid_bus_err = vid_bus_err;
+	assign	vid_hdmiin_err = vid_vid_bus_err;
+	assign	vid_hdmiin_stall = vid_vid_bus_stall;
+	assign	vid_hdmiin_ack   = vid_vid_bus_ack;
+	assign	vid_hdmiin_idata = vid_vid_bus_data;
 	//
 	// BUS-LOGIC for zip
 	//
-	//
-	//
-	//
-	// Select lines for bus: zip
-	//
-	// Address width: 28
-	// Data width:    32
-	//
-	//
-	
-	assign	     zip_dwb_sel = (zip_cyc); // Only one peripheral on this bus
-	//
-
-	assign	zip_none_sel = 1'b0;
-	always @(*)
-		zip_many_ack = 1'b0;
-	assign	zip_err = zip_dwb_err;
-	assign	zip_stall = zip_dwb_stall;
-	always @(*)
-		zip_ack = zip_dwb_ack;
-	always @(*)
-		zip_idata = zip_dwb_data;
+//
+// Bus zip has only one master (zip_zip) and one slave (zip_zip_dwb)
+// connected to it -- skipping the interconnect
+//
+	assign	zip_zip_dwb_err = zip_dwb_err;
+	assign	zip_zip_err = zip_zip_dwb_err;
+	assign	zip_zip_stall = zip_zip_dwb_stall;
+	assign	zip_zip_ack   = zip_zip_dwb_ack;
+	assign	zip_zip_idata = zip_zip_dwb_data;
 	//
 	// BUS-LOGIC for sdr
 	//
 	//
-	//
-	//
-	// Select lines for bus: sdr
-	//
-	// Address width: 25
-	// Data width:    128
-	//
-	//
-	
-	assign	       sdram_sel = (sdr_cyc); // Only one peripheral on this bus
+	// No class SINGLE peripherals on the "sdr" bus
 	//
 
-	assign	sdr_none_sel = 1'b0;
-	always @(*)
-		sdr_many_ack = 1'b0;
-	assign	sdr_err = sdram_err;
-	assign	sdr_stall = sdram_stall;
-	always @(*)
-		sdr_ack = sdram_ack;
-	always @(*)
-		sdr_idata = sdram_data;
+	//
+	// No class DOUBLE peripherals on the "sdr" bus
+	//
+
+	//
+	// Connect the sdr bus components together using the wbxbar()
+	//
+	//
+	wbxbar #(
+		.NM(2),.NS(1), .AW(25), .DW(128),
+		.SLAVE_ADDR({
+			{ 25'h      0 }
+		}),
+		.SLAVE_MASK({
+			{ 25'h      0 }
+		}))
+	sdr_xbar(
+		.i_clk(i_clk), .i_reset(i_reset),
+		.i_mcyc({
+			sdr_sdram_arbiter_cyc,
+			sdr_vid_bus_cyc
+		}),
+		.i_mstb({
+			sdr_sdram_arbiter_stb,
+			sdr_vid_bus_stb
+		}),
+		.i_mwe({
+			sdr_sdram_arbiter_we,
+			sdr_vid_bus_we
+		}),
+		.i_maddr({
+			sdr_sdram_arbiter_addr,
+			sdr_vid_bus_addr
+		}),
+		.i_mdata({
+			sdr_sdram_arbiter_data,
+			sdr_vid_bus_data
+		}),
+		.i_msel({
+			sdr_sdram_arbiter_sel,
+			sdr_vid_bus_sel
+		}),
+		.o_mstall({
+			sdr_sdram_arbiter_stall,
+			sdr_vid_bus_stall
+		}),
+		.o_mack({
+			sdr_sdram_arbiter_ack,
+			sdr_vid_bus_ack
+		}),
+		.o_mdata({
+			sdr_sdram_arbiter_idata,
+			sdr_vid_bus_idata
+		}),
+		.o_merr({
+			sdr_sdram_arbiter_err,
+			sdr_vid_bus_err
+		}),
+		// Slave connections
+		.o_scyc({
+			sdr_sdram_cyc
+		}),
+		.o_sstb({
+			sdr_sdram_stb
+		}),
+		.o_swe({
+			sdr_sdram_we
+		}),
+		.o_saddr({
+			sdr_sdram_addr
+		}),
+		.o_sdata({
+			sdr_sdram_data
+		}),
+		.o_ssel({
+			sdr_sdram_sel
+		}),
+		.i_sstall({
+			sdr_sdram_stall
+		}),
+		.i_sack({
+			sdr_sdram_ack
+		}),
+		.i_sdata({
+			sdr_sdram_idata
+		}),
+		.i_serr({
+			sdr_sdram_err
+		})
+		);
+
 	//
 	// Declare the interrupt busses
 	//
@@ -1265,8 +1588,11 @@ module	main(i_clk, i_reset,
 	assign	o_mic_csn    = 1'b1;
 	assign	o_mic_sck    = 1'b1;
 
-	// In the case that there is no pmic peripheral responding on the wb bus
-	assign	pmic_ack   = (wb_stb) && (pmic_sel);
+	//
+	// In the case that there is no pmic peripheral
+	// responding on the wb bus
+	assign	pmic_ack   = 1'b0;
+	assign	pmic_err   = (pmic_stb);
 	assign	pmic_stall = 0;
 	assign	pmic_data  = 0;
 
@@ -1346,8 +1672,11 @@ module	main(i_clk, i_reset,
 `endif
 `else	// CFG_ACCESS
 
-	// In the case that there is no cfg peripheral responding on the wb bus
-	assign	cfg_ack   = (wb_stb) && (cfg_sel);
+	//
+	// In the case that there is no cfg peripheral
+	// responding on the wb bus
+	assign	cfg_ack   = 1'b0;
+	assign	cfg_err   = (cfg_stb);
 	assign	cfg_stall = 0;
 	assign	cfg_data  = 0;
 
@@ -1384,8 +1713,11 @@ module	main(i_clk, i_reset,
 	assign	o_mdio  = 1'b1;
 	assign	o_mdwe  = 1'b0;
 
-	// In the case that there is no mdio peripheral responding on the wb bus
-	assign	mdio_ack   = (wb_stb) && (mdio_sel);
+	//
+	// In the case that there is no mdio peripheral
+	// responding on the wb bus
+	assign	mdio_ack   = 1'b0;
+	assign	mdio_err   = (mdio_stb);
 	assign	mdio_stall = 0;
 	assign	mdio_data  = 0;
 
@@ -1394,7 +1726,7 @@ module	main(i_clk, i_reset,
 	always @(posedge i_clk)
 		if (wb_err)
 			r_buserr_addr <= wb_addr;
-	assign	buserr_data = { {(32-2-28){1'b0}},
+	assign	buserr_data = { {(32-2-23){1'b0}},
 			r_buserr_addr, 2'b00 };
 	assign	buildtime_data = `BUILDTIME;
 	assign	buildtime_ack = wb_stb && buildtime_sel;
@@ -1499,8 +1831,11 @@ module	main(i_clk, i_reset,
 	assign	flashcfg_data  = flash_data;
 `else	// FLASHCFG_ACCESS
 
-	// In the case that there is no flashcfg peripheral responding on the wb bus
-	assign	flashcfg_ack   = (wb_stb) && (flashcfg_sel);
+	//
+	// In the case that there is no flashcfg peripheral
+	// responding on the wb bus
+	assign	flashcfg_ack   = 1'b0;
+	assign	flashcfg_err   = (flashcfg_stb);
 	assign	flashcfg_stall = 0;
 	assign	flashcfg_data  = 0;
 
@@ -1552,8 +1887,11 @@ module	main(i_clk, i_reset,
 
 `else	// SDSPI_SCOPE
 
-	// In the case that there is no scope_sdcard peripheral responding on the wb bus
-	assign	scope_sdcard_ack   = (wb_stb) && (scope_sdcard_sel);
+	//
+	// In the case that there is no scope_sdcard peripheral
+	// responding on the wb bus
+	assign	scope_sdcard_ack   = 1'b0;
+	assign	scope_sdcard_err   = (scope_sdcard_stb);
 	assign	scope_sdcard_stall = 0;
 	assign	scope_sdcard_data  = 0;
 
@@ -1568,7 +1906,7 @@ module	main(i_clk, i_reset,
 				o_host_uart_tx, tx_host_busy);
 
 `ifdef	INCLUDE_ZIPCPU
-	// assign	wbu_zip_sel   = wbu_addr[28];
+	// assign	wbu_zip_sel   = wbu_addr[23];
 `else
 	assign	wbu_zip_sel   = 1'b0;
 	assign	zip_dbg_ack   = 1'b0;
@@ -1590,21 +1928,8 @@ module	main(i_clk, i_reset,
 			o_host_tx_stb, o_host_tx_data, i_host_tx_busy,
 			wbubus_dbg[0]);
 	assign	wbu_sel = 4'hf;
-	assign	wbu_addr = wbu_tmp_addr[(29-1):0];
+	assign	wbu_addr = wbu_tmp_addr[(24-1):0];
 `else	// WBUBUS_MASTER
-
-	// In the case that nothing drives the wbu bus ...
-	assign	wbu_cyc = 1'b0;
-	assign	wbu_stb = 1'b0;
-	assign	wbu_we  = 1'b0;
-	assign	wbu_sel = 0;
-	assign	wbu_addr= 0;
-	assign	wbu_data= 0;
-	// verilator lint_off UNUSED
-	wire	[35:0]	unused_bus_wbu;
-	assign	unused_bus_wbu = { wbu_ack, wbu_stall, wbu_err, wbu_data };
-	// verilator lint_on  UNUSED
-
 `endif	// WBUBUS_MASTER
 
 `ifdef	FLASH_ACCESS
@@ -1630,8 +1955,11 @@ module	main(i_clk, i_reset,
 	assign	o_qspi_mod  = 2'b01;
 	assign	o_qspi_dat  = 4'b1111;
 
-	// In the case that there is no flash peripheral responding on the wb bus
-	assign	flash_ack   = (wb_stb) && (flash_sel);
+	//
+	// In the case that there is no flash peripheral
+	// responding on the wb bus
+	assign	flash_ack   = 1'b0;
+	assign	flash_err   = (flash_stb);
 	assign	flash_stall = 0;
 	assign	flash_data  = 0;
 
@@ -1680,22 +2008,25 @@ module	main(i_clk, i_reset,
 	assign	o_sd_cmd   = 1'b1;
 	assign	o_sd_data  = 4'hf;
 
-	// In the case that there is no sdcard peripheral responding on the wb bus
-	assign	sdcard_ack   = (wb_stb) && (sdcard_sel);
+	//
+	// In the case that there is no sdcard peripheral
+	// responding on the wb bus
+	assign	sdcard_ack   = 1'b0;
+	assign	sdcard_err   = (sdcard_stb);
 	assign	sdcard_stall = 0;
 	assign	sdcard_data  = 0;
 
 	assign	sdcard_int = 1'b0;	// sdcard.INT.SDCARD.WIRE
 `endif	// SDSPI_ACCESS
 
-	busexpander #(.AWIN(27), .DWIN(32),
+	busexpander #(.AWIN(@$(AWID)), .DWIN(32),
 			.DWOUT(128))
 		xpandi32x128(
 			i_clk,
 			(wb_cyc),
 			(wb_stb)&&(xpand_sel),
 			wb_we,
-			wb_addr[(27-1):0],
+			wb_addr[(@$(AWID)-1):0],
 			wb_data, wb_sel,
 			xpand_ack, xpand_stall,
 			xpand_data, xpand_err,
@@ -1745,19 +2076,6 @@ module	main(i_clk, i_reset,
 	assign	hdmi_in_g = hin_pixels[19:10];
 	assign	hdmi_in_b = hin_pixels[ 9: 0];
 `else	// HDMIIN_ACCESS
-
-	// In the case that nothing drives the vid bus ...
-	assign	vid_cyc = 1'b0;
-	assign	vid_stb = 1'b0;
-	assign	vid_we  = 1'b0;
-	assign	vid_sel = 0;
-	assign	vid_addr= 0;
-	assign	vid_data= 0;
-	// verilator lint_off UNUSED
-	wire	[131:0]	unused_bus_vid;
-	assign	unused_bus_vid = { vid_ack, vid_stall, vid_err, vid_data };
-	// verilator lint_on  UNUSED
-
 	assign	hdmiin_int = 1'b0;	// hdmiin.INT.VSYNC.WIRE
 `endif	// HDMIIN_ACCESS
 
@@ -1782,19 +2100,6 @@ module	main(i_clk, i_reset,
 			zip_debug);
 	assign	zip_trigger = zip_debug[31];
 `else	// INCLUDE_ZIPCPU
-
-	// In the case that nothing drives the zip bus ...
-	assign	zip_cyc = 1'b0;
-	assign	zip_stb = 1'b0;
-	assign	zip_we  = 1'b0;
-	assign	zip_sel = 0;
-	assign	zip_addr= 0;
-	assign	zip_data= 0;
-	// verilator lint_off UNUSED
-	wire	[35:0]	unused_bus_zip;
-	assign	unused_bus_zip = { zip_ack, zip_stall, zip_err, zip_data };
-	// verilator lint_on  UNUSED
-
 	assign	zip_cpu_int = 1'b0;	// zip.INT.ZIP.WIRE
 `endif	// INCLUDE_ZIPCPU
 
@@ -1812,8 +2117,11 @@ module	main(i_clk, i_reset,
 
 `else	// SDRAM_ACCESS
 
-	// In the case that there is no sdram peripheral responding on the sdr bus
-	assign	sdram_ack   = (sdr_stb) && (sdram_sel);
+	//
+	// In the case that there is no sdram peripheral
+	// responding on the sdr bus
+	assign	sdram_ack   = 1'b0;
+	assign	sdram_err   = (sdram_stb);
 	assign	sdram_stall = 0;
 	assign	sdram_data  = 0;
 
@@ -1826,7 +2134,7 @@ module	main(i_clk, i_reset,
 	//
 	//
 	// Clock speed = 100000000 Hz
-	wbpriarbiter #(32,28)	bus_arbiter(i_clk,
+	wbpriarbiter #(32,23)	bus_arbiter(i_clk,
 		// The Zip CPU bus master --- gets the priority slot
 		zip_cyc, (zip_stb)&&(zip_dwb_sel), zip_we, zip_addr, zip_data, zip_sel,
 			zip_dwb_ack, zip_dwb_stall, zip_dwb_err,
@@ -1834,7 +2142,7 @@ module	main(i_clk, i_reset,
 		(wbu_cyc),
 			(wbu_stb)&&(wbu_dwb_sel),
 			wbu_we,
-			wbu_addr[(28-1):0],
+			wbu_addr[(23-1):0],
 			wbu_data, wbu_sel,
 			wbu_dwb_ack, wbu_dwb_stall, wbu_dwb_err,
 		// Common bus returns
@@ -1863,7 +2171,7 @@ module	main(i_clk, i_reset,
 `endif
 `endif
 `ifdef	BUS_DELAY_NEEDED
-	busdelay #(28)	wbu_dwbi_delay(i_clk, i_reset,
+	busdelay #(23)	wbu_dwbi_delay(i_clk, i_reset,
 		wbu_dwbi_cyc, wbu_dwbi_stb, wbu_dwbi_we, wbu_dwbi_addr, wbu_dwbi_odata, wbu_dwbi_sel,
 			wbu_dwbi_ack, wbu_dwbi_stall, wbu_dwbi_idata, wbu_dwbi_err,
 		wb_cyc, wb_stb, wb_we, wb_addr, wb_data, wb_sel,
@@ -1927,6 +2235,15 @@ module	main(i_clk, i_reset,
 			buspic_ack, buspic_stall, buspic_data,
 			bus_int_vector, w_bus_int);
 `else	// BUSPIC_ACCESS
+
+	//
+	// In the case that there is no buspic peripheral
+	// responding on the wb bus
+	assign	buspic_ack   = 1'b0;
+	assign	buspic_err   = (buspic_stb);
+	assign	buspic_stall = 0;
+	assign	buspic_data  = 0;
+
 	assign	w_bus_int = 1'b0;	// buspic.INT.BUS.WIRE
 `endif	// BUSPIC_ACCESS
 
@@ -1943,8 +2260,11 @@ module	main(i_clk, i_reset,
 	assign	o_gpsu_tx    = 1'b1;
 	assign	w_gpsu_rts_n = 1'b0;
 
-	// In the case that there is no gpsu peripheral responding on the wb bus
-	assign	gpsu_ack   = (wb_stb) && (gpsu_sel);
+	//
+	// In the case that there is no gpsu peripheral
+	// responding on the wb bus
+	assign	gpsu_ack   = 1'b0;
+	assign	gpsu_err   = (gpsu_stb);
 	assign	gpsu_stall = 0;
 	assign	gpsu_data  = 0;
 
@@ -1962,8 +2282,11 @@ module	main(i_clk, i_reset,
 				bkram_ack, bkram_stall, bkram_data);
 `else	// BKRAM_ACCESS
 
-	// In the case that there is no bkram peripheral responding on the wb bus
-	assign	bkram_ack   = (wb_stb) && (bkram_sel);
+	//
+	// In the case that there is no bkram peripheral
+	// responding on the wb bus
+	assign	bkram_ack   = 1'b0;
+	assign	bkram_err   = (bkram_stb);
 	assign	bkram_stall = 0;
 	assign	bkram_data  = 0;
 

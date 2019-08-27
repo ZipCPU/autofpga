@@ -337,79 +337,79 @@ typedef	struct	GPSTB_S	{
 
 #ifdef	RTC_ACCESS
 #define	_BOARD_HAS_RTC
-static volatile RTCLIGHT *const _rtc = ((RTCLIGHT *)0x14000030);
+static volatile RTCLIGHT *const _rtc = ((RTCLIGHT *)0x00a00060);
 #endif	// RTC_ACCESS
 #define	_BOARD_HAS_VERSION
 #ifdef	MICROPHONE_ACCESS
 #define	_BOARD_HAS_WBMIC
-static volatile WBMIC *const _wbmic = ((WBMIC *)67108864);
+static volatile WBMIC *const _wbmic = ((WBMIC *)2097152);
 #endif	// MICROPHONE_ACCESS
 #ifdef	GPIO_ACCESS
 #define	_BOARD_HAS_GPIO
-static volatile unsigned *const _gpio = ((unsigned *)335544532);
+static volatile unsigned *const _gpio = ((unsigned *)10485968);
 #endif	// GPIO_ACCESS
 #ifdef	HDMI_OUT_EDID_ACCESS
 #define	_BOARD_HAS_HDMI_SRC_EDID
-static volatile EDID_SRC *const _edout = ((EDID_SRC *)335544832);
+static volatile EDID_SRC *const _edout = ((EDID_SRC *)10486272);
 #endif	// HDMI_OUT_EDID_ACCESS
 #ifdef	CFG_ACCESS
 #define	_BOARD_HAS_ICAPTETWO
-static volatile unsigned *const _icape = ((unsigned *)268435456);
+static volatile unsigned *const _icape = ((unsigned *)8388608);
 #endif	// CFG_ACCESS
 #ifdef	SPIO_ACCESS
 #define	_BOARD_HAS_SPIO
-static volatile unsigned *const _spio = ((unsigned *)335544548);
+static volatile unsigned *const _spio = ((unsigned *)10485984);
 #endif	// SPIO_ACCESS
 #ifdef	NETCTRL_ACCESS
 #define	_BOARD_HAS_NETMDIO
-static volatile ENETMDIO *const _mdio = ((ENETMDIO *)301989888);
+static volatile ENETMDIO *const _mdio = ((ENETMDIO *)9437184);
 #endif	// NETCTRL_ACCESS
 #define	_BOARD_HAS_BUSERR
-static volatile unsigned *const _buserr = ((unsigned *)335544516);
+static volatile unsigned *const _buserr = ((unsigned *)10485956);
 #define	_BOARD_HAS_BUILDTIME
 #ifdef	OLEDBW_ACCESS
 #define	_BOARD_HAS_OLEDBW
-static volatile OLEDBW *const _oledbw = ((OLEDBW *)335544352);
+static volatile OLEDBW *const _oledbw = ((OLEDBW *)10485824);
 #endif	// OLEDBW_ACCESS
 #ifdef	GPSTRK_ACCESS
-static volatile GPSTRACKER *const _gps = ((GPSTRACKER *)0x14000000);
+static volatile GPSTRACKER *const _gps = ((GPSTRACKER *)0x00a00000);
 #endif	// GPSTRK_ACCESS
 #ifdef	FLASHCFG_ACCESS
 #define	_BOARD_HAS_FLASHCFG
-static volatile unsigned * const _flashcfg = ((unsigned *)(0x02000000));
+static volatile unsigned * const _flashcfg = ((unsigned *)(0x00100000));
 #endif	// FLASHCFG_ACCESS
 #ifdef	MOUSE_ACCESS
 #define	_BOARD_HAS_WBMOUSE
-static volatile WBMOUSE *const _mouse = ((WBMOUSE *)335544336);
+static volatile WBMOUSE *const _mouse = ((WBMOUSE *)10485792);
 #endif	// MOUSE_ACCESS
 #ifdef	HDMI_IN_EDID_ACCESS
 #define	_BOARD_HAS_HDMI_IN_EDID
-static volatile unsigned *const _edin = ((unsigned *)335544576);
+static volatile unsigned *const _edin = ((unsigned *)10486016);
 #endif	// HDMI_IN_EDID_ACCESS
 #ifdef	SDSPI_SCOPE
 #define	_BOARD_HAS_SDSPI_SCOPE
-static volatile WBSCOPE *const _scope_sdcard = ((WBSCOPE *)0x0a000000);
+static volatile WBSCOPE *const _scope_sdcard = ((WBSCOPE *)0x00500000);
 #endif	// SDSPI_SCOPE
 #ifdef	FLASH_ACCESS
 #define	_BOARD_HAS_FLASH
 extern int _flash[1];
 #endif	// FLASH_ACCESS
 #ifdef	PWRCOUNT_ACCESS
-static volatile unsigned *const _pwrcount = ((unsigned *)0x140000dc);
+static volatile unsigned *const _pwrcount = ((unsigned *)0x00a000d8);
 #endif	// PWRCOUNT_ACCESS
 #ifdef	RTCDATE_ACCESS
 #define	_BOARD_HAS_RTCDATE
-static volatile unsigned *const _rtcdate = ((unsigned *)335544544);
+static volatile unsigned *const _rtcdate = ((unsigned *)10485980);
 #endif	// RTCDATE_ACCESS
 #ifdef	SDSPI_ACCESS
 #define	_BOARD_HAS_SDSPI
-static volatile SDSPI *const _sdcard = ((SDSPI *)0x0e000000);
+static volatile SDSPI *const _sdcard = ((SDSPI *)0x00600000);
 #endif	// SDSPI_ACCESS
 #define	_BOARD_HAS_SUBSECONDS
-static volatile unsigned *const _subseconds = ((unsigned *)0x140000e8);
+static volatile unsigned *const _subseconds = ((unsigned *)0x00a000e4);
 #ifdef	HDMIIN_ACCESS
 #define	_BOARD_HAS_HDMI_IN
-static volatile HDMI_IN *const _hin = ((HDMI_IN *)335544448);
+static volatile HDMI_IN *const _hin = ((HDMI_IN *)10485888);
 #endif	// HDMIIN_ACCESS
 #ifdef	SDRAM_ACCESS
 #define	_BOARD_HAS_SDRAM
@@ -417,17 +417,17 @@ extern char	_sdram[0x20000000];
 #endif	// SDRAM_ACCESS
 #ifdef	BUSPIC_ACCESS
 #define	_BOARD_HAS_BUSPIC
-static volatile unsigned *const _buspic = ((unsigned *)0x140000c8);
+static volatile unsigned *const _buspic = ((unsigned *)@$[0x%08x](REGBASE));
 #endif	// BUSPIC_ACCESS
 #ifdef	GPSUART_ACCESS
 #define	_BOARD_HAS_GPS_UART
-static volatile WBUART *const _gpsu = ((WBUART *)(0x0c000000));
+static volatile WBUART *const _gpsu = ((WBUART *)(@$[0x%08x](REGBASE)));
 #endif	// GPSUART_ACCESS
 #ifdef	BKRAM_ACCESS
 #define	_BOARD_HAS_BKRAM
 extern char	_bkram[0x00100000];
 #endif	// BKRAM_ACCESS
-static volatile GPSTB *const _gpstb = ((GPSTB *)0x14000040);
+static volatile GPSTB *const _gpstb = ((GPSTB *)@$[0x%08x](REGBASE));
 //
 // Interrupt assignments (3 PICs)
 //

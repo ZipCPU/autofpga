@@ -44,7 +44,7 @@
 #include "predicates.h"
 
 STRINGP		BMASTER::name(void) {
-	return getstring(*m_hash, KY_NAME);
+	return getstring(*m_hash, KYPREFIX);
 }
 
 STRINGP		BMASTER::bus_prefix(void) {

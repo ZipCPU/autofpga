@@ -75,54 +75,18 @@ bool	GENBUS::bus_option(const STRING &ky) {
 	return	(option != NULL);
 }
 
+STRINGP	GENBUS::name(void) {
+	if (m_info)
+		return m_info->name();
+	return NULL;
+}
+
 bool	BUSCLASS::matches(BUSINFO *bi) {
-	PLIST *pl = bi->m_plist;
-	if (!pl) {
-		gbl_msg.info("No bus class match for empty slave list");
-printf("NO MATCH: EMPTY SLAVE LIST\n");
-		return false;
-	}
+	MAPDHASH *bhash = bi->m_hash;
+	STRINGP	btype;
 
-	for(unsigned pi = 0; pi < pl->size(); pi++) {
-		MAPDHASH::iterator	kvpair, kvname;
-		STRINGP			bname;
-		PERIPH			*p;
-		bool			bfail;
-
-		p = (*pl)[pi];
-
-		if (p->p_phash->end() != (kvpair = findkey(*p->p_phash, KYSLAVE_BUS))) {
-			// Check any slaves of this bus to see if we can
-			// handle them
-			bname = getstring(kvpair->second.u.m_m, KY_NAME);
-			if (bname && bname->compare(*bi->m_name)==0) {
-				bfail = matchfail(kvpair->second.u.m_m);
-				if (bfail)
-					return false;
-			}
-		}
-
-		if (p->p_phash->end() != (kvpair = findkey(*p->p_phash, KYMASTER_BUS))) {
-			// Check any masters of this bus to see if we can
-			// handle them
-			bname = getstring(kvpair->second.u.m_m, KY_NAME);
-			if (bname && bname->compare(*bi->m_name)==0) {
-				bfail = matchfail(kvpair->second.u.m_m);
-				if (bfail)
-					return false;
-			}
-		}
-
-		if (p->p_phash->end() != (kvpair = findkey(*p->p_phash, KYBUS))) {
-			// Check any other bus references, for the same purpose
-			bname = getstring(kvpair->second.u.m_m, KY_NAME);
-			if (bname && bname->compare(*bi->m_name)==0) {
-				bfail = matchfail(kvpair->second.u.m_m);
-				if (bfail)
-					return false;
-			}
-		}
-	}
-
-	return true;
+	// Check any slaves of this bus to see if we can
+	// handle them
+	btype = getstring(bhash, KY_TYPE);
+	return matchtype(btype);
 }

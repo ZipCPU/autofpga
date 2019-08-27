@@ -57,27 +57,27 @@ class	GENBUS;
 #include "genbus.h"
 
 class	BUSINFO {
+	GENBUS	*m_genbus;	// Bus logic generator
+	int	m_nullsz;
+	STRINGP	m_name;
 public:
-	bool	m_addresses_assigned;
-	int	m_data_width, m_address_width;
 
 	// List of peripherals on the bus
 	PLISTP    m_plist;
 	// List of bus masters
 	MLISTP		m_mlist;
 	//
-	STRINGP   m_name, m_prefix, m_type;
-	GENBUS	*m_genbus;	// Bus logic generator
+	STRINGP   m_type;
 	CLOCKINFO *m_clock; // , *m_bhash;
-	int	m_nullsz;
 	MAPDHASH	*m_hash;
+	int	m_data_width, m_address_width;
+	bool	m_addresses_assigned;
 
 	BUSINFO(void) { // MAPDHASH *hash)
 		// m_bhash  = hash;
 		m_plist  = NULL;
 		m_mlist  = NULL;
 		m_name   = NULL;
-		m_prefix = NULL;
 		m_type   = NULL;
 		m_clock  = NULL;
 		m_hash   = NULL;
@@ -90,8 +90,8 @@ public:
 
 	BUSINFO(STRINGP name) {
 		m_plist  = NULL;
+		m_mlist  = NULL;
 		m_name   = name;
-		m_prefix = NULL;
 		m_type   = NULL;
 		m_clock  = NULL;
 		m_hash   = new MAPDHASH();
@@ -114,11 +114,10 @@ public:
 	PERIPH *add(PERIPHP p);
 	PERIPH *add(MAPDHASH *phash);
 	void	addmaster(MAPDHASH *hash) {
-		if (!m_mlist) {
+		if (!m_mlist)
 			m_mlist = new MLIST();
-		}
-
-		m_mlist->push_back(new BMASTER(hash));
+		BMASTERP bp = new BMASTER(hash);
+		m_mlist->push_back(bp);
 	}
 
 	void	writeout_bus_slave_defns_v(FILE *fp);
@@ -131,12 +130,20 @@ public:
 
 	PERIPHP operator[](unsigned i);
 	unsigned size(void);
-	void	init(MAPDHASH *phash, MAPDHASH *bp);
+	void	init(MAPDHASH *phash);
+	void	init(STRINGP bname);
+	void	merge(STRINGP component, MAPDHASH *hash);
 	void	integrity_check(void);
 	bool	ismember_of(MAPDHASH *phash);
 	STRINGP	name(void);
+	STRINGP	prefix(STRINGP p = NULL);
 	STRINGP	btype(void);
 	STRINGP	reset_wire(void);
+	STRINGP	slave_portlist(PERIPHP);
+	STRINGP	slave_ansi_portlist(PERIPHP);
+	STRINGP	master_portlist(BMASTERP);
+	STRINGP	master_ansi_portlist(BMASTERP);
+	GENBUS	*generator(void);	// Bus logic generator
 };
 
 class	BUSLIST : public std::vector<BUSINFO *>	{
@@ -146,16 +153,21 @@ public:
 	unsigned	get_base_address(MAPDHASH *phash);
 	void	addperipheral(MAPDHASH *phash);
 	void	addperipheral(MAPT &map);
+	void	addmaster(MAPDHASH *phash);
+	void	addmaster(MAPT &map);
 
 	void	adddefault(MAPDHASH &master, STRINGP defname);
 
-	BUSINFO *addbus_aux(MAPDHASH *phash, STRINGP pname, MAPDHASH *bp);
-	void	addbus(MAPDHASH *phash);
-	void	addbus(MAPT &map);
+	BUSINFO *newbus_aux(STRINGP cname, MAPDHASH *bp);
+	BUSINFO *newbus_aux(STRINGP cname, STRINGP bn);
+	void	addbus(STRINGP cname, STRINGP busname);
+	void	addbus(STRINGP cname, MAPDHASH *phash);
+	void	addbus(STRINGP cname, MAPT &map);
 	// void	countsio(MAPDHASH *phash);
 	// void	countsio(MAPT &map);
 	BUSINFO *find_bus_of_peripheral(MAPDHASH *phash);
 	void	assign_bus_types(void);
+	void	checkforbusdefns(STRINGP, MAPDHASH *, const STRING &);
 };
 
 extern	void	build_bus_list(MAPDHASH &master);

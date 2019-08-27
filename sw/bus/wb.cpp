@@ -69,17 +69,15 @@
 //	... only, I've currently chosen to do this in a slave independent
 //	fashion, and so the ROM, WOM, and AWID strings get set as a default
 //
-//	SLAVE.ASCIIPORTLIST ... same thing,
+//	SLAVE.ANSIPORTLIST ... same thing,
 //
-//	SLAVE.IASCII: i_
-//	SLAVE.OASCII: o_
-//	ASCBLIST.PREFIX: prefix
-//	ASCBLIST.SUFFIX:
-//	// ASCBLIST.CAPS: // Not (currently) used
-//	ASCBLIST.DATA:
-//		.@$(SLAVE.IASCII)@$(ASCBLIST.PREFIX)cyc@$(ASCBLIST.SUFFIX)(@$SLAVE.BUS)_cyc),
-//		.@$(SLAVE.IASCII)@$(ASCBLIST.PREFIX)stb@$(ASCBLIST.SUFFIX)(@$SLAVE.BUS)_stb),
-//		.@$(SLAVE.IASCII)@$(ASCBLIST.PREFIX)we@$(ASCBLIST.SUFFIX)(@$SLAVE.BUS)_we),
+//	SLAVE.IANSI: i_
+//	SLAVE.OANSI: o_
+//	SLAVE.ANSPREFIX:
+//	SLAVE.ANSSUFFIX:
+//		.@$(SLAVE.IANSI)@$(SLAVE.ANSPREFIX)cyc@$(SLAVE.ANSSUFFIX)(@$SLAVE.BUS)_cyc),
+//		.@$(SLAVE.IANSI)@$(SLAVE.ANSPREFIX)stb@$(SLAVE.ANSSUFFIX)(@$SLAVE.BUS)_stb),
+//		.@$(SLAVE.IANSI)@$(SLAVE.ANSPREFIX)we@$(SLAVE.ANSSUFFIX)(@$SLAVE.BUS)_we),
 //			.
 //
 // Creator:	Dan Gisselquist, Ph.D.
@@ -147,20 +145,28 @@ extern	WBBUSCLASS	wbclass;
 
 WBBUS::WBBUS(BUSINFO *bi) {
 	m_info = bi;
-	PLIST	*pl = m_info->m_plist;
-	m_plist = pl;
 	m_slist = NULL;
 	m_dlist = NULL;
 
 	m_is_single = false;
 	m_is_double = false;
 
+	m_num_single = 0;
+	m_num_double = 0;
+	m_num_total = 0;
+}
+
+void	WBBUS::allocate_subbus(void) {
+	PLIST	*pl = m_info->m_plist;
 	BUSINFO	*sbi = NULL, *dbi = NULL;
 
-	gbl_msg.info("Generating bus logic generator for %s\n",
-		(m_info->m_name) ? m_info->m_name->c_str() : "(No-name)");
-	printf("Generating bus logic generator for %s\n",
-		(m_info->m_name) ? m_info->m_name->c_str() : "(No-name)");
+	if (NULL == pl || pl->size() == 0) {
+		gbl_msg.warning("Bus %s has no attached slaves\n",
+			(name()) ? name()->c_str() : "(No-name)");
+	}
+
+	gbl_msg.info("Generating WB bus logic generator for %s\n",
+		(name()) ? name()->c_str() : "(No-name)");
 	countsio();
 
 	if (m_num_single <= 2) {
@@ -202,38 +208,38 @@ WBBUS::WBBUS(BUSINFO *bi) {
 		dbi = create_dio();
 	}
 
-	if (!m_is_double && !m_is_single)
-			for(unsigned pi = 0; pi< pl->size(); pi++) {
-		PERIPHP	p = (*pl)[pi];
-		STRINGP	ptyp;
+	if (!m_is_double && !m_is_single && pl) {
+		//
+		// There exist peripherals that are neither singles nor doubles
+		//
+		for(unsigned pi = 0; pi< pl->size(); pi++) {
+			PERIPHP	p = (*pl)[pi];
+			STRINGP	ptyp;
 
-		ptyp = getstring(p->p_phash, KYSLAVE_TYPE);
-// printf("SLAVE-TYPE: %s\n", (ptyp) ? ptyp->c_str() : "(Null)");
-		if (m_slist && ptyp != NULL
+			ptyp = getstring(p->p_phash, KYSLAVE_TYPE);
+			if (m_slist && ptyp != NULL
 				&& ptyp->compare(KYSINGLE) == 0) {
-			m_info->m_plist->erase(pl->begin()+pi);
-			pi--;
-			m_slist->add(p);
-			// printf("Adjusted slist, plist has %d and slist has %d now\n", (int)pl->size(), (int)m_slist->size());
-		} else if (m_dlist && ptyp != NULL
+				m_info->m_plist->erase(pl->begin()+pi);
+				pi--;
+				m_slist->add(p);
+			} else if (m_dlist && ptyp != NULL
 						&& ptyp->compare(KYDOUBLE) == 0) {
-			m_info->m_plist->erase(pl->begin()+pi);
-			pi--;
-			m_dlist->add(p);
-			// printf("Adjusted dlist, plist has %d and dlist has %d now\n", (int)pl->size(), (int)m_dlist->size());
-		} else {
+				m_info->m_plist->erase(pl->begin()+pi);
+				pi--;
+				m_dlist->add(p);
+			} else {
 			// Leave this peripheral in m_info->m_plist
+			}
 		}
 	}
 
-	countsio();
-//	printf("PLIST now has %d entries\n", (int)m_info->m_plist->size());
-//	printf("After reallocation, %d, %d, %d\n", m_num_single, m_num_double, m_num_total-m_num_single-m_num_double);
+//	countsio();
 
 	if (sbi)
-		sbi->m_genbus = wbclass.create(sbi);
+		setstring(sbi->m_hash, KY_TYPE, wbclass.name());
 	if (dbi)
-		dbi->m_genbus = wbclass.create(dbi);
+		setstring(dbi->m_hash, KY_TYPE, wbclass.name());
+	REHASH;
 }
 
 int	WBBUS::address_width(void) {
@@ -244,7 +250,7 @@ int	WBBUS::address_width(void) {
 bool	WBBUS::get_base_address(MAPDHASH *phash, unsigned &base) {
 	if (!m_info || !m_info->m_plist) {
 		gbl_msg.error("BUS[%s] has no peripherals!\n",
-			(m_info) ? m_info->m_name->c_str() : "(No name)");
+			(name()) ? name()->c_str() : "(No name)");
 		return false;
 	} else
 		return m_info->m_plist->get_base_address(phash, base);
@@ -252,14 +258,21 @@ bool	WBBUS::get_base_address(MAPDHASH *phash, unsigned &base) {
 
 void	WBBUS::assign_addresses(void) {
 	int	address_width;
+
+	if (m_info->m_addresses_assigned)
+		return;
+	if ((NULL == m_slist)&&(NULL == m_dlist))
+		allocate_subbus();
+
 	if (!m_info)
 		return;
 	gbl_msg.info("Assigning addresses for bus %s\n",
-		(m_info) ? m_info->m_name->c_str() : "(No name bus)");
+		(name()) ? name()->c_str() : "(No name bus)");
 	if (!m_info->m_plist||(m_info->m_plist->size() < 1)) {
 		m_info->m_address_width = 0;
 	} else if (!m_info->m_addresses_assigned) {
-		int	dw = m_info->data_width();
+		int	dw = m_info->data_width(),
+			nullsz;
 
 		if (m_slist)
 			m_slist->assign_addresses(dw, 0);
@@ -267,8 +280,11 @@ void	WBBUS::assign_addresses(void) {
 		if (m_dlist)
 			m_dlist->assign_addresses(dw, 0);
 
-		m_plist->assign_addresses(dw, m_info->m_nullsz);
-		address_width = m_plist->get_address_width();
+		if (!getvalue(*m_info->m_hash, KY_NULLSZ, nullsz))
+			nullsz = 0;
+
+		m_info->m_plist->assign_addresses(dw, nullsz);
+		address_width = m_info->m_plist->get_address_width();
 		m_info->m_address_width = address_width;
 		if (m_info->m_hash) {
 			setvalue(*m_info->m_hash, KY_AWID, m_info->m_address_width);
@@ -282,18 +298,21 @@ BUSINFO *WBBUS::create_sio(void) {
 
 	BUSINFO	*sbi;
 	SUBBUS	*subp;
-	STRINGP	name;
+	STRINGP	sioname;
 	MAPDHASH *bushash;
 
-	name = new STRING(STRING("" PREFIX) + (*m_info->m_name) + "_sio");
+	sioname = new STRING(STRING("" PREFIX) + (*name()) + "_sio");
 	bushash = new MAPDHASH();
-	setstring(*bushash, KYPREFIX, name);
+	setstring(*bushash, KYPREFIX, sioname);
 	setstring(*bushash, KYSLAVE_TYPE, new STRING(KYDOUBLE));
-	sbi  = new BUSINFO(name);
-	sbi->m_prefix = new STRING("_sio");;
+	setstring(*bushash, KYSLAVE_PREFIX, sioname);
+	setstring(*bushash, KYMASTER_BUS, sioname);
+	sbi  = new BUSINFO(sioname);
+	sbi->prefix(new STRING("_sio"));
 	sbi->m_data_width = m_info->m_data_width;
 	sbi->m_clock      = m_info->m_clock;
-	subp = new SUBBUS(bushash, name, sbi);
+	sbi->addmaster(m_info->m_hash);
+	subp = new SUBBUS(bushash, sioname, sbi);
 	subp->p_slave_bus = m_info;
 	// subp->p_master_bus = set by the slave to be sbi
 	m_info->m_plist->add(subp);
@@ -309,18 +328,20 @@ BUSINFO *WBBUS::create_dio(void) {
 
 	BUSINFO	*dbi;
 	SUBBUS	*subp;
-	STRINGP	name;
+	STRINGP	dioname;
 	MAPDHASH	*bushash;
 
-	name = new STRING(STRING("" PREFIX) + (*m_info->m_name) + "_dio");
+	dioname = new STRING(STRING("" PREFIX) + (*name()) + "_dio");
 	bushash = new MAPDHASH();
-	setstring(*bushash, KYPREFIX, name);
+	setstring(*bushash, KYPREFIX, dioname);
 	setstring(*bushash, KYSLAVE_TYPE, new STRING(KYOTHER));
-	dbi  = new BUSINFO(name);
-	dbi->m_prefix = new STRING("_dio");;
+	setstring(*bushash, KYSLAVE_PREFIX, dioname);
+	dbi  = new BUSINFO(dioname);
+	dbi->prefix(new STRING("_dio"));
 	dbi->m_data_width = m_info->m_data_width;
 	dbi->m_clock      = m_info->m_clock;
-	subp = new SUBBUS(bushash, name, dbi);
+	dbi->addmaster(m_info->m_hash);
+	subp = new SUBBUS(bushash, dioname, dbi);
 	subp->p_slave_bus = m_info;
 	// subp->p_master_bus = set by the slave to be dbi
 	m_info->m_plist->add(subp);
@@ -338,7 +359,9 @@ void	WBBUS::countsio(void) {
 	m_num_double = 0;
 	m_num_total = 0;
 
-// printf("COUNTSIO: PLIST has %d entries\n", (int)m_info->m_plist->size());
+	if (NULL == pl)
+		return;
+
 	for(unsigned pi=0; pi< pl->size(); pi++) {
 		strp = getstring((*pl)[pi]->p_phash, KYSLAVE_TYPE);
 		if (NULL != strp) {
@@ -357,7 +380,7 @@ void	WBBUS::integrity_check(void) {
 
 	if (m_info && m_info->m_data_width <= 0) {
 		gbl_msg.error("ERR: BUS width not defined for %s\n",
-			m_info->m_name->c_str());
+			name()->c_str());
 	}
 }
 
@@ -365,15 +388,15 @@ void	WBBUS::writeout_defn_v(FILE *fp, const char* pname,
 		const char *pfx,
 		const int aw, const int dw,
 		const char *errwire, const char *btyp) {
-	STRINGP	n = m_info->m_name;
+	STRINGP	n = name();
 
 	fprintf(fp, "\t// Wishbone definitions for bus %s%s, component %s\n",
 		n->c_str(), btyp, pname);
-	fprintf(fp, "\twire\t\t%s_cyc, %s_stb, %s_we;",
+	fprintf(fp, "\twire\t\t%s_cyc, %s_stb, %s_we;\n",
 		pfx, pfx, pfx);
-	fprintf(fp, "\twire\t[%d-1:0]\t%s_addr;", aw, pfx);
-	fprintf(fp, "\twire\t[%d-1:0]\t%s_data;", dw, pfx);
-	fprintf(fp, "\twire\t[%d-1:0]\t%s_sel;", dw/8, pfx);
+	fprintf(fp, "\twire\t[%d:0]\t%s_addr;\n", address_width()-1, pfx);
+	fprintf(fp, "\twire\t[%d:0]\t%s_data;\n", dw-1, pfx);
+	fprintf(fp, "\twire\t[%d:0]\t%s_sel;\n", dw/8-1, pfx);
 	fprintf(fp, "\twire\t\t%s_stall, %s_ack, %s_err", pfx, pfx, pfx);
 	if ((errwire)&&(errwire[0] != '\0')
 			&&(STRING(STRING(pfx)+"_err").compare(errwire)!=0))
@@ -381,12 +404,12 @@ void	WBBUS::writeout_defn_v(FILE *fp, const char* pname,
 			"\tassign\t\t%s_err = %s;\n", errwire, pfx, errwire);
 	else
 		fprintf(fp, ";\n");
-	fprintf(fp, "\twire\t[%d-1:0]\t%s_idata;", dw, pfx);
+	fprintf(fp, "\twire\t[%d:0]\t%s_idata;\n", dw-1, pfx);
 }
 
 void	WBBUS::writeout_bus_slave_defns_v(FILE *fp) {
 	PLIST	*p = m_info->m_plist;
-	STRINGP	n = m_info->m_name;
+	STRINGP	n = name();
 
 	if (m_slist) {
 		for(PLIST::iterator pp=m_slist->begin();
@@ -449,8 +472,10 @@ void	WBBUS::write_addr_range(FILE *fp, const PERIPHP p, const int dalines) {
 		fprintf(fp, " // 0x%0*lx - 0x%0*lx", w, p->p_base,
 			w, p->p_base + (p->p_naddr << (dalines))-1);
 }
+
 void	WBBUS::writeout_bus_select_v(FILE *fp) {
-	STRINGP	n = m_info->m_name;
+#ifdef	DEPRECATED_CODE
+	STRINGP	n = name();
 	STRING	addrbus = STRING((*n)+"_addr");
 	unsigned	sbaw = address_width();
 	unsigned	dw   = m_info->data_width();
@@ -495,7 +520,6 @@ void	WBBUS::writeout_bus_select_v(FILE *fp) {
 					fprintf(fp, "\n");
 			}
 		}
-
 	}
 
 	if (m_dlist) {
@@ -536,52 +560,54 @@ void	WBBUS::writeout_bus_select_v(FILE *fp) {
 	for(unsigned tmp=mask; ((tmp)&&((tmp&1)==0)); tmp>>=1)
 		unused_lsbs++;
 
-	if (m_plist->size() == 1) {
-		if ((*m_plist)[0]->p_name)
+	if (m_info->m_plist->size() == 1) {
+		if ((*m_info->m_plist)[0]->p_name)
 			fprintf(fp, "\tassign\t%12s_sel = (%s_cyc); "
 					"// Only one peripheral on this bus\n",
-				(*m_plist)[0]->p_name->c_str(),
+				(*m_info->m_plist)[0]->p_name->c_str(),
 				n->c_str());
-	} else for(unsigned i=0; i< m_plist->size(); i++) {
-		if ((*m_plist)[i]->p_name) {
-			if ((*m_plist)[i]->p_mask == 0) {
+	} else for(unsigned i=0; i< m_info->m_plist->size(); i++) {
+		PERIPHP p = (*m_info->m_plist)[i];
+		const char *pn = p->p_name->c_str();
+
+		if (pn) {
+			if (p->p_mask == 0) {
 				fprintf(fp, "\tassign\t%12s_sel = 1\'b0; // ERR: address mask == 0\n",
-					(*m_plist)[i]->p_name->c_str());
+					pn);
 			} else {
 				assert(sbaw > unused_lsbs);
 				assert(sbaw > 0);
 				fprintf(fp, "\tassign\t%12s_sel "
 					"= ((%s[%2d:%2d] & %2d\'h%lx) == %2d\'h%0*lx);",
-					(*m_plist)[i]->p_name->c_str(),
-					addrbus.c_str(),
-					sbaw-1,
+					pn, addrbus.c_str(), sbaw-1,
 					unused_lsbs,
-					sbaw-unused_lsbs, (*m_plist)[i]->p_mask >> unused_lsbs,
+					sbaw-unused_lsbs, p->p_mask >> unused_lsbs,
 					sbaw-unused_lsbs,
 					(sbaw-unused_lsbs+3)/4,
-					(*m_plist)[i]->p_base>>(dalines+unused_lsbs));
-				write_addr_range(fp, (*m_plist)[i], dalines);
+					p->p_base>>(dalines+unused_lsbs));
+				write_addr_range(fp, p, dalines);
 				fprintf(fp, "\n");
 			}
-		} if ((*m_plist)[i]->p_master_bus) {
+		} if (p->p_master_bus) {
 			fprintf(fp, "//x2\tWas a master bus as well\n");
 		}
 	} fprintf(fp, "\t//\n\n");
-
+#endif
 }
 
 void	WBBUS::writeout_no_slave_v(FILE *fp, STRINGP prefix) {
-/*
-	STRINGP	n = m_info->m_name;
+	STRINGP	n = m_info->name();
 
-	fprintf(fp, "\n");
-	fprintf(fp, "\t// In the case that there is no %s peripheral responding on the %s bus\n", prefix->c_str(), n->c_str());
-	fprintf(fp, "\tassign\t%s_ack   = (%s_stb) && (%s_sel);\n",
-			prefix->c_str(), n->c_str(), prefix->c_str());
+	fprintf(fp, "\n\t//\n");
+	fprintf(fp, "\t// In the case that there is no %s peripheral\n"
+		"\t// responding on the %s bus\n",
+			prefix->c_str(), n->c_str());
+	fprintf(fp, "\tassign\t%s_ack   = 1\'b0;\n", prefix->c_str());
+	fprintf(fp, "\tassign\t%s_err   = (%s_stb);\n",
+			prefix->c_str(), prefix->c_str());
 	fprintf(fp, "\tassign\t%s_stall = 0;\n", prefix->c_str());
 	fprintf(fp, "\tassign\t%s_data  = 0;\n", prefix->c_str());
 	fprintf(fp, "\n");
-*/
 }
 
 void	WBBUS::writeout_no_master_v(FILE *fp) {
@@ -590,7 +616,7 @@ void	WBBUS::writeout_no_master_v(FILE *fp) {
 		gbl_msg.error("(Unnamed bus) has no name!\n");
 
 	// PLIST	*p = m_info->m_plist;
-	STRINGP	n = m_info->m_name;
+	STRINGP	p = m_info->bus_prefix();
 
 	fprintf(fp, "\n");
 	fprintf(fp, "\t// In the case that nothing drives the %s bus ...\n", n->c_str());
@@ -613,6 +639,10 @@ void	WBBUS::writeout_no_master_v(FILE *fp) {
 */
 }
 
+//
+// Connect this master to the crossbar.  Specifically, we want to output
+// a list of master connections to fill the given port.
+//
 void	WBBUS::xbarcon_master(FILE *fp, const char *tabs,
 		const char *pfx, const char *sig, bool comma) {
 	fprintf(fp, "%s%s({\n", tabs, pfx);
@@ -625,6 +655,10 @@ void	WBBUS::xbarcon_master(FILE *fp, const char *tabs,
 			sig, tabs, (comma) ? ",":"");
 }
 
+//
+// Output a list of connections to slave bus wires.  Used in connecting the
+// slaves to the various crossbar inputs.
+//
 void	WBBUS::xbarcon_slave(FILE *fp, PLIST *pl, const char *tabs,
 		const char *pfx, const char *sig, bool comma) {
 	fprintf(fp, "%s%s({\n", tabs, pfx);
@@ -638,30 +672,41 @@ void	WBBUS::xbarcon_slave(FILE *fp, PLIST *pl, const char *tabs,
 }
 
 void	WBBUS::writeout_bus_logic_v(FILE *fp) {
-	// PLIST	*p = m_info->m_plist;
-	STRINGP		n = m_info->m_name, rst;
+	STRINGP		n = name(), rst;
 	CLOCKINFO	*c = m_info->m_clock;
 	PLIST::iterator	pp;
 	PLISTP		pl;
+	unsigned	unused_lsbs;
 
-	if (NULL == m_plist)
+	if (NULL == m_info->m_plist)
 		return;
 
+	if (NULL == m_info->m_mlist) {
+		gbl_msg.error("No masters assigned to bus %s\n",
+				n->c_str());
+		return;
+	}
 	if (NULL == (rst = m_info->reset_wire())) {
 		gbl_msg.warning("Bus %s has no associated reset wire, using \'i_reset\'\n", n->c_str());
 		rst = new STRING("i_reset");
 		setstring(m_info->m_hash, KY_RESET, rst);
+		REHASH;
 	}
 
 	if (NULL == c || NULL == c->m_wire) {
 		gbl_msg.fatal("Bus %s has no associated clock\n", n->c_str());
 	}
 
-	writeout_bus_select_v(fp);
 
-	if (m_plist->size() == 0) {
+	if (m_info->m_plist->size() == 0) {
+		fprintf(fp, "\t//\n"
+			"\t// Bus %s has no slaves\n"
+			"\t//\n\n", n->c_str());
+
 		// Since this bus has no slaves, any attempt to access it
 		// needs to cause a bus error.
+		//
+		// Need to loop through all possible masters ...	
 		for(MLIST::iterator pp=m_info->m_mlist->begin(); pp != m_info->m_mlist->end(); pp++) {
 			STRINGP	pfx= (*pp)->bus_prefix();
 
@@ -675,14 +720,46 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 				pfx->c_str());
 		}
 		return;
-	} else if ((m_plist->size() == 1)&&(m_info->m_mlist->size() == 1)) {
+	} else if (NULL == m_info->m_mlist || m_info->m_mlist->size() == 0) {
+		for(unsigned p=0; p < m_info->m_plist->size(); p++) {
+			STRINGP	pstr = (*m_info->m_plist)[p]->bus_prefix();
+			fprintf(fp,
+		"\t//\n"
+		"\t// The %s bus has no masters assigned to it\n"
+		"\t//\n"
+		"\tassign	%s_cyc = 1\'b0;\n"
+		"\tassign	%s_stb = 1\'b0;\n"
+		"\tassign	%s_we  = 1\'b0;\n"
+		"\tassign	%s_addr= 0;\n"
+		"\tassign	%s_data= 0;\n"
+		"\tassign	%s_sel;\n\n",
+		pstr->c_str(),
+		//
+		pstr->c_str(), pstr->c_str(), pstr->c_str(),
+		pstr->c_str(), pstr->c_str(), pstr->c_str());
+		}
+
+		return;
+	} else if ((m_info->m_plist->size() == 1)&&(m_info->m_mlist->size() == 1)) {
+		MLIST::iterator	mp = m_info->m_mlist->begin();
+		PLIST::iterator	pp = m_info->m_plist->begin();
+		STRINGP	strp;
 		// Only one master connected to only one slave--skip all the
 		// extra connection logic.
-		MLIST::iterator	mp = m_info->m_mlist->begin();
-		PLIST::iterator	pp = m_plist->begin();
-		STRINGP	strp;
+		//
+		// Can only simplify if there's only one peripheral and only
+		// one master
+		//
+		STRINGP	slv  = (*m_info->m_plist)[0]->bus_prefix();
+		STRINGP	mstr = (*m_info->m_mlist)[0]->bus_prefix();
 
-		if (NULL != (strp = getstring((*m_plist)[0]->p_phash,
+		fprintf(fp,
+		"//\n"
+		"// Bus %s has only one master (%s) and one slave (%s)\n"
+		"// connected to it -- skipping the interconnect\n"
+		"//\n", n->c_str(), mstr->c_str(), slv->c_str());
+
+		if (NULL != (strp = getstring((*m_info->m_plist)[0]->p_phash,
 						KYERROR_WIRE))) {
 			fprintf(fp, "\tassign\t%s_err = %s;\n",
 				(*pp)->bus_prefix()->c_str(),
@@ -707,23 +784,30 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 
 	// Start with the slist
 	if (m_slist) {
-		fprintf(fp, "\treg\t\t" PREFIX "r_%s_sio_ack;\n",
-				n->c_str());
-		fprintf(fp, "\treg\t[%d:0]\t" PREFIX "r_%s_sio_data;\n\n",
-			m_info->data_width()-1, n->c_str());
+		STRING	sio_bus_prefix = STRING(*m_info->name()) + "_sio";
+		STRINGP	slp = &sio_bus_prefix;
 
-		fprintf(fp, "\tassign\t" PREFIX "%s_sio_stall = 1\'b0;\n\n", n->c_str());
-		fprintf(fp, "\tinitial " PREFIX "r_%s_sio_ack = 1\'b0;\n"
+		fprintf(fp,
+			"\t//\n"
+			"\t// %s Bus logic to handle SINGLE slaves\n"
+			"\t//\n", n->c_str());
+
+		fprintf(fp, "\treg\t\t" PREFIX "r_%s_ack;\n", slp->c_str());
+		fprintf(fp, "\treg\t[%d:0]\t" PREFIX "r_%s_data;\n\n",
+			m_info->data_width()-1, slp->c_str());
+
+		fprintf(fp, "\tassign\t" PREFIX "%s_stall = 1\'b0;\n\n", slp->c_str());
+		fprintf(fp, "\tinitial " PREFIX "r_%s_ack = 1\'b0;\n"
 			"\talways\t@(posedge %s)\n"
-			"\t\t" PREFIX "r_%s_sio_ack <= (%s_stb)&&(" PREFIX "%s_sio_sel);\n",
-				n->c_str(),
-				c->m_wire->c_str(),
-				n->c_str(),
-				n->c_str(), n->c_str());
-		fprintf(fp, "\tassign\t" PREFIX "%s_sio_ack = " PREFIX "r_%s_sio_ack;\n\n",
-				n->c_str(), n->c_str());
+			"\t\t" PREFIX "r_%s_ack <= (%s_stb);\n",
+				slp->c_str(), c->m_wire->c_str(),
+				slp->c_str(), slp->c_str());
+		fprintf(fp, "\tassign\t" PREFIX "%s_ack = " PREFIX "r_%s_ack;\n\n",
+				slp->c_str(), slp->c_str());
 
-		unsigned mask = 0, unused_lsbs = 0, lgdw;
+		unsigned mask = 0, lgdw;
+		unused_lsbs = 0;
+
 		for(unsigned k=0; k<m_slist->size(); k++) {
 			mask |= (*m_slist)[k]->p_mask;
 		} for(unsigned tmp=mask; ((tmp!=0)&&((tmp & 1)==0)); tmp >>= 1)
@@ -737,27 +821,104 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 			"\tcasez( %s_addr[%d:%d] )\n",
 				c->m_wire->c_str(),
 				// mask, lgdw, unused_lsbs,
-				n->c_str(),
+				slp->c_str(),
 				nextlg(mask)-1, unused_lsbs);
-		for(unsigned j=0; j<m_slist->size()-1; j++) {
-			fprintf(fp, "\t\t%d'h%lx: " PREFIX "r_%s_sio_data <= %s_data;\n",
+		for(unsigned j=0; j<m_slist->size(); j++) {
+			fprintf(fp, "\t\t%d'h%lx: " PREFIX "r_%s_data <= %s_data;\n",
 				nextlg(mask)-unused_lsbs,
 				((*m_slist)[j]->p_base) >> (unused_lsbs + lgdw),
-				n->c_str(),
-				(*m_slist)[j]->p_name->c_str());
+				slp->c_str(),
+				(*m_slist)[j]->bus_prefix()->c_str());
 		}
 
-		fprintf(fp, "\t\tdefault: " PREFIX "r_%s_sio_data <= %s_data;\n",
-			n->c_str(),
-			(*m_slist)[m_slist->size()-1]->p_name->c_str());
+		if (m_slist->size()+1 == nextlg(m_slist->size())) {
+			// We need a default option
+		if (bus_option(KY_OPT_LOWPOWER)) {
+			int	v;
+			STRINGP str;
+			if (getvalue(*m_info->m_hash, KY_OPT_LOWPOWER, v))
+				fprintf(fp,
+				"\t\tdefault: " PREFIX
+					"r_%s_data <= (%d) ? 0 : %s_data;\n",
+				slp->c_str(), v,
+				(*m_slist)[m_slist->size()-1]->p_name->c_str());
+			else {
+				str = getstring(*m_info->m_hash, KY_OPT_LOWPOWER);
+				fprintf(fp, "\t\tdefault: " PREFIX "r_%s_data <= (%s) ? 0 : %s_data;\n",
+				slp->c_str(), (str) ? str->c_str() : "1\'b0",
+				(*m_slist)[m_slist->size()-1]->p_name->c_str());
+			}
+
+		} else {
+			fprintf(fp, "\t\tdefault: " PREFIX "r_%s_data <= %s_data;\n",
+				slp->c_str(),
+				(*m_slist)[m_slist->size()-1]->p_name->c_str());
+		}}
 		fprintf(fp, "\tendcase\n");
-		fprintf(fp, "\tassign\t" PREFIX "%s_sio_data = " PREFIX "r_%s_sio_data;\n\n",
-			n->c_str(), n->c_str());
-	}
+		fprintf(fp, "\tassign\t" PREFIX "%s_idata = " PREFIX "r_%s_data;\n\n",
+			slp->c_str(), slp->c_str());
+
+		fprintf(fp, "\n\t//\n"
+			"\t// Now to translate this logic to the various SIO slaves\n\t//\n"
+			"\t// In this case, the SIO bus has the prefix %s\n"
+			"\t// and all of the slaves have various wires beginning\n"
+			"\t// with their own respective bus prefixes.\n"
+			"\t// Our goal here is to make certain that all of\n"
+			"\t// the slave bus inputs match the SIO bus wires\n",
+			slp->c_str());
+		
+		unsigned	sbaw;
+		unsigned	dw   = m_info->data_width();
+		unsigned	dalines = nextlg(dw/8);
+		mask = 0;
+
+		sbaw = m_slist->get_address_width();
+		for(unsigned j=0; j<m_slist->size(); j++) {
+			const char *pn = (*m_slist)[j]->bus_prefix()->c_str();
+
+			fprintf(fp, "\tassign\t%s_cyc = %s_cyc;\n",
+				pn, slp->c_str());
+
+			if ((*m_slist)[j]->p_mask == 0) {
+				fprintf(fp, "\tassign\t%s_stb = 1\'b0; // ERR: (SIO) address mask == 0\n",
+					pn);
+			} else {
+				assert(sbaw > unused_lsbs);
+				assert(sbaw > 0);
+				fprintf(fp, "\tassign\t%s_stb = %s_stb "
+					"&& (%s_addr[%2d:%2d] == %2d\'h%0*lx); ",
+					pn, slp->c_str(), slp->c_str(),
+					sbaw-1, unused_lsbs,
+					sbaw-unused_lsbs,
+					(sbaw-unused_lsbs+3)/4,
+					(*m_slist)[j]->p_base >> (unused_lsbs+dalines));
+				write_addr_range(fp, (*m_slist)[j], dalines);
+				fprintf(fp, "\n");
+			}
+			fprintf(fp,
+			"\tassign\t%s_we  = %s_we;\n"
+			"\tassign\t%s_data= %s_data;\n"
+			"\tassign\t%s_sel = %s_sel;\n",
+				pn, slp->c_str(),
+				pn, slp->c_str(),
+				pn, slp->c_str());
+		}
+	} else
+		fprintf(fp, "\t//\n\t// No class SINGLE peripherals on the \"%s\" bus\n\t//\n\n", n->c_str());
 
 	// Then the dlist
 	if (m_dlist) {
-		unsigned mask = 0, unused_lsbs = 0, lgdw, maskbits;
+		STRING	dio_bus_prefix = STRING(*m_info->name()) + "_dio";
+		STRINGP	dlp = &dio_bus_prefix;
+
+		fprintf(fp,
+			"\t//\n"
+			"\t// %s Bus logic to handle %ld DOUBLE slaves\n"
+			"\t//\n"
+			"\t//\n", n->c_str(), m_dlist->size());
+
+		unsigned mask = 0, lgdw, maskbits;
+		unused_lsbs = 0;
 		for(unsigned k=0; k<m_dlist->size(); k++) {
 			mask |= (*m_dlist)[k]->p_mask;
 		} for(unsigned tmp=mask; ((tmp!=0)&&((tmp & 1)==0)); tmp >>= 1)
@@ -771,42 +932,62 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 		lgdw = nextlg(m_info->data_width())-3;
 
 
-		fprintf(fp, "\treg\t[1:0]\t" PREFIX "r_%s_dio_ack;\n",
-				n->c_str());
+		fprintf(fp, "\treg\t[1:0]\t" PREFIX "r_%s_ack;\n",
+				dlp->c_str());
 		fprintf(fp, "\t// # dlist = %d, nextlg(#dlist) = %d\n",
 			(int)m_dlist->size(),
 			nextlg(m_dlist->size()));
-		fprintf(fp, "\treg\t[%d:0]\t" PREFIX "r_%s_dio_bus_select;\n",
-			nextlg((int)m_dlist->size())-1, n->c_str());
-		fprintf(fp, "\treg\t[%d:0]\t" PREFIX "r_%s_dio_data;\n",
-			m_info->data_width()-1, n->c_str());
+		fprintf(fp, "\treg\t[%d:0]\t" PREFIX "r_%s_bus_select;\n",
+			nextlg((int)m_dlist->size())-1, dlp->c_str());
+		fprintf(fp, "\treg\t[%d:0]\t" PREFIX "r_%s_data;\n",
+			m_info->data_width()-1, dlp->c_str());
+		fprintf(fp, "\n");
 
 		//
 		// The stall line
-		fprintf(fp, "\tassign\t" PREFIX "%s_dio_stall = 1\'b0;\n", n->c_str());
+		fprintf(fp, "\t// DOUBLE peripherals are not allowed to stall.\n"
+			"\tassign\t" PREFIX "%s_stall = 1\'b0;\n\n",
+			dlp->c_str());
 		//
 		// The ACK line
-		fprintf(fp, "\talways\t@(posedge %s)\n"
-			"\tif (i_reset || !%s_cyc)\n"
-			"\t\t" PREFIX "r_%s_dio_ack <= 0;\n"
+		fprintf(fp,
+		"\t// DOUBLE peripherals return their acknowledgments in two\n"
+		"\t// clocks--always, allowing us to collect this logic together\n"
+		"\t// in a slave independent manner.  Here, the acknowledgment\n"
+		"\t// is treated as a two stage shift register, cleared on any\n"
+		"\t// reset, or any time the cycle line drops.  (Dropping the\n"
+		"\t// cycle line aborts the transaction.)\n"
+		"\tinitial\t" PREFIX "r_%s_ack <= 0;\n"
+		"\talways\t@(posedge %s)\n"
+			"\tif (%s || !%s_cyc)\n",
+				dlp->c_str(), c->m_wire->c_str(),
+				rst->c_str(), dlp->c_str());
+		fprintf(fp,
+			"\t\t" PREFIX "r_%s_ack <= 0;\n"
 			"\telse\n"
-			"\t\t" PREFIX "r_%s_dio_ack <= { " PREFIX "r_%s_dio_ack[0], (%s_stb)&&(" PREFIX "%s_dio_sel) };\n",
-				c->m_wire->c_str(), n->c_str(),
-				n->c_str(), n->c_str(),
-				n->c_str(), n->c_str(),
-				n->c_str());
-		fprintf(fp, "\tassign\t" PREFIX "%s_dio_ack = " PREFIX "r_%s_dio_ack[1];\n", n->c_str(), n->c_str());
+			"\t\t" PREFIX "r_%s_ack <= { " PREFIX "r_%s_ack[0], (%s_stb) };\n",
+				dlp->c_str(), dlp->c_str(),
+				dlp->c_str(), dlp->c_str());
+		fprintf(fp, "\tassign\t" PREFIX "%s_ack = "
+			PREFIX "r_%s_ack[1];\n",
+			dlp->c_str(), dlp->c_str());
 		fprintf(fp, "\n");
 
 		//
 		// The data return lines
-		fprintf(fp, "\talways @(posedge %s)\n"
+		fprintf(fp,
+			"\t// Since it costs us two clocks to go through this\n"
+			"\t// logic, we'll take one of those clocks here to set\n"
+			"\t// a selection index, and then on the next clock we'll\n"
+			"\t// use this index to select from among the vaious\n"
+			"\t// possible bus return values\n"
+			"\talways @(posedge %s)\n"
 			"\tcasez(%s_addr[%d:%d])\n",
 				c->m_wire->c_str(),
-				n->c_str(),
+				dlp->c_str(),
 				maskbits+unused_lsbs-1, unused_lsbs);
 		for(unsigned k=0; k<m_dlist->size(); k++) {
-			fprintf(fp, "\t\t%d'b", maskbits);
+			fprintf(fp, "\t%d'b", maskbits);
 			for(unsigned b=0; b<maskbits; b++) {
 				unsigned	shift = maskbits + unused_lsbs-b-1;
 				if (((*m_dlist)[k]->p_mask & (1<<shift))==0)
@@ -820,54 +1001,126 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 					&&(b<maskbits-1))
 					fprintf(fp, "_");
 			}
-			fprintf(fp, ": " PREFIX "r_%s_dio_bus_select <= %d\'d%d;\n",
-				n->c_str(), nextlg(m_dlist->size()), k);
+			fprintf(fp, ": " PREFIX "r_%s_bus_select <= %d\'d%d;\n",
+				dlp->c_str(), nextlg(m_dlist->size()), k);
 		}
-		fprintf(fp, "\t\tdefault: " PREFIX "r_%s_dio_bus_select <= 0;\n",
-			n->c_str());
+		fprintf(fp, "\tdefault: " PREFIX "r_%s_bus_select <= 0;\n",
+			dlp->c_str());
 		fprintf(fp, "\tendcase\n\n");
 
 		fprintf(fp, "\talways\t@(posedge %s)\n"
-			"\tcasez(" PREFIX "r_%s_dio_bus_select)\n",
-			c->m_wire->c_str(), n->c_str());
+			"\tcasez(" PREFIX "r_%s_bus_select)\n",
+			c->m_wire->c_str(), dlp->c_str());
 
 		for(unsigned k=0; k<m_dlist->size()-1; k++) {
-			fprintf(fp, "\t\t%d'd%d", nextlg(m_dlist->size()), k);
-			fprintf(fp, ": " PREFIX "r_%s_dio_data <= %s_data;\n",
-				n->c_str(),
-				(*m_dlist)[k]->p_name->c_str());
+			fprintf(fp, "\t%d'd%d", nextlg(m_dlist->size()), k);
+			fprintf(fp, ": " PREFIX "r_%s_data <= %s_data;\n",
+				dlp->c_str(),
+				(*m_dlist)[k]->bus_prefix()->c_str());
 		}
 
-		fprintf(fp, "\t\tdefault: " PREFIX "r_%s_dio_data <= %s_data;\n",
-			n->c_str(),
+		fprintf(fp, "\tdefault: "
+			PREFIX "r_%s_data <= %s_data;\n", dlp->c_str(),
 			(*m_dlist)[m_dlist->size()-1]->p_name->c_str());
 		fprintf(fp, "\tendcase\n\n");
-		fprintf(fp, "\tassign\t" PREFIX "%s_dio_data = " PREFIX "r_%s_dio_data;\n\n",
-			n->c_str(), n->c_str());
+		fprintf(fp, "\tassign\t" PREFIX "%s_idata = " PREFIX "r_%s_data;\n\n",
+			dlp->c_str(), dlp->c_str());
+
+		unsigned	sbaw;
+		unsigned	dw   = m_info->data_width();
+		unsigned	dalines = nextlg(dw/8);
+		mask = 0;
+
+		sbaw = m_dlist->get_address_width();
+		for(unsigned j=0; j<m_dlist->size(); j++) {
+			const char *pn = (*m_dlist)[j]->bus_prefix()->c_str();
+
+			fprintf(fp, "\tassign\t%s_cyc = %s_cyc;\n",
+				pn, dlp->c_str());
+
+			if ((*m_dlist)[j]->p_mask == 0) {
+				fprintf(fp, "\tassign\t%s_stb = 1\'b0; // ERR: (DIO) address mask == 0\n",
+					pn);
+			} else {
+				assert(sbaw > unused_lsbs);
+				assert(sbaw > 0);
+				fprintf(fp, "\tassign\t%s_stb = %s_stb "
+					"&& (%s_addr[%2d:%2d] == %2d\'h%0*lx); ",
+					pn, dlp->c_str(), dlp->c_str(),
+					sbaw-1, unused_lsbs,
+					sbaw-unused_lsbs,
+					(sbaw-unused_lsbs+3)/4,
+					(*m_dlist)[j]->p_base >> (unused_lsbs+dalines));
+				write_addr_range(fp, (*m_dlist)[j], dalines);
+				fprintf(fp, "\n");
+			}
+			fprintf(fp,
+			"\tassign\t%s_we  = %s_we;\n"
+			"\tassign\t%s_data= %s_data;\n"
+			"\tassign\t%s_sel = %s_sel;\n",
+				pn, dlp->c_str(),
+				pn, dlp->c_str(),
+				pn, dlp->c_str());
+		}
 	} else
-		fprintf(fp, "\t//\n\t// No class DOUBLE peripherals on the \"%s\" bus\n\t//\n", n->c_str());
+		fprintf(fp, "\t//\n\t// No class DOUBLE peripherals on the \"%s\" bus\n\t//\n\n", n->c_str());
 
+	//
+	//
+	// Now for the main set of slaves
+	//
+	//
 
-	fprintf(fp, ""
+	fprintf(fp,
 	"\t//\n"
 	"\t// Connect the %s bus components together using the wbxbar()\n"
 	"\t//\n"
 	"\t//\n", n->c_str());
 
+	unused_lsbs = nextlg(m_info->data_width())-3;
 	fprintf(fp,
 	"\twbxbar #(\n"
-		"\t\t.NM(%ld),.NS(%ld), .AW(%d), .DW(%d),",
-		m_info->m_mlist->size(), m_plist->size(), address_width(),
+		"\t\t.NM(%ld),.NS(%ld), .AW(%d), .DW(%d),\n\t\t.SLAVE_ADDR({\n",
+		m_info->m_mlist->size(), m_info->m_plist->size(), address_width(),
 		m_info->data_width());
-		// SLAVE_ADDR
-		// SLAVE_MASK
+	for(unsigned k=m_info->m_plist->size()-1; k>0; k=k-1) {
+		fprintf(fp, "\t\t\t{ %d\'h%*lx },\n",
+			address_width(), (address_width()+3)/4,
+			((*m_info->m_plist)[k]->p_base >> unused_lsbs));
+	} fprintf(fp, "\t\t\t{ %d\'h%*lx }\n",
+			address_width(), (address_width()+3)/4,
+			((*m_info->m_plist)[0]->p_base >> unused_lsbs));
+
+	fprintf(fp,
+	"\t\t}),\n"
+	"\t\t.SLAVE_MASK({\n");
+	for(unsigned k=m_info->m_plist->size()-1; k>0; k=k-1) {
+		fprintf(fp, "\t\t\t{ %d\'h%*lx },\n",
+			address_width(), (address_width()+3)/4,
+			((*m_info->m_plist)[k]->p_mask >> unused_lsbs));
+	} fprintf(fp, "\t\t\t{ %d\'h%*lx }\n",
+			address_width(), (address_width()+3)/4,
+			((*m_info->m_plist)[0]->p_mask >> unused_lsbs));
+	fprintf(fp, "\t\t})");
+
+	if (bus_option(KY_OPT_LOWPOWER)) {
+		STRINGP	str;
+		int	val;
+		if (getvalue(*m_info->m_hash, KY_OPT_LOWPOWER, val))
+			fprintf(fp, ",\n\t\t.OPT_LOWPOWER(%d)", val);
+		else if (NULL != (str = getstring(*m_info->m_hash, KY_OPT_LOWPOWER)))
+			fprintf(fp, ",\n\t\t.OPT_LOWPOWER(%s)", str->c_str());
+	}
+
 	if (bus_option(KY_OPT_LGMAXBURST)) {
-		STRINGP str;
+		STRINGP	str;
 		int	val;
 		if (getvalue(*m_info->m_hash, KY_OPT_LGMAXBURST, val))
 			fprintf(fp, ",\n\t\t.LGMAXBURST(%d)", val);
 		else if (NULL != (str = getstring(*m_info->m_hash, KY_OPT_LGMAXBURST)))
 			fprintf(fp, ",\n\t\t.LGMAXBURST(%s)", str->c_str());
+		else
+			gbl_msg.warning("OPT_LGMAXBURST parameter found with no value in %d\n", n->c_str());
 	}
 	if (bus_option(KY_OPT_TIMEOUT)) {
 		STRINGP str;
@@ -887,39 +1140,36 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 		else
 			fprintf(fp, ",\n\t\t.OPT_DBLBUFFER(1\'b1)");
 	}
-	if (bus_option(KY_OPT_LOWPOWER)) {
-		STRINGP str;
-		int	val;
-		if (getvalue(*m_info->m_hash, KY_OPT_LOWPOWER, val))
-			fprintf(fp, ",\n\t\t.OPT_LOWPOWER(%d)", val);
-		else if (NULL != (str = getstring(*m_info->m_hash, KY_OPT_LOWPOWER)))
-			fprintf(fp, ",\n\t\t.OPT_LOWPOWER(%s)", str->c_str());
-	}
+
 
 	// OPT_STARVATION_TIMEOUT?
 
 	fprintf(fp,
-	"\t) %s_xbar(\n"
+	")\n\t%s_xbar(\n"
 	"\t\t.i_clk(%s), .i_reset(%s),\n",
 		n->c_str(), c->m_wire->c_str(), rst->c_str());
 	xbarcon_master(fp, "\t\t", ".i_mcyc",  "cyc");
 	xbarcon_master(fp, "\t\t", ".i_mstb",  "stb");
 	xbarcon_master(fp, "\t\t", ".i_mwe",   "we");
 	xbarcon_master(fp, "\t\t", ".i_maddr", "addr");
+	xbarcon_master(fp, "\t\t", ".i_mdata", "data");
+	xbarcon_master(fp, "\t\t", ".i_msel",  "sel");
 	xbarcon_master(fp, "\t\t", ".o_mstall","stall");
 	xbarcon_master(fp, "\t\t", ".o_mack",  "ack");
 	xbarcon_master(fp, "\t\t", ".o_mdata", "idata");
 	xbarcon_master(fp, "\t\t", ".o_merr",  "err");
 	fprintf(fp, "\t\t// Slave connections\n");
-	pl = m_plist;
-	xbarcon_slave(fp, pl, "\t\t", ".o_mcyc",  "cyc");
-	xbarcon_slave(fp, pl, "\t\t", ".o_mstb",  "stb");
-	xbarcon_slave(fp, pl, "\t\t", ".o_mwe",   "we");
-	xbarcon_slave(fp, pl, "\t\t", ".o_maddr", "addr");
-	xbarcon_slave(fp, pl, "\t\t", ".i_mstall","stall");
-	xbarcon_slave(fp, pl, "\t\t", ".i_mack",  "ack");
-	xbarcon_slave(fp, pl, "\t\t", ".i_mdata", "idata");
-	xbarcon_slave(fp, pl, "\t\t", ".i_merr",  "err",  false);
+	pl = m_info->m_plist;
+	xbarcon_slave(fp, pl, "\t\t", ".o_scyc",  "cyc");
+	xbarcon_slave(fp, pl, "\t\t", ".o_sstb",  "stb");
+	xbarcon_slave(fp, pl, "\t\t", ".o_swe",   "we");
+	xbarcon_slave(fp, pl, "\t\t", ".o_saddr", "addr");
+	xbarcon_slave(fp, pl, "\t\t", ".o_sdata", "data");
+	xbarcon_slave(fp, pl, "\t\t", ".o_ssel",  "sel");
+	xbarcon_slave(fp, pl, "\t\t", ".i_sstall","stall");
+	xbarcon_slave(fp, pl, "\t\t", ".i_sack",  "ack");
+	xbarcon_slave(fp, pl, "\t\t", ".i_sdata", "idata");
+	xbarcon_slave(fp, pl, "\t\t", ".i_serr",  "err",  false);
 	fprintf(fp, "\t\t);\n\n");
 
 }
@@ -929,25 +1179,27 @@ STRINGP	WBBUS::master_portlist(BMASTERP) {
 	"@$(MASTER.PREFIX)_cyc, "
 	"@$(MASTER.PREFIX)_stb, "
 	"@$(MASTER.PREFIX)_we,\n"
-	"\t\t\t@$(MASTER.PREFIX)_addr[@$(AWID)-1:0],\n"
-	"\t\t\t@$(MASTER.PREFIX)_data, // @$(DW) bits wide\n"
-	"\t\t\t@$(MASTER.PREFIX)_sel,  // @$(DW)/8 bits wide\n"
+	"\t\t\t@$(MASTER.PREFIX)_addr[@$(MASTER.BUS.AWID)-1:0],\n"
+	"\t\t\t@$(MASTER.PREFIX)_data, // @$(MASTER.BUS.WIDTH) bits wide\n"
+	"\t\t\t@$(MASTER.PREFIX)_sel,  // @$(MASTER.BUS.WIDTH)/8 bits wide\n"
 	"\t\t@$(SLAVE.PREFIX)_stall,"
 	"@$(MASTER.PREFIX)_ack, "
-	"@$(MASTER.PREFIX)_idata");
+	"@$(MASTER.PREFIX)_idata,"
+	"@$(MASTER.PREFIX)_err");
 }
 
-STRINGP	WBBUS::master_ascii_portlist(BMASTERP) {
+STRINGP	WBBUS::master_ansi_portlist(BMASTERP) {
 	return new STRING(
 	".i_wb_cyc(@$(MASTER.PREFIX)_cyc), "
 	".i_wb_stb(@$(MASTER.PREFIX)_stb), "
 	".i_wb_we(@$(MASTER.PREFIX)_we),\n"
-	"\t\t\t.i_wb_addr(@$(MASTER.PREFIX)_addr[@$(AWID)-1:0]),\n"
-	"\t\t\t.i_wb_data(@$(MASTER.PREFIX)_data), // @$(DW) bits wide\n"
-	"\t\t\t.i_wb_sel(@$(MASTER.PREFIX)_sel),  // @$(DW)/8 bits wide\n"
+	"\t\t\t.i_wb_addr(@$(MASTER.PREFIX)_addr[@$(MASTER.BUS.AWID)-1:0]),\n"
+	"\t\t\t.i_wb_data(@$(MASTER.PREFIX)_data), // @$(MASTER.BUS.WIDTH) bits wide\n"
+	"\t\t\t.i_wb_sel(@$(MASTER.PREFIX)_sel),  // @$(MASTER.BUS.WIDTH)/8 bits wide\n"
 	"\t\t.o_wb_stall(@$(MASTER.PREFIX)_stall),"
 	".o_wb_ack(@$(MASTER.PREFIX)_ack), "
-	".o_wb_data(@$(MASTER.PREFIX)_idata)");
+	".o_wb_data(@$(MASTER.PREFIX)_idata)"
+	".o_wb_err(@$(MASTER.PREFIX)_err)");
 }
 
 STRINGP	WBBUS::slave_portlist(PERIPHP p) {
@@ -958,17 +1210,19 @@ STRINGP	WBBUS::slave_portlist(PERIPHP p) {
 
 	if (!p->read_only() && !p->write_only())
 		str = str + STRING("@$(SLAVE.PREFIX)_we,\n");
-	if (address_width() > 0)
-		str = str + STRING("\t\t\t@$(SLAVE.PREFIX)_addr[@$(AWID)-1:0],\n");
+	if (p->get_slave_address_width() > 0) {
+		char	tmp[64];
+		STRING	stmp;
+		sprintf(tmp, "_addr[%d-1:0],\n", p->get_slave_address_width());
+		stmp = STRING("\t\t\t@$(SLAVE.PREFIX)") + STRING(tmp);
+		str = str + stmp;
+	}
 	if (!p->read_only())
 		str = str + STRING(
-		"\t\t\t@$(SLAVE.PREFIX)_data, // @$(DW) bits wide\n"
-		"\t\t\t@$(SLAVE.PREFIX)_sel,  // @$(DW)/8 bits wide\n");
+		"\t\t\t@$(SLAVE.PREFIX)_data, // @$(SLAVE.BUS.WIDTH) bits wide\n"
+		"\t\t\t@$(SLAVE.PREFIX)_sel,  // @$(SLAVE.BUS.WIDTH)/8 bits wide\n");
 	str = str + STRING(
-		"\t\t@$(SLAVE.PREFIX)_stall,"
-		"@$(SLAVE.PREFIX)_ack");
-	if (!p->write_only())
-		str = str + STRING(", @$(SLAVE.PREFIX)_idata");
+		"\t\t@$(SLAVE.PREFIX)_stall, @$(SLAVE.PREFIX)_ack");
 	if (!p->write_only())
 		str = str + STRING(", @$(SLAVE.PREFIX)_idata");
 	if (NULL != errp)
@@ -977,7 +1231,7 @@ STRINGP	WBBUS::slave_portlist(PERIPHP p) {
 	return new STRING(str);
 }
 
-STRINGP	WBBUS::slave_ascii_portlist(PERIPHP p) {
+STRINGP	WBBUS::slave_ansi_portlist(PERIPHP p) {
 	STRINGP	errp = getstring(p->p_phash, KYERROR_WIRE);
 	STRING	str = STRING(
 
@@ -985,12 +1239,17 @@ STRINGP	WBBUS::slave_ascii_portlist(PERIPHP p) {
 	".i_wb_stb(@$(SLAVE.PREFIX)_stb), ");
 	if (!p->read_only() && !p->write_only())
 		str = str + STRING(".i_wb_we(@$(SLAVE.PREFIX)_we),\n");
-	if (address_width() > 0)
-		str = str + STRING("\t\t\t.i_wb_addr(@$(SLAVE.PREFIX)_addr[@$(AWID)-1:0]),\n");
+	if (p->get_slave_address_width() > 0) {
+		char	tmp[64];
+		STRING	stmp;
+		sprintf(tmp, "_addr[%d-1:0]),\n", p->get_slave_address_width());
+		stmp = STRING("\t\t\t.i_wb_addr(@$(SLAVE.PREFIX)") + STRING(tmp);
+		str = str + stmp;
+	}
 	if (!p->read_only())
 		str = str + STRING(
-	"\t\t\t.i_wb_data(@$(SLAVE.PREFIX)_data), // @$(DW) bits wide\n"
-	"\t\t\t.i_wb_sel(@$(SLAVE.PREFIX)_sel),  // @$(DW)/8 bits wide\n");
+	"\t\t\t.i_wb_data(@$(SLAVE.PREFIX)_data), // @$(SLAVE.BUS.WIDTH) bits wide\n"
+	"\t\t\t.i_wb_sel(@$(SLAVE.PREFIX)_sel),  // @$(SLAVE.BUS.WIDTH)/8 bits wide\n");
 	str = str + STRING(
 	"\t\t.o_wb_stall(@$(SLAVE.PREFIX)_stall),"
 	".o_wb_ack(@$(SLAVE.PREFIX)_ack)");
@@ -1022,6 +1281,9 @@ STRINGP	WBBUSCLASS::longname(void) {
 }
 
 bool	WBBUSCLASS::matchtype(STRINGP str) {
+	if (!str)
+		// Wishbone is the default type
+		return true;
 	if (str->compare("wb")==0)
 		return true;
 	if (str->compare("wbp")==0)

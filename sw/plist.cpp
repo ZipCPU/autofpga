@@ -113,13 +113,6 @@ bool	PERIPH::ismemory(void) {
 }
 
 unsigned PERIPH::get_slave_address_width(void) {
-	/*
-	MAPDHASH::iterator	kvbus, kvvalue;
-	kvbus = findkey(*p_phash, KYMASTER_BUS);
-	if ((kvbus != p_phash->end())&&(kvbus->second.m_typ == MAPT_MAP)) {
-		if (getstring(kvbus->
-	}
-	*/
 	if (p_awid != nextlg(naddr()))
 		p_awid = nextlg(naddr());
 	return p_awid;
@@ -130,151 +123,27 @@ unsigned PERIPH::naddr(void) {
 
 	assert(p_phash);
 	if (getvalue(*p_phash, KYNADDR, value)) {
+		bool rebuild = false;
 		if (0 == p_naddr) {
 			p_naddr = value;
+			if (p_awid != nextlg(p_naddr))
+				rebuild = true;
 			p_awid  = nextlg(p_naddr);
 		} else if ((int)p_naddr != value) {
 			gbl_msg.warning("%s's number of addresses changed from %ld to %d\n",
 				p_name->c_str(), p_naddr, value);
 			p_naddr = value;
 			p_awid  = nextlg(p_naddr);
+			rebuild = true;
+		}
+		if (rebuild) {
+			setstring(p_phash, KYSLAVE_PORTLIST,
+					p_slave_bus->slave_portlist(this));
+			setstring(p_phash, KYSLAVE_ANSIPORTLIST,
+					p_slave_bus->slave_portlist(this));
 		}
 	}
 	return p_naddr;
-}
-
-//
-// compare_naddr
-//
-// This is part of the peripheral sorting mechanism, whereby peripherals are
-// sorted by the numbers of addresses they use.  Peripherals using fewer
-// addresses are placed first, with peripherals using more addresses placed
-// later.
-//
-bool	compare_naddr(PERIPHP a, PERIPHP b) {
-	if (!a)
-		return (b)?false:true;
-	else if (!b)
-		return true;
-
-	// Unordered items come before ordered items.
-
-	bool		have_order = false;
-	int		aorder, border;
-
-	if (a->p_phash == NULL) {
-		gbl_msg.fatal("Peripheral %s has a null hash!\n", a->p_name->c_str());
-	} if (b->p_phash == NULL) {
-		gbl_msg.fatal("ERR: Peripheral %s has a null hash!\n", b->p_name->c_str());
-	}
-
-	have_order = getvalue(*a->p_phash, KYSLAVE_ORDER, aorder);
-	if (have_order) {
-		have_order = getvalue(*b->p_phash, KYSLAVE_ORDER, border);
-		if (have_order)
-			return (aorder < border);
-		return false;
-	} else if (getvalue(*b->p_phash, KYSLAVE_ORDER, border))
-		return true;
-		
-	unsigned	anaddr, bnaddr;
-
-	anaddr = a->get_slave_address_width();
-	bnaddr = b->get_slave_address_width();
-
-	if (anaddr != bnaddr)
-		return (anaddr < bnaddr);
-	// Otherwise ... the two address types are equal.
-	if ((a->p_name)&&(b->p_name))
-		return (a->p_name->compare(*b->p_name) < 0) ? true:false;
-	else if (!a->p_name)
-		return true;
-	else
-		return true;
-}
-
-bool	compare_address(PERIPHP a, PERIPHP b) {
-	if (!a)
-		return (b)?false:true;
-	else if (!b)
-		return true;
-	return (a->p_base < b->p_base);
-}
-
-bool	compare_regaddr(PERIPHP a, PERIPHP b) {
-	return (a->p_regbase < b->p_regbase);
-}
-
-//
-// Add a peripheral to a given list of peripherals
-int	PLIST::add(MAPDHASH *phash) {
-	PERIPHP p;
-	STRINGP	pname;
-	int	naddr;
-
-	pname  = getstring(*phash, KYPREFIX);
-	if (!pname) {
-		gbl_msg.warning("Skipping unnamed peripheral\n");
-		return -1;
-	}
-	if (!getvalue(*phash, KYNADDR, naddr)) {
-		naddr = 0;
-	}
-	if (issubbus(*phash)) {
-		BUSINFO		*bi;
-		MAPDHASH::iterator	kvmbus;
-
-		kvmbus = findkey(*phash, KYMASTER_BUS);
-		if (kvmbus != phash->end()) {
-			bi = NULL;
-			if (kvmbus->second.m_typ == MAPT_STRING)
-				bi = find_bus(kvmbus->second.u.m_s);
-			else if (kvmbus->second.m_typ == MAPT_MAP)
-				bi = find_bus(kvmbus->second.u.m_m);
-			assert(bi);
-		}
-		p = new SUBBUS(phash, bi->m_name, bi);
-	} else {
-		p = new PERIPH;
-		p->p_master_bus = NULL;
-	}
-
-	p->p_base = 0;
-	p->p_naddr = naddr;
-	p->p_awid  = (0 == naddr) ? nextlg(p->p_naddr) : 0;
-	p->p_phash = phash;
-	p->p_name  = pname;
-
-	{
-		BUSINFO		*bi;
-		MAPDHASH::iterator	kvsbus;
-
-		kvsbus = findkey(*phash, KYSLAVE_BUS);
-		if (kvsbus != phash->end()) {
-			bi = NULL;
-			if (kvsbus->second.m_typ == MAPT_STRING) {
-				bi = find_bus(kvsbus->second.u.m_s);
-				kvsbus->second.m_typ = MAPT_MAP;
-				kvsbus->second.u.m_m = bi->m_hash;
-			} else if (kvsbus->second.m_typ == MAPT_MAP)
-				bi = find_bus(kvsbus->second.u.m_m);
-			assert(bi);
-		} else {
-			MAPT	elm;
-			bi = find_bus((STRINGP)NULL);
-			assert(NULL != bi);
-			assert(NULL != bi->m_hash);
-			elm.m_typ = MAPT_MAP;
-			elm.u.m_m = bi->m_hash;
-			assert(bi->m_hash);
-			phash->insert(KEYVALUE(KYSLAVE_BUS, elm));
-		}
-		p->p_slave_bus = bi;
-	}
-
-
-	push_back(p);
-	return size()-1;
 }
 
 void	PERIPH::integrity_check(void) {
@@ -287,7 +156,7 @@ STRINGP	PERIPH::bus_prefix(void) {
 	STRINGP	pfx;
 	pfx = getstring(p_phash, KYSLAVE_PREFIX);
 	if (NULL == pfx) {
-		STRINGP	bus = p_master_bus->name();
+		STRINGP	bus = p_slave_bus->name();
 		if (NULL == bus)
 			return NULL;
 		// Assume a prefix if it isnt given
@@ -329,7 +198,135 @@ void	PLIST::integrity_check(void) {
 	}
 }
 
+//
+// compare_naddr
+//
+// This is part of the peripheral sorting mechanism, whereby peripherals are
+// sorted by the numbers of addresses they use.  Peripherals using fewer
+// addresses are placed first, with peripherals using more addresses placed
+// later.
+//
+bool	compare_naddr(PERIPHP a, PERIPHP b) {
+	if (!a)
+		return (b)?false:true;
+	else if (!b)
+		return true;
+
+	// Unordered items come before ordered items.
+
+	bool		have_order = false;
+	int		aorder, border;
+
+	if (a->p_phash == NULL) {
+		gbl_msg.fatal("Peripheral %s has a null hash!\n", a->p_name->c_str());
+	} if (b->p_phash == NULL) {
+		gbl_msg.fatal("ERR: Peripheral %s has a null hash!\n", b->p_name->c_str());
+	}
+
+	have_order = getvalue(*a->p_phash, KYSLAVE_ORDER, aorder);
+	if (have_order) {
+		have_order = getvalue(*b->p_phash, KYSLAVE_ORDER, border);
+		if (have_order)
+			return (aorder < border);
+		return false;
+	} else if (getvalue(*b->p_phash, KYSLAVE_ORDER, border))
+		return true;
+
+	unsigned	anaddr, bnaddr;
+
+	anaddr = a->get_slave_address_width();
+	bnaddr = b->get_slave_address_width();
+
+	if (anaddr != bnaddr)
+		return (anaddr < bnaddr);
+	// Otherwise ... the two address types are equal.
+	if ((a->p_name)&&(b->p_name))
+		return (a->p_name->compare(*b->p_name) < 0) ? true:false;
+	else if (!a->p_name)
+		return true;
+	else
+		return true;
+}
+
+bool	compare_address(PERIPHP a, PERIPHP b) {
+	if (!a)
+		return (b)?false:true;
+	else if (!b)
+		return true;
+	return (a->p_base < b->p_base);
+}
+
+bool	compare_regaddr(PERIPHP a, PERIPHP b) {
+	return (a->p_regbase < b->p_regbase);
+}
+
 int	PLIST::add(PERIPHP p) {
+	// To get here, the component must already have a valid hash
+	assert(p->p_phash);
+	push_back(p);
+	return size()-1;
+}
+
+
+//
+// Add a peripheral to a given list of peripherals
+int	PLIST::add(MAPDHASH *phash) {
+	PERIPHP p;
+	STRINGP	pname;
+	int	naddr;
+
+	pname  = getstring(*phash, KYPREFIX);
+	if (!pname) {
+		gbl_msg.warning("Skipping unnamed peripheral\n");
+		return -1;
+	}
+	if (!getvalue(*phash, KYNADDR, naddr)) {
+		naddr = 0;
+	}
+	if (issubbus(*phash)) {
+		BUSINFO		*bi;
+		MAPDHASH::iterator	kvmbus;
+
+		kvmbus = findkey(*phash, KYMASTER_BUS);
+		if (kvmbus != phash->end()) {
+			bi = NULL;
+			if (kvmbus->second.m_typ == MAPT_STRING)
+				bi = find_bus(kvmbus->second.u.m_s);
+			else if (kvmbus->second.m_typ == MAPT_MAP)
+				bi = find_bus(kvmbus->second.u.m_m);
+			assert(bi);
+		}
+		p = new SUBBUS(phash, bi->name(), bi);
+	} else {
+		p = new PERIPH;
+		p->p_master_bus = NULL;
+	}
+
+	p->p_base = 0;
+	p->p_naddr = naddr;
+	p->p_awid  = (0 == naddr) ? nextlg(p->p_naddr) : 0;
+	p->p_phash = phash;
+	p->p_name  = pname;
+
+	{
+		BUSINFO		*bi;
+		MAPDHASH::iterator	kvsbus;
+
+		kvsbus = findkey(*phash, KYSLAVE_BUS);
+		assert(kvsbus != phash->end());
+		assert(kvsbus->second.m_typ == MAPT_MAP);
+		bi = find_bus(kvsbus->second.u.m_m);
+		assert(bi);
+		p->p_slave_bus = bi;
+	}
+
+	if (p) {
+		setstring(p->p_phash, KYSLAVE_PORTLIST, p->p_slave_bus->slave_portlist(p));
+		setstring(p->p_phash, KYSLAVE_ANSIPORTLIST, p->p_slave_bus->slave_portlist(p));
+	}
+
+	(void)p->bus_prefix();
+
 	push_back(p);
 	return size()-1;
 }
@@ -345,7 +342,8 @@ bool	PLIST::get_base_address(MAPDHASH *phash, unsigned &base) {
 				return true;
 			}
 		}
-	} return false;
+	}
+	return false;
 }
 
 unsigned	PLIST::min_addr_size_bytes(const unsigned np,
@@ -363,7 +361,7 @@ unsigned	PLIST::min_addr_size_bytes(const unsigned np,
 		base_bytes &= (-1<<pa);
 		// First valid next address is ...
 		start = base_bytes + (1<<pa);
-	} 
+	}
 	// Next address
 	return nextlg(start);
 }
@@ -383,7 +381,8 @@ unsigned	PLIST::min_addr_size_octets(unsigned np,
 }
 
 
-void	PLIST::assign_addresses(unsigned dwidth, unsigned nullsz) {
+void	PLIST::assign_addresses(unsigned dwidth, unsigned nullsz,
+		unsigned bus_min_address_width) {
 	unsigned daddr_abits = nextlg(dwidth/8);
 
 	// Use daddr_abits to convert our addresses between bus addresses and
@@ -437,6 +436,8 @@ void	PLIST::assign_addresses(unsigned dwidth, unsigned nullsz) {
 				+ daddr_abits;
 		min_asz = min_addr_size_octets(size(), min_awd,
 				nullsz, daddr_abits);
+		if (min_asz < bus_min_address_width)
+			min_asz = bus_min_address_width;
 		// Our goal will be to do better than this
 
 		for(iterator p=begin(); p!=end(); p++) {
@@ -541,9 +542,17 @@ void	PLIST::assign_addresses(unsigned dwidth, unsigned nullsz) {
 					(*this)[i]->p_mask << daddr_abits);
 
 			if ((*this)[i]->p_phash) {
-				MAPDHASH	*ph = (*this)[i]->p_phash;
-				setvalue(*ph, KYBASE, (*this)[i]->p_base);
-				setvalue(*ph, KYMASK, (*this)[i]->p_mask << daddr_abits);
+				PERIPHP	p = (*this)[i];
+				MAPDHASH	*ph = p->p_phash;
+				GENBUS		*g = p->p_slave_bus->generator();
+				setvalue(*ph, KYBASE, p->p_base);
+				setvalue(*ph, KYMASK, p->p_mask << daddr_abits);
+				if (g) {
+					setstring(*ph, KYSLAVE_PORTLIST,
+						g->slave_portlist(p));
+					setstring(*ph, KYSLAVE_ANSIPORTLIST,
+						g->slave_ansi_portlist(p));
+				}
 			}
 		} m_address_width = nextlg(start_address)-daddr_abits;
 	}

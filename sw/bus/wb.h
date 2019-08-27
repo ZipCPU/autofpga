@@ -41,7 +41,7 @@
 #include "../genbus.h"
 
 class	WBBUS : public GENBUS {
-	PLIST	*m_plist, *m_slist, *m_dlist;
+	PLIST	*m_slist, *m_dlist;
 	unsigned	m_num_total, m_num_double, m_num_single;
 	bool		m_is_single, m_is_double;
 
@@ -49,6 +49,11 @@ class	WBBUS : public GENBUS {
 				const char *, const char *, bool comma = true);
 	void	xbarcon_slave(FILE *fp, PLIST *pl, const char *,
 				const char *, const char *, bool comma = true);
+	void	allocate_subbus(void);
+
+	BUSINFO *create_sio(void);
+	BUSINFO *create_dio(void);
+	void	countsio(void);
 public:
 	WBBUS(BUSINFO *bi);
 	~WBBUS() {};
@@ -73,14 +78,11 @@ public:
 	//
 	//
 	virtual	STRINGP	master_portlist(BMASTERP);
-	virtual	STRINGP	master_ascii_portlist(BMASTERP);
+	virtual	STRINGP	master_ansi_portlist(BMASTERP);
 	virtual	STRINGP	slave_portlist(PERIPHP);
-	virtual	STRINGP	slave_ascii_portlist(PERIPHP);
-	virtual	void	integrity_check(void);
+	virtual	STRINGP	slave_ansi_portlist(PERIPHP);
 
-	BUSINFO *create_sio(void);
-	BUSINFO *create_dio(void);
-	void	countsio(void);
+	virtual	void	integrity_check(void);
 };
 
 class	WBBUSCLASS : public BUSCLASS {

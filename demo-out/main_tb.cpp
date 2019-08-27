@@ -525,7 +525,7 @@ public:
 		//
 		// Loading the flash component
 		//
-		base  = 0x18000000; // in octets
+		base  = 0x01000000; // in octets
 		adrln = 0x01000000;
 
 		if ((addr >= base)&&(addr < base + adrln)) {
@@ -577,43 +577,6 @@ public:
 #else	// SDRAM_ACCESS
 			return false;
 #endif	// SDRAM_ACCESS
-		//
-		// End of components with a SIM.LOAD tag, and a
-		// non-zero number of addresses (NADDR)
-		//
-		}
-
-		//
-		// Loading the bkram component
-		//
-		base  = 0x16000000; // in octets
-		adrln = 0x00100000;
-
-		if ((addr >= base)&&(addr < base + adrln)) {
-			// If the start access is in bkram
-			start = (addr > base) ? (addr-base) : 0;
-			offset = (start + base) - addr;
-			wlen = (len-offset > adrln - start)
-				? (adrln - start) : len - offset;
-#ifdef	BKRAM_ACCESS
-			// FROM bkram.SIM.LOAD
-			start = start & (-4);
-			wlen = (wlen+3)&(-4);
-
-			// Need to byte swap data to get it into the memory
-			char	*bswapd = new char[len+8];
-			memcpy(bswapd, &buf[offset], wlen);
-			byteswapbuf(len>>2, (uint32_t *)bswapd);
-			memcpy(&m_core->block_ram[start], bswapd, wlen);
-			delete	bswapd;
-			// AUTOFPGA::Now clean up anything else
-			// Was there more to write than we wrote?
-			if (addr + len > base + adrln)
-				return load(base + adrln, &buf[offset+wlen], len-wlen);
-			return true;
-#else	// BKRAM_ACCESS
-			return false;
-#endif	// BKRAM_ACCESS
 		//
 		// End of components with a SIM.LOAD tag, and a
 		// non-zero number of addresses (NADDR)

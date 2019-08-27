@@ -42,7 +42,7 @@
 #include "../genbus.h"
 
 class	AXILBUS : public GENBUS {
-	PLIST		*m_plist, *m_slist, *m_dlist;
+	PLIST		*m_slist, *m_dlist;
 	MAPDHASH	*m_interconnect;
 	unsigned	m_num_total, m_num_double, m_num_single;
 	bool		m_is_single, m_is_double;
@@ -52,6 +52,11 @@ class	AXILBUS : public GENBUS {
 	void	xbarcon_slave(FILE *fp, PLIST *pl,
 			const char *, const char *, const char *, bool comma=true);
 	STRINGP	master_name(int k);
+	void	allocate_subbus(void);
+
+	BUSINFO *create_sio(void);
+	BUSINFO *create_dio(void);
+	void	countsio(void);
 public:
 	AXILBUS(BUSINFO *bi);
 	~AXILBUS() {};
@@ -73,15 +78,12 @@ public:
 	virtual	void	writeout_no_master_v(FILE *fp);
 	//
 	//
-	virtual	void	integrity_check(void);
-	virtual	STRINGP	master_portlist(BMASTERP m);
-	virtual	STRINGP	master_ascii_portlist(BMASTERP m);
-	virtual	STRINGP	slave_portlist(PERIPHP p);
-	virtual	STRINGP	slave_ascii_portlist(PERIPHP p);
+	virtual	STRINGP	master_portlist(BMASTERP);
+	virtual	STRINGP	master_ansi_portlist(BMASTERP);
+	virtual	STRINGP	slave_portlist(PERIPHP);
+	virtual	STRINGP	slave_ansi_portlist(PERIPHP);
 
-	BUSINFO *create_sio(void);
-	BUSINFO *create_dio(void);
-	void	countsio(void);
+	virtual	void	integrity_check(void);
 };
 
 class	AXILBUSCLASS : public BUSCLASS {

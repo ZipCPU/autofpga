@@ -62,8 +62,8 @@ public:
 	unsigned	p_sbaw;
 	STRINGP		p_name;
 	MAPDHASH	*p_phash;
-	BUSINFO		*p_slave_bus;
-	BUSINFO		*p_master_bus;
+	BUSINFO		*p_slave_bus;	// We are a slave of this bus
+	BUSINFO		*p_master_bus;	// We might master this bus beneath us
 
 	STRINGP	name(void) { return p_name; };
 	virtual	bool	issingle(void);
@@ -92,7 +92,8 @@ public:
 	// Add a peripheral to a given list of peripherals
 	int	add(MAPDHASH *phash);
 	int	add(PERIPHP p);
-	void	assign_addresses(unsigned dwidth, unsigned nullsz = 0);
+	void	assign_addresses(unsigned dwidth, unsigned nullsz = 0,
+				unsigned bus_min_address_width = 0);
 	bool	get_base_address(MAPDHASH *phash, unsigned &base);
 	unsigned	min_addr_size_bytes(unsigned, unsigned,
 				unsigned nullsz=0);

@@ -99,7 +99,7 @@ APLIST *full_gather(void) {
 	BUSINFO	*bi;
 	APLIST	*alist;
 
-        strp = getstring(*gbl_hash, KYREGISTER_BUS);
+        strp = getstring(*gbl_hash, KYREGISTER_BUS_NAME);
         if (NULL == strp) {
 		gbl_msg.warning("No REGISTER.BUS defined, assuming a register bus of \"wbu\".\n");
                 strp = new STRING("wbu");
