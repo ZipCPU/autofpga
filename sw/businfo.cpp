@@ -165,6 +165,8 @@ void	BUSINFO::assign_addresses(void) {
 			generator()->master_portlist((*m_mlist)[k]));
 		setstring((*m_mlist)[k]->m_hash, KYMASTER_ANSIPORTLIST,
 			generator()->master_ansi_portlist((*m_mlist)[k]));
+
+		REHASH;
 	}
 
 	m_addresses_assigned = true;

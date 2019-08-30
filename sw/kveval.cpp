@@ -123,6 +123,10 @@ STRINGP	get_named_string(MAPSTACK &stack, MAPDHASH &here, STRING &key) {
 			return getstring(*kvpair->second.u.m_m);
 		if (kvpair->second.m_typ != MAPT_STRING)
 			return NULL;
+		if (NULL != strstr(kvpair->second.u.m_s->c_str(), "@$"))
+			// Don't return a named value if it hasn't (yet)
+			// been filled in within its current context
+			return NULL;
 		return kvpair->second.u.m_s;
 	} return NULL;
 }
