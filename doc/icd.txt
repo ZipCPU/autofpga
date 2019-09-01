@@ -312,7 +312,10 @@ MASTER.BUS	Indicates that this component acts as a bus master, and
 MASTER.TYPE	One of CPU, HOST, BUS, SUBBUS, ARBITER, or XCLOCK.
 	CPU	will cause board.ld to be created.  Depends upon RESET_ADDRESS
 		being defined.
+	DMA	Has a control SLAVE port, and an unrelated MASTER port--one
+		that cannot be accessed through the slave
 	HOST	Controls the bus from an external interface.
+
 	BUS, SUBBUS,
 	ARBITER,
 	XCLOCK	These define a series of bridges, whereby the master of one

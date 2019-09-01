@@ -57,31 +57,36 @@
 #include "subbus.h"
 #include "globals.h"
 #include "msgs.h"
+#include "predicates.h"
 
 typedef	std::vector<PERIPHP>	APLIST;
 
-void	gather_peripherals(APLIST *alist, BUSINFO *bus, PLIST *plist) {
-	if (NULL == plist)
+void	gather_peripherals(APLIST *alist, BUSINFO *bus, PLIST *plist, unsigned base) {
+	if (NULL == plist) {
+		gbl_msg.warning("Sub-bus %s has no peripherals\n", bus->name()->c_str());
 		return;
+	}
 
 	for(unsigned k=0; k<plist->size(); k++) {
 		MAPDHASH	*ph = (*plist)[k]->p_phash;
-		unsigned base;
-		if (!bus->get_base_address(ph, base))
-			base = 0;
+		unsigned	addr;
+
+		// unsigned base = 0;
+		if (!bus->get_base_address(ph, addr))
+			addr = 0;
 		alist->push_back((*plist)[k]);
-		if (base != 0) {
-			setvalue(*ph, KYREGBASE, base);
+		if (addr+base != 0) {
+			setvalue(*ph, KYREGBASE, addr+base);
 			reeval(gbl_hash);
 		}
-		(*plist)[k]->p_regbase = base;
-		if ((NULL != (*plist)[k]->p_master_bus)
-			&&((*plist)[k]->p_master_bus != (*plist)[k]->p_slave_bus)
-			&&((*plist)[k]->p_master_bus != bus)) {
+		(*plist)[k]->p_regbase = addr+base;
+		if (isarbiter(*ph)) {
 			BUSINFO	*subbus;
 
 			subbus = (*plist)[k]->p_master_bus;
-			gather_peripherals(alist, bus, subbus->m_plist);
+			assert(subbus);
+
+			gather_peripherals(alist, subbus, subbus->m_plist, addr+base);
 		}
 	}
 }
@@ -89,7 +94,7 @@ void	gather_peripherals(APLIST *alist, BUSINFO *bus, PLIST *plist) {
 APLIST	*gather_peripherals(BUSINFO *bus) {
 	APLIST	*alist = new APLIST;
 
-	gather_peripherals(alist, bus, bus->m_plist);
+	gather_peripherals(alist, bus, bus->m_plist, 0);
 
 	return alist;
 }

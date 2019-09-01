@@ -69,23 +69,27 @@ unsigned	SUBBUS::get_slave_address_width(void) {
 	return p_awid;
 }
 
-unsigned SUBBUS::get_base_address(MAPDHASH *phash) {
-	unsigned base;
-
+/*
+bool SUBBUS::get_base_address(MAPDHASH *phash, unsigned &base) {
 	assert(p_master_bus);
 	assert(p_master_bus != p_slave_bus);
 
-	if (p_master_bus->get_base_address(phash, base)) {
+	if (p_slave_bus->get_base_address(phash, base)) {
+		// If the bus we are mastering has an offset, add that to our
+		// base address
 		base += p_base;
 		return true;
 	}
 
 	return false;
 }
+*/
 
 void	SUBBUS::assign_addresses(void) {
 	assert(p_master_bus);
 	assert(p_master_bus != p_slave_bus);
+
+	// Assign addresses to the bus that we master from here
 	p_master_bus->assign_addresses();
 }
 

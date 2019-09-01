@@ -752,7 +752,7 @@ void setstring(MAPDHASH &master, const STRING &ky, STRINGP strp) {
 	}
 }
 
-void setstring(MAPDHASH &master, const STRING &ky, STRING &str) {
+void setstring(MAPDHASH &master, const STRING &ky, const STRING &str) {
 	return setstring(master, ky, new STRING(str));
 }
 
@@ -761,7 +761,7 @@ void setstring(MAPDHASH *mp, const STRING &ky, STRINGP strp) {
 	return setstring(*mp, ky, strp);
 }
 
-void setstring(MAPDHASH *mp, const STRING &ky, STRING &str) {
+void setstring(MAPDHASH *mp, const STRING &ky, const STRING &str) {
 	assert(mp);
 	return setstring(*mp, ky, new STRING(str));
 }

@@ -45,7 +45,7 @@
 
 typedef	std::vector<PERIPHP>	APLIST;
 
-extern 	void	gather_peripherals(APLIST *alist, BUSINFO *bus, PLIST *plist);
+extern 	void	gather_peripherals(APLIST *alist, BUSINFO *bus, PLIST *plist, unsigned base=0);
 
 extern 	APLIST	*gather_peripherals(BUSINFO *bus);
 

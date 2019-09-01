@@ -53,7 +53,7 @@ public:
 		p_master_bus->add(phash);
 	}
 
-	unsigned get_base_address(MAPDHASH *phash);
+	bool get_base_address(MAPDHASH *phash, unsigned &base);
 
 	void	assign_addresses(void);
 	bool	need_translator(void);

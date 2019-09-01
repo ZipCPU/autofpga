@@ -58,6 +58,7 @@ bool	isbusmaster(MAPDHASH &phash);
 // must be one of: SUBBUS, XCLOCK, ARBITER, etc.
 //
 bool	issubbus(MAPDHASH &phash);
+bool	isarbiter(MAPDHASH &phash);
 //
 // Same thing, but when given a location within the tree, rather than a hash
 // value.
@@ -78,10 +79,6 @@ bool	isperipheral(MAPT &pmap);
 // interrupts that can be assigned to it.
 bool	ispic(MAPDHASH &phash);
 bool	ispic(MAPT &pmap);
-
-// Does this reference a memory peripheral?
-bool	ismemory(MAPDHASH &phash);
-bool	ismemory(MAPT &pmap);
 
 // Does this reference a memory peripheral?
 bool	ismemory(MAPDHASH &phash);

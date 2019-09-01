@@ -46,20 +46,6 @@
 #include "regdefs.h"
 
 const	REGNAME	raw_bregs[] = {
-	{ R_PIC             ,	"PIC"          	},
-	{ R_GPSU_SETUP      ,	"GPSSETUP"     	},
-	{ R_GPSU_FIFO       ,	"GPSFIFO"      	},
-	{ R_GPSU_UARTRX     ,	"GPSRX"        	},
-	{ R_GPSU_UARTTX     ,	"GPSTX"        	},
-	{ R_BKRAM           ,	"RAM"          	},
-	{ R_GPSTB_FREQ      ,	"GPSFREQ"      	},
-	{ R_GPSTB_JUMP      ,	"GPSJUMP"      	},
-	{ R_GPSTB_ERRHI     ,	"ERRHI"        	},
-	{ R_GPSTB_ERRLO     ,	"ERRLO"        	},
-	{ R_GPSTB_COUNTHI   ,	"CNTHI"        	},
-	{ R_GPSTB_COUNTLO   ,	"CNTLO"        	},
-	{ R_GPSTB_STEPHI    ,	"STEPHI"       	},
-	{ R_GPSTB_STEPLO    ,	"STEPLO"       	},
 	{ R_FLASHCFG        ,	"FLASHCFG"     	},
 	{ R_FLASHCFG        ,	"QSPIC"        	},
 	{ R_MIC_DATA        ,	"MICD"         	},
@@ -73,6 +59,10 @@ const	REGNAME	raw_bregs[] = {
 	{ R_SDSPI_SCOPC     ,	"SDSCOPC"      	},
 	{ R_SDSPI_SCOPC     ,	"SDSCOPE"      	},
 	{ R_SDSPI_SCOPD     ,	"SDSCOPD"      	},
+	{ R_GPSU_SETUP      ,	"GPSSETUP"     	},
+	{ R_GPSU_FIFO       ,	"GPSFIFO"      	},
+	{ R_GPSU_UARTRX     ,	"GPSRX"        	},
+	{ R_GPSU_UARTTX     ,	"GPSTX"        	},
 	{ R_SDSPI_CTRL      ,	"SDCARD"       	},
 	{ R_SDSPI_DATA      ,	"SDDATA"       	},
 	{ R_SDSPI_FIFOA     ,	"SDFIFOA"      	},
@@ -81,7 +71,6 @@ const	REGNAME	raw_bregs[] = {
 	{ R_SDSPI_FIFOB     ,	"SDFIFOB"      	},
 	{ R_SDSPI_FIFOB     ,	"SDFIF1"       	},
 	{ R_SDSPI_FIFOB     ,	"SDFIFB"       	},
-	{ R_SDRAM           ,	"SDRAM"        	},
 	{ R_CFG_CRC         ,	"FPGACRC"      	},
 	{ R_CFG_FAR         ,	"FPGAFAR"      	},
 	{ R_CFG_FDRI        ,	"FPGAFDRI"     	},
@@ -149,6 +138,14 @@ const	REGNAME	raw_bregs[] = {
 	{ R_STOPWATCH       ,	"STOPWATCH"    	},
 	{ R_CKALARM         ,	"ALARM"        	},
 	{ R_CKALARM         ,	"CKALARM"      	},
+	{ R_GPSTB_FREQ      ,	"GPSFREQ"      	},
+	{ R_GPSTB_JUMP      ,	"GPSJUMP"      	},
+	{ R_GPSTB_ERRHI     ,	"ERRHI"        	},
+	{ R_GPSTB_ERRLO     ,	"ERRLO"        	},
+	{ R_GPSTB_COUNTHI   ,	"CNTHI"        	},
+	{ R_GPSTB_COUNTLO   ,	"CNTLO"        	},
+	{ R_GPSTB_STEPHI    ,	"STEPHI"       	},
+	{ R_GPSTB_STEPLO    ,	"STEPLO"       	},
 	{ R_HIN_FRAMEADDR   ,	"HINFRAME"     	},
 	{ R_HIN_ORIGIN      ,	"HINORIGIN"    	},
 	{ R_HIN_MAXSZ       ,	"HINMAXSZ"     	},
@@ -172,6 +169,7 @@ const	REGNAME	raw_bregs[] = {
 	{ R_HIN_VMODE       ,	"HINVMODE"     	},
 	{ R_BUILDTIME       ,	"BUILDTIME"    	},
 	{ R_BUSERR          ,	"BUSERR"       	},
+	{ R_PIC             ,	"PIC"          	},
 	{ R_HDMI_INCLK      ,	"HCLKIN"       	},
 	{ R_HDMI_OUTCLK     ,	"HCLKOUT"      	},
 	{ R_GPIO            ,	"GPIO"         	},
@@ -189,7 +187,9 @@ const	REGNAME	raw_bregs[] = {
 	{ R_EDID_CMD        ,	"EDCMD"        	},
 	{ R_EDID_SPD        ,	"EDSPD"        	},
 	{ R_EDID_OUT        ,	"EDOUT"        	},
-	{ R_FLASH           ,	"FLASH"        	}
+	{ R_BKRAM           ,	"RAM"          	},
+	{ R_FLASH           ,	"FLASH"        	},
+	{ R_SDRAM           ,	"SDRAM"        	}
 };
 
 // REGSDEFS.CPP.INSERT for any bus masters

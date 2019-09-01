@@ -113,8 +113,10 @@ bool	PERIPH::ismemory(void) {
 }
 
 unsigned PERIPH::get_slave_address_width(void) {
-	if (p_awid != nextlg(naddr()))
+	if (p_awid != nextlg(naddr())) {
 		p_awid = nextlg(naddr());
+		setvalue(*p_phash, KYSLAVE_AWID, p_awid);
+	}
 	return p_awid;
 }
 
@@ -321,11 +323,6 @@ int	PLIST::add(MAPDHASH *phash) {
 		p->p_slave_bus = bi;
 	}
 
-	if (p) {
-		setstring(p->p_phash, KYSLAVE_PORTLIST, p->p_slave_bus->slave_portlist(p));
-		setstring(p->p_phash, KYSLAVE_ANSIPORTLIST, p->p_slave_bus->slave_ansi_portlist(p));
-	}
-
 	(void)p->bus_prefix();
 
 	push_back(p);
@@ -381,10 +378,12 @@ unsigned	PLIST::min_addr_size_octets(unsigned np,
 	return mna;
 }
 
-
+extern bool gbl_ready_for_address_assignment;
 void	PLIST::assign_addresses(unsigned dwidth, unsigned nullsz,
 		unsigned bus_min_address_width) {
 	unsigned daddr_abits = nextlg(dwidth/8);
+
+assert(gbl_ready_for_address_assignment);
 
 	// Use daddr_abits to convert our addresses between bus addresses and
 	// byte addresses.  The address width involved is in bus words,
@@ -406,7 +405,13 @@ void	PLIST::assign_addresses(unsigned dwidth, unsigned nullsz,
 				(*this)[0]->p_name->c_str());
 		}
 	} else {
+		static int counter = 0;
+		counter++;
 
+
+		int	sequence = counter;
+gbl_msg.info("PL: 1.SEQ = %d\n", sequence);
+fprintf(stderr, "PL: 1.SEQ = %d\n", sequence);
 		// We'll need a minimum of nextlg(p->size()) bits to address
 		// p->size() separate peripherals.  While we'd like to minimize
 		// the number of bits we use to do this, adding one extra bit
@@ -442,6 +447,9 @@ void	PLIST::assign_addresses(unsigned dwidth, unsigned nullsz,
 		// Our goal will be to do better than this
 
 		for(iterator p=begin(); p!=end(); p++) {
+			// Make certain all of our slaves have at least
+			// one address location assigned to them, generate
+			// an error if not
 			if ((*p)->naddr() <= 0) {
 				gbl_msg.error("Slave %s has zero "
 					"NADDR (now address assigned)\n",
@@ -449,6 +457,9 @@ void	PLIST::assign_addresses(unsigned dwidth, unsigned nullsz,
 			}
 		}
 
+		//
+		// Minimize the address width
+		//
 		unsigned	min_relevant = 32-daddr_abits;
 		for(unsigned mina = daddr_abits+1; mina < 32-daddr_abits;
 						mina++) {
@@ -542,6 +553,11 @@ void	PLIST::assign_addresses(unsigned dwidth, unsigned nullsz,
 					(*this)[i]->p_base,
 					(*this)[i]->p_mask << daddr_abits);
 
+fprintf(stderr, "  %20s -> %08lx & 0x%08lx\n",
+					(*this)[i]->p_name->c_str(),
+					(*this)[i]->p_base,
+					(*this)[i]->p_mask << daddr_abits);
+
 			if ((*this)[i]->p_phash) {
 				PERIPHP	p = (*this)[i];
 				MAPDHASH	*ph = p->p_phash;
@@ -557,6 +573,8 @@ void	PLIST::assign_addresses(unsigned dwidth, unsigned nullsz,
 				}
 			}
 		} m_address_width = nextlg(start_address)-daddr_abits;
+gbl_msg.info("PL: 2.SEQ = %d\n", sequence);
+fprintf(stderr, "PL: 2.SEQ = %d\n", sequence);
 	}
 
 	reeval(gbl_hash);

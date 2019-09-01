@@ -166,13 +166,13 @@ module	main(i_clk, i_reset,
 	// A 32-bit address indicating where the ZipCPU should start running
 	// from
 `ifdef	FLASH_ACCESS
-	localparam	RESET_ADDRESS = 23068672;
+	localparam	RESET_ADDRESS = 408944640;
 `else
-	localparam	RESET_ADDRESS = @$(/bkram.REGBASE);
+	localparam	RESET_ADDRESS = 369098752;
 `endif
 	//
 	// The number of valid bits on the bus
-	localparam	ZIP_ADDRESS_WIDTH = 23; // Zip-CPU address width
+	localparam	ZIP_ADDRESS_WIDTH = 28; // Zip-CPU address width
 	//
 	// Number of ZipCPU interrupts
 	localparam	ZIP_INTS = 16;
@@ -321,7 +321,7 @@ module	main(i_clk, i_reset,
 	reg	r_clkhdmiout_ack;
 	wire	[5-1:0]	w_btn;
 	wire	[8-1:0]	w_led;
-	reg	[23-1:0]	r_buserr_addr;
+	reg	[28-1:0]	r_buserr_addr;
 // BUILDTIME doesnt need to include builddate.v a second time
 // `include "builddate.v"
 	wire	gps_pps, gps_led, gps_locked, gps_tracking;
@@ -394,7 +394,7 @@ module	main(i_clk, i_reset,
 	// Bus arbiter's internal lines
 	wire		wbu_dwbi_cyc, wbu_dwbi_stb, wbu_dwbi_we,
 			wbu_dwbi_ack, wbu_dwbi_stall, wbu_dwbi_err;
-	wire	[(23-1):0]	wbu_dwbi_addr;
+	wire	[(28-1):0]	wbu_dwbi_addr;
 	wire	[(32-1):0]	wbu_dwbi_odata, wbu_dwbi_idata;
 	wire	[(4-1):0]	wbu_dwbi_sel;
 	// Bus arbiter's internal lines
@@ -425,313 +425,400 @@ module	main(i_clk, i_reset,
 
 	// Bus wb
 	// Wishbone definitions for bus wb, component wbu_dwb
+	// Verilator lint_off UNUSED
 	wire		wb_wbu_dwb_cyc, wb_wbu_dwb_stb, wb_wbu_dwb_we;
-	wire	[22:0]	wb_wbu_dwb_addr;
+	wire	[27:0]	wb_wbu_dwb_addr;
 	wire	[31:0]	wb_wbu_dwb_data;
 	wire	[3:0]	wb_wbu_dwb_sel;
 	wire		wb_wbu_dwb_stall, wb_wbu_dwb_ack, wb_wbu_dwb_err;
 	wire	[31:0]	wb_wbu_dwb_idata;
+	// Verilator lint_on UNUSED
 	// Wishbone definitions for bus wb, component zip_dwb
+	// Verilator lint_off UNUSED
 	wire		wb_zip_dwb_cyc, wb_zip_dwb_stb, wb_zip_dwb_we;
-	wire	[22:0]	wb_zip_dwb_addr;
+	wire	[27:0]	wb_zip_dwb_addr;
 	wire	[31:0]	wb_zip_dwb_data;
 	wire	[3:0]	wb_zip_dwb_sel;
 	wire		wb_zip_dwb_stall, wb_zip_dwb_ack, wb_zip_dwb_err;
 	wire	[31:0]	wb_zip_dwb_idata;
+	// Verilator lint_on UNUSED
 	// Wishbone definitions for bus wb(SIO), component buildtime
+	// Verilator lint_off UNUSED
 	wire		wb_buildtime_cyc, wb_buildtime_stb, wb_buildtime_we;
-	wire	[22:0]	wb_buildtime_addr;
+	wire	[27:0]	wb_buildtime_addr;
 	wire	[31:0]	wb_buildtime_data;
 	wire	[3:0]	wb_buildtime_sel;
 	wire		wb_buildtime_stall, wb_buildtime_ack, wb_buildtime_err;
 	wire	[31:0]	wb_buildtime_idata;
+	// Verilator lint_on UNUSED
 	// Wishbone definitions for bus wb(SIO), component buserr
+	// Verilator lint_off UNUSED
 	wire		wb_buserr_cyc, wb_buserr_stb, wb_buserr_we;
-	wire	[22:0]	wb_buserr_addr;
+	wire	[27:0]	wb_buserr_addr;
 	wire	[31:0]	wb_buserr_data;
 	wire	[3:0]	wb_buserr_sel;
 	wire		wb_buserr_stall, wb_buserr_ack, wb_buserr_err;
 	wire	[31:0]	wb_buserr_idata;
+	// Verilator lint_on UNUSED
+	// Wishbone definitions for bus wb(SIO), component buspic
+	// Verilator lint_off UNUSED
+	wire		wb_buspic_cyc, wb_buspic_stb, wb_buspic_we;
+	wire	[27:0]	wb_buspic_addr;
+	wire	[31:0]	wb_buspic_data;
+	wire	[3:0]	wb_buspic_sel;
+	wire		wb_buspic_stall, wb_buspic_ack, wb_buspic_err;
+	wire	[31:0]	wb_buspic_idata;
+	// Verilator lint_on UNUSED
 	// Wishbone definitions for bus wb(SIO), component clkhdmiin
+	// Verilator lint_off UNUSED
 	wire		wb_clkhdmiin_cyc, wb_clkhdmiin_stb, wb_clkhdmiin_we;
-	wire	[22:0]	wb_clkhdmiin_addr;
+	wire	[27:0]	wb_clkhdmiin_addr;
 	wire	[31:0]	wb_clkhdmiin_data;
 	wire	[3:0]	wb_clkhdmiin_sel;
 	wire		wb_clkhdmiin_stall, wb_clkhdmiin_ack, wb_clkhdmiin_err;
 	wire	[31:0]	wb_clkhdmiin_idata;
+	// Verilator lint_on UNUSED
 	// Wishbone definitions for bus wb(SIO), component clkhdmiout
+	// Verilator lint_off UNUSED
 	wire		wb_clkhdmiout_cyc, wb_clkhdmiout_stb, wb_clkhdmiout_we;
-	wire	[22:0]	wb_clkhdmiout_addr;
+	wire	[27:0]	wb_clkhdmiout_addr;
 	wire	[31:0]	wb_clkhdmiout_data;
 	wire	[3:0]	wb_clkhdmiout_sel;
 	wire		wb_clkhdmiout_stall, wb_clkhdmiout_ack, wb_clkhdmiout_err;
 	wire	[31:0]	wb_clkhdmiout_idata;
+	// Verilator lint_on UNUSED
 	// Wishbone definitions for bus wb(SIO), component gpio
+	// Verilator lint_off UNUSED
 	wire		wb_gpio_cyc, wb_gpio_stb, wb_gpio_we;
-	wire	[22:0]	wb_gpio_addr;
+	wire	[27:0]	wb_gpio_addr;
 	wire	[31:0]	wb_gpio_data;
 	wire	[3:0]	wb_gpio_sel;
 	wire		wb_gpio_stall, wb_gpio_ack, wb_gpio_err;
 	wire	[31:0]	wb_gpio_idata;
+	// Verilator lint_on UNUSED
 	// Wishbone definitions for bus wb(SIO), component hdmi_scope_frame_offset
+	// Verilator lint_off UNUSED
 	wire		wb_hdmi_scope_frame_offset_cyc, wb_hdmi_scope_frame_offset_stb, wb_hdmi_scope_frame_offset_we;
-	wire	[22:0]	wb_hdmi_scope_frame_offset_addr;
+	wire	[27:0]	wb_hdmi_scope_frame_offset_addr;
 	wire	[31:0]	wb_hdmi_scope_frame_offset_data;
 	wire	[3:0]	wb_hdmi_scope_frame_offset_sel;
 	wire		wb_hdmi_scope_frame_offset_stall, wb_hdmi_scope_frame_offset_ack, wb_hdmi_scope_frame_offset_err;
 	wire	[31:0]	wb_hdmi_scope_frame_offset_idata;
+	// Verilator lint_on UNUSED
 	// Wishbone definitions for bus wb(SIO), component pwrcount
+	// Verilator lint_off UNUSED
 	wire		wb_pwrcount_cyc, wb_pwrcount_stb, wb_pwrcount_we;
-	wire	[22:0]	wb_pwrcount_addr;
+	wire	[27:0]	wb_pwrcount_addr;
 	wire	[31:0]	wb_pwrcount_data;
 	wire	[3:0]	wb_pwrcount_sel;
 	wire		wb_pwrcount_stall, wb_pwrcount_ack, wb_pwrcount_err;
 	wire	[31:0]	wb_pwrcount_idata;
+	// Verilator lint_on UNUSED
 	// Wishbone definitions for bus wb(SIO), component rtcdate
+	// Verilator lint_off UNUSED
 	wire		wb_rtcdate_cyc, wb_rtcdate_stb, wb_rtcdate_we;
-	wire	[22:0]	wb_rtcdate_addr;
+	wire	[27:0]	wb_rtcdate_addr;
 	wire	[31:0]	wb_rtcdate_data;
 	wire	[3:0]	wb_rtcdate_sel;
 	wire		wb_rtcdate_stall, wb_rtcdate_ack, wb_rtcdate_err;
 	wire	[31:0]	wb_rtcdate_idata;
+	// Verilator lint_on UNUSED
 	// Wishbone definitions for bus wb(SIO), component spio
+	// Verilator lint_off UNUSED
 	wire		wb_spio_cyc, wb_spio_stb, wb_spio_we;
-	wire	[22:0]	wb_spio_addr;
+	wire	[27:0]	wb_spio_addr;
 	wire	[31:0]	wb_spio_data;
 	wire	[3:0]	wb_spio_sel;
 	wire		wb_spio_stall, wb_spio_ack, wb_spio_err;
 	wire	[31:0]	wb_spio_idata;
+	// Verilator lint_on UNUSED
 	// Wishbone definitions for bus wb(SIO), component subseconds
+	// Verilator lint_off UNUSED
 	wire		wb_subseconds_cyc, wb_subseconds_stb, wb_subseconds_we;
-	wire	[22:0]	wb_subseconds_addr;
+	wire	[27:0]	wb_subseconds_addr;
 	wire	[31:0]	wb_subseconds_data;
 	wire	[3:0]	wb_subseconds_sel;
 	wire		wb_subseconds_stall, wb_subseconds_ack, wb_subseconds_err;
 	wire	[31:0]	wb_subseconds_idata;
+	// Verilator lint_on UNUSED
 	// Wishbone definitions for bus wb(SIO), component sysclk
+	// Verilator lint_off UNUSED
 	wire		wb_sysclk_cyc, wb_sysclk_stb, wb_sysclk_we;
-	wire	[22:0]	wb_sysclk_addr;
+	wire	[27:0]	wb_sysclk_addr;
 	wire	[31:0]	wb_sysclk_data;
 	wire	[3:0]	wb_sysclk_sel;
 	wire		wb_sysclk_stall, wb_sysclk_ack, wb_sysclk_err;
 	wire	[31:0]	wb_sysclk_idata;
+	// Verilator lint_on UNUSED
 	// Wishbone definitions for bus wb(SIO), component version
+	// Verilator lint_off UNUSED
 	wire		wb_version_cyc, wb_version_stb, wb_version_we;
-	wire	[22:0]	wb_version_addr;
+	wire	[27:0]	wb_version_addr;
 	wire	[31:0]	wb_version_data;
 	wire	[3:0]	wb_version_sel;
 	wire		wb_version_stall, wb_version_ack, wb_version_err;
 	wire	[31:0]	wb_version_idata;
+	// Verilator lint_on UNUSED
 	// Wishbone definitions for bus wb(DIO), component gck
+	// Verilator lint_off UNUSED
 	wire		wb_gck_cyc, wb_gck_stb, wb_gck_we;
-	wire	[22:0]	wb_gck_addr;
+	wire	[27:0]	wb_gck_addr;
 	wire	[31:0]	wb_gck_data;
 	wire	[3:0]	wb_gck_sel;
 	wire		wb_gck_stall, wb_gck_ack, wb_gck_err;
 	wire	[31:0]	wb_gck_idata;
+	// Verilator lint_on UNUSED
 	// Wishbone definitions for bus wb(DIO), component mous
+	// Verilator lint_off UNUSED
 	wire		wb_mous_cyc, wb_mous_stb, wb_mous_we;
-	wire	[22:0]	wb_mous_addr;
+	wire	[27:0]	wb_mous_addr;
 	wire	[31:0]	wb_mous_data;
 	wire	[3:0]	wb_mous_sel;
 	wire		wb_mous_stall, wb_mous_ack, wb_mous_err;
 	wire	[31:0]	wb_mous_idata;
+	// Verilator lint_on UNUSED
 	// Wishbone definitions for bus wb(DIO), component oled
+	// Verilator lint_off UNUSED
 	wire		wb_oled_cyc, wb_oled_stb, wb_oled_we;
-	wire	[22:0]	wb_oled_addr;
+	wire	[27:0]	wb_oled_addr;
 	wire	[31:0]	wb_oled_data;
 	wire	[3:0]	wb_oled_sel;
 	wire		wb_oled_stall, wb_oled_ack, wb_oled_err;
 	wire	[31:0]	wb_oled_idata;
+	// Verilator lint_on UNUSED
 	// Wishbone definitions for bus wb(DIO), component rtc
+	// Verilator lint_off UNUSED
 	wire		wb_rtc_cyc, wb_rtc_stb, wb_rtc_we;
-	wire	[22:0]	wb_rtc_addr;
+	wire	[27:0]	wb_rtc_addr;
 	wire	[31:0]	wb_rtc_data;
 	wire	[3:0]	wb_rtc_sel;
 	wire		wb_rtc_stall, wb_rtc_ack, wb_rtc_err;
 	wire	[31:0]	wb_rtc_idata;
+	// Verilator lint_on UNUSED
+	// Wishbone definitions for bus wb(DIO), component gtb
+	// Verilator lint_off UNUSED
+	wire		wb_gtb_cyc, wb_gtb_stb, wb_gtb_we;
+	wire	[27:0]	wb_gtb_addr;
+	wire	[31:0]	wb_gtb_data;
+	wire	[3:0]	wb_gtb_sel;
+	wire		wb_gtb_stall, wb_gtb_ack, wb_gtb_err;
+	wire	[31:0]	wb_gtb_idata;
+	// Verilator lint_on UNUSED
 	// Wishbone definitions for bus wb(DIO), component hdmiin
+	// Verilator lint_off UNUSED
 	wire		wb_hdmiin_cyc, wb_hdmiin_stb, wb_hdmiin_we;
-	wire	[22:0]	wb_hdmiin_addr;
+	wire	[27:0]	wb_hdmiin_addr;
 	wire	[31:0]	wb_hdmiin_data;
 	wire	[3:0]	wb_hdmiin_sel;
 	wire		wb_hdmiin_stall, wb_hdmiin_ack, wb_hdmiin_err;
 	wire	[31:0]	wb_hdmiin_idata;
+	// Verilator lint_on UNUSED
 	// Wishbone definitions for bus wb(DIO), component wb_sio
+	// Verilator lint_off UNUSED
 	wire		wb_sio_cyc, wb_sio_stb, wb_sio_we;
-	wire	[22:0]	wb_sio_addr;
+	wire	[27:0]	wb_sio_addr;
 	wire	[31:0]	wb_sio_data;
 	wire	[3:0]	wb_sio_sel;
 	wire		wb_sio_stall, wb_sio_ack, wb_sio_err;
 	wire	[31:0]	wb_sio_idata;
+	// Verilator lint_on UNUSED
 	// Wishbone definitions for bus wb(DIO), component edin
+	// Verilator lint_off UNUSED
 	wire		wb_edin_cyc, wb_edin_stb, wb_edin_we;
-	wire	[22:0]	wb_edin_addr;
+	wire	[27:0]	wb_edin_addr;
 	wire	[31:0]	wb_edin_data;
 	wire	[3:0]	wb_edin_sel;
 	wire		wb_edin_stall, wb_edin_ack, wb_edin_err;
 	wire	[31:0]	wb_edin_idata;
+	// Verilator lint_on UNUSED
 	// Wishbone definitions for bus wb(DIO), component edout
+	// Verilator lint_off UNUSED
 	wire		wb_edout_cyc, wb_edout_stb, wb_edout_we;
-	wire	[22:0]	wb_edout_addr;
+	wire	[27:0]	wb_edout_addr;
 	wire	[31:0]	wb_edout_data;
 	wire	[3:0]	wb_edout_sel;
 	wire		wb_edout_stall, wb_edout_ack, wb_edout_err;
 	wire	[31:0]	wb_edout_idata;
+	// Verilator lint_on UNUSED
 	// Wishbone definitions for bus wb, component flashcfg
+	// Verilator lint_off UNUSED
 	wire		wb_flashcfg_cyc, wb_flashcfg_stb, wb_flashcfg_we;
-	wire	[22:0]	wb_flashcfg_addr;
+	wire	[27:0]	wb_flashcfg_addr;
 	wire	[31:0]	wb_flashcfg_data;
 	wire	[3:0]	wb_flashcfg_sel;
 	wire		wb_flashcfg_stall, wb_flashcfg_ack, wb_flashcfg_err;
 	wire	[31:0]	wb_flashcfg_idata;
+	// Verilator lint_on UNUSED
 	// Wishbone definitions for bus wb, component pmic
+	// Verilator lint_off UNUSED
 	wire		wb_pmic_cyc, wb_pmic_stb, wb_pmic_we;
-	wire	[22:0]	wb_pmic_addr;
+	wire	[27:0]	wb_pmic_addr;
 	wire	[31:0]	wb_pmic_data;
 	wire	[3:0]	wb_pmic_sel;
 	wire		wb_pmic_stall, wb_pmic_ack, wb_pmic_err;
 	wire	[31:0]	wb_pmic_idata;
+	// Verilator lint_on UNUSED
 	// Wishbone definitions for bus wb, component scop_edid
+	// Verilator lint_off UNUSED
 	wire		wb_scop_edid_cyc, wb_scop_edid_stb, wb_scop_edid_we;
-	wire	[22:0]	wb_scop_edid_addr;
+	wire	[27:0]	wb_scop_edid_addr;
 	wire	[31:0]	wb_scop_edid_data;
 	wire	[3:0]	wb_scop_edid_sel;
 	wire		wb_scop_edid_stall, wb_scop_edid_ack, wb_scop_edid_err;
 	wire	[31:0]	wb_scop_edid_idata;
+	// Verilator lint_on UNUSED
 	// Wishbone definitions for bus wb, component scope_hdmiin
+	// Verilator lint_off UNUSED
 	wire		wb_scope_hdmiin_cyc, wb_scope_hdmiin_stb, wb_scope_hdmiin_we;
-	wire	[22:0]	wb_scope_hdmiin_addr;
+	wire	[27:0]	wb_scope_hdmiin_addr;
 	wire	[31:0]	wb_scope_hdmiin_data;
 	wire	[3:0]	wb_scope_hdmiin_sel;
 	wire		wb_scope_hdmiin_stall, wb_scope_hdmiin_ack, wb_scope_hdmiin_err;
 	wire	[31:0]	wb_scope_hdmiin_idata;
+	// Verilator lint_on UNUSED
 	// Wishbone definitions for bus wb, component scope_sdcard
+	// Verilator lint_off UNUSED
 	wire		wb_scope_sdcard_cyc, wb_scope_sdcard_stb, wb_scope_sdcard_we;
-	wire	[22:0]	wb_scope_sdcard_addr;
+	wire	[27:0]	wb_scope_sdcard_addr;
 	wire	[31:0]	wb_scope_sdcard_data;
 	wire	[3:0]	wb_scope_sdcard_sel;
 	wire		wb_scope_sdcard_stall, wb_scope_sdcard_ack, wb_scope_sdcard_err;
 	wire	[31:0]	wb_scope_sdcard_idata;
+	// Verilator lint_on UNUSED
+	// Wishbone definitions for bus wb, component gpsu
+	// Verilator lint_off UNUSED
+	wire		wb_gpsu_cyc, wb_gpsu_stb, wb_gpsu_we;
+	wire	[27:0]	wb_gpsu_addr;
+	wire	[31:0]	wb_gpsu_data;
+	wire	[3:0]	wb_gpsu_sel;
+	wire		wb_gpsu_stall, wb_gpsu_ack, wb_gpsu_err;
+	wire	[31:0]	wb_gpsu_idata;
+	// Verilator lint_on UNUSED
 	// Wishbone definitions for bus wb, component sdcard
+	// Verilator lint_off UNUSED
 	wire		wb_sdcard_cyc, wb_sdcard_stb, wb_sdcard_we;
-	wire	[22:0]	wb_sdcard_addr;
+	wire	[27:0]	wb_sdcard_addr;
 	wire	[31:0]	wb_sdcard_data;
 	wire	[3:0]	wb_sdcard_sel;
 	wire		wb_sdcard_stall, wb_sdcard_ack, wb_sdcard_err;
 	wire	[31:0]	wb_sdcard_idata;
+	// Verilator lint_on UNUSED
+	// Wishbone definitions for bus wb, component cfg
+	// Verilator lint_off UNUSED
+	wire		wb_cfg_cyc, wb_cfg_stb, wb_cfg_we;
+	wire	[27:0]	wb_cfg_addr;
+	wire	[31:0]	wb_cfg_data;
+	wire	[3:0]	wb_cfg_sel;
+	wire		wb_cfg_stall, wb_cfg_ack, wb_cfg_err;
+	wire	[31:0]	wb_cfg_idata;
+	// Verilator lint_on UNUSED
+	// Wishbone definitions for bus wb, component mdio
+	// Verilator lint_off UNUSED
+	wire		wb_mdio_cyc, wb_mdio_stb, wb_mdio_we;
+	wire	[27:0]	wb_mdio_addr;
+	wire	[31:0]	wb_mdio_data;
+	wire	[3:0]	wb_mdio_sel;
+	wire		wb_mdio_stall, wb_mdio_ack, wb_mdio_err;
+	wire	[31:0]	wb_mdio_idata;
+	// Verilator lint_on UNUSED
+	// Wishbone definitions for bus wb, component wb_dio
+	// Verilator lint_off UNUSED
+	wire		wb_dio_cyc, wb_dio_stb, wb_dio_we;
+	wire	[27:0]	wb_dio_addr;
+	wire	[31:0]	wb_dio_data;
+	wire	[3:0]	wb_dio_sel;
+	wire		wb_dio_stall, wb_dio_ack, wb_dio_err;
+	wire	[31:0]	wb_dio_idata;
+	// Verilator lint_on UNUSED
+	// Wishbone definitions for bus wb, component bkram
+	// Verilator lint_off UNUSED
+	wire		wb_bkram_cyc, wb_bkram_stb, wb_bkram_we;
+	wire	[27:0]	wb_bkram_addr;
+	wire	[31:0]	wb_bkram_data;
+	wire	[3:0]	wb_bkram_sel;
+	wire		wb_bkram_stall, wb_bkram_ack, wb_bkram_err;
+	wire	[31:0]	wb_bkram_idata;
+	// Verilator lint_on UNUSED
+	// Wishbone definitions for bus wb, component flash
+	// Verilator lint_off UNUSED
+	wire		wb_flash_cyc, wb_flash_stb, wb_flash_we;
+	wire	[27:0]	wb_flash_addr;
+	wire	[31:0]	wb_flash_data;
+	wire	[3:0]	wb_flash_sel;
+	wire		wb_flash_stall, wb_flash_ack, wb_flash_err;
+	wire	[31:0]	wb_flash_idata;
+	// Verilator lint_on UNUSED
 	// Wishbone definitions for bus wb, component xpand
+	// Verilator lint_off UNUSED
 	wire		wb_xpand_cyc, wb_xpand_stb, wb_xpand_we;
-	wire	[22:0]	wb_xpand_addr;
+	wire	[27:0]	wb_xpand_addr;
 	wire	[31:0]	wb_xpand_data;
 	wire	[3:0]	wb_xpand_sel;
 	wire		wb_xpand_stall, wb_xpand_ack, wb_xpand_err, xpand_err;
 	assign		wb_xpand_err = xpand_err;
 	wire	[31:0]	wb_xpand_idata;
-	// Wishbone definitions for bus wb, component cfg
-	wire		wb_cfg_cyc, wb_cfg_stb, wb_cfg_we;
-	wire	[22:0]	wb_cfg_addr;
-	wire	[31:0]	wb_cfg_data;
-	wire	[3:0]	wb_cfg_sel;
-	wire		wb_cfg_stall, wb_cfg_ack, wb_cfg_err;
-	wire	[31:0]	wb_cfg_idata;
-	// Wishbone definitions for bus wb, component mdio
-	wire		wb_mdio_cyc, wb_mdio_stb, wb_mdio_we;
-	wire	[22:0]	wb_mdio_addr;
-	wire	[31:0]	wb_mdio_data;
-	wire	[3:0]	wb_mdio_sel;
-	wire		wb_mdio_stall, wb_mdio_ack, wb_mdio_err;
-	wire	[31:0]	wb_mdio_idata;
-	// Wishbone definitions for bus wb, component wb_dio
-	wire		wb_dio_cyc, wb_dio_stb, wb_dio_we;
-	wire	[22:0]	wb_dio_addr;
-	wire	[31:0]	wb_dio_data;
-	wire	[3:0]	wb_dio_sel;
-	wire		wb_dio_stall, wb_dio_ack, wb_dio_err;
-	wire	[31:0]	wb_dio_idata;
-	// Wishbone definitions for bus wb, component flash
-	wire		wb_flash_cyc, wb_flash_stb, wb_flash_we;
-	wire	[22:0]	wb_flash_addr;
-	wire	[31:0]	wb_flash_data;
-	wire	[3:0]	wb_flash_sel;
-	wire		wb_flash_stall, wb_flash_ack, wb_flash_err;
-	wire	[31:0]	wb_flash_idata;
-	// Wishbone definitions for bus wb, component buspic
-	wire		wb_buspic_cyc, wb_buspic_stb, wb_buspic_we;
-	wire	[22:0]	wb_buspic_addr;
-	wire	[31:0]	wb_buspic_data;
-	wire	[3:0]	wb_buspic_sel;
-	wire		wb_buspic_stall, wb_buspic_ack, wb_buspic_err;
-	wire	[31:0]	wb_buspic_idata;
-	// Wishbone definitions for bus wb, component gpsu
-	wire		wb_gpsu_cyc, wb_gpsu_stb, wb_gpsu_we;
-	wire	[22:0]	wb_gpsu_addr;
-	wire	[31:0]	wb_gpsu_data;
-	wire	[3:0]	wb_gpsu_sel;
-	wire		wb_gpsu_stall, wb_gpsu_ack, wb_gpsu_err;
-	wire	[31:0]	wb_gpsu_idata;
-	// Wishbone definitions for bus wb, component bkram
-	wire		wb_bkram_cyc, wb_bkram_stb, wb_bkram_we;
-	wire	[22:0]	wb_bkram_addr;
-	wire	[31:0]	wb_bkram_data;
-	wire	[3:0]	wb_bkram_sel;
-	wire		wb_bkram_stall, wb_bkram_ack, wb_bkram_err;
-	wire	[31:0]	wb_bkram_idata;
-	// Wishbone definitions for bus wb, component gtb
-	wire		wb_gtb_cyc, wb_gtb_stb, wb_gtb_we;
-	wire	[22:0]	wb_gtb_addr;
-	wire	[31:0]	wb_gtb_data;
-	wire	[3:0]	wb_gtb_sel;
-	wire		wb_gtb_stall, wb_gtb_ack, wb_gtb_err;
-	wire	[31:0]	wb_gtb_idata;
+	// Verilator lint_on UNUSED
 	// Bus wbu
 	// Wishbone definitions for bus wbu, component wbu
+	// Verilator lint_off UNUSED
 	wire		wbu_wbu_cyc, wbu_wbu_stb, wbu_wbu_we;
-	wire	[23:0]	wbu_wbu_addr;
+	wire	[28:0]	wbu_wbu_addr;
 	wire	[31:0]	wbu_wbu_data;
 	wire	[3:0]	wbu_wbu_sel;
 	wire		wbu_wbu_stall, wbu_wbu_ack, wbu_wbu_err;
 	wire	[31:0]	wbu_wbu_idata;
+	// Verilator lint_on UNUSED
 	// Wishbone definitions for bus wbu, component wbu_dwb
+	// Verilator lint_off UNUSED
 	wire		wbu_wbu_dwb_cyc, wbu_wbu_dwb_stb, wbu_wbu_dwb_we;
-	wire	[23:0]	wbu_wbu_dwb_addr;
+	wire	[28:0]	wbu_wbu_dwb_addr;
 	wire	[31:0]	wbu_wbu_dwb_data;
 	wire	[3:0]	wbu_wbu_dwb_sel;
 	wire		wbu_wbu_dwb_stall, wbu_wbu_dwb_ack, wbu_wbu_dwb_err, wbu_dwb_err;
 	assign		wbu_wbu_dwb_err = wbu_dwb_err;
 	wire	[31:0]	wbu_wbu_dwb_idata;
+	// Verilator lint_on UNUSED
 	// Wishbone definitions for bus wbu, component zip_dbg
+	// Verilator lint_off UNUSED
 	wire		wbu_zip_dbg_cyc, wbu_zip_dbg_stb, wbu_zip_dbg_we;
-	wire	[23:0]	wbu_zip_dbg_addr;
+	wire	[28:0]	wbu_zip_dbg_addr;
 	wire	[31:0]	wbu_zip_dbg_data;
 	wire	[3:0]	wbu_zip_dbg_sel;
 	wire		wbu_zip_dbg_stall, wbu_zip_dbg_ack, wbu_zip_dbg_err;
 	wire	[31:0]	wbu_zip_dbg_idata;
+	// Verilator lint_on UNUSED
 	// Bus xpand_bus
 	// Wishbone definitions for bus xpand_bus, component xpand
+	// Verilator lint_off UNUSED
 	wire		xpand_bus_xpand_cyc, xpand_bus_xpand_stb, xpand_bus_xpand_we;
-	wire	[-1:0]	xpand_bus_xpand_addr;
+	wire	[24:0]	xpand_bus_xpand_addr;
 	wire	[127:0]	xpand_bus_xpand_data;
 	wire	[15:0]	xpand_bus_xpand_sel;
 	wire		xpand_bus_xpand_stall, xpand_bus_xpand_ack, xpand_bus_xpand_err;
 	wire	[127:0]	xpand_bus_xpand_idata;
+	// Verilator lint_on UNUSED
 	// Wishbone definitions for bus xpand_bus, component sdram_arbiter
+	// Verilator lint_off UNUSED
 	wire		xpand_bus_sdram_arbiter_cyc, xpand_bus_sdram_arbiter_stb, xpand_bus_sdram_arbiter_we;
-	wire	[-1:0]	xpand_bus_sdram_arbiter_addr;
+	wire	[24:0]	xpand_bus_sdram_arbiter_addr;
 	wire	[127:0]	xpand_bus_sdram_arbiter_data;
 	wire	[15:0]	xpand_bus_sdram_arbiter_sel;
 	wire		xpand_bus_sdram_arbiter_stall, xpand_bus_sdram_arbiter_ack, xpand_bus_sdram_arbiter_err, sdram_arbiter_err;
 	assign		xpand_bus_sdram_arbiter_err = sdram_arbiter_err;
 	wire	[127:0]	xpand_bus_sdram_arbiter_idata;
+	// Verilator lint_on UNUSED
 	// Bus vid
 	// Wishbone definitions for bus vid, component hdmiin
+	// Verilator lint_off UNUSED
 	wire		vid_hdmiin_cyc, vid_hdmiin_stb, vid_hdmiin_we;
 	wire	[24:0]	vid_hdmiin_addr;
 	wire	[127:0]	vid_hdmiin_data;
 	wire	[15:0]	vid_hdmiin_sel;
 	wire		vid_hdmiin_stall, vid_hdmiin_ack, vid_hdmiin_err;
 	wire	[127:0]	vid_hdmiin_idata;
+	// Verilator lint_on UNUSED
 	// Wishbone definitions for bus vid, component vid_bus
+	// Verilator lint_off UNUSED
 	wire		vid_vid_bus_cyc, vid_vid_bus_stb, vid_vid_bus_we;
 	wire	[24:0]	vid_vid_bus_addr;
 	wire	[127:0]	vid_vid_bus_data;
@@ -739,38 +826,48 @@ module	main(i_clk, i_reset,
 	wire		vid_vid_bus_stall, vid_vid_bus_ack, vid_vid_bus_err, vid_bus_err;
 	assign		vid_vid_bus_err = vid_bus_err;
 	wire	[127:0]	vid_vid_bus_idata;
+	// Verilator lint_on UNUSED
 	// Bus zip
 	// Wishbone definitions for bus zip, component zip
+	// Verilator lint_off UNUSED
 	wire		zip_zip_cyc, zip_zip_stb, zip_zip_we;
-	wire	[22:0]	zip_zip_addr;
+	wire	[27:0]	zip_zip_addr;
 	wire	[31:0]	zip_zip_data;
 	wire	[3:0]	zip_zip_sel;
 	wire		zip_zip_stall, zip_zip_ack, zip_zip_err;
 	wire	[31:0]	zip_zip_idata;
+	// Verilator lint_on UNUSED
 	// Wishbone definitions for bus zip, component zip_dwb
+	// Verilator lint_off UNUSED
 	wire		zip_zip_dwb_cyc, zip_zip_dwb_stb, zip_zip_dwb_we;
-	wire	[22:0]	zip_zip_dwb_addr;
+	wire	[27:0]	zip_zip_dwb_addr;
 	wire	[31:0]	zip_zip_dwb_data;
 	wire	[3:0]	zip_zip_dwb_sel;
 	wire		zip_zip_dwb_stall, zip_zip_dwb_ack, zip_zip_dwb_err, zip_dwb_err;
 	assign		zip_zip_dwb_err = zip_dwb_err;
 	wire	[31:0]	zip_zip_dwb_idata;
+	// Verilator lint_on UNUSED
 	// Bus sdr
 	// Wishbone definitions for bus sdr, component vid_bus
+	// Verilator lint_off UNUSED
 	wire		sdr_vid_bus_cyc, sdr_vid_bus_stb, sdr_vid_bus_we;
 	wire	[24:0]	sdr_vid_bus_addr;
 	wire	[127:0]	sdr_vid_bus_data;
 	wire	[15:0]	sdr_vid_bus_sel;
 	wire		sdr_vid_bus_stall, sdr_vid_bus_ack, sdr_vid_bus_err;
 	wire	[127:0]	sdr_vid_bus_idata;
+	// Verilator lint_on UNUSED
 	// Wishbone definitions for bus sdr, component sdram_arbiter
+	// Verilator lint_off UNUSED
 	wire		sdr_sdram_arbiter_cyc, sdr_sdram_arbiter_stb, sdr_sdram_arbiter_we;
 	wire	[24:0]	sdr_sdram_arbiter_addr;
 	wire	[127:0]	sdr_sdram_arbiter_data;
 	wire	[15:0]	sdr_sdram_arbiter_sel;
 	wire		sdr_sdram_arbiter_stall, sdr_sdram_arbiter_ack, sdr_sdram_arbiter_err;
 	wire	[127:0]	sdr_sdram_arbiter_idata;
+	// Verilator lint_on UNUSED
 	// Wishbone definitions for bus sdr, component sdram
+	// Verilator lint_off UNUSED
 	wire		sdr_sdram_cyc, sdr_sdram_stb, sdr_sdram_we;
 	wire	[24:0]	sdr_sdram_addr;
 	wire	[127:0]	sdr_sdram_data;
@@ -778,6 +875,7 @@ module	main(i_clk, i_reset,
 	wire		sdr_sdram_stall, sdr_sdram_ack, sdr_sdram_err, sdram_err;
 	assign		sdr_sdram_err = sdram_err;
 	wire	[127:0]	sdr_sdram_idata;
+	// Verilator lint_on UNUSED
 
 	//
 	// Peripheral address decoding
@@ -802,16 +900,18 @@ module	main(i_clk, i_reset,
 	casez( wb_sio_addr[3:0] )
 		4'h0: r_wb_sio_data <= wb_buildtime_data;
 		4'h1: r_wb_sio_data <= wb_buserr_data;
-		4'h2: r_wb_sio_data <= wb_clkhdmiin_data;
-		4'h3: r_wb_sio_data <= wb_clkhdmiout_data;
-		4'h4: r_wb_sio_data <= wb_gpio_data;
-		4'h5: r_wb_sio_data <= wb_hdmi_scope_frame_offset_data;
-		4'h6: r_wb_sio_data <= wb_pwrcount_data;
-		4'h7: r_wb_sio_data <= wb_rtcdate_data;
-		4'h8: r_wb_sio_data <= wb_spio_data;
-		4'h9: r_wb_sio_data <= wb_subseconds_data;
-		4'ha: r_wb_sio_data <= wb_sysclk_data;
-		4'hb: r_wb_sio_data <= wb_version_data;
+		4'h2: r_wb_sio_data <= wb_buspic_data;
+		4'h3: r_wb_sio_data <= wb_clkhdmiin_data;
+		4'h4: r_wb_sio_data <= wb_clkhdmiout_data;
+		4'h5: r_wb_sio_data <= wb_gpio_data;
+		4'h6: r_wb_sio_data <= wb_hdmi_scope_frame_offset_data;
+		4'h7: r_wb_sio_data <= wb_pwrcount_data;
+		4'h8: r_wb_sio_data <= wb_rtcdate_data;
+		4'h9: r_wb_sio_data <= wb_spio_data;
+		4'ha: r_wb_sio_data <= wb_subseconds_data;
+		4'hb: r_wb_sio_data <= wb_sysclk_data;
+		4'hc: r_wb_sio_data <= wb_version_data;
+		default: r_wb_sio_data <= wb_version_idata;
 	endcase
 	assign	wb_sio_idata = r_wb_sio_data;
 
@@ -825,72 +925,77 @@ module	main(i_clk, i_reset,
 	// Our goal here is to make certain that all of
 	// the slave bus inputs match the SIO bus wires
 	assign	wb_buildtime_cyc = wb_sio_cyc;
-	assign	wb_buildtime_stb = wb_sio_stb && (wb_sio_addr[ 3: 0] ==  4'h0);  // 0x000000
+	assign	wb_buildtime_stb = wb_sio_stb && (wb_sio_addr[ 3: 0] ==  4'h0);  // 0x0000000
 	assign	wb_buildtime_we  = wb_sio_we;
 	assign	wb_buildtime_data= wb_sio_data;
 	assign	wb_buildtime_sel = wb_sio_sel;
 	assign	wb_buserr_cyc = wb_sio_cyc;
-	assign	wb_buserr_stb = wb_sio_stb && (wb_sio_addr[ 3: 0] ==  4'h1);  // 0x000004
+	assign	wb_buserr_stb = wb_sio_stb && (wb_sio_addr[ 3: 0] ==  4'h1);  // 0x0000004
 	assign	wb_buserr_we  = wb_sio_we;
 	assign	wb_buserr_data= wb_sio_data;
 	assign	wb_buserr_sel = wb_sio_sel;
+	assign	wb_buspic_cyc = wb_sio_cyc;
+	assign	wb_buspic_stb = wb_sio_stb && (wb_sio_addr[ 3: 0] ==  4'h2);  // 0x0000008
+	assign	wb_buspic_we  = wb_sio_we;
+	assign	wb_buspic_data= wb_sio_data;
+	assign	wb_buspic_sel = wb_sio_sel;
 	assign	wb_clkhdmiin_cyc = wb_sio_cyc;
-	assign	wb_clkhdmiin_stb = wb_sio_stb && (wb_sio_addr[ 3: 0] ==  4'h2);  // 0x000008
+	assign	wb_clkhdmiin_stb = wb_sio_stb && (wb_sio_addr[ 3: 0] ==  4'h3);  // 0x000000c
 	assign	wb_clkhdmiin_we  = wb_sio_we;
 	assign	wb_clkhdmiin_data= wb_sio_data;
 	assign	wb_clkhdmiin_sel = wb_sio_sel;
 	assign	wb_clkhdmiout_cyc = wb_sio_cyc;
-	assign	wb_clkhdmiout_stb = wb_sio_stb && (wb_sio_addr[ 3: 0] ==  4'h3);  // 0x00000c
+	assign	wb_clkhdmiout_stb = wb_sio_stb && (wb_sio_addr[ 3: 0] ==  4'h4);  // 0x0000010
 	assign	wb_clkhdmiout_we  = wb_sio_we;
 	assign	wb_clkhdmiout_data= wb_sio_data;
 	assign	wb_clkhdmiout_sel = wb_sio_sel;
 	assign	wb_gpio_cyc = wb_sio_cyc;
-	assign	wb_gpio_stb = wb_sio_stb && (wb_sio_addr[ 3: 0] ==  4'h4);  // 0x000010
+	assign	wb_gpio_stb = wb_sio_stb && (wb_sio_addr[ 3: 0] ==  4'h5);  // 0x0000014
 	assign	wb_gpio_we  = wb_sio_we;
 	assign	wb_gpio_data= wb_sio_data;
 	assign	wb_gpio_sel = wb_sio_sel;
 	assign	wb_hdmi_scope_frame_offset_cyc = wb_sio_cyc;
-	assign	wb_hdmi_scope_frame_offset_stb = wb_sio_stb && (wb_sio_addr[ 3: 0] ==  4'h5);  // 0x000014
+	assign	wb_hdmi_scope_frame_offset_stb = wb_sio_stb && (wb_sio_addr[ 3: 0] ==  4'h6);  // 0x0000018
 	assign	wb_hdmi_scope_frame_offset_we  = wb_sio_we;
 	assign	wb_hdmi_scope_frame_offset_data= wb_sio_data;
 	assign	wb_hdmi_scope_frame_offset_sel = wb_sio_sel;
 	assign	wb_pwrcount_cyc = wb_sio_cyc;
-	assign	wb_pwrcount_stb = wb_sio_stb && (wb_sio_addr[ 3: 0] ==  4'h6);  // 0x000018
+	assign	wb_pwrcount_stb = wb_sio_stb && (wb_sio_addr[ 3: 0] ==  4'h7);  // 0x000001c
 	assign	wb_pwrcount_we  = wb_sio_we;
 	assign	wb_pwrcount_data= wb_sio_data;
 	assign	wb_pwrcount_sel = wb_sio_sel;
 	assign	wb_rtcdate_cyc = wb_sio_cyc;
-	assign	wb_rtcdate_stb = wb_sio_stb && (wb_sio_addr[ 3: 0] ==  4'h7);  // 0x00001c
+	assign	wb_rtcdate_stb = wb_sio_stb && (wb_sio_addr[ 3: 0] ==  4'h8);  // 0x0000020
 	assign	wb_rtcdate_we  = wb_sio_we;
 	assign	wb_rtcdate_data= wb_sio_data;
 	assign	wb_rtcdate_sel = wb_sio_sel;
 	assign	wb_spio_cyc = wb_sio_cyc;
-	assign	wb_spio_stb = wb_sio_stb && (wb_sio_addr[ 3: 0] ==  4'h8);  // 0x000020
+	assign	wb_spio_stb = wb_sio_stb && (wb_sio_addr[ 3: 0] ==  4'h9);  // 0x0000024
 	assign	wb_spio_we  = wb_sio_we;
 	assign	wb_spio_data= wb_sio_data;
 	assign	wb_spio_sel = wb_sio_sel;
 	assign	wb_subseconds_cyc = wb_sio_cyc;
-	assign	wb_subseconds_stb = wb_sio_stb && (wb_sio_addr[ 3: 0] ==  4'h9);  // 0x000024
+	assign	wb_subseconds_stb = wb_sio_stb && (wb_sio_addr[ 3: 0] ==  4'ha);  // 0x0000028
 	assign	wb_subseconds_we  = wb_sio_we;
 	assign	wb_subseconds_data= wb_sio_data;
 	assign	wb_subseconds_sel = wb_sio_sel;
 	assign	wb_sysclk_cyc = wb_sio_cyc;
-	assign	wb_sysclk_stb = wb_sio_stb && (wb_sio_addr[ 3: 0] ==  4'ha);  // 0x000028
+	assign	wb_sysclk_stb = wb_sio_stb && (wb_sio_addr[ 3: 0] ==  4'hb);  // 0x000002c
 	assign	wb_sysclk_we  = wb_sio_we;
 	assign	wb_sysclk_data= wb_sio_data;
 	assign	wb_sysclk_sel = wb_sio_sel;
 	assign	wb_version_cyc = wb_sio_cyc;
-	assign	wb_version_stb = wb_sio_stb && (wb_sio_addr[ 3: 0] ==  4'hb);  // 0x00002c
+	assign	wb_version_stb = wb_sio_stb && (wb_sio_addr[ 3: 0] ==  4'hc);  // 0x0000030
 	assign	wb_version_we  = wb_sio_we;
 	assign	wb_version_data= wb_sio_data;
 	assign	wb_version_sel = wb_sio_sel;
 	//
-	// wb Bus logic to handle 8 DOUBLE slaves
+	// wb Bus logic to handle 9 DOUBLE slaves
 	//
 	//
 	reg	[1:0]	r_wb_dio_ack;
-	// # dlist = 8, nextlg(#dlist) = 3
-	reg	[2:0]	r_wb_dio_bus_select;
+	// # dlist = 9, nextlg(#dlist) = 4
+	reg	[3:0]	r_wb_dio_bus_select;
 	reg	[31:0]	r_wb_dio_data;
 
 	// DOUBLE peripherals are not allowed to stall.
@@ -902,7 +1007,7 @@ module	main(i_clk, i_reset,
 	// is treated as a two stage shift register, cleared on any
 	// reset, or any time the cycle line drops.  (Dropping the
 	// cycle line aborts the transaction.)
-	initial	r_wb_dio_ack <= 0;
+	initial	r_wb_dio_ack = 0;
 	always	@(posedge i_clk)
 	if (i_reset || !wb_dio_cyc)
 		r_wb_dio_ack <= 0;
@@ -916,111 +1021,139 @@ module	main(i_clk, i_reset,
 	// use this index to select from among the vaious
 	// possible bus return values
 	always @(posedge i_clk)
-	casez(wb_dio_addr[7:3])
-	5'b00_000: r_wb_dio_bus_select <= 3'd0;
-	5'b00_001: r_wb_dio_bus_select <= 3'd1;
-	5'b00_010: r_wb_dio_bus_select <= 3'd2;
-	5'b00_011: r_wb_dio_bus_select <= 3'd3;
-	5'b00_10?: r_wb_dio_bus_select <= 3'd4;
-	5'b00_11?: r_wb_dio_bus_select <= 3'd5;
-	5'b01_???: r_wb_dio_bus_select <= 3'd6;
-	5'b1?_???: r_wb_dio_bus_select <= 3'd7;
+	casez(wb_dio_addr[7:2])
+	6'b00_0000: r_wb_dio_bus_select <= 4'd0;
+	6'b00_0001: r_wb_dio_bus_select <= 4'd1;
+	6'b00_0010: r_wb_dio_bus_select <= 4'd2;
+	6'b00_0011: r_wb_dio_bus_select <= 4'd3;
+	6'b00_010?: r_wb_dio_bus_select <= 4'd4;
+	6'b00_10??: r_wb_dio_bus_select <= 4'd5;
+	6'b00_11??: r_wb_dio_bus_select <= 4'd6;
+	6'b01_????: r_wb_dio_bus_select <= 4'd7;
+	6'b1?_????: r_wb_dio_bus_select <= 4'd8;
 	default: r_wb_dio_bus_select <= 0;
 	endcase
 
 	always	@(posedge i_clk)
 	casez(r_wb_dio_bus_select)
-	3'd0: r_wb_dio_data <= wb_gck_data;
-	3'd1: r_wb_dio_data <= wb_mous_data;
-	3'd2: r_wb_dio_data <= wb_oled_data;
-	3'd3: r_wb_dio_data <= wb_rtc_data;
-	3'd4: r_wb_dio_data <= wb_hdmiin_data;
-	3'd5: r_wb_dio_data <= wb_sio_data;
-	3'd6: r_wb_dio_data <= wb_edin_data;
-	default: r_wb_dio_data <= edout_data;
+	4'd0: r_wb_dio_data <= wb_gck_idata;
+	4'd1: r_wb_dio_data <= wb_mous_idata;
+	4'd2: r_wb_dio_data <= wb_oled_idata;
+	4'd3: r_wb_dio_data <= wb_rtc_idata;
+	4'd4: r_wb_dio_data <= wb_gtb_idata;
+	4'd5: r_wb_dio_data <= wb_hdmiin_idata;
+	4'd6: r_wb_dio_data <= wb_sio_idata;
+	4'd7: r_wb_dio_data <= wb_edin_idata;
+	4'd8: r_wb_dio_data <= wb_edout_idata;
+	default: r_wb_dio_data <= wb_edout_idata;
 	endcase
 
 	assign	wb_dio_idata = r_wb_dio_data;
 
 	assign	wb_gck_cyc = wb_dio_cyc;
-	assign	wb_gck_stb = wb_dio_stb && (wb_dio_addr[ 7: 3] ==  5'h00);  // 0x000000 - 0x00000f
+	assign	wb_gck_stb = wb_dio_stb && (wb_dio_addr[ 7: 2] ==  6'h00);  // 0x0000000 - 0x000000f
 	assign	wb_gck_we  = wb_dio_we;
+	assign	wb_gck_addr= wb_dio_addr;
 	assign	wb_gck_data= wb_dio_data;
 	assign	wb_gck_sel = wb_dio_sel;
 	assign	wb_mous_cyc = wb_dio_cyc;
-	assign	wb_mous_stb = wb_dio_stb && (wb_dio_addr[ 7: 3] ==  5'h01);  // 0x000020 - 0x00002f
+	assign	wb_mous_stb = wb_dio_stb && (wb_dio_addr[ 7: 2] ==  6'h01);  // 0x0000010 - 0x000001f
 	assign	wb_mous_we  = wb_dio_we;
+	assign	wb_mous_addr= wb_dio_addr;
 	assign	wb_mous_data= wb_dio_data;
 	assign	wb_mous_sel = wb_dio_sel;
 	assign	wb_oled_cyc = wb_dio_cyc;
-	assign	wb_oled_stb = wb_dio_stb && (wb_dio_addr[ 7: 3] ==  5'h02);  // 0x000040 - 0x00004f
+	assign	wb_oled_stb = wb_dio_stb && (wb_dio_addr[ 7: 2] ==  6'h02);  // 0x0000020 - 0x000002f
 	assign	wb_oled_we  = wb_dio_we;
+	assign	wb_oled_addr= wb_dio_addr;
 	assign	wb_oled_data= wb_dio_data;
 	assign	wb_oled_sel = wb_dio_sel;
 	assign	wb_rtc_cyc = wb_dio_cyc;
-	assign	wb_rtc_stb = wb_dio_stb && (wb_dio_addr[ 7: 3] ==  5'h03);  // 0x000060 - 0x00006f
+	assign	wb_rtc_stb = wb_dio_stb && (wb_dio_addr[ 7: 2] ==  6'h03);  // 0x0000030 - 0x000003f
 	assign	wb_rtc_we  = wb_dio_we;
+	assign	wb_rtc_addr= wb_dio_addr;
 	assign	wb_rtc_data= wb_dio_data;
 	assign	wb_rtc_sel = wb_dio_sel;
+	assign	wb_gtb_cyc = wb_dio_cyc;
+	assign	wb_gtb_stb = wb_dio_stb && (wb_dio_addr[ 7: 2] ==  6'h04);  // 0x0000040 - 0x000005f
+	assign	wb_gtb_we  = wb_dio_we;
+	assign	wb_gtb_addr= wb_dio_addr;
+	assign	wb_gtb_data= wb_dio_data;
+	assign	wb_gtb_sel = wb_dio_sel;
 	assign	wb_hdmiin_cyc = wb_dio_cyc;
-	assign	wb_hdmiin_stb = wb_dio_stb && (wb_dio_addr[ 7: 3] ==  5'h04);  // 0x000080 - 0x0000bf
+	assign	wb_hdmiin_stb = wb_dio_stb && (wb_dio_addr[ 7: 2] ==  6'h08);  // 0x0000080 - 0x00000bf
 	assign	wb_hdmiin_we  = wb_dio_we;
+	assign	wb_hdmiin_addr= wb_dio_addr;
 	assign	wb_hdmiin_data= wb_dio_data;
 	assign	wb_hdmiin_sel = wb_dio_sel;
 	assign	wb_sio_cyc = wb_dio_cyc;
-	assign	wb_sio_stb = wb_dio_stb && (wb_dio_addr[ 7: 3] ==  5'h06);  // 0x0000c0 - 0x0000ff
+	assign	wb_sio_stb = wb_dio_stb && (wb_dio_addr[ 7: 2] ==  6'h0c);  // 0x00000c0 - 0x00000ff
 	assign	wb_sio_we  = wb_dio_we;
+	assign	wb_sio_addr= wb_dio_addr;
 	assign	wb_sio_data= wb_dio_data;
 	assign	wb_sio_sel = wb_dio_sel;
 	assign	wb_edin_cyc = wb_dio_cyc;
-	assign	wb_edin_stb = wb_dio_stb && (wb_dio_addr[ 7: 3] ==  5'h08);  // 0x000100 - 0x0001ff
+	assign	wb_edin_stb = wb_dio_stb && (wb_dio_addr[ 7: 2] ==  6'h10);  // 0x0000100 - 0x00001ff
 	assign	wb_edin_we  = wb_dio_we;
+	assign	wb_edin_addr= wb_dio_addr;
 	assign	wb_edin_data= wb_dio_data;
 	assign	wb_edin_sel = wb_dio_sel;
 	assign	wb_edout_cyc = wb_dio_cyc;
-	assign	wb_edout_stb = wb_dio_stb && (wb_dio_addr[ 7: 3] ==  5'h10);  // 0x000200 - 0x0003ff
+	assign	wb_edout_stb = wb_dio_stb && (wb_dio_addr[ 7: 2] ==  6'h20);  // 0x0000200 - 0x00003ff
 	assign	wb_edout_we  = wb_dio_we;
+	assign	wb_edout_addr= wb_dio_addr;
 	assign	wb_edout_data= wb_dio_data;
 	assign	wb_edout_sel = wb_dio_sel;
+	assign	wb_flashcfg_err= 1'b0;
+	assign	wb_pmic_err= 1'b0;
+	assign	wb_scop_edid_err= 1'b0;
+	assign	wb_scope_hdmiin_err= 1'b0;
+	assign	wb_scope_sdcard_err= 1'b0;
+	assign	wb_gpsu_err= 1'b0;
+	assign	wb_sdcard_err= 1'b0;
+	assign	wb_cfg_err= 1'b0;
+	assign	wb_mdio_err= 1'b0;
+	assign	wb_dio_err= 1'b0;
+	assign	wb_bkram_err= 1'b0;
+	assign	wb_flash_err= 1'b0;
+	// info: @ERROR.WIRE xpand_err != wb_xpand
+	// info: @ERROR.WIRE for xpand, = xpand_err, doesn't match the buses wire wb_xpand_err
+	assign	wb_xpand_err = xpand_err;
 	//
 	// Connect the wb bus components together using the wbxbar()
 	//
 	//
 	wbxbar #(
-		.NM(2),.NS(15), .AW(23), .DW(32),
+		.NM(2), .NS(13), .AW(28), .DW(32),
 		.SLAVE_ADDR({
-			{ 23'h     0 },
-			{ 23'h     0 },
-			{ 23'h     0 },
-			{ 23'h     0 },
-			{ 23'h400000 },
-			{ 23'h280000 },
-			{ 23'h240000 },
-			{ 23'h200000 },
-			{ 23'h1c0000 },
-			{ 23'h180000 },
-			{ 23'h140000 },
-			{ 23'h100000 },
-			{ 23'h c0000 },
-			{ 23'h 80000 },
-			{ 23'h 40000 }
+			{ 28'h8000000 },
+			{ 28'h6000000 },
+			{ 28'h5800000 },
+			{ 28'h5000000 },
+			{ 28'h4800000 },
+			{ 28'h4000000 },
+			{ 28'h3800000 },
+			{ 28'h3000000 },
+			{ 28'h2800000 },
+			{ 28'h2000000 },
+			{ 28'h1800000 },
+			{ 28'h1000000 },
+			{ 28'h0800000 }
 		}),
 		.SLAVE_MASK({
-			{ 23'h14ca0910080b189d },
-			{ 23'h14ca0910080b189d },
-			{ 23'h15905314ca091008 },
-			{ 23'h1314ca0910080b1a },
-			{ 23'h100000 },
-			{ 23'h1f0000 },
-			{ 23'h1f0000 },
-			{ 23'h1f0000 },
-			{ 23'h1f0000 },
-			{ 23'h1f0000 },
-			{ 23'h1f0000 },
-			{ 23'h1f0000 },
-			{ 23'h1f0000 },
-			{ 23'h1f0000 },
-			{ 23'h1f0000 }
+			{ 28'h2000000 },
+			{ 28'h3e00000 },
+			{ 28'h3e00000 },
+			{ 28'h3e00000 },
+			{ 28'h3e00000 },
+			{ 28'h3e00000 },
+			{ 28'h3e00000 },
+			{ 28'h3e00000 },
+			{ 28'h3e00000 },
+			{ 28'h3e00000 },
+			{ 28'h3e00000 },
+			{ 28'h3e00000 },
+			{ 28'h3e00000 }
 		}))
 	wb_xbar(
 		.i_clk(i_clk), .i_reset(i_reset),
@@ -1066,16 +1199,14 @@ module	main(i_clk, i_reset,
 		}),
 		// Slave connections
 		.o_scyc({
-			wb_gtb_cyc,
-			wb_bkram_cyc,
-			wb_gpsu_cyc,
-			wb_buspic_cyc,
+			wb_xpand_cyc,
 			wb_flash_cyc,
+			wb_bkram_cyc,
 			wb_dio_cyc,
 			wb_mdio_cyc,
 			wb_cfg_cyc,
-			wb_xpand_cyc,
 			wb_sdcard_cyc,
+			wb_gpsu_cyc,
 			wb_scope_sdcard_cyc,
 			wb_scope_hdmiin_cyc,
 			wb_scop_edid_cyc,
@@ -1083,16 +1214,14 @@ module	main(i_clk, i_reset,
 			wb_flashcfg_cyc
 		}),
 		.o_sstb({
-			wb_gtb_stb,
-			wb_bkram_stb,
-			wb_gpsu_stb,
-			wb_buspic_stb,
+			wb_xpand_stb,
 			wb_flash_stb,
+			wb_bkram_stb,
 			wb_dio_stb,
 			wb_mdio_stb,
 			wb_cfg_stb,
-			wb_xpand_stb,
 			wb_sdcard_stb,
+			wb_gpsu_stb,
 			wb_scope_sdcard_stb,
 			wb_scope_hdmiin_stb,
 			wb_scop_edid_stb,
@@ -1100,16 +1229,14 @@ module	main(i_clk, i_reset,
 			wb_flashcfg_stb
 		}),
 		.o_swe({
-			wb_gtb_we,
-			wb_bkram_we,
-			wb_gpsu_we,
-			wb_buspic_we,
+			wb_xpand_we,
 			wb_flash_we,
+			wb_bkram_we,
 			wb_dio_we,
 			wb_mdio_we,
 			wb_cfg_we,
-			wb_xpand_we,
 			wb_sdcard_we,
+			wb_gpsu_we,
 			wb_scope_sdcard_we,
 			wb_scope_hdmiin_we,
 			wb_scop_edid_we,
@@ -1117,16 +1244,14 @@ module	main(i_clk, i_reset,
 			wb_flashcfg_we
 		}),
 		.o_saddr({
-			wb_gtb_addr,
-			wb_bkram_addr,
-			wb_gpsu_addr,
-			wb_buspic_addr,
+			wb_xpand_addr,
 			wb_flash_addr,
+			wb_bkram_addr,
 			wb_dio_addr,
 			wb_mdio_addr,
 			wb_cfg_addr,
-			wb_xpand_addr,
 			wb_sdcard_addr,
+			wb_gpsu_addr,
 			wb_scope_sdcard_addr,
 			wb_scope_hdmiin_addr,
 			wb_scop_edid_addr,
@@ -1134,16 +1259,14 @@ module	main(i_clk, i_reset,
 			wb_flashcfg_addr
 		}),
 		.o_sdata({
-			wb_gtb_data,
-			wb_bkram_data,
-			wb_gpsu_data,
-			wb_buspic_data,
+			wb_xpand_data,
 			wb_flash_data,
+			wb_bkram_data,
 			wb_dio_data,
 			wb_mdio_data,
 			wb_cfg_data,
-			wb_xpand_data,
 			wb_sdcard_data,
+			wb_gpsu_data,
 			wb_scope_sdcard_data,
 			wb_scope_hdmiin_data,
 			wb_scop_edid_data,
@@ -1151,16 +1274,14 @@ module	main(i_clk, i_reset,
 			wb_flashcfg_data
 		}),
 		.o_ssel({
-			wb_gtb_sel,
-			wb_bkram_sel,
-			wb_gpsu_sel,
-			wb_buspic_sel,
+			wb_xpand_sel,
 			wb_flash_sel,
+			wb_bkram_sel,
 			wb_dio_sel,
 			wb_mdio_sel,
 			wb_cfg_sel,
-			wb_xpand_sel,
 			wb_sdcard_sel,
+			wb_gpsu_sel,
 			wb_scope_sdcard_sel,
 			wb_scope_hdmiin_sel,
 			wb_scop_edid_sel,
@@ -1168,16 +1289,14 @@ module	main(i_clk, i_reset,
 			wb_flashcfg_sel
 		}),
 		.i_sstall({
-			wb_gtb_stall,
-			wb_bkram_stall,
-			wb_gpsu_stall,
-			wb_buspic_stall,
+			wb_xpand_stall,
 			wb_flash_stall,
+			wb_bkram_stall,
 			wb_dio_stall,
 			wb_mdio_stall,
 			wb_cfg_stall,
-			wb_xpand_stall,
 			wb_sdcard_stall,
+			wb_gpsu_stall,
 			wb_scope_sdcard_stall,
 			wb_scope_hdmiin_stall,
 			wb_scop_edid_stall,
@@ -1185,16 +1304,14 @@ module	main(i_clk, i_reset,
 			wb_flashcfg_stall
 		}),
 		.i_sack({
-			wb_gtb_ack,
-			wb_bkram_ack,
-			wb_gpsu_ack,
-			wb_buspic_ack,
+			wb_xpand_ack,
 			wb_flash_ack,
+			wb_bkram_ack,
 			wb_dio_ack,
 			wb_mdio_ack,
 			wb_cfg_ack,
-			wb_xpand_ack,
 			wb_sdcard_ack,
+			wb_gpsu_ack,
 			wb_scope_sdcard_ack,
 			wb_scope_hdmiin_ack,
 			wb_scop_edid_ack,
@@ -1202,16 +1319,14 @@ module	main(i_clk, i_reset,
 			wb_flashcfg_ack
 		}),
 		.i_sdata({
-			wb_gtb_idata,
-			wb_bkram_idata,
-			wb_gpsu_idata,
-			wb_buspic_idata,
+			wb_xpand_idata,
 			wb_flash_idata,
+			wb_bkram_idata,
 			wb_dio_idata,
 			wb_mdio_idata,
 			wb_cfg_idata,
-			wb_xpand_idata,
 			wb_sdcard_idata,
+			wb_gpsu_idata,
 			wb_scope_sdcard_idata,
 			wb_scope_hdmiin_idata,
 			wb_scop_edid_idata,
@@ -1219,16 +1334,14 @@ module	main(i_clk, i_reset,
 			wb_flashcfg_idata
 		}),
 		.i_serr({
-			wb_gtb_err,
-			wb_bkram_err,
-			wb_gpsu_err,
-			wb_buspic_err,
+			wb_xpand_err,
 			wb_flash_err,
+			wb_bkram_err,
 			wb_dio_err,
 			wb_mdio_err,
 			wb_cfg_err,
-			wb_xpand_err,
 			wb_sdcard_err,
+			wb_gpsu_err,
 			wb_scope_sdcard_err,
 			wb_scope_hdmiin_err,
 			wb_scop_edid_err,
@@ -1248,19 +1361,23 @@ module	main(i_clk, i_reset,
 	// No class DOUBLE peripherals on the "wbu" bus
 	//
 
+	// info: @ERROR.WIRE wbu_dwb_err != wbu_wbu_dwb
+	// info: @ERROR.WIRE for wbu_dwb, = wbu_dwb_err, doesn't match the buses wire wbu_wbu_dwb_err
+	assign	wbu_wbu_dwb_err = wbu_dwb_err;
+	assign	wbu_zip_dbg_err= 1'b0;
 	//
 	// Connect the wbu bus components together using the wbxbar()
 	//
 	//
 	wbxbar #(
-		.NM(1),.NS(2), .AW(24), .DW(32),
+		.NM(1), .NS(2), .AW(29), .DW(32),
 		.SLAVE_ADDR({
-			{ 24'h800000 },
-			{ 24'h     0 }
+			{ 29'h10000000 },
+			{ 29'h00000000 }
 		}),
 		.SLAVE_MASK({
-			{ 24'h200000 },
-			{ 24'h200000 }
+			{ 29'h06000000 },
+			{ 29'h04000000 }
 		}))
 	wbu_xbar(
 		.i_clk(i_clk), .i_reset(i_reset),
@@ -1384,17 +1501,20 @@ module	main(i_clk, i_reset,
 	// No class DOUBLE peripherals on the "sdr" bus
 	//
 
+	// info: @ERROR.WIRE sdram_err != sdr_sdram
+	// info: @ERROR.WIRE for sdram, = sdram_err, doesn't match the buses wire sdr_sdram_err
+	assign	sdr_sdram_err = sdram_err;
 	//
 	// Connect the sdr bus components together using the wbxbar()
 	//
 	//
 	wbxbar #(
-		.NM(2),.NS(1), .AW(25), .DW(128),
+		.NM(2), .NS(1), .AW(25), .DW(128),
 		.SLAVE_ADDR({
-			{ 25'h      0 }
+			{ 25'h0000000 }
 		}),
 		.SLAVE_MASK({
-			{ 25'h      0 }
+			{ 25'h0000000 }
 		}))
 	sdr_xbar(
 		.i_clk(i_clk), .i_reset(i_reset),
@@ -1726,7 +1846,7 @@ module	main(i_clk, i_reset,
 	always @(posedge i_clk)
 		if (wb_err)
 			r_buserr_addr <= wb_addr;
-	assign	buserr_data = { {(32-2-23){1'b0}},
+	assign	buserr_data = { {(32-2-28){1'b0}},
 			r_buserr_addr, 2'b00 };
 	assign	buildtime_data = `BUILDTIME;
 	assign	buildtime_ack = wb_stb && buildtime_sel;
@@ -1906,7 +2026,7 @@ module	main(i_clk, i_reset,
 				o_host_uart_tx, tx_host_busy);
 
 `ifdef	INCLUDE_ZIPCPU
-	// assign	wbu_zip_sel   = wbu_addr[23];
+	// assign	wbu_zip_sel   = wbu_addr[28];
 `else
 	assign	wbu_zip_sel   = 1'b0;
 	assign	zip_dbg_ack   = 1'b0;
@@ -1928,7 +2048,7 @@ module	main(i_clk, i_reset,
 			o_host_tx_stb, o_host_tx_data, i_host_tx_busy,
 			wbubus_dbg[0]);
 	assign	wbu_sel = 4'hf;
-	assign	wbu_addr = wbu_tmp_addr[(24-1):0];
+	assign	wbu_addr = wbu_tmp_addr[(29-1):0];
 `else	// WBUBUS_MASTER
 `endif	// WBUBUS_MASTER
 
@@ -2019,14 +2139,14 @@ module	main(i_clk, i_reset,
 	assign	sdcard_int = 1'b0;	// sdcard.INT.SDCARD.WIRE
 `endif	// SDSPI_ACCESS
 
-	busexpander #(.AWIN(@$(AWID)), .DWIN(32),
+	busexpander #(.AWIN(27), .DWIN(32),
 			.DWOUT(128))
 		xpandi32x128(
 			i_clk,
 			(wb_cyc),
 			(wb_stb)&&(xpand_sel),
 			wb_we,
-			wb_addr[(@$(AWID)-1):0],
+			wb_addr[(27-1):0],
 			wb_data, wb_sel,
 			xpand_ack, xpand_stall,
 			xpand_data, xpand_err,
@@ -2134,7 +2254,7 @@ module	main(i_clk, i_reset,
 	//
 	//
 	// Clock speed = 100000000 Hz
-	wbpriarbiter #(32,23)	bus_arbiter(i_clk,
+	wbpriarbiter #(32,28)	bus_arbiter(i_clk,
 		// The Zip CPU bus master --- gets the priority slot
 		zip_cyc, (zip_stb)&&(zip_dwb_sel), zip_we, zip_addr, zip_data, zip_sel,
 			zip_dwb_ack, zip_dwb_stall, zip_dwb_err,
@@ -2142,7 +2262,7 @@ module	main(i_clk, i_reset,
 		(wbu_cyc),
 			(wbu_stb)&&(wbu_dwb_sel),
 			wbu_we,
-			wbu_addr[(23-1):0],
+			wbu_addr[(28-1):0],
 			wbu_data, wbu_sel,
 			wbu_dwb_ack, wbu_dwb_stall, wbu_dwb_err,
 		// Common bus returns
@@ -2171,7 +2291,7 @@ module	main(i_clk, i_reset,
 `endif
 `endif
 `ifdef	BUS_DELAY_NEEDED
-	busdelay #(23)	wbu_dwbi_delay(i_clk, i_reset,
+	busdelay #(28)	wbu_dwbi_delay(i_clk, i_reset,
 		wbu_dwbi_cyc, wbu_dwbi_stb, wbu_dwbi_we, wbu_dwbi_addr, wbu_dwbi_odata, wbu_dwbi_sel,
 			wbu_dwbi_ack, wbu_dwbi_stall, wbu_dwbi_idata, wbu_dwbi_err,
 		wb_cyc, wb_stb, wb_we, wb_addr, wb_data, wb_sel,
@@ -2235,15 +2355,6 @@ module	main(i_clk, i_reset,
 			buspic_ack, buspic_stall, buspic_data,
 			bus_int_vector, w_bus_int);
 `else	// BUSPIC_ACCESS
-
-	//
-	// In the case that there is no buspic peripheral
-	// responding on the wb bus
-	assign	buspic_ack   = 1'b0;
-	assign	buspic_err   = (buspic_stb);
-	assign	buspic_stall = 0;
-	assign	buspic_data  = 0;
-
 	assign	w_bus_int = 1'b0;	// buspic.INT.BUS.WIRE
 `endif	// BUSPIC_ACCESS
 

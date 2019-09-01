@@ -70,10 +70,12 @@ BUSLIST	*gbl_blist;
 // Look up the number of bits in the address bus of the given hash
 int	BUSINFO::address_width(void) {
 	if (!m_addresses_assigned) {
-		gbl_msg.info("Requesting address width of %s\n", name()->c_str());
+		gbl_msg.info("BI: Requesting address width of %s\n", name()->c_str());
+fprintf(stderr, "BI: Requesting address width of %s, and assigning addresses\n", name()->c_str());
 		assign_addresses();
 
-		gbl_msg.info("Address width of %s is %d\n", name()->c_str(), m_address_width);
+		gbl_msg.info("BI: Address width of %s is %d\n", name()->c_str(), m_address_width);
+fprintf(stderr, "BI: Address width of %s is %d\n", name()->c_str(), m_address_width);
 	}
 	return generator()->address_width();
 }
@@ -155,7 +157,7 @@ void	BUSINFO::assign_addresses(void) {
 		gbl_msg.fatal("Bus %s has no generator type defined\n",
 			m_name->c_str());
 
-	gbl_msg.info("Assigning addresses for bus %s\n", m_name->c_str());
+	gbl_msg.info("BI: Assigning addresses for bus %s\n", m_name->c_str());
 	generator()->assign_addresses();
 
 	if (m_mlist) for(unsigned k=0; k<m_mlist->size(); k++) {
@@ -190,6 +192,7 @@ PERIPH *BUSINFO::add(PERIPHP p) {
 	plist = m_plist;
 
 	pi = plist->add(p);
+	m_addresses_assigned = false;
 	plist->integrity_check();
 	if (pi >= 0) {
 		p = (*plist)[pi];
@@ -806,6 +809,7 @@ void	BUSLIST::addbus(STRINGP cname, MAPT &map) {
 // proper error (as it should).
 //
 void assign_addresses(void) {
+fprintf(stderr, "MASTER--> ASSIGN ADDRESSES\n");
 	for(unsigned i=0; i<gbl_blist->size(); i++)
 		(*gbl_blist)[i]->assign_addresses();
 }
@@ -841,6 +845,8 @@ void	BUSINFO::writeout_no_master_v(FILE *fp) {
 }
 
 bool	BUSINFO::ismember_of(MAPDHASH *phash) {
+	if (m_plist == NULL)
+		return false;
 	for(unsigned i=0; i<m_plist->size(); i++)
 		if ((*m_plist)[i]->p_phash == phash)
 			return true;
@@ -1074,6 +1080,7 @@ void	BUSLIST::checkforbusdefns(STRINGP prefix, MAPDHASH *map, const STRING &key)
 	}
 }
 
+bool	gbl_ready_for_address_assignment = 0;
 void	build_bus_list(MAPDHASH &master) {
 	MAPDHASH::iterator	kvpair, kvaccess, kvsearch;
 	BUSLIST	*bl = new BUSLIST;
@@ -1169,14 +1176,16 @@ void	build_bus_list(MAPDHASH &master) {
 
 	bl->assign_bus_types();
 
+gbl_ready_for_address_assignment = true;
 	for(unsigned i=0; i< bl->size(); i++) {
 		(*bl)[i]->assign_addresses();
 		reeval(master);
 	}
-
+fprintf(stderr, "BUS-LIST: BUILT!\n");
 	reeval(master);
 }
 
+// #define	DUMP_BUS_TREE
 #ifdef	DUMP_BUS_TREE
 void	BUSINFO::dump_bus_tree(int tab=0) {
 
@@ -1185,6 +1194,8 @@ void	BUSINFO::dump_bus_tree(int tab=0) {
 
 	for(m_plist::iterator pp=m_plist->begin(); pp != m_plist->end(); pp++) {
 		gbl_msg.info("%*s%s\n", tab+1, "", (*pp)->p_name->c_str());
+		if (issubbus((*pp)->p_phash))
+			(*pp)->p_master_bus->dump_bus_tree(tab+1);
 	}
 }
 

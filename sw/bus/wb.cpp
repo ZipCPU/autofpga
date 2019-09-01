@@ -266,7 +266,7 @@ void	WBBUS::assign_addresses(void) {
 
 	if (!m_info)
 		return;
-	gbl_msg.info("Assigning addresses for bus %s\n",
+	gbl_msg.info("WB: Assigning addresses for bus %s\n",
 		(name()) ? name()->c_str() : "(No name bus)");
 	if (!m_info->m_plist||(m_info->m_plist->size() < 1)) {
 		m_info->m_address_width = 0;
@@ -299,23 +299,37 @@ BUSINFO *WBBUS::create_sio(void) {
 	BUSINFO	*sbi;
 	SUBBUS	*subp;
 	STRINGP	sioname;
-	MAPDHASH *bushash;
+	MAPDHASH *bushash, *shash;
+	MAPT	elm;
 
 	sioname = new STRING(STRING("" PREFIX) + (*name()) + "_sio");
 	bushash = new MAPDHASH();
-	setstring(*bushash, KYPREFIX, sioname);
-	setstring(*bushash, KYSLAVE_TYPE, new STRING(KYDOUBLE));
-	setstring(*bushash, KYSLAVE_PREFIX, sioname);
-	setstring(*bushash, KYMASTER_BUS, sioname);
+	shash   = new MAPDHASH();
+	setstring(*shash, KYPREFIX, sioname);
+	setstring(*shash, KYSLAVE_TYPE, new STRING(KYDOUBLE));
+	setstring(*shash, KYSLAVE_PREFIX, sioname);
+	
+	elm.m_typ = MAPT_MAP;
+	elm.u.m_m = bushash;
+	shash->insert(KEYVALUE(KYSLAVE_BUS, elm));
+	
+	elm.u.m_m = m_info->m_hash;
+	shash->insert(KEYVALUE(KYMASTER_BUS, elm));
+	setstring(shash, KYMASTER_TYPE, KYARBITER);
+
 	sbi  = new BUSINFO(sioname);
 	sbi->prefix(new STRING("_sio"));
+	setstring(bushash, KY_TYPE, new STRING("wb"));
 	sbi->m_data_width = m_info->m_data_width;
 	sbi->m_clock      = m_info->m_clock;
 	sbi->addmaster(m_info->m_hash);
-	subp = new SUBBUS(bushash, sioname, sbi);
+	subp = new SUBBUS(shash, sioname, sbi);
 	subp->p_slave_bus = m_info;
-	// subp->p_master_bus = set by the slave to be sbi
+	// subp->p_master_bus = set by the SUBBUS to be sbi
 	m_info->m_plist->add(subp);
+assert(subp->p_master_bus);
+assert(subp->p_slave_bus == m_info);
+assert(subp->p_master_bus == sbi);
 	// m_plist->integrity_check();
 	sbi->add();
 	m_slist = sbi->m_plist;
@@ -329,24 +343,44 @@ BUSINFO *WBBUS::create_dio(void) {
 	BUSINFO	*dbi;
 	SUBBUS	*subp;
 	STRINGP	dioname;
-	MAPDHASH	*bushash;
+	MAPDHASH	*bushash, *shash;
+	MAPT	elm;
 
 	dioname = new STRING(STRING("" PREFIX) + (*name()) + "_dio");
 	bushash = new MAPDHASH();
-	setstring(*bushash, KYPREFIX, dioname);
-	setstring(*bushash, KYSLAVE_TYPE, new STRING(KYOTHER));
-	setstring(*bushash, KYSLAVE_PREFIX, dioname);
+	shash   = new MAPDHASH();
+	setstring(*bushash, KY_NAME, dioname);
+	setstring(*shash, KYPREFIX, dioname);
+	setstring(*shash, KYSLAVE_TYPE, new STRING(KYOTHER));
+	setstring(*shash, KYSLAVE_PREFIX, dioname);
+	
+	elm.m_typ = MAPT_MAP;
+	elm.u.m_m = m_info->m_hash;
+	shash->insert(KEYVALUE(KYSLAVE_BUS, elm));
+	
+	elm.u.m_m = bushash;
+	shash->insert(KEYVALUE(KYMASTER_BUS, elm));
+	setstring(shash, KYMASTER_TYPE, KYARBITER);
+
 	dbi  = new BUSINFO(dioname);
 	dbi->prefix(new STRING("_dio"));
+	setstring(bushash, KY_TYPE, new STRING("wb"));
+assert(m_info->data_width() > 0);
+	setvalue(*bushash, KY_WIDTH, m_info->data_width());
 	dbi->m_data_width = m_info->m_data_width;
 	dbi->m_clock      = m_info->m_clock;
 	dbi->addmaster(m_info->m_hash);
-	subp = new SUBBUS(bushash, dioname, dbi);
+	subp = new SUBBUS(shash, dioname, dbi);
 	subp->p_slave_bus = m_info;
-	// subp->p_master_bus = set by the slave to be dbi
 	m_info->m_plist->add(subp);
+assert(subp->p_master_bus);
+assert(subp->p_master_bus == dbi);
+assert(subp->p_slave_bus == m_info);
+	// subp->p_master_bus = set by the slave to be dbi
 	dbi->add();
 	m_dlist = dbi->m_plist;
+assert(isbusmaster(*shash));
+assert(isarbiter(*shash));
 
 	return dbi;
 }
@@ -392,6 +426,7 @@ void	WBBUS::writeout_defn_v(FILE *fp, const char* pname,
 
 	fprintf(fp, "\t// Wishbone definitions for bus %s%s, component %s\n",
 		n->c_str(), btyp, pname);
+	fprintf(fp, "\t// Verilator lint_off UNUSED\n");
 	fprintf(fp, "\twire\t\t%s_cyc, %s_stb, %s_we;\n",
 		pfx, pfx, pfx);
 	fprintf(fp, "\twire\t[%d:0]\t%s_addr;\n", address_width()-1, pfx);
@@ -405,6 +440,7 @@ void	WBBUS::writeout_defn_v(FILE *fp, const char* pname,
 	else
 		fprintf(fp, ";\n");
 	fprintf(fp, "\twire\t[%d:0]\t%s_idata;\n", dw-1, pfx);
+	fprintf(fp, "\t// Verilator lint_on UNUSED\n");
 }
 
 void	WBBUS::writeout_bus_slave_defns_v(FILE *fp) {
@@ -831,7 +867,7 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 				(*m_slist)[j]->bus_prefix()->c_str());
 		}
 
-		if (m_slist->size()+1 == nextlg(m_slist->size())) {
+		if (nextlg(m_slist->size()-1) == nextlg(m_slist->size())) {
 			// We need a default option
 		if (bus_option(KY_OPT_LOWPOWER)) {
 			int	v;
@@ -839,20 +875,20 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 			if (getvalue(*m_info->m_hash, KY_OPT_LOWPOWER, v))
 				fprintf(fp,
 				"\t\tdefault: " PREFIX
-					"r_%s_data <= (%d) ? 0 : %s_data;\n",
+					"r_%s_data <= (%d) ? 0 : %s_idata;\n",
 				slp->c_str(), v,
-				(*m_slist)[m_slist->size()-1]->p_name->c_str());
+				(*m_slist)[m_slist->size()-1]->bus_prefix()->c_str());
 			else {
 				str = getstring(*m_info->m_hash, KY_OPT_LOWPOWER);
-				fprintf(fp, "\t\tdefault: " PREFIX "r_%s_data <= (%s) ? 0 : %s_data;\n",
+				fprintf(fp, "\t\tdefault: " PREFIX "r_%s_data <= (%s) ? 0 : %s_idata;\n",
 				slp->c_str(), (str) ? str->c_str() : "1\'b0",
-				(*m_slist)[m_slist->size()-1]->p_name->c_str());
+				(*m_slist)[m_slist->size()-1]->bus_prefix()->c_str());
 			}
 
 		} else {
-			fprintf(fp, "\t\tdefault: " PREFIX "r_%s_data <= %s_data;\n",
+			fprintf(fp, "\t\tdefault: " PREFIX "r_%s_data <= %s_idata;\n",
 				slp->c_str(),
-				(*m_slist)[m_slist->size()-1]->p_name->c_str());
+				(*m_slist)[m_slist->size()-1]->bus_prefix()->c_str());
 		}}
 		fprintf(fp, "\tendcase\n");
 		fprintf(fp, "\tassign\t" PREFIX "%s_idata = " PREFIX "r_%s_data;\n\n",
@@ -957,7 +993,7 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 		"\t// is treated as a two stage shift register, cleared on any\n"
 		"\t// reset, or any time the cycle line drops.  (Dropping the\n"
 		"\t// cycle line aborts the transaction.)\n"
-		"\tinitial\t" PREFIX "r_%s_ack <= 0;\n"
+		"\tinitial\t" PREFIX "r_%s_ack = 0;\n"
 		"\talways\t@(posedge %s)\n"
 			"\tif (%s || !%s_cyc)\n",
 				dlp->c_str(), c->m_wire->c_str(),
@@ -975,6 +1011,7 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 
 		//
 		// The data return lines
+		//
 		fprintf(fp,
 			"\t// Since it costs us two clocks to go through this\n"
 			"\t// logic, we'll take one of those clocks here to set\n"
@@ -1012,20 +1049,32 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 			"\tcasez(" PREFIX "r_%s_bus_select)\n",
 			c->m_wire->c_str(), dlp->c_str());
 
-		for(unsigned k=0; k<m_dlist->size()-1; k++) {
+		for(unsigned k=0; k<m_dlist->size(); k++) {
 			fprintf(fp, "\t%d'd%d", nextlg(m_dlist->size()), k);
-			fprintf(fp, ": " PREFIX "r_%s_data <= %s_data;\n",
+			fprintf(fp, ": " PREFIX "r_%s_data <= %s_idata;\n",
 				dlp->c_str(),
 				(*m_dlist)[k]->bus_prefix()->c_str());
 		}
 
-		fprintf(fp, "\tdefault: "
-			PREFIX "r_%s_data <= %s_data;\n", dlp->c_str(),
-			(*m_dlist)[m_dlist->size()-1]->p_name->c_str());
+		if ((1u<<nextlg(m_dlist->size())) != m_dlist->size()) {
+			// Only place the default value into the case if there
+			// are empty values there.
+			if (bus_option(KY_OPT_LOWPOWER)) {
+				fprintf(fp, "\tdefault: "
+					PREFIX "r_%s_data <= 0;\n", dlp->c_str());
+			} else
+			fprintf(fp, "\tdefault: "
+				PREFIX "r_%s_data <= %s_idata;\n", dlp->c_str(),
+			(*m_dlist)[m_dlist->size()-1]->bus_prefix()->c_str());
+		}
 		fprintf(fp, "\tendcase\n\n");
 		fprintf(fp, "\tassign\t" PREFIX "%s_idata = " PREFIX "r_%s_data;\n\n",
 			dlp->c_str(), dlp->c_str());
 
+		//
+		// Connect the dio bus wires together to send to the various
+		// slave buses the dio bus drives
+		//
 		unsigned	sbaw;
 		unsigned	dw   = m_info->data_width();
 		unsigned	dalines = nextlg(dw/8);
@@ -1056,8 +1105,10 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 			}
 			fprintf(fp,
 			"\tassign\t%s_we  = %s_we;\n"
+			"\tassign\t%s_addr= %s_addr;\n"
 			"\tassign\t%s_data= %s_data;\n"
 			"\tassign\t%s_sel = %s_sel;\n",
+				pn, dlp->c_str(),
 				pn, dlp->c_str(),
 				pn, dlp->c_str(),
 				pn, dlp->c_str());
@@ -1071,6 +1122,38 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 	//
 	//
 
+	//
+	// First make certain any slaves that cannot produce error wires
+	// can produce
+	//
+	for(unsigned k=0; k<m_info->m_plist->size(); k++) {
+		PERIPHP	p = (*m_info->m_plist)[k];
+		const char *pn = (*m_info->m_plist)[k]->bus_prefix()->c_str();
+		STRINGP	err;
+
+		if (NULL != (err = getstring(p->p_phash, KYERROR_WIRE))) {
+			STRING buserr = STRING(pn) + STRING("_err");
+			if (buserr.compare(*err) == 0) {
+				fprintf(fp, "\t// info: @ERROR.WIRE for %s "
+					"matches the buses error name, "
+					"%s_err\n",
+					p->name()->c_str(), pn);
+			} else {
+				fprintf(fp, "\t// info: @ERROR.WIRE %s != %s\n",
+					err->c_str(), pn);
+				fprintf(fp, "\t// info: @ERROR.WIRE for %s, = %s, doesn\'t match the buses wire %s_err\n",
+					p->name()->c_str(), err->c_str(),
+					pn);
+				fprintf(fp, "\tassign\t%s_err = %s;\n",
+					pn, err->c_str());
+			}
+		} else
+			fprintf(fp, "\tassign\t%s_err= 1\'b0;\n", pn);
+	}
+
+	//
+	// Now create the crossbar interconnect
+	//
 	fprintf(fp,
 	"\t//\n"
 	"\t// Connect the %s bus components together using the wbxbar()\n"
@@ -1080,14 +1163,15 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 	unused_lsbs = nextlg(m_info->data_width())-3;
 	fprintf(fp,
 	"\twbxbar #(\n"
-		"\t\t.NM(%ld),.NS(%ld), .AW(%d), .DW(%d),\n\t\t.SLAVE_ADDR({\n",
-		m_info->m_mlist->size(), m_info->m_plist->size(), address_width(),
-		m_info->data_width());
+		"\t\t.NM(%ld), .NS(%ld), .AW(%d), .DW(%d),\n"
+		"\t\t.SLAVE_ADDR({\n",
+		m_info->m_mlist->size(), m_info->m_plist->size(),
+		address_width(), m_info->data_width());
 	for(unsigned k=m_info->m_plist->size()-1; k>0; k=k-1) {
-		fprintf(fp, "\t\t\t{ %d\'h%*lx },\n",
+		fprintf(fp, "\t\t\t{ %d\'h%0*lx },\n",
 			address_width(), (address_width()+3)/4,
 			((*m_info->m_plist)[k]->p_base >> unused_lsbs));
-	} fprintf(fp, "\t\t\t{ %d\'h%*lx }\n",
+	} fprintf(fp, "\t\t\t{ %d\'h%0*lx }\n",
 			address_width(), (address_width()+3)/4,
 			((*m_info->m_plist)[0]->p_base >> unused_lsbs));
 
@@ -1095,10 +1179,10 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 	"\t\t}),\n"
 	"\t\t.SLAVE_MASK({\n");
 	for(unsigned k=m_info->m_plist->size()-1; k>0; k=k-1) {
-		fprintf(fp, "\t\t\t{ %d\'h%*lx },\n",
+		fprintf(fp, "\t\t\t{ %d\'h%0*lx },\n",
 			address_width(), (address_width()+3)/4,
 			((*m_info->m_plist)[k]->p_mask >> unused_lsbs));
-	} fprintf(fp, "\t\t\t{ %d\'h%*lx }\n",
+	} fprintf(fp, "\t\t\t{ %d\'h%0*lx }\n",
 			address_width(), (address_width()+3)/4,
 			((*m_info->m_plist)[0]->p_mask >> unused_lsbs));
 	fprintf(fp, "\t\t})");

@@ -99,6 +99,8 @@ bool	issubbus(MAPDHASH &phash) {
 	return false;
 }
 
+bool	isarbiter(MAPDHASH &phash) { return issubbus(phash); }
+
 //
 // Same thing, but when given a location within the tree, rather than a hash
 // value.
