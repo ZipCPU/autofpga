@@ -69,14 +69,8 @@ BUSLIST	*gbl_blist;
 
 // Look up the number of bits in the address bus of the given hash
 int	BUSINFO::address_width(void) {
-	if (!m_addresses_assigned) {
-		gbl_msg.info("BI: Requesting address width of %s\n", name()->c_str());
-fprintf(stderr, "BI: Requesting address width of %s, and assigning addresses\n", name()->c_str());
+	if (!m_addresses_assigned)
 		assign_addresses();
-
-		gbl_msg.info("BI: Address width of %s is %d\n", name()->c_str(), m_address_width);
-fprintf(stderr, "BI: Address width of %s is %d\n", name()->c_str(), m_address_width);
-	}
 	return generator()->address_width();
 }
 
@@ -670,7 +664,6 @@ void	BUSLIST::addmaster(MAPT &map) {
 void	BUSLIST::adddefault(MAPDHASH &master, STRINGP defname) {
 	BUSINFO	*bi;
 
-	gbl_msg.userinfo("ADDING BUS: %s (default)\n", defname->c_str());
 	if (size() == 0) {
 		// If there are no elements (yet) in our BUSLIST, then create
 		// a first one, and call it our default.
@@ -734,8 +727,7 @@ BUSINFO *BUSLIST::newbus_aux(STRINGP component, MAPDHASH *bp) {
 			bi = new BUSINFO();
 			push_back(bi);
 			bi->init(bp);
-			gbl_msg.info("ADDING BUS: %s from %s\n", str->c_str(),
-				component->c_str());
+			gbl_msg.userinfo("Bus: %s\n", str->c_str());
 		} else {
 			// We need to merge the BUS-MAP into the existing
 			// one
@@ -1181,7 +1173,6 @@ gbl_ready_for_address_assignment = true;
 		(*bl)[i]->assign_addresses();
 		reeval(master);
 	}
-fprintf(stderr, "BUS-LIST: BUILT!\n");
 	reeval(master);
 }
 

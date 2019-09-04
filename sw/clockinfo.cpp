@@ -342,11 +342,11 @@ void	add_to_clklist(MAPDHASH *ckmap) {
 			}
 
 			if (clocks_per_second != 0)
-				gbl_msg.userinfo("ADDING CLOCK: %s, %s, at %lu Hz\n",
+				gbl_msg.userinfo("Clock: %s, %s, at %lu Hz\n",
 					pname, wname->c_str(),
 					clocks_per_second);
 			else
-				gbl_msg.userinfo("ADDING CLOCK: %s, %s\n",
+				gbl_msg.userinfo("Clock: %s, %s\n",
 					pname, wname->c_str());
 		}
 

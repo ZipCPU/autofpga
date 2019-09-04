@@ -1011,7 +1011,6 @@ void	flatten_aux(MAPDHASH &master, MAPDHASH &sub, STRING &here) {
 
 
 		if (kvpair->first.compare(KYPLUSDOT)==0) {
-fprintf(stderr, "KYPLUSDOT--FLATTEN.PLUS\n");
 				STRING	ikey = kvpair->first.substr(1);
 				MAPDHASH::iterator	kvprior;
 
