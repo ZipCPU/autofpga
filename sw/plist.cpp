@@ -405,13 +405,7 @@ assert(gbl_ready_for_address_assignment);
 				(*this)[0]->p_name->c_str());
 		}
 	} else {
-		static int counter = 0;
-		counter++;
 
-
-		int	sequence = counter;
-gbl_msg.info("PL: 1.SEQ = %d\n", sequence);
-fprintf(stderr, "PL: 1.SEQ = %d\n", sequence);
 		// We'll need a minimum of nextlg(p->size()) bits to address
 		// p->size() separate peripherals.  While we'd like to minimize
 		// the number of bits we use to do this, adding one extra bit
@@ -553,11 +547,6 @@ fprintf(stderr, "PL: 1.SEQ = %d\n", sequence);
 					(*this)[i]->p_base,
 					(*this)[i]->p_mask << daddr_abits);
 
-fprintf(stderr, "  %20s -> %08lx & 0x%08lx\n",
-					(*this)[i]->p_name->c_str(),
-					(*this)[i]->p_base,
-					(*this)[i]->p_mask << daddr_abits);
-
 			if ((*this)[i]->p_phash) {
 				PERIPHP	p = (*this)[i];
 				MAPDHASH	*ph = p->p_phash;
@@ -573,8 +562,6 @@ fprintf(stderr, "  %20s -> %08lx & 0x%08lx\n",
 				}
 			}
 		} m_address_width = nextlg(start_address)-daddr_abits;
-gbl_msg.info("PL: 2.SEQ = %d\n", sequence);
-fprintf(stderr, "PL: 2.SEQ = %d\n", sequence);
 	}
 
 	reeval(gbl_hash);
