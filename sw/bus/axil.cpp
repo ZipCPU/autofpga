@@ -252,7 +252,7 @@ void	AXILBUS::assign_addresses(void) {
 
 	if (!m_info)
 		return;
-	gbl_msg.info("Assigning addresses for bus %s\n",
+	gbl_msg.info("AXIL: Assigning addresses for bus %s\n",
 		(name()) ? name()->c_str() : "(No name bus)");
 	if (!m_info->m_plist||(m_info->m_plist->size() < 1)) {
 		m_info->m_address_width = 0;
@@ -285,23 +285,37 @@ BUSINFO *AXILBUS::create_sio(void) {
 	BUSINFO	*sbi;
 	SUBBUS	*subp;
 	STRINGP	sioname;
-	MAPDHASH *bushash;
+	MAPDHASH *bushash, *shash;
+	MAPT	elm;
 
 	sioname = new STRING(STRING("" PREFIX) + (*name()) + "_sio");
 	bushash = new MAPDHASH();
-	setstring(*bushash, KYPREFIX, sioname);
-	setstring(*bushash, KYSLAVE_TYPE, new STRING(KYDOUBLE));
-	setstring(*bushash, KYSLAVE_PREFIX, sioname);
-	setstring(*bushash, KYMASTER_BUS, sioname);
+	shash   = new MAPDHASH();
+	setstring(*shash, KYPREFIX, sioname);
+	setstring(*shash, KYSLAVE_TYPE, new STRING(KYDOUBLE));
+	setstring(*shash, KYSLAVE_PREFIX, sioname);
+
+	elm.m_typ = MAPT_MAP;
+	elm.u.m_m = bushash;
+	shash->insert(KEYVALUE(KYSLAVE_BUS, elm));
+
+	elm.u.m_m = m_info->m_hash;
+	shash->insert(KEYVALUE(KYMASTER_BUS, elm));
+	setstring(shash, KYMASTER_TYPE, KYARBITER);
+
 	sbi  = new BUSINFO(sioname);
 	sbi->prefix(new STRING("_sio"));
+	setstring(bushash, KY_TYPE, new STRING("axil"));
 	sbi->m_data_width = m_info->m_data_width;
 	sbi->m_clock      = m_info->m_clock;
 	sbi->addmaster(m_info->m_hash);
-	subp = new SUBBUS(bushash, sioname, sbi);
+	subp = new SUBBUS(shash, sioname, sbi);
 	subp->p_slave_bus = m_info;
-	// subp->p_master_bus = set by the slave to be sbi
+	// subp->p_master_bus = set by the SUBBUS to be sbi
 	m_info->m_plist->add(subp);
+assert(subp->p_master_bus);
+assert(subp->p_slave_bus == m_info);
+assert(subp->p_master_bus == sbi);
 	// m_plist->integrity_check();
 	sbi->add();
 	m_slist = sbi->m_plist;
@@ -315,24 +329,44 @@ BUSINFO *AXILBUS::create_dio(void) {
 	BUSINFO	*dbi;
 	SUBBUS	*subp;
 	STRINGP	dioname;
-	MAPDHASH	*bushash;
+	MAPDHASH	*bushash, *shash;
+	MAPT	elm;
 
 	dioname = new STRING(STRING("" PREFIX) + (*name()) + "_dio");
 	bushash = new MAPDHASH();
-	setstring(*bushash, KYPREFIX, dioname);
-	setstring(*bushash, KYSLAVE_TYPE, new STRING(KYOTHER));
-	setstring(*bushash, KYSLAVE_PREFIX, dioname);
+	shash   = new MAPDHASH();
+	setstring(*bushash, KY_NAME, dioname);
+	setstring(*shash, KYPREFIX, dioname);
+	setstring(*shash, KYSLAVE_TYPE, new STRING(KYOTHER));
+	setstring(*shash, KYSLAVE_PREFIX, dioname);
+
+	elm.m_typ = MAPT_MAP;
+	elm.u.m_m = m_info->m_hash;
+	shash->insert(KEYVALUE(KYSLAVE_BUS, elm));
+
+	elm.u.m_m = bushash;
+	shash->insert(KEYVALUE(KYMASTER_BUS, elm));
+	setstring(shash, KYMASTER_TYPE, KYARBITER);
+
 	dbi  = new BUSINFO(dioname);
 	dbi->prefix(new STRING("_dio"));
+	setstring(bushash, KY_TYPE, new STRING("axil"));
+assert(m_info->data_width() > 0);
+	setvalue(*bushash, KY_WIDTH, m_info->data_width());
 	dbi->m_data_width = m_info->m_data_width;
 	dbi->m_clock      = m_info->m_clock;
 	dbi->addmaster(m_info->m_hash);
-	subp = new SUBBUS(bushash, dioname, dbi);
+	subp = new SUBBUS(shash, dioname, dbi);
 	subp->p_slave_bus = m_info;
-	// subp->p_master_bus = set by the slave to be dbi
 	m_info->m_plist->add(subp);
+assert(subp->p_master_bus);
+assert(subp->p_master_bus == dbi);
+assert(subp->p_slave_bus == m_info);
+	// subp->p_master_bus = set by the slave to be dbi
 	dbi->add();
 	m_dlist = dbi->m_plist;
+assert(isbusmaster(*shash));
+assert(isarbiter(*shash));
 
 	return dbi;
 }
@@ -435,12 +469,12 @@ void	AXILBUS::writeout_bus_master_defns_v(FILE *fp) {
 
 	if (m) {
 		for(MLIST::iterator pp=m->begin(); pp != m->end(); pp++) {
-			STRINGP	n = getstring((*pp)->m_hash, KY_NAME);
+			STRINGP	n = getstring((*pp)->name();
 			writeout_defn_v(fp, n->c_str(),
 			(*pp)->bus_prefix()->c_str());
 		}
 	} else {
-		gbl_msg.error("%s has no slaves\n", n->c_str());
+		gbl_msg.error("Bus %s has no masters\n", n->c_str());
 	}
 }
 
@@ -530,6 +564,7 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 
 	unused_lsbs = nextlg(m_info->data_width())-3;
 	if (m_info->m_plist->size() == 0) {
+
 		// Since this bus has no slaves, any attempt to access it
 		// needs to cause a bus error.
 		//
@@ -537,9 +572,9 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 		for(unsigned m=0; m_info && m < m_info->m_mlist->size(); m++) {
 			STRINGP	mstr = master_name(m);
 			fprintf(fp,
-		"\t//\n"
-		"\t// The %s bus has no slaves assigned to it\n"
-		"\t//\n"
+				"\t//\n"
+				"\t// The %s bus has no slaves assigned to it\n"
+				"\t//\n"
 		"\tassign	%s_awready = %s_bvalid && %s_bready;\n"
 		"\tassign	%s_wready  = %s_awready;\n"
 		"\tassign	%s_bvalid = %s_awvalid && %s_wvalid;\n"
@@ -692,7 +727,7 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 			"\t\t//\n"
 			"\t\t.S_AXI_BVALID( %s_sio_bvalid),\n"
 			"\t\t.S_AXI_BREADY( %s_sio_bready),\n"
-			"\t\t.S_AXI_BERSP(  %s_sio_bresp),\n"
+			"\t\t.S_AXI_BRESP(  %s_sio_bresp),\n"
 			"\t\t// Read connections\n"
 			"\t\t.S_AXI_ARVALID(%s_sio_arvalid),\n"
 			"\t\t.S_AXI_ARREADY(%s_sio_arready),\n"
@@ -889,7 +924,7 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 	for(unsigned k=m_info->m_plist->size()-1; k>0; k=k-1) {
 		fprintf(fp, "\t\t\t{ %d\'h%*lx },\n",
 			address_width(), (address_width()+3)/4,
-			((*m_info->m_plist)[k]->p_mask));
+			((*m_info->m_plist)[k]->p_mask) << unused_lsbs);
 	} fprintf(fp, "\t\t\t{ %d\'h%*lx }\n",
 			address_width(), (address_width()+3)/4,
 			((*m_info->m_plist)[0]->p_mask));

@@ -496,6 +496,8 @@ void	WBBUS::writeout_bus_master_defns_v(FILE *fp) {
 				address_width(), m_info->data_width(),
 				NULL);
 		}
+	} else {
+		gbl_msg.error("Bus %s has no masters\n", n->c_str());
 	}
 }
 
@@ -747,6 +749,9 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 			STRINGP	pfx= (*pp)->bus_prefix();
 
 			fprintf(fp,
+				"\t//\n"
+				"\t// The %s bus has no slaves assigned to it\n"
+				"\t//\n"
 				"\t\tassign\t%s_err   = %s_stb;\n"
 				"\t\tassign\t%s_stall = 1\'b0;\n"
 				"\t\tassign\t%s_ack   = 1\'b0;\n"
