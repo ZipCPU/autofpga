@@ -315,7 +315,9 @@ void	build_ld_files(MAPDHASH &master, STRINGP subd) {
 	MAPDHASH	*bimap;
 
 	for(kvpair = master.begin(); kvpair != master.end(); kvpair++) {
-		if (!isbusmaster(kvpair->second))
+		STRINGP	mtyp;
+
+		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
 
 		fnamep = getstring(kvpair->second.u.m_m, KYLD_FILE);
@@ -329,12 +331,24 @@ void	build_ld_files(MAPDHASH &master, STRINGP subd) {
 			continue;
 		}
 
+		mtyp = getstring(kvpair->second.u.m_m, KYMASTER_TYPE);
+		if ((mtyp == NULL)||(KYSCRIPT.compare(*mtyp)!=0)) {
+			gbl_msg.error("Linker script for %s "
+				"must have type SCRIPT, not %s\n",
+				kvpair->first.c_str(),
+				(mtyp) ? mtyp->c_str() : "(NULL)");
+			continue;
+		}
+
 		if (fnamep->size() < 3) {
-			gbl_msg.error("Linker script filename, %s, for %s is too short\n",
+			gbl_msg.error("Linker script filename, %s, "
+				"for %s is too short\n",
 				fnamep->c_str(), kvpair->first.c_str());
 			continue;
 		} else if ((*fnamep)[0] == '/') {
-			gbl_msg.error("Cowardly refusing to write a linker script to an absolute pathname, %s\n", fnamep->c_str());
+			gbl_msg.error("Cowardly refusing to write a linker "
+				"script to an absolute pathname, %s\n",
+				fnamep->c_str());
 			continue;
 		}
 
@@ -343,7 +357,8 @@ void	build_ld_files(MAPDHASH &master, STRINGP subd) {
 			fname += ".ld";
 		fp = fopen(fname.c_str(), "w");
 		if (fp == NULL)
-			gbl_msg.error("Could not write linker script, %s\n", fname.c_str());
+			gbl_msg.error("Could not write linker script, %s\n",
+				fname.c_str());
 		else {
 			build_script_ld(master, *kvpair->second.u.m_m,
 				fp, *fnamep);
