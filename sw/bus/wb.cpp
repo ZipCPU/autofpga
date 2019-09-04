@@ -308,11 +308,11 @@ BUSINFO *WBBUS::create_sio(void) {
 	setstring(*shash, KYPREFIX, sioname);
 	setstring(*shash, KYSLAVE_TYPE, new STRING(KYDOUBLE));
 	setstring(*shash, KYSLAVE_PREFIX, sioname);
-	
+
 	elm.m_typ = MAPT_MAP;
 	elm.u.m_m = bushash;
 	shash->insert(KEYVALUE(KYSLAVE_BUS, elm));
-	
+
 	elm.u.m_m = m_info->m_hash;
 	shash->insert(KEYVALUE(KYMASTER_BUS, elm));
 	setstring(shash, KYMASTER_TYPE, KYARBITER);
@@ -353,11 +353,11 @@ BUSINFO *WBBUS::create_dio(void) {
 	setstring(*shash, KYPREFIX, dioname);
 	setstring(*shash, KYSLAVE_TYPE, new STRING(KYOTHER));
 	setstring(*shash, KYSLAVE_PREFIX, dioname);
-	
+
 	elm.m_typ = MAPT_MAP;
 	elm.u.m_m = m_info->m_hash;
 	shash->insert(KEYVALUE(KYSLAVE_BUS, elm));
-	
+
 	elm.u.m_m = bushash;
 	shash->insert(KEYVALUE(KYMASTER_BUS, elm));
 	setstring(shash, KYMASTER_TYPE, KYARBITER);
@@ -742,7 +742,7 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 		// Since this bus has no slaves, any attempt to access it
 		// needs to cause a bus error.
 		//
-		// Need to loop through all possible masters ...	
+		// Need to loop through all possible masters ...
 		for(MLIST::iterator pp=m_info->m_mlist->begin(); pp != m_info->m_mlist->end(); pp++) {
 			STRINGP	pfx= (*pp)->bus_prefix();
 
@@ -860,7 +860,7 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 				slp->c_str(),
 				nextlg(mask)-1, unused_lsbs);
 		for(unsigned j=0; j<m_slist->size(); j++) {
-			fprintf(fp, "\t\t%d'h%lx: " PREFIX "r_%s_data <= %s_data;\n",
+			fprintf(fp, "\t\t%d'h%lx: " PREFIX "r_%s_data <= %s_idata;\n",
 				nextlg(mask)-unused_lsbs,
 				((*m_slist)[j]->p_base) >> (unused_lsbs + lgdw),
 				slp->c_str(),
@@ -902,7 +902,7 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 			"\t// Our goal here is to make certain that all of\n"
 			"\t// the slave bus inputs match the SIO bus wires\n",
 			slp->c_str());
-		
+
 		unsigned	sbaw;
 		unsigned	dw   = m_info->data_width();
 		unsigned	dalines = nextlg(dw/8);
@@ -1094,9 +1094,16 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 				assert(sbaw > unused_lsbs);
 				assert(sbaw > 0);
 				fprintf(fp, "\tassign\t%s_stb = %s_stb "
-					"&& (%s_addr[%2d:%2d] == %2d\'h%0*lx); ",
+					"&& ((%s_addr[%2d:%2d] & %2d\'h%0*lx) == %2d\'h%0*lx); ",
 					pn, dlp->c_str(), dlp->c_str(),
+					// Relevant address bits
 					sbaw-1, unused_lsbs,
+					//
+					// Mask bits
+					sbaw-unused_lsbs,
+					(sbaw-unused_lsbs+3)/4,
+					(*m_dlist)[j]->p_mask >> unused_lsbs,
+					//
 					sbaw-unused_lsbs,
 					(sbaw-unused_lsbs+3)/4,
 					(*m_dlist)[j]->p_base >> (unused_lsbs+dalines));
@@ -1121,6 +1128,18 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 	// Now for the main set of slaves
 	//
 	//
+
+	unsigned	slave_name_width = 4;
+	// Find the maximum width of any slaves name, for our comment tables
+	// below
+	for(unsigned k=0; k<m_info->m_plist->size(); k++) {
+		PERIPHP	p = (*m_info->m_plist)[k];
+		unsigned	sz;
+
+		sz = p->name()->size();
+		if (slave_name_width < sz);
+			slave_name_width = sz;
+	}
 
 	//
 	// First make certain any slaves that cannot produce error wires
@@ -1167,24 +1186,37 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 		"\t\t.SLAVE_ADDR({\n",
 		m_info->m_mlist->size(), m_info->m_plist->size(),
 		address_width(), m_info->data_width());
-	for(unsigned k=m_info->m_plist->size()-1; k>0; k=k-1) {
-		fprintf(fp, "\t\t\t{ %d\'h%0*lx },\n",
-			address_width(), (address_width()+3)/4,
-			((*m_info->m_plist)[k]->p_base >> unused_lsbs));
-	} fprintf(fp, "\t\t\t{ %d\'h%0*lx }\n",
-			address_width(), (address_width()+3)/4,
-			((*m_info->m_plist)[0]->p_base >> unused_lsbs));
+	{
+		for(unsigned k=m_info->m_plist->size()-1; k>0; k=k-1) {
+			PERIPHP	p = (*m_info->m_plist)[k];
+
+			fprintf(fp, "\t\t\t{ %d\'h%0*lx },",
+				address_width(), (address_width()+3)/4,
+				p->p_base >> unused_lsbs);
+			fprintf(fp, " // %*s: 0x%0*lx\n", slave_name_width,
+				p->name()->c_str(),
+				(address_width()+unused_lsbs+3)/4, p->p_base);
+
+		} fprintf(fp, "\t\t\t{ %d\'h%0*lx }  // %*s: 0x%0*lx\n",
+				address_width(), (address_width()+3)/4,
+				((*m_info->m_plist)[0]->p_base >> unused_lsbs),
+				slave_name_width,
+				(*m_info->m_plist)[0]->name()->c_str(),
+				(address_width()+unused_lsbs+3)/4,
+				(*m_info->m_plist)[0]->p_base);
+	}
 
 	fprintf(fp,
 	"\t\t}),\n"
 	"\t\t.SLAVE_MASK({\n");
 	for(unsigned k=m_info->m_plist->size()-1; k>0; k=k-1) {
-		fprintf(fp, "\t\t\t{ %d\'h%0*lx },\n",
+		PERIPHP	p = (*m_info->m_plist)[k];
+		fprintf(fp, "\t\t\t{ %d\'h%0*lx }, // %*s\n",
 			address_width(), (address_width()+3)/4,
-			((*m_info->m_plist)[k]->p_mask >> unused_lsbs));
+			p->p_mask, slave_name_width, p->name()->c_str());
 	} fprintf(fp, "\t\t\t{ %d\'h%0*lx }\n",
 			address_width(), (address_width()+3)/4,
-			((*m_info->m_plist)[0]->p_mask >> unused_lsbs));
+			((*m_info->m_plist)[0]->p_mask));
 	fprintf(fp, "\t\t})");
 
 	if (bus_option(KY_OPT_LOWPOWER)) {
@@ -1266,7 +1298,7 @@ STRINGP	WBBUS::master_portlist(BMASTERP) {
 	"\t\t\t@$(MASTER.PREFIX)_addr[@$(MASTER.BUS.AWID)-1:0],\n"
 	"\t\t\t@$(MASTER.PREFIX)_data, // @$(MASTER.BUS.WIDTH) bits wide\n"
 	"\t\t\t@$(MASTER.PREFIX)_sel,  // @$(MASTER.BUS.WIDTH)/8 bits wide\n"
-	"\t\t@$(SLAVE.PREFIX)_stall,"
+	"\t\t@$(MASTER.PREFIX)_stall,"
 	"@$(MASTER.PREFIX)_ack, "
 	"@$(MASTER.PREFIX)_idata,"
 	"@$(MASTER.PREFIX)_err");
