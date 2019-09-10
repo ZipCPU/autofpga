@@ -497,7 +497,7 @@ void	WBBUS::writeout_bus_master_defns_v(FILE *fp) {
 				NULL);
 		}
 	} else {
-		gbl_msg.error("Bus %s has no masters\n", n->c_str());
+		gbl_msg.error("Bus %s has no masters\n", name()->c_str());
 	}
 }
 
@@ -747,6 +747,7 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 		// Need to loop through all possible masters ...
 		for(MLIST::iterator pp=m_info->m_mlist->begin(); pp != m_info->m_mlist->end(); pp++) {
 			STRINGP	pfx= (*pp)->bus_prefix();
+			const char *pfxc = pfx->c_str();
 
 			fprintf(fp,
 				"\t//\n"
@@ -756,9 +757,7 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 				"\t\tassign\t%s_stall = 1\'b0;\n"
 				"\t\tassign\t%s_ack   = 1\'b0;\n"
 				"\t\tassign\t%s_idata = 0;\n",
-				pfx->c_str(), pfx->c_str(),
-				pfx->c_str(), pfx->c_str(),
-				pfx->c_str());
+				pfxc, pfxc, pfxc, pfxc, pfxc, pfxc);
 		}
 		return;
 	} else if (NULL == m_info->m_mlist || m_info->m_mlist->size() == 0) {

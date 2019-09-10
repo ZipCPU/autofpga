@@ -898,19 +898,19 @@ module	main(i_clk, i_reset,
 
 	always	@(posedge i_clk)
 	casez( wb_sio_addr[3:0] )
-		4'h0: r_wb_sio_data <= wb_buildtime_data;
-		4'h1: r_wb_sio_data <= wb_buserr_data;
-		4'h2: r_wb_sio_data <= wb_buspic_data;
-		4'h3: r_wb_sio_data <= wb_clkhdmiin_data;
-		4'h4: r_wb_sio_data <= wb_clkhdmiout_data;
-		4'h5: r_wb_sio_data <= wb_gpio_data;
-		4'h6: r_wb_sio_data <= wb_hdmi_scope_frame_offset_data;
-		4'h7: r_wb_sio_data <= wb_pwrcount_data;
-		4'h8: r_wb_sio_data <= wb_rtcdate_data;
-		4'h9: r_wb_sio_data <= wb_spio_data;
-		4'ha: r_wb_sio_data <= wb_subseconds_data;
-		4'hb: r_wb_sio_data <= wb_sysclk_data;
-		4'hc: r_wb_sio_data <= wb_version_data;
+		4'h0: r_wb_sio_data <= wb_buildtime_idata;
+		4'h1: r_wb_sio_data <= wb_buserr_idata;
+		4'h2: r_wb_sio_data <= wb_buspic_idata;
+		4'h3: r_wb_sio_data <= wb_clkhdmiin_idata;
+		4'h4: r_wb_sio_data <= wb_clkhdmiout_idata;
+		4'h5: r_wb_sio_data <= wb_gpio_idata;
+		4'h6: r_wb_sio_data <= wb_hdmi_scope_frame_offset_idata;
+		4'h7: r_wb_sio_data <= wb_pwrcount_idata;
+		4'h8: r_wb_sio_data <= wb_rtcdate_idata;
+		4'h9: r_wb_sio_data <= wb_spio_idata;
+		4'ha: r_wb_sio_data <= wb_subseconds_idata;
+		4'hb: r_wb_sio_data <= wb_sysclk_idata;
+		4'hc: r_wb_sio_data <= wb_version_idata;
 		default: r_wb_sio_data <= wb_version_idata;
 	endcase
 	assign	wb_sio_idata = r_wb_sio_data;
@@ -1051,55 +1051,55 @@ module	main(i_clk, i_reset,
 	assign	wb_dio_idata = r_wb_dio_data;
 
 	assign	wb_gck_cyc = wb_dio_cyc;
-	assign	wb_gck_stb = wb_dio_stb && (wb_dio_addr[ 7: 2] ==  6'h00);  // 0x0000000 - 0x000000f
+	assign	wb_gck_stb = wb_dio_stb && ((wb_dio_addr[ 7: 2] &  6'h3f) ==  6'h00);  // 0x0000000 - 0x000000f
 	assign	wb_gck_we  = wb_dio_we;
 	assign	wb_gck_addr= wb_dio_addr;
 	assign	wb_gck_data= wb_dio_data;
 	assign	wb_gck_sel = wb_dio_sel;
 	assign	wb_mous_cyc = wb_dio_cyc;
-	assign	wb_mous_stb = wb_dio_stb && (wb_dio_addr[ 7: 2] ==  6'h01);  // 0x0000010 - 0x000001f
+	assign	wb_mous_stb = wb_dio_stb && ((wb_dio_addr[ 7: 2] &  6'h3f) ==  6'h01);  // 0x0000010 - 0x000001f
 	assign	wb_mous_we  = wb_dio_we;
 	assign	wb_mous_addr= wb_dio_addr;
 	assign	wb_mous_data= wb_dio_data;
 	assign	wb_mous_sel = wb_dio_sel;
 	assign	wb_oled_cyc = wb_dio_cyc;
-	assign	wb_oled_stb = wb_dio_stb && (wb_dio_addr[ 7: 2] ==  6'h02);  // 0x0000020 - 0x000002f
+	assign	wb_oled_stb = wb_dio_stb && ((wb_dio_addr[ 7: 2] &  6'h3f) ==  6'h02);  // 0x0000020 - 0x000002f
 	assign	wb_oled_we  = wb_dio_we;
 	assign	wb_oled_addr= wb_dio_addr;
 	assign	wb_oled_data= wb_dio_data;
 	assign	wb_oled_sel = wb_dio_sel;
 	assign	wb_rtc_cyc = wb_dio_cyc;
-	assign	wb_rtc_stb = wb_dio_stb && (wb_dio_addr[ 7: 2] ==  6'h03);  // 0x0000030 - 0x000003f
+	assign	wb_rtc_stb = wb_dio_stb && ((wb_dio_addr[ 7: 2] &  6'h3f) ==  6'h03);  // 0x0000030 - 0x000003f
 	assign	wb_rtc_we  = wb_dio_we;
 	assign	wb_rtc_addr= wb_dio_addr;
 	assign	wb_rtc_data= wb_dio_data;
 	assign	wb_rtc_sel = wb_dio_sel;
 	assign	wb_gtb_cyc = wb_dio_cyc;
-	assign	wb_gtb_stb = wb_dio_stb && (wb_dio_addr[ 7: 2] ==  6'h04);  // 0x0000040 - 0x000005f
+	assign	wb_gtb_stb = wb_dio_stb && ((wb_dio_addr[ 7: 2] &  6'h3e) ==  6'h04);  // 0x0000040 - 0x000005f
 	assign	wb_gtb_we  = wb_dio_we;
 	assign	wb_gtb_addr= wb_dio_addr;
 	assign	wb_gtb_data= wb_dio_data;
 	assign	wb_gtb_sel = wb_dio_sel;
 	assign	wb_hdmiin_cyc = wb_dio_cyc;
-	assign	wb_hdmiin_stb = wb_dio_stb && (wb_dio_addr[ 7: 2] ==  6'h08);  // 0x0000080 - 0x00000bf
+	assign	wb_hdmiin_stb = wb_dio_stb && ((wb_dio_addr[ 7: 2] &  6'h3c) ==  6'h08);  // 0x0000080 - 0x00000bf
 	assign	wb_hdmiin_we  = wb_dio_we;
 	assign	wb_hdmiin_addr= wb_dio_addr;
 	assign	wb_hdmiin_data= wb_dio_data;
 	assign	wb_hdmiin_sel = wb_dio_sel;
 	assign	wb_sio_cyc = wb_dio_cyc;
-	assign	wb_sio_stb = wb_dio_stb && (wb_dio_addr[ 7: 2] ==  6'h0c);  // 0x00000c0 - 0x00000ff
+	assign	wb_sio_stb = wb_dio_stb && ((wb_dio_addr[ 7: 2] &  6'h3c) ==  6'h0c);  // 0x00000c0 - 0x00000ff
 	assign	wb_sio_we  = wb_dio_we;
 	assign	wb_sio_addr= wb_dio_addr;
 	assign	wb_sio_data= wb_dio_data;
 	assign	wb_sio_sel = wb_dio_sel;
 	assign	wb_edin_cyc = wb_dio_cyc;
-	assign	wb_edin_stb = wb_dio_stb && (wb_dio_addr[ 7: 2] ==  6'h10);  // 0x0000100 - 0x00001ff
+	assign	wb_edin_stb = wb_dio_stb && ((wb_dio_addr[ 7: 2] &  6'h30) ==  6'h10);  // 0x0000100 - 0x00001ff
 	assign	wb_edin_we  = wb_dio_we;
 	assign	wb_edin_addr= wb_dio_addr;
 	assign	wb_edin_data= wb_dio_data;
 	assign	wb_edin_sel = wb_dio_sel;
 	assign	wb_edout_cyc = wb_dio_cyc;
-	assign	wb_edout_stb = wb_dio_stb && (wb_dio_addr[ 7: 2] ==  6'h20);  // 0x0000200 - 0x00003ff
+	assign	wb_edout_stb = wb_dio_stb && ((wb_dio_addr[ 7: 2] &  6'h20) ==  6'h20);  // 0x0000200 - 0x00003ff
 	assign	wb_edout_we  = wb_dio_we;
 	assign	wb_edout_addr= wb_dio_addr;
 	assign	wb_edout_data= wb_dio_data;
@@ -1126,34 +1126,34 @@ module	main(i_clk, i_reset,
 	wbxbar #(
 		.NM(2), .NS(13), .AW(28), .DW(32),
 		.SLAVE_ADDR({
-			{ 28'h8000000 },
-			{ 28'h6000000 },
-			{ 28'h5800000 },
-			{ 28'h5000000 },
-			{ 28'h4800000 },
-			{ 28'h4000000 },
-			{ 28'h3800000 },
-			{ 28'h3000000 },
-			{ 28'h2800000 },
-			{ 28'h2000000 },
-			{ 28'h1800000 },
-			{ 28'h1000000 },
-			{ 28'h0800000 }
+			{ 28'h8000000 }, // xpand: 0x20000000
+			{ 28'h6000000 }, // flash: 0x18000000
+			{ 28'h5800000 }, // bkram: 0x16000000
+			{ 28'h5000000 }, // wb_dio: 0x14000000
+			{ 28'h4800000 }, //  mdio: 0x12000000
+			{ 28'h4000000 }, //   cfg: 0x10000000
+			{ 28'h3800000 }, // sdcard: 0x0e000000
+			{ 28'h3000000 }, //  gpsu: 0x0c000000
+			{ 28'h2800000 }, // scope_sdcard: 0x0a000000
+			{ 28'h2000000 }, // scope_hdmiin: 0x08000000
+			{ 28'h1800000 }, // scop_edid: 0x06000000
+			{ 28'h1000000 }, //  pmic: 0x04000000
+			{ 28'h0800000 }  // flashcfg: 0x02000000
 		}),
 		.SLAVE_MASK({
-			{ 28'h2000000 },
-			{ 28'h3e00000 },
-			{ 28'h3e00000 },
-			{ 28'h3e00000 },
-			{ 28'h3e00000 },
-			{ 28'h3e00000 },
-			{ 28'h3e00000 },
-			{ 28'h3e00000 },
-			{ 28'h3e00000 },
-			{ 28'h3e00000 },
-			{ 28'h3e00000 },
-			{ 28'h3e00000 },
-			{ 28'h3e00000 }
+			{ 28'h8000000 }, // xpand
+			{ 28'hf800000 }, // flash
+			{ 28'hf800000 }, // bkram
+			{ 28'hf800000 }, // wb_dio
+			{ 28'hf800000 }, //  mdio
+			{ 28'hf800000 }, //   cfg
+			{ 28'hf800000 }, // sdcard
+			{ 28'hf800000 }, //  gpsu
+			{ 28'hf800000 }, // scope_sdcard
+			{ 28'hf800000 }, // scope_hdmiin
+			{ 28'hf800000 }, // scop_edid
+			{ 28'hf800000 }, //  pmic
+			{ 28'hf800000 }
 		}))
 	wb_xbar(
 		.i_clk(i_clk), .i_reset(i_reset),
@@ -1372,12 +1372,12 @@ module	main(i_clk, i_reset,
 	wbxbar #(
 		.NM(1), .NS(2), .AW(29), .DW(32),
 		.SLAVE_ADDR({
-			{ 29'h10000000 },
-			{ 29'h00000000 }
+			{ 29'h10000000 }, // zip_dbg: 0x40000000
+			{ 29'h00000000 }  // wbu_dwb: 0x00000000
 		}),
 		.SLAVE_MASK({
-			{ 29'h06000000 },
-			{ 29'h04000000 }
+			{ 29'h18000000 }, // zip_dbg
+			{ 29'h10000000 }
 		}))
 	wbu_xbar(
 		.i_clk(i_clk), .i_reset(i_reset),
@@ -1511,7 +1511,7 @@ module	main(i_clk, i_reset,
 	wbxbar #(
 		.NM(2), .NS(1), .AW(25), .DW(128),
 		.SLAVE_ADDR({
-			{ 25'h0000000 }
+			{ 25'h0000000 }  // sdram: 0x00000000
 		}),
 		.SLAVE_MASK({
 			{ 25'h0000000 }

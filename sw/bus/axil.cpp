@@ -469,7 +469,7 @@ void	AXILBUS::writeout_bus_master_defns_v(FILE *fp) {
 
 	if (m) {
 		for(MLIST::iterator pp=m->begin(); pp != m->end(); pp++) {
-			STRINGP	n = getstring((*pp)->name();
+			STRINGP	n = (*pp)->name();
 			writeout_defn_v(fp, n->c_str(),
 			(*pp)->bus_prefix()->c_str());
 		}
