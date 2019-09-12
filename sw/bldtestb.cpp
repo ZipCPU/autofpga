@@ -57,9 +57,17 @@ void	build_testb_h(MAPDHASH &master, FILE *fp, STRING &fname) {
 "#ifndef	TESTB_H\n"
 "#define	TESTB_H\n"
 "\n"
+"// #define TRACE_FST\n"
+"\n"
 "#include <stdio.h>\n"
 "#include <stdint.h>\n"
-"#include <verilated_vcd_c.h>\n");
+"#ifdef	TRACE_FST\n"
+"#define\tTRACECLASS\tVerilatedFstC\n"
+"#include <verilated_fst_c.h>\n"
+"#else // TRACE_FST\n"
+"#define\tTRACECLASS\tVerilatedVcdC\n"
+"#include <verilated_vcd_c.h>\n"
+"#endif\n");
 
 	if (cklist.size() == 0) {
 		fprintf(stderr, "ERR: No clocks defined!\n");
@@ -80,7 +88,7 @@ void	build_testb_h(MAPDHASH &master, FILE *fp, STRING &fname) {
 "public:\n"
 "	VA	*m_core;\n"
 "	bool		m_changed;\n"
-"	VerilatedVcdC*	m_trace;\n"
+"	TRACECLASS*	m_trace;\n"
 "	bool		m_done;\n"
 "	uint64_t	m_time_ps;\n");
 
@@ -125,7 +133,7 @@ void	build_testb_h(MAPDHASH &master, FILE *fp, STRING &fname) {
 "\n"
 "	virtual	void	opentrace(const char *vcdname) {\n"
 "		if (!m_trace) {\n"
-"			m_trace = new VerilatedVcdC;\n"
+"			m_trace = new TRACECLASS;\n"
 "			m_core->trace(m_trace, 99);\n"
 "			m_trace->spTrace()->set_time_resolution(\"ps\");\n"
 "			m_trace->spTrace()->set_time_unit(\"ps\");\n"
