@@ -401,139 +401,139 @@ module	main(i_clk, i_reset,
 	reg		wb_ack;
 
 	// Wishbone slave definitions for bus wb(SIO), slave buildtime
-	wire		buildtime_sel, buildtime_ack, buildtime_stall;
+	wire		buildtime_sel, buildtime_stall, buildtime_ack;
 	wire	[31:0]	buildtime_data;
 
 	// Wishbone slave definitions for bus wb(SIO), slave buserr
-	wire		buserr_sel, buserr_ack, buserr_stall;
+	wire		buserr_sel, buserr_stall, buserr_ack;
 	wire	[31:0]	buserr_data;
 
 	// Wishbone slave definitions for bus wb(SIO), slave buspic
-	wire		buspic_sel, buspic_ack, buspic_stall;
+	wire		buspic_sel, buspic_stall, buspic_ack;
 	wire	[31:0]	buspic_data;
 
 	// Wishbone slave definitions for bus wb(SIO), slave clkhdmiin
-	wire		clkhdmiin_sel, clkhdmiin_ack, clkhdmiin_stall;
+	wire		clkhdmiin_sel, clkhdmiin_stall, clkhdmiin_ack;
 	wire	[31:0]	clkhdmiin_data;
 
 	// Wishbone slave definitions for bus wb(SIO), slave clkhdmiout
-	wire		clkhdmiout_sel, clkhdmiout_ack, clkhdmiout_stall;
+	wire		clkhdmiout_sel, clkhdmiout_stall, clkhdmiout_ack;
 	wire	[31:0]	clkhdmiout_data;
 
 	// Wishbone slave definitions for bus wb(SIO), slave gpio
-	wire		gpio_sel, gpio_ack, gpio_stall;
+	wire		gpio_sel, gpio_stall, gpio_ack;
 	wire	[31:0]	gpio_data;
 
 	// Wishbone slave definitions for bus wb(SIO), slave hdmi_scope_frame_offset
-	wire		hdmi_scope_frame_offset_sel, hdmi_scope_frame_offset_ack, hdmi_scope_frame_offset_stall;
+	wire		hdmi_scope_frame_offset_sel, hdmi_scope_frame_offset_stall, hdmi_scope_frame_offset_ack;
 	wire	[31:0]	hdmi_scope_frame_offset_data;
 
 	// Wishbone slave definitions for bus wb(SIO), slave pwrcount
-	wire		pwrcount_sel, pwrcount_ack, pwrcount_stall;
+	wire		pwrcount_sel, pwrcount_stall, pwrcount_ack;
 	wire	[31:0]	pwrcount_data;
 
 	// Wishbone slave definitions for bus wb(SIO), slave rtcdate
-	wire		rtcdate_sel, rtcdate_ack, rtcdate_stall;
+	wire		rtcdate_sel, rtcdate_stall, rtcdate_ack;
 	wire	[31:0]	rtcdate_data;
 
 	// Wishbone slave definitions for bus wb(SIO), slave spio
-	wire		spio_sel, spio_ack, spio_stall;
+	wire		spio_sel, spio_stall, spio_ack;
 	wire	[31:0]	spio_data;
 
 	// Wishbone slave definitions for bus wb(SIO), slave subseconds
-	wire		subseconds_sel, subseconds_ack, subseconds_stall;
+	wire		subseconds_sel, subseconds_stall, subseconds_ack;
 	wire	[31:0]	subseconds_data;
 
 	// Wishbone slave definitions for bus wb(SIO), slave sysclk
-	wire		sysclk_sel, sysclk_ack, sysclk_stall;
+	wire		sysclk_sel, sysclk_stall, sysclk_ack;
 	wire	[31:0]	sysclk_data;
 
 	// Wishbone slave definitions for bus wb(SIO), slave version
-	wire		version_sel, version_ack, version_stall;
+	wire		version_sel, version_stall, version_ack;
 	wire	[31:0]	version_data;
 
 	// Wishbone slave definitions for bus wb(DIO), slave gck
-	wire		gck_sel, gck_ack, gck_stall;
+	wire		gck_sel, gck_stall, gck_ack;
 	wire	[31:0]	gck_data;
 
 	// Wishbone slave definitions for bus wb(DIO), slave mous
-	wire		mous_sel, mous_ack, mous_stall;
+	wire		mous_sel, mous_stall, mous_ack;
 	wire	[31:0]	mous_data;
 
 	// Wishbone slave definitions for bus wb(DIO), slave oled
-	wire		oled_sel, oled_ack, oled_stall;
+	wire		oled_sel, oled_stall, oled_ack;
 	wire	[31:0]	oled_data;
 
 	// Wishbone slave definitions for bus wb(DIO), slave rtc
-	wire		rtc_sel, rtc_ack, rtc_stall;
+	wire		rtc_sel, rtc_stall, rtc_ack;
 	wire	[31:0]	rtc_data;
 
 	// Wishbone slave definitions for bus wb(DIO), slave gtb
-	wire		gtb_sel, gtb_ack, gtb_stall;
+	wire		gtb_sel, gtb_stall, gtb_ack;
 	wire	[31:0]	gtb_data;
 
 	// Wishbone slave definitions for bus wb(DIO), slave hdmiin
-	wire		hdmiin_sel, hdmiin_ack, hdmiin_stall;
+	wire		hdmiin_sel, hdmiin_stall, hdmiin_ack;
 	wire	[31:0]	hdmiin_data;
 
 	// Wishbone slave definitions for bus wb(DIO), slave edin
-	wire		edin_sel, edin_ack, edin_stall;
+	wire		edin_sel, edin_stall, edin_ack;
 	wire	[31:0]	edin_data;
 
 	// Wishbone slave definitions for bus wb(DIO), slave edout
-	wire		edout_sel, edout_ack, edout_stall;
+	wire		edout_sel, edout_stall, edout_ack;
 	wire	[31:0]	edout_data;
 
 	// Wishbone slave definitions for bus wb, slave pmic
-	wire		pmic_sel, pmic_ack, pmic_stall;
+	wire		pmic_sel, pmic_stall, pmic_ack;
 	wire	[31:0]	pmic_data;
 
 	// Wishbone slave definitions for bus wb, slave scop_edid
-	wire		scop_edid_sel, scop_edid_ack, scop_edid_stall;
+	wire		scop_edid_sel, scop_edid_stall, scop_edid_ack;
 	wire	[31:0]	scop_edid_data;
 
 	// Wishbone slave definitions for bus wb, slave scope_hdmiin
-	wire		scope_hdmiin_sel, scope_hdmiin_ack, scope_hdmiin_stall;
+	wire		scope_hdmiin_sel, scope_hdmiin_stall, scope_hdmiin_ack;
 	wire	[31:0]	scope_hdmiin_data;
 
 	// Wishbone slave definitions for bus wb, slave scope_sdcard
-	wire		scope_sdcard_sel, scope_sdcard_ack, scope_sdcard_stall;
+	wire		scope_sdcard_sel, scope_sdcard_stall, scope_sdcard_ack;
 	wire	[31:0]	scope_sdcard_data;
 
 	// Wishbone slave definitions for bus wb, slave flctl
-	wire		flctl_sel, flctl_ack, flctl_stall;
+	wire		flctl_sel, flctl_stall, flctl_ack;
 	wire	[31:0]	flctl_data;
 
 	// Wishbone slave definitions for bus wb, slave gpsu
-	wire		gpsu_sel, gpsu_ack, gpsu_stall;
+	wire		gpsu_sel, gpsu_stall, gpsu_ack;
 	wire	[31:0]	gpsu_data;
 
 	// Wishbone slave definitions for bus wb, slave sdcard
-	wire		sdcard_sel, sdcard_ack, sdcard_stall;
+	wire		sdcard_sel, sdcard_stall, sdcard_ack;
 	wire	[31:0]	sdcard_data;
 
 	// Wishbone slave definitions for bus wb, slave wb_sio
-	wire		wb_sio_sel, wb_sio_ack, wb_sio_stall;
+	wire		wb_sio_sel, wb_sio_stall, wb_sio_ack;
 	wire	[31:0]	wb_sio_data;
 
 	// Wishbone slave definitions for bus wb, slave cfg
-	wire		cfg_sel, cfg_ack, cfg_stall;
+	wire		cfg_sel, cfg_stall, cfg_ack;
 	wire	[31:0]	cfg_data;
 
 	// Wishbone slave definitions for bus wb, slave mdio
-	wire		mdio_sel, mdio_ack, mdio_stall;
+	wire		mdio_sel, mdio_stall, mdio_ack;
 	wire	[31:0]	mdio_data;
 
 	// Wishbone slave definitions for bus wb, slave wb_dio
-	wire		wb_dio_sel, wb_dio_ack, wb_dio_stall;
+	wire		wb_dio_sel, wb_dio_stall, wb_dio_ack;
 	wire	[31:0]	wb_dio_data;
 
 	// Wishbone slave definitions for bus wb, slave bkram
-	wire		bkram_sel, bkram_ack, bkram_stall;
+	wire		bkram_sel, bkram_stall, bkram_ack;
 	wire	[31:0]	bkram_data;
 
 	// Wishbone slave definitions for bus wb, slave flash
-	wire		flash_sel, flash_ack, flash_stall;
+	wire		flash_sel, flash_stall, flash_ack;
 	wire	[31:0]	flash_data;
 
 	// Bus wbu
@@ -548,11 +548,11 @@ module	main(i_clk, i_reset,
 	reg		wbu_ack;
 
 	// Wishbone slave definitions for bus wbu, slave wbu_dwb
-	wire		wbu_dwb_sel, wbu_dwb_ack, wbu_dwb_stall, wbu_dwb_err;
+	wire		wbu_dwb_sel, wbu_dwb_stall, wbu_dwb_ack, wbu_dwb_err;
 	wire	[31:0]	wbu_dwb_data;
 
 	// Wishbone slave definitions for bus wbu, slave zip_dbg
-	wire		zip_dbg_sel, zip_dbg_ack, zip_dbg_stall;
+	wire		zip_dbg_sel, zip_dbg_stall, zip_dbg_ack;
 	wire	[31:0]	zip_dbg_data;
 
 	// Bus zip
@@ -567,7 +567,7 @@ module	main(i_clk, i_reset,
 	reg		zip_ack;
 
 	// Wishbone slave definitions for bus zip, slave zip_dwb
-	wire		zip_dwb_sel, zip_dwb_ack, zip_dwb_stall, zip_dwb_err;
+	wire		zip_dwb_sel, zip_dwb_stall, zip_dwb_ack, zip_dwb_err;
 	wire	[31:0]	zip_dwb_data;
 
 
@@ -1420,7 +1420,7 @@ module	main(i_clk, i_reset,
 	assign	wbu_data= 0;
 	// verilator lint_off UNUSED
 	wire	unused_bus_wbu;
-	assign	unused_bus_wbu = &{ 1'b0, wbu_ack, wbu_stall, wbu_err, wbu_data };
+	assign	unused_bus_wbu = &{ 1'b0, wbu_stall, wbu_ack, wbu_err, wbu_data };
 	// verilator lint_on  UNUSED
 
 `endif	// WBUBUS_MASTER
@@ -1575,7 +1575,7 @@ module	main(i_clk, i_reset,
 	assign	zip_data= 0;
 	// verilator lint_off UNUSED
 	wire	unused_bus_zip;
-	assign	unused_bus_zip = &{ 1'b0, zip_ack, zip_stall, zip_err, zip_data };
+	assign	unused_bus_zip = &{ 1'b0, zip_stall, zip_ack, zip_err, zip_data };
 	// verilator lint_on  UNUSED
 
 	assign	zip_cpu_int = 1'b0;	// zip.INT.ZIP.WIRE

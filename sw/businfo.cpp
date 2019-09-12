@@ -873,7 +873,7 @@ void assign_addresses(void) {
 void	BUSINFO::writeout_slave_defn_v(FILE *fp, const char* pname, const char *errwire, const char *btyp) {
 	fprintf(fp, "\t// Wishbone slave definitions for bus %s%s, slave %s\n",
 		m_name->c_str(), btyp, pname);
-	fprintf(fp, "\twire\t\t%s_sel, %s_ack, %s_stall",
+	fprintf(fp, "\twire\t\t%s_sel, %s_stall, %s_ack",
 			pname, pname, pname);
 	if ((errwire)&&(errwire[0] != '\0'))
 		fprintf(fp, ", %s;\n", errwire);
@@ -1119,7 +1119,7 @@ void	BUSINFO::writeout_no_master_v(FILE *fp) {
 	fprintf(fp, "\t// verilator lint_off UNUSED\n");
 	fprintf(fp, "\twire\tunused_bus_%s;\n", m_name->c_str());
 	fprintf(fp, "\tassign\tunused_bus_%s = "
-		"&{ 1\'b0, %s_ack, %s_stall, %s_err, %s_data };\n",
+		"&{ 1\'b0, %s_stall, %s_ack, %s_err, %s_data };\n",
 		m_name->c_str(), m_name->c_str(), m_name->c_str(),
 		m_name->c_str(), m_name->c_str());
 	fprintf(fp, "\t// verilator lint_on  UNUSED\n");
