@@ -336,9 +336,7 @@ void	build_main_tb_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 "	}\n\n");
 
 	fprintf(fp,
-"	void	tick(void) {\n"
-"		if (done())\n"
-"			return;\n");
+"	void	tick(void) {\n");
 	fprintf(fp, "\t\tTESTB<Vmain>::tick(); // Clock.size = %ld\n\t}\n\n", cklist.size());
 
 	for(unsigned i=0; i<cklist.size(); i++) {
