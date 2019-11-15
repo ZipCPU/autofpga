@@ -751,14 +751,15 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 
 			fprintf(fp,
 				"\t//\n"
-				"\t// The %s bus has no slaves assigned to it\n"
+				"\t// Master %s has no slaves attached to its bus, %s\n"
 				"\t//\n"
 				"\t\tassign\t%s_err   = %s_stb;\n"
 				"\t\tassign\t%s_stall = 1\'b0;\n"
 				"\t\tassign\t%s_ack   = 1\'b0;\n"
 				"\t\tassign\t%s_idata = 0;\n",
-				pfxc, pfxc, pfxc, pfxc, pfxc, pfxc);
+				pfxc, m_info->name->c_str(), pfxc, pfxc, pfxc, pfxc, pfxc, pfxc);
 		}
+
 		return;
 	} else if (NULL == m_info->m_mlist || m_info->m_mlist->size() == 0) {
 		for(unsigned p=0; p < m_info->m_plist->size(); p++) {
@@ -1235,6 +1236,7 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 	"\t\t.SLAVE_MASK({\n");
 	for(unsigned k=m_info->m_plist->size()-1; k>0; k=k-1) {
 		PERIPHP	p = (*m_info->m_plist)[k];
+
 		fprintf(fp, "\t\t\t{ %d\'h%0*lx }, // %*s\n",
 			address_width(), (address_width()+3)/4,
 			p->p_mask, slave_name_width, p->name()->c_str());

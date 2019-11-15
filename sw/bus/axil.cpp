@@ -130,6 +130,7 @@
 
 extern	AXILBUSCLASS	axilclass;
 const	unsigned	AXI_MIN_ADDRESS_WIDTH = 12;
+
 AXILBUS::AXILBUS(BUSINFO *bi) {
 	m_info = bi;
 	m_slist = NULL;
@@ -226,6 +227,7 @@ void	AXILBUS::allocate_subbus(void) {
 		setstring(sbi->m_hash, KY_TYPE, axilclass.name());
 	if (dbi)
 		setstring(dbi->m_hash, KY_TYPE, axilclass.name());
+	REHASH;
 }
 
 int	AXILBUS::address_width(void) {
@@ -469,8 +471,7 @@ void	AXILBUS::writeout_bus_master_defns_v(FILE *fp) {
 
 	if (m) {
 		for(MLIST::iterator pp=m->begin(); pp != m->end(); pp++) {
-			STRINGP	n = (*pp)->name();
-			writeout_defn_v(fp, n->c_str(),
+			writeout_defn_v(fp, (*pp)->name()->c_str(),
 			(*pp)->bus_prefix()->c_str());
 		}
 	} else {
@@ -502,6 +503,10 @@ STRINGP	AXILBUS::master_name(int k) {
 	return (*ml)[k]->name();
 }
 
+//
+// Connect this master to the crossbar.  Specifically, we want to output
+// a list of master connections to fill the given port.
+//
 void AXILBUS::xbarcon_master(FILE *fp, const char *tabs,
 			const char *pfx,const char *sig, bool comma) {
 	STRING lcase = STRING(sig);
@@ -520,6 +525,10 @@ void AXILBUS::xbarcon_master(FILE *fp, const char *tabs,
 	fprintf(fp, "%s})%s\n", tabs, comma ? ",":"");
 }
 
+//
+// Output a list of connections to slave bus wires.  Used in connecting the
+// slaves to the various crossbar inputs.
+//
 void AXILBUS::xbarcon_slave(FILE *fp, PLIST *pl, const char *tabs,
 			const char *pfx,const char *sig, bool comma) {
 	STRING lcase = STRING(sig);
@@ -564,6 +573,9 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 
 	unused_lsbs = nextlg(m_info->data_width())-3;
 	if (m_info->m_plist->size() == 0) {
+		fprintf(fp, "\t//\n"
+			"\t// Bus %s has no slaves\n"
+			"\t//\n\n", n->c_str());
 
 		// Since this bus has no slaves, any attempt to access it
 		// needs to cause a bus error.
@@ -583,7 +595,7 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 		"\tassign	%s_arready = %s_rready;\n"
 		"\tassign	%s_rvalid = %s_arvalid;\n"
 		"\tassign	%s_rresp = 2'b11;\n\n",
-		mstr->c_str(),
+		mstr->c_str(), m_info->name()->c_str()
 		//
 		mstr->c_str(), mstr->c_str(), mstr->c_str(),
 		mstr->c_str(), mstr->c_str(),
@@ -894,7 +906,21 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 	//
 	pl = m_info->m_plist;
 
-	fprintf(fp,
+	unsigned	slave_name_width = 4;
+	// Find the maximum width of any slaves name, for our comment tables
+	// below
+	for(unsigned k=0; k<m_info->m_plist->size(); k++) {
+		PERIPHP	p = (*m_info->m_plist)[k];
+		unsigned	sz;
+
+		sz = p->name()->size();
+		if (slave_name_width < sz)
+			slave_name_width = sz;
+	}
+
+	//
+	// Now create the crossbar interconnect
+	//	fprintf(fp,
 	"\t//\n"
 	"\t// Connect the %s bus components together using the axilxbar()\n"
 	"\t//\n"
@@ -910,24 +936,39 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 		m_info->data_width(),
 		m_mlist->size(),
 		m_info->m_plist->size());
-	for(unsigned k=m_info->m_plist->size()-1; k>0; k=k-1) {
-		fprintf(fp, "\t\t\t{ %d\'h%*lx },\n",
-			address_width(), (address_width()+3)/4,
-			((*m_info->m_plist)[k]->p_base));
-	} fprintf(fp, "\t\t\t{ %d\'h%*lx }\n",
-			address_width(), (address_width()+3)/4,
-			((*m_info->m_plist)[0]->p_base));
+	{
+		for(unsigned k=m_info->m_plist->size()-1; k>0; k=k-1) {
+			PERIPHP	p = (*m_info->m_plist)[k];
+
+			fprintf(fp, "\t\t\t{ %d\'h%0*lx },\n",
+				address_width(), (address_width()+3)/4,
+				((*m_info->m_plist)[k]->p_base));
+			fprintf(fp, " // %*s: 0x%0*lx\n", slave_name_width,
+				p->name()->c_str(),
+				(address_width()+3)/4, p->p_base);
+
+		} fprintf(fp, "\t\t\t{ %d\'h%0*lx }  // %*s: 0x%0*lx\n",
+				address_width(), (address_width()+3)/4,
+				((*m_info->m_plist)[0]->p_base),
+				slave_name_width,
+				(*m_info->m_plist)[0]->name()->c_str(),
+				(address_width()+unused_lsbs+3)/4,
+				(*m_info->m_plist)[0]->p_base);
+	}
 
 	fprintf(fp,
 	"\t\t}),\n"
 	"\t\t.SLAVE_MASK({\n");
 	for(unsigned k=m_info->m_plist->size()-1; k>0; k=k-1) {
-		fprintf(fp, "\t\t\t{ %d\'h%*lx },\n",
+		PERIPHP	p = (*m_info->m_plist)[k];
+
+		fprintf(fp, "\t\t\t{ %d\'h%0*lx }, // %*s\n",
 			address_width(), (address_width()+3)/4,
-			((*m_info->m_plist)[k]->p_mask) << unused_lsbs);
-	} fprintf(fp, "\t\t\t{ %d\'h%*lx }\n",
+			p->p_mask << unused_lsbs, slave_name_width, p->name()->c_str());
+	} fprintf(fp, "\t\t\t{ %d\'h%0*lx }  // %*s\n",
 			address_width(), (address_width()+3)/4,
-			((*m_info->m_plist)[0]->p_mask));
+			((*m_info->m_plist)[0]->p_mask << unused_lsbs),
+			slave_name_width, (*m_info->m_plist)[0]->name()->c_str());
 	fprintf(fp, "\t\t})");
 
 	if (bus_option(KY_OPT_LOWPOWER)) {
