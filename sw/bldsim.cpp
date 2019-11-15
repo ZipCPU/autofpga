@@ -70,6 +70,7 @@
 #include "keys.h"
 #include "legalnotice.h"
 #include "bldtestb.h"
+#include "msgs.h"
 
 extern	void	writeout(FILE *fp, MAPDHASH &master, const STRING &ky);
 
@@ -86,13 +87,14 @@ bool	tb_same_clock(MAPDHASH &info, STRINGP ckname) {
 		dstr = strdup(simclk->c_str());
 		tok = strtok(dstr, DELIMITERS);
 		result = (ckname->compare(tok)==0);
+		tok = strtok(NULL, DELIMITERS);
+		if (tok)
+			result = false;
 		free(dstr);
 
 		return result;
 	}
 
-	if ((cklist.size() > 0)&&(ckname->compare(*cklist[0].m_name)==0))
-		return true;
 	return false;
 }
 
@@ -121,17 +123,21 @@ bool	tb_tick(MAPDHASH &info, STRINGP ckname, FILE *fp) {
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
 		MAPDHASH	*p = kvpair->second.u.m_m;
+		STRINGP	tick = getstring(*p, *ky);
+
+		if (!tick)
+			continue;
+		if (NULL == getstring(*p, KYSIM_CLOCK))
+			gbl_msg.warning("%s defines SIM.TICK, but not SIM.CLOCK\n",
+				kvpair->first.c_str());
 		if (!tb_same_clock(*p, ckname))
 			continue;
-		STRINGP	tick = getstring(*p, *ky);
-		if (tick) {
-			if (fp) {
-				fprintf(fp, "\t\t// %s from %s\n", ky->c_str(),
-					kvpair->first.c_str());
-				fprintf(fp, "%s", tick->c_str());
-			}
-			result = true;
+		if (fp) {
+			fprintf(fp, "\t\t// %s from %s\n", ky->c_str(),
+				kvpair->first.c_str());
+			fprintf(fp, "%s", tick->c_str());
 		}
+		result = true;
 	}
 
 	if ((fp)&&(!result))
@@ -164,14 +170,17 @@ bool	tb_dbg_condition(MAPDHASH &info, STRINGP ckname, FILE *fp) {
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
 		MAPDHASH	*p = kvpair->second.u.m_m;
+		STRINGP	tick = getstring(*p, *ky);
+		if (!tick)
+			continue;
+		if (NULL == getstring(*p, KYSIM_CLOCK))
+			gbl_msg.warning("%s defines SIM.DBGCONDITION, but not SIM.CLOCK\n",
+				kvpair->first.c_str());
 		if (!tb_same_clock(*p, ckname))
 			continue;
-		STRINGP	tick = getstring(*p, *ky);
-		if (tick) {
-			if (fp) {
-				fprintf(fp, "%s", tick->c_str());
-			} result = true;
-		}
+		if (fp) {
+			fprintf(fp, "%s", tick->c_str());
+		} result = true;
 	}
 
 	if ((fp)&&(!result))
@@ -206,18 +215,22 @@ bool	tb_debug(MAPDHASH &info, STRINGP ckname, FILE *fp) {
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
 		MAPDHASH	*p = kvpair->second.u.m_m;
+		STRINGP	tick = getstring(*p, KYSIM_DEBUG);
+
+		if (!tick)
+			continue;
+		if (NULL == getstring(*p, KYSIM_CLOCK))
+			gbl_msg.warning("%s defines SIM.DEBUG, but not SIM.CLOCK\n",
+				kvpair->first.c_str());
 		if (!tb_same_clock(*p, ckname))
 			continue;
-		STRINGP	tick = getstring(*p, KYSIM_DEBUG);
-		if (tick) {
-			if (fp) {
-				fprintf(fp, "\t\t\t//    %s from %s\n",
-					ky->c_str(),
-					kvpair->first.c_str());
-				fprintf(fp, "%s", tick->c_str());
-			}
-			result = true;
+		if (fp) {
+			fprintf(fp, "\t\t\t//    %s from %s\n",
+				ky->c_str(),
+				kvpair->first.c_str());
+			fprintf(fp, "%s", tick->c_str());
 		}
+		result = true;
 	}
 
 	if ((fp)&&(!result))
@@ -336,9 +349,7 @@ void	build_main_tb_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 "	}\n\n");
 
 	fprintf(fp,
-"	void	tick(void) {\n"
-"		if (done())\n"
-"			return;\n");
+"	void	tick(void) {\n");
 	fprintf(fp, "\t\tTESTB<Vmain>::tick(); // Clock.size = %ld\n\t}\n\n", cklist.size());
 
 	for(unsigned i=0; i<cklist.size(); i++) {
@@ -430,7 +441,7 @@ void	build_main_tb_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 		str = getstring(kvpair->second, KYSIM_LOAD);
 		if (str == NULL)
 			continue;
-		if (!getvalue(*dev, KYBASE, base))
+		if (!getvalue(*dev, KYREGBASE, base))
 			continue;
 		if (!getvalue(*dev, KYNADDR, naddr))
 			continue;
