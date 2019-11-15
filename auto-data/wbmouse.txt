@@ -76,8 +76,7 @@
 	wire	[31:0]	scrn_mouse;
 @MAIN.INSERT=
 	wbmouse themouse(i_clk,
-		(wb_cyc), (wb_stb)&&(mous_sel), wb_we, wb_addr[1:0], wb_data,
-			mous_ack, mous_stall, mous_data,
+		@$(SLAVE.PORTLIST),
 		i_ps2, o_ps2,
 		scrn_mouse, mous_interrupt);
 @MAIN.ALT=

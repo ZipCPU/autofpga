@@ -11,7 +11,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017-2018, Gisselquist Technology, LLC
+## Copyright (C) 2017-2019, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -54,16 +54,17 @@
 
 	memdev #(@$(MEMORY_ADDRESS_WIDTH))
 		enet_buffers(i_clk,
-			(wb_cyc), (wb_stb)&&(netb_sel),
-				(wb_we)&&(wb_addr[@$(MEMORY_ADDRESS_WIDTH)-1]),
-				wb_addr[@$(MEMORY_ADDRESS_WIDTH)-2:0], wb_data, wb_sel,
-				netb_ack, netb_stall, netb_data);
+			@$(SLAVE.PORTLIST));
 
 `else
 
-	assign	netb_ack   = 1'b0;
-	assign	netb_stall = 1'b0;
-	assign	netb_data  = netp_data;
+// These don't need to be defined here, and indeed should not be defined here
+// lest their definitions override those of the netb interface defined in the
+// enetpackets module
+//
+//	assign	@$(SLAVE.PREFIX)_ack   = 1'b0;
+//	assign	@$(SLAVE.PREFIX)_stall = 1'b0;
+//	assign	@$(SLAVE.PREFIX)_data  = @$(netp.SLAVE.PREFIX)_data;
 
 `endif
 
@@ -88,7 +89,7 @@ static volatile unsigned *const @$(BDEF.IONAME)tx = ((unsigned *)(@$[0x%08x](REG
 @INT.NETRX.PIC=syspic
 @INT.NETTX.PIC=syspic
 @NADDR=8
-@SLAVE.TYPE=OTHER
+@SLAVE.TYPE=DOUBLE
 @SLAVE.BUS=wb
 @TOP.PORTLIST=
 		// Ethernet control (packets) lines
@@ -154,9 +155,8 @@ static volatile unsigned *const @$(BDEF.IONAME)tx = ((unsigned *)(@$[0x%08x](REG
 @MAIN.INSERT=
 	enetpackets	#(.MEMORY_ADDRESS_WIDTH(@$(MAWB)))
 		netctrl(i_clk, i_reset,
-			wb_cyc,(wb_stb)&&((netp_sel)||(netb_sel)),
-			wb_we, { (netb_sel), wb_addr[@$(MAWB)-2:0] }, wb_data, wb_sel,
-				netp_ack, netp_stall, netp_data,
+			@$(netb.SLAVE.PORTLIST),
+			@$(SLAVE.PORTLIST),
 			o_net_reset_n,
 			i_net_rx_clk, i_net_rx_dv, i_net_rx_err, i_net_rxd,
 			i_clk_125mhz, o_net_tx_clk, o_net_tx_ctl, o_net_txd,

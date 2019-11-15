@@ -52,7 +52,7 @@
 		o_hdmi_in_txen,
 		io_hdmi_out_cec,
 		i_hdmi_out_hpd_n, // Hotplug detect
-		o_sd_reset, i_sd_cd,
+		o_sd_reset,
 		i_gps_3df
 @TOP.IODECL=
 	// GPIO wires
@@ -61,7 +61,6 @@
 	output	wire	o_hdmi_in_txen;
 	inout	wire	io_hdmi_out_cec;
 	input	wire	i_hdmi_out_hpd_n;
-	input	wire	i_sd_cd;
 	output	wire	o_sd_reset;
 	input	wire	i_gps_3df;
 @TOP.DEFNS=
@@ -78,7 +77,7 @@
 	assign	i_gpio = { 10'h0,
 			w_hdmi_in_pll_locked,
 			sysclk_locked, i_gps_3df,
-			!i_hdmi_out_hpd_n, i_sd_cd,
+			!i_hdmi_out_hpd_n, !i_sd_cd_n,
 			io_hdmi_out_cec, io_hdmi_in_cec };
 	assign	io_hdmi_in_cec  = o_gpio[0] ? 1'bz : 1'b0;
 	assign	io_hdmi_out_cec = o_gpio[1] ? 1'bz : 1'b0;
@@ -96,6 +95,8 @@
 	// @$(DEVID) ports
 	input		[(NGPI-1):0]	i_@$(PREFIX);
 	output	wire	[(NGPO-1):0]	o_@$(PREFIX);
+@MAIN.DEFNS=
+	wire	sd_reset;
 @MAIN.INSERT=
 	//
 	// @$(DEVID)
@@ -104,11 +105,12 @@
 	// another 16 @$(DEVID) outputs.  The interrupt trips when any of the inputs
 	// changes.  (Sorry, which input isn't (yet) selectable.)
 	//
-	localparam	INITIAL_@$(DEVID) = 16'h0f;
+	localparam	INITIAL_@$(DEVID) = 16'h04f;
 	wbgpio	#(NGPI, NGPO, INITIAL_@$(DEVID))
-		@$(PREFIX)i(i_clk, 1'b1, (wb_stb)&&(@$(PREFIX)_sel), wb_we,
-			wb_data, @$(PREFIX)_data, i_@$(PREFIX), o_@$(PREFIX),
-			@$(PREFIX)_int);
+		@$(PREFIX)i(i_clk, @$(SLAVE.PORTLIST),
+			i_@$(PREFIX), o_@$(PREFIX), @$(PREFIX)_int);
+
+	assign	sd_reset = o_@$(PREFIX)[6];
 @REGS.N=1
 @REGS.0= 0 R_@$(DEVID) @$(DEVID) GPI GPO
 @BDEF.DEFN=

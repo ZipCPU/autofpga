@@ -53,9 +53,8 @@
 	//
 	// The BUS Interrupt controller
 	//
-	icontrol #(15)	@$(PREFIX)i(@$(SLAVE.BUS.CLOCK.WIRE), 1'b0, (@$(BUSP)_stb)&&(@$(PREFIX)_sel),
-			@$(BUSP)_we, @$(BUSP)_data,
-			@$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_data,
+	icontrol #(15)	@$(PREFIX)i(@$(SLAVE.BUS.CLOCK.WIRE), 1'b0,
+			@$(SLAVE.PORTLIST),
 			bus_int_vector, w_bus_int);
 @MAIN.ALT=
 @REGS.N=1

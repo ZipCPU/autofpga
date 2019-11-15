@@ -43,12 +43,12 @@
 @BUS.NAME=wbu
 @BUS.CLOCK=clk
 @BUS.WIDTH=32
-@BUS.TYPE=wb
 @$BAUDRATE=1000000
 @CLOCK.NAME=clk
 @$SETUP=@$(CLOCK.FREQUENCY) / @$BAUDRATE
 @SETUP.FORMAT=24'h%x
 @$BUS_ADDRESS_WIDTH=@$(MASTER.BUS.AWID)
+@BP=@$(MASTER.PREFIX)
 # @TOP.PORTLIST=
 # 		// UART/host to wishbone interface
 # 		i_host_uart_rx, o_host_uart_tx
@@ -90,7 +90,7 @@
 	// The bus-console depends upon the zip_dbg wires.  If there is no
 	// ZipCPU defining them, we'll need to define them here anyway.
 	//
-	wire		zip_dbg_ack, zip_dbg_stall;
+	wire		zip_dbg_stall, zip_dbg_ack;
 	wire	[31:0]	zip_dbg_data;
 `endif
 @$ZIP_ADDRESS_BIT=@$BUS_ADDRESS_WIDTH-1
@@ -119,11 +119,8 @@
 `endif
 	wire	[31:0]	wbu_tmp_addr;
 	wbubus	genbus(i_clk, i_host_rx_stb, i_host_rx_data,
-			wbu_cyc, wbu_stb, wbu_we, wbu_tmp_addr, wbu_data,
-			(wbu_zip_sel)?zip_dbg_ack:wbu_ack,
-			(wbu_zip_sel)?zip_dbg_stall:wbu_stall,
-				(wbu_zip_sel)?1'b0:wbu_err,
-				(wbu_zip_sel)?zip_dbg_data:wbu_idata,
+			@$(BP)_cyc, @$(BP)_stb, @$(BP)_we, @$(PREFIX)_tmp_addr, @$(BP)_data,
+			@$(BP)_stall, @$(BP)_ack, @$(BP)_idata, @$(BP)_err,
 			w_bus_int,
 			o_host_tx_stb, o_host_tx_data, i_host_tx_busy,
 			wbubus_dbg[0]);
@@ -133,6 +130,21 @@
 #define	R_ZIPCTRL	@$.ZIP_ADDRESS
 #define	R_ZIPDATA	@$.ZIP_DBGDATA
 #
+SIM.INIT=
+		m_core->i_host_uart_rx = 1;
 SIM.CLOCK=clk
 SIM.TICK=
 		m_core->i_host_uart_rx = (*m_dbgbus)(m_core->o_host_uart_tx);
+@RTL.MAKE.GROUP=
+@RTL.MAKE.SUBD=wbubus
+@RTL.MAKE.FILES= wbconsole.v wbubus.v wbucompactlines.v wbucompress.v
+	wbuconsole.v wbudecompress.v wbudeword.v wbuexec.v wbufifo.v
+	wbuidleint.v wbuinput.v wbuoutput.v wbureadcw.v wbusixchar.v wbutohex.v
+##
+##
+@PREFIX=wbu_arbiter
+@MASTER.BUS=wb
+@MASTER.TYPE=OTHER
+@SLAVE.BUS=wbu
+@SLAVE.TYPE=OTHER
+@NADDR=1<<@$(MASTER.BUS.AWID)

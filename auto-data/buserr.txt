@@ -42,17 +42,27 @@
 @SLAVE.BUS=wb
 @SINGLE.INPUT= r_bus_err
 @CLOCK.NAME=clk
+@$RWID=(@$(zip.MASTER.BUS.AWID) > @$(wbu.MASTER.BUS.AWID)) ? @$(zip.MASTER.BUS.AWID) : @$(wbu.MASTER.BUS.AWID)
 @MAIN.DEFNS=
-	reg	[@$(SLAVE.BUS.AWID)-1:0]	r_@$(PREFIX)_addr;
+	reg	[@$(RWID)-1:0]	r_@$(PREFIX)_addr;
 @MAIN.INSERT=
 	always @(posedge @$(CLOCK.WIRE))
-		if (@$(SLAVE.BUS.NAME)_err)
-			r_@$(PREFIX)_addr <= @$(SLAVE.BUS.NAME)_addr;
-	assign	@$(PREFIX)_data = { {(@$(SLAVE.BUS.WIDTH)-2-@$(SLAVE.BUS.AWID)){1'b0}},
+	if (@$(zip.MASTER.PREFIX)_err)
+	begin
+		r_@$(PREFIX)_addr <= 0;
+		r_@$(PREFIX)_addr[@$(zip.MASTER.BUS.AWID)-1:0] <= @$(zip.MASTER.PREFIX)_addr[@$(zip.MASTER.BUS.AWID)-1:0];
+	end else if (@$(wbu.MASTER.PREFIX)_err)
+	begin
+		r_@$(PREFIX)_addr <= 0;
+		r_@$(PREFIX)_addr[@$(wbu.MASTER.BUS.AWID)-1:0] <= @$(wbu.MASTER.PREFIX)_addr[@$(wbu.MASTER.BUS.AWID)-1:0];
+	end
+	assign	@$(SLAVE.PREFIX)_stall= 1'b0;
+	assign	@$(SLAVE.PREFIX)_ack  = @$(SLAVE.PREFIX)_stb;
+	assign	@$(SLAVE.PREFIX)_idata = { {(30-@$(RWID)){1'b0}},
 			r_@$(PREFIX)_addr, 2'b00 };
 @REGS.N=1
 @REGS.0= 0 R_BUSERR BUSERR
 @BDEF.IONAME=io_buserr
 @BDEF.IOTYPE=unsigned
 @BDEF.OSDEF=_BOARD_HAS_BUSERR
-@BDEF.OSVAL=static volatile @$THIS.BDEF.IOTYPE *const _buserr = ((@$THIS.BDEF.IOTYPE *)@$.REGBASE);
+@BDEF.OSVAL=static volatile @$THIS.BDEF.IOTYPE *const _buserr = ((@$THIS.BDEF.IOTYPE *)@$[0x%08x](REGBASE));

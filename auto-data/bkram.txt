@@ -49,9 +49,7 @@
 @MAIN.INSERT=
 	memdev #(.LGMEMSZ(@$THIS.LGMEMSZ), .EXTRACLOCK(1))
 		@$(PREFIX)i(i_clk, i_reset,
-			(wb_cyc), (wb_stb)&&(@$(PREFIX)_sel), wb_we,
-				wb_addr[(@$THIS.LGMEMSZ-3):0], wb_data, wb_sel,
-				@$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_data);
+			@$(SLAVE.PORTLIST));
 @REGS.N=1
 @REGS.0= 0 R_@$(DEVID) RAM
 @REGDEFS.H.DEFNS=

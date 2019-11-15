@@ -38,7 +38,7 @@
 ##
 ##
 .PHONY: all
-all:	archive sw
+all:	sw
 YYMMDD:=`date +%Y%m%d`
 
 .PHONY: archive

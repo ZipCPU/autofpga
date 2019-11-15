@@ -87,13 +87,15 @@ autofpga: $(OBJECTS)
 	echo $(OBJECTS)
 	$(CXX) $(CFLAGS) $(OBJECTS) -o $@
 
-VDATA := global.txt clock.txt bkram.txt flash.txt zipmaster.txt		\
-	wbubus.txt dlyarbiter.txt sdvidram.txt xpander.txt vidarbiter.txt		\
-	gps.txt icape.txt mdio.txt spio.txt wboledbw.txt rtcdate.txt	\
-	hdmi.txt clkcounter.txt gpio.txt pwrcount.txt wbpmic.txt	\
-	version.txt buserr.txt pic.txt rtcgps.txt wbmouse.txt sdspi.txt
+VDATA := bkram.txt buserr.txt clkcounter.txt clock.txt enet.txt		\
+	flash.txt global.txt gpio.txt gps.txt hdmi.txt icape.txt	\
+	legalgen.txt mdio.txt pic.txt pwrcount.txt rtcdate.txt		\
+	rtcgps.txt sdram.txt sdspi.txt spio.txt version.txt wbmouse.txt	\
+	wboledbw.txt wbpmic.txt wbscopc.txt wbscope.txt	wbubus.txt	\
+	xpander.txt zipmaster.txt
 # Unused:
-#	enet.txt sdspi.txt wbuart.txt
+#	wbuart.txt
+
 
 .PHONY: demo
 demo: runme.sh

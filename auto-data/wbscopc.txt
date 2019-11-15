@@ -42,6 +42,8 @@
 @CORE=wbscopc
 @REGS.NOTE=// @$(PREFIX) compressed scope
 @RTL.MAKE.GROUP=SCOPC
+@RTL.MAKE.SUBD=wbscope
+@RTL.MAKE.FILES=wbscopc.v
 @TRIGGER=@$(TARGET)_debug[31]
 @DEBUG=@$(TARGET)_debug[30:0]
 @INCLUDEFILE=wbscope.txt

@@ -43,15 +43,15 @@
 @MAIN.DEFNS=
 `include "builddate.v"
 @MAIN.INSERT=
-	assign	@$(PREFIX)_data = `DATESTAMP;
-	assign	@$(PREFIX)_ack = wb_stb && @$(PREFIX)_sel;
-	assign	@$(PREFIX)_stall = 1'b0;
+	assign	@$(SLAVE.PREFIX)_idata = `DATESTAMP;
+	assign	@$(SLAVE.PREFIX)_ack = @$(SLAVE.PREFIX)_stb;
+	assign	@$(SLAVE.PREFIX)_stall = 1'b0;
 @REGS.N=1
 @REGS.0= 0 R_@$(DEVID) @$(DEVID)
 @BDEF.IONAME=_@$(PREFIX)
 @BDEF.IOTYPE=unsigned
 @BDEF.OSDEF=_BOARD_HAS_@$(DEVID)
-@BDEF.IOTYPE=static volatile @$BDEF.IOTYPE *const @$BDEF.IONAME = &((@$BDEF.IOTYPE *)@$[0x%08x](REGBASE));
+@BDEF.OSVAL=static volatile @$BDEF.IOTYPE *const @$BDEF.IONAME = ((@$BDEF.IOTYPE *)@$[0x%08x](REGBASE));
 ##
 ##
 ##
@@ -64,12 +64,12 @@
 // BUILDTIME doesnt need to include builddate.v a second time
 // `include "builddate.v"
 @MAIN.INSERT=
-	assign	@$(PREFIX)_data = `BUILDTIME;
-	assign	@$(PREFIX)_ack = wb_stb && @$(PREFIX)_sel;
-	assign	@$(PREFIX)_stall = 1'b0;
+	assign	@$(SLAVE.PREFIX)_idata = `BUILDTIME;
+	assign	@$(SLAVE.PREFIX)_ack = @$(SLAVE.PREFIX)_stb;
+	assign	@$(SLAVE.PREFIX)_stall = 1'b0;
 @REGS.N=1
 @REGS.0= 0 R_@$(DEVID) @$(DEVID)
 @BDEF.IONAME=_@$(PREFIX)
 @BDEF.IOTYPE=unsigned
 @BDEF.OSDEF=_BOARD_HAS_@$(DEVID)
-@BDEF.IOTYPE=static volatile @$BDEF.IOTYPE *const @$BDEF.IONAME = &((@$.BDEF.IOTYPE *)@$[0x%08x](REGBASE));
+@BDEF.OSVAL=static volatile @$BDEF.IOTYPE *const @$BDEF.IONAME = ((@$.BDEF.IOTYPE *)@$[0x%08x](REGBASE));

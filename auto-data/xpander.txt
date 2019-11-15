@@ -41,37 +41,20 @@
 @SLAVE.TYPE=OTHER
 @SLAVE.BUS=wb
 @SLAVE.CLOCK=clk
-# @MASTER.BUS=wbsdr
-@MASTER.BUS=xpand_bus
-@MASTER.BUS.CLOCK=clk
+@BUS=rambus
+@BUS.CLOCK=clk
+@MASTER.BUS=rambus
+## @MASTER.BUS.CLOCK=clk
 @MASTER.TYPE=SUBBUS
 # XPand bus transactions are 128 bits wide
 # Hence we need 4 fewer bus wires than would be necessary for
-@BUS.NAME=xpand_bus
-@BUS.WIDTH=128
-@BUS.CLOCK=clk
 @$AWID=@$(MASTER.BUS.AWID)+2
-@ERROR.WIRE=@$(PREFIX)_err
+@ERROR.WIRE=@$(SLAVE.PREFIX)_err
 @MAIN.INSERT=
 	busexpander #(.AWIN(@$(AWID)), .DWIN(@$(SLAVE.BUS.WIDTH)),
 			.DWOUT(@$(MASTER.BUS.WIDTH)))
 		@$(PREFIX)i@$(SLAVE.BUS.WIDTH)x@$(MASTER.BUS.WIDTH)(
-			@$(SLAVE.BUS.CLOCK.WIRE),
-			(@$(SLAVE.BUS.NAME)_cyc),
-			(@$(SLAVE.BUS.NAME)_stb)&&(@$(PREFIX)_sel),
-			@$(SLAVE.BUS.NAME)_we,
-			@$(SLAVE.BUS.NAME)_addr[(@$(AWID)-1):0],
-			@$(SLAVE.BUS.NAME)_data, @$(SLAVE.BUS.NAME)_sel,
-			@$(PREFIX)_ack, @$(PREFIX)_stall,
-			@$(PREFIX)_data, @$(PREFIX)_err,
+			@$(SLAVE.BUS.CLOCK.WIRE), i_reset,
+			@$(SLAVE.PORTLIST),
 			//
-			@$(MASTER.BUS.NAME)_cyc,
-			@$(MASTER.BUS.NAME)_stb,
-			@$(MASTER.BUS.NAME)_we,
-			@$(MASTER.BUS.NAME)_addr,
-			@$(MASTER.BUS.NAME)_data,
-			@$(MASTER.BUS.NAME)_sel,
-			@$(MASTER.BUS.NAME)_ack,
-			@$(MASTER.BUS.NAME)_stall,
-			@$(MASTER.BUS.NAME)_idata,
-			@$(MASTER.BUS.NAME)_err);
+			@$(MASTER.PORTLIST));

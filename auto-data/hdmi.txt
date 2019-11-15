@@ -48,9 +48,9 @@
 @SLAVE.TYPE=DOUBLE
 @SLAVE.BUS=wb
 @MASTER.TYPE=VIDEO
-@MASTER.BUS.NAME=vid
+@MASTER.BUS.NAME=rambus
 @MASTER.BUS.WIDTH=128
-@BUS.NAME=vid
+@BUS.NAME=rambus
 @BUS.WIDTH=128
 @BUS.TYPE=wb
 @BUS.CLOCK=clk
@@ -168,10 +168,10 @@
 			i_hdmi_in_r, i_hdmi_in_g, i_hdmi_in_b,
 			@$(CBUS)_cyc, (@$(CBUS)_stb)&&(hdmiin_sel), @$(CBUS)_we, @$(CBUS)_addr[3:0],
 				@$(CBUS)_data, @$(CBUS)_sel,
-			hdmiin_ack, hdmiin_stall, hdmiin_data,
+			hdmiin_stall, hdmiin_ack, hdmiin_data,
 			@$(VBUS)_cyc, @$(VBUS)_stb, @$(VBUS)_we,
 				@$(VBUS)_addr, @$(VBUS)_data, @$(VBUS)_sel,
-				@$(VBUS)_ack, @$(VBUS)_stall, @$(VBUS)_err,
+				@$(VBUS)_stall, @$(VBUS)_ack, @$(VBUS)_err,
 			hdmiin_int,
 			hin_pixels, hin_dbg_scope);
 
@@ -327,7 +327,7 @@ typedef	struct	HDMI_IN_S {
 			@$(PREFIX)_trigger, hin_dbg_scope,
 		i_clk, wb_cyc, (wb_stb)&&(scope_hdmiin_sel), wb_we, wb_addr[0],
 				{ wb_data[31:20], 20'h0 },
-			scope_hdmiin_ack, scope_hdmiin_stall,
+			scope_hdmiin_stall, scope_hdmiin_ack,
 			scope_hdmiin_data,
 		scop_hdmiin_int);
 @REGS.N=2
@@ -454,8 +454,7 @@ typedef	struct	HDMI_IN_S {
 		.I2C_READ_ONLY(1'b1),
 		.MEM_ADDR_BITS(@$.LGMEMSZ))
 	    the_input_edid(i_clk, 1'b0,
-		wb_cyc, (wb_stb)&&(edin_sel), wb_we, wb_addr[@$.LGMEMSZ-3:0], wb_data,
-			wb_sel, edin_ack, edin_stall, edin_data,
+		@$(SLAVE.PORTLIST),
 		i_hdmi_in_scl, i_hdmi_in_sda, o_hdmi_in_scl, o_hdmi_in_sda,
 		edid_dbg);
 @MAIN.ALT=
@@ -513,8 +512,7 @@ typedef	struct	HDMI_IN_S {
 	wire	[31:0]	edido_dbg;
 @MAIN.INSERT=
 	wbi2cmaster	#(.READ_ONLY(1'b1),.MEM_ADDR_BITS(8)) the_@$(PREFIX)(i_clk,
-		wb_cyc, (wb_stb)&&(@$(PREFIX)_sel), wb_we, wb_addr[6:0], wb_data,
-			wb_sel, @$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_data,
+		@$(SLAVE.PORTLIST),
 		i_hdmi_out_scl, i_hdmi_out_sda, o_hdmi_out_scl, o_hdmi_out_sda,
 		@$INT.EDID.WIRE,
 		edido_dbg);
@@ -569,8 +567,7 @@ typedef	struct	EDID_SRC_S {
 	assign	edid_scope_data    = edido_dbg[30:0];
 	wbscopc	#(.LGMEM(5'hb), .MAX_STEP(31'h10000)) theicscop(i_clk, 1'b1,
 			edid_scope_trigger, edid_scope_data,
-			i_clk, wb_cyc, (wb_stb)&&(scop_edid_sel), wb_we, wb_addr[0], wb_data,
-			scop_edid_ack, scop_edid_stall, scop_edid_data,
+			i_clk, @$(SLAVE.PORTLIST),
 			scop_edid_int);
 @REGS.NOTE=// EDID/I2C Debug Scope
 @REGS.N=2
@@ -581,6 +578,7 @@ typedef	struct	EDID_SRC_S {
 #
 @PREFIX=clkhdmiin
 @DEVID=HDMI_INCLK
+@DEPENDS=HDMI_ACCESS
 @INCLUDEFILE=clkcounter.txt
 @REGS.NOTE= // HDMI-IN Clock Counter (measures clock speed)
 @REGS.0 = 0 R_HDMI_INCLK HCLKIN

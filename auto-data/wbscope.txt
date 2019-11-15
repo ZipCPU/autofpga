@@ -60,9 +60,8 @@
 	@$(CORE) #(.LGMEM(@$(LOG_CAPTURE_SIZE)),
 		.SYNCHRONOUS(@$(SYNCHRONOUS)))
 	@$(PREFIX)i(@$(DATA_CLOCK), @$(CAPTURECE), @$(TRIGGER), @$(DEBUG),
-		@$(SLAVE.BUS.CLOCK.WIRE), @$(SLAVE.BUS)_cyc, (@$(SLAVE.BUS)_stb)&&(@$(PREFIX)_sel), @$(SLAVE.BUS)_we,
-		@$(SLAVE.BUS)_addr[0], @$(SLAVE.BUS)_data, @$(PREFIX)_ack, @$(PREFIX)_stall,
-		@$(PREFIX)_data, @$(PREFIX)_int);
+		@$(SLAVE.BUS.CLOCK.WIRE), @$(SLAVE.PORTLIST),
+		@$(PREFIX)_int);
 @MAIN.ALT=
 	assign	@$(PREFIX)_int = 0;
 @REGS.NOTE=// @$(PREFIX) scope
@@ -70,16 +69,25 @@
 @REGS.0=0 R_@$(DEVID)  @$(DEVID)
 @REGS.1=1 R_@$(DEVID)D @$(DEVID)D
 @RTL.MAKE.GROUP=SCOPE
+@RTL.MAKE.SUBD=wbscope
 @RTL.MAKE.FILES=@$(CORE).v
 @BDEF.DEFN=
-#ifndef	SCOPE_H
-#define	SCOPE_H
+#ifndef	WBSCOPE_H
+#define	WBSCOPE_H
 
-typedef	struct	SCOPE_S {
+#define	WBSCOPE_NO_RESET	0x80000000u
+#define	WBSCOPE_STOPPED		0x40000000u
+#define	WBSCOPE_TRIGGERED	0x20000000u
+#define	WBSCOPE_PRIMED		0x10000000u
+#define	WBSCOPE_TRIGGER		(WBSCOPE_NO_RESET|0x08000000u)
+#define	WBSCOPE_MANUAL		(WBSCOPE_TRIGGER)
+#define	WBSCOPE_DISABLE		0x04000000u
+
+typedef	struct	WBSCOPE_S {
 	unsigned s_ctrl, s_data;
-} SCOPE;
+} WBSCOPE;
 #endif
 @BDEF.IONAME=_@$(PREFIX)
-@BDEF.IOTYPE=SCOPE
+@BDEF.IOTYPE=WBSCOPE
 @BDEF.OSDEF=_BOARD_HAS_@$(DEVID)
 @BDEF.OSVAL=static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME) = ((@$(BDEF.IOTYPE) *)@$[0x%08x](REGBASE));

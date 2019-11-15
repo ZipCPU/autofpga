@@ -55,9 +55,7 @@
 @MAIN.INSERT=
 	wbmic #(.DEFAULT_RELOAD(@$.CLKSPERSAMPLE))
  		microphone(i_clk, 1'b0,
- 			wb_cyc, (wb_stb)&&(pmic_sel), wb_we,
-				wb_addr[0], wb_data,
- 			pmic_ack, pmic_stall, pmic_data,
+			@$(SLAVE.PORTLIST),
 			o_mic_csn, o_mic_sck, i_mic_din, pmic_int);
 @MAIN.ALT=
 	assign	o_mic_csn    = 1'b1;

@@ -36,7 +36,7 @@
 ##
 ##
 # The prefix is used to create a series of bus data lines for interaction with
-# the bus.  In this case, these will be uart_sel, uart_ack, uart_stall, and
+# the bus.  In this case, these will be uart_sel, uart_stall, uart_ack, and
 # uart_data.
 @PREFIX=uart
 # The number of addressable registers this peripheral has on the wishbone bus.
@@ -88,9 +88,7 @@
 @MAIN.INSERT=
 	wbuart #(.INITIAL_SETUP(@$.UARTSETUP))
  		@$(PREFIX)_uart(i_clk, 1'b0,
- 			wb_cyc, (wb_stb)&&(@$(PREFIX)_sel), wb_we,
-				wb_addr[1:0], wb_data,
- 			@$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_data,
+			@$(SLAVE.PORTLIST),
  			i_@$(PREFIX)_rx, o_@$(PREFIX)_tx, @$CTS, @$RTS,
 			@$(PREFIX)rx_int, @$(PREFIX)tx_int,
 			@$(PREFIX)rxf_int, @$(PREFIX)txf_int);
@@ -153,6 +151,7 @@ typedef struct  WBUART_S {
 		m_@$(PREFIX) = new UARTSIM(FPGAPORT+@$(SIM.PORTOFFSET),@$(SIM.UARTSETUP));
 		m_core->@$CTS = 0; // The sim doesnt use flow control
 #endif // @$(ACCESS)
+@SIM.CLOCK=@$(SLAVE.BUS.CLOCK)
 @SIM.TICK=
 #ifdef	@$(ACCESS)
 		m_core->i_@$(PREFIX)_rx = (*m_@$(PREFIX))(m_core->o_@$(PREFIX)_tx);

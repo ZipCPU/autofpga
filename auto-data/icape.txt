@@ -44,21 +44,19 @@
 @MAIN.PARAM=
 	localparam	ICAPE_LGDIV=3;
 @MAIN.INSERT=
-	wire[31:0]	cfg_debug;
 `ifdef	VERILATOR
-	reg	r_cfg_ack;
+	reg	r_@$(PREFIX)_ack;
+
+	initial	r_@$(PREFIX)_ack = 1'b0;
 	always @(posedge i_clk)
-		r_cfg_ack <= (wb_stb)&&(cfg_sel);
-	assign	cfg_ack   = r_cfg_ack;
-	assign	cfg_stall = 1'b0;
-	assign	cfg_data  = 32'h00;
+		r_@$(PREFIX)_ack <= @$(SLAVE.PREFIX)_stb;
+	assign	@$(SLAVE.PREFIX)_ack   = r_@$(PREFIX)_ack;
+	assign	@$(SLAVE.PREFIX)_stall = 1'b0;
+	assign	@$(SLAVE.PREFIX)_idata = 32'h00;
 `else
 	wbicapetwo #(ICAPE_LGDIV)
-		cfgport(i_clk, wb_cyc, (wb_stb)&&(cfg_sel), wb_we,
-			wb_addr[4:0], wb_data,
-			cfg_ack, cfg_stall, cfg_data);
+		cfgport(i_clk, @$(SLAVE.PORTLIST));
 `endif
-# static	const	char	*dbg_insert = "cfg_debug";
 @REGS.NOTE=// FPGA CONFIG REGISTERS: 0x4e0-0x4ff
 @REGS.N=20
 @REGS.0=   0 R_CFG_CRC		FPGACRC
@@ -106,6 +104,6 @@
 @BDEF.IONAME=io_icape[32]
 @BDEF.IOTYPE=unsigned
 @BDEF.OSDEF=_BOARD_HAS_ICAPTETWO
-@BDEF.OSVAL=static volatile @$THIS.BDEF.IOTYPE *const _icape = ((unsigned *)@$THIS.BASE);
+@BDEF.OSVAL=static volatile @$THIS.BDEF.IOTYPE *const _icape = ((unsigned *)@$[0x%08x](THIS.BASE));
 @RTL.MAKE.GROUP=ICAP
 @RTL.MAKE.FILES=wbicapetwo.v

@@ -43,13 +43,16 @@
 @MAIN.DEFNS=
 	reg	[31:0]	r_pwrcount_data;
 @MAIN.INSERT=
-	initial	r_pwrcount_data = 32'h0;
+	initial	r_@$(PREFIX)_data = 32'h0;
 	always @(posedge i_clk)
-	if (r_pwrcount_data[31])
-		r_pwrcount_data[30:0] <= r_pwrcount_data[30:0] + 1'b1;
+	if (r_@$(PREFIX)_data[31])
+		r_@$(PREFIX)_data[30:0] <= r_@$(PREFIX)_data[30:0] + 1'b1;
 	else
-		r_pwrcount_data[31:0] <= r_pwrcount_data[31:0] + 1'b1;
-	assign	pwrcount_data = r_pwrcount_data;
+		r_@$(PREFIX)_data[31:0] <= r_@$(PREFIX)_data[31:0] + 1'b1;
+
+	assign	@$(SLAVE.PREFIX)_stall = 1'b0;
+	assign	@$(SLAVE.PREFIX)_ack   = @$(SLAVE.PREFIX)_stb;
+	assign	@$(SLAVE.PREFIX)_idata = r_@$(PREFIX)_data;
 @REGS.N=1
 @REGS.0= 0 R_PWRCOUNT PWRCOUNT
 @BDEF.OSVAL= static volatile unsigned *const _@$(PREFIX) = ((unsigned *)@$[0x%08x](REGBASE));

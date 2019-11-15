@@ -58,8 +58,7 @@
 @MAIN.INSERT=
 `ifdef	GPSTRK_ACCESS
 	rtcgps	#(RTC_CLKSTEP) the@$(PREFIX)(i_clk, i_reset,
-		wb_cyc, (wb_stb)&&(@$(PREFIX)_sel), wb_we, wb_addr[1:0], wb_data, wb_sel,
-		@$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_data,
+		@$(SLAVE.PORTLIST),
 		@$(PREFIX)_int, @$(PREFIX)_ppd,
 		gps_tracking, ck_pps, gps_step[47:16], rtc_pps);
 `else
@@ -91,6 +90,7 @@ typedef	struct	RTCLIGHT_S	{
 #
 #
 @RTL.MAKE.GROUP=RTCGPS
+@RTL.MAKE.SUBD=rtc
 @RTL.MAKE.FILES=rtcgps.v rtcbare.v rtctimer.v rtcstopwatch.v rtcalarm.v rtclight.v
 ##
 ##
@@ -105,16 +105,16 @@ typedef	struct	RTCLIGHT_S	{
 `endif
 @MAIN.INSERT=
 `ifdef	GPSTRK_ACCESS
-	assign	@$(PREFIX)_data = gps_now[31:0];
+	assign	@$(SLAVE.PREFIX)_idata = gps_now[31:0];
 `else
 	always @(posedge i_clk)
-	if ((wb_stb)&&(@$(PREFIX)_sel))
+	if (@$(SLAVE.PREFIX)_stb && @$(SLAVE.PREFIX)_we)
 		r_@$(PREFIX)_data <= wb_data;
 	else
 		r_@$(PREFIX)_data <= r_@$(PREFIX)_data
 			+ { 16'h0, RTLCLKSTEP[31:16] };
 
-	assign	@$(PREFIX)_data = r_@$(PREFIX)_data;
+	assign	@$(SLAVE.PREFIX)_idata = r_@$(PREFIX)_data;
 `endif
 @REGS.NOTE= // A register capturing subseconds, locked to GPS if present
 @REGS.N=1

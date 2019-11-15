@@ -63,18 +63,16 @@
 	wire	gps_pps, gps_led, gps_locked, gps_tracking;
 	wire	[63:0]	gps_now, gps_err, gps_step;
 	wire	[1:0]	gps_dbg_tick;
-	wire		ck_pps;
 @MAIN.INSERT=
+	// Verilator lint_off UNUSED
 	wire	[1:0]	ck_dbg;
+	// Verilator lint_on  UNUSED
 
 	gpsclock #(.DEFAULT_STEP(GPSCLOCK_DEFAULT_STEP))
 		ppsck(i_clk, 1'b0, gps_pps, ck_pps, gps_led,
-			(wb_stb)&&(gck_sel), wb_we, wb_addr[1:0], wb_data,
-				gck_ack, gck_stall, gck_data,
+			@$(SLAVE.PORTLIST),
 			gps_tracking, gps_now, gps_step, gps_err, gps_locked,
 			ck_dbg);
-
-	assign	ck_pps2= ck_pps;
 @MAIN.ALT=
 	wire	[31:0]	pre_step;
 	assign	pre_step = { 16'h00, (({GPSCLOCK_DEFAULT_STEP[27:0],20'h00})
@@ -88,7 +86,7 @@
 	assign	gps_led    = 1'b0;
 	assign	gps_locked = 1'b0;
 
-@INT.PPS.WIRE=ck_pps2
+@INT.PPS.WIRE=ck_pps
 @INT.PPS.PIC=syspic
 @REGS.NOTE= // GPS clock tracker, control loop settings registers
 @REGS.N=4
@@ -120,8 +118,7 @@ static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME) = ((@$BDEF.IOTYPE *)@$[0x
 `ifdef	GPSTRK_ACCESS
 	gpsclock_tb #(.CLOCK_FREQUENCY_HZ(@$(CLOCK.FREQUENCY)))
 		ppstb(i_clk, ck_pps, tb_pps,
-			(wb_stb)&&(gtb_sel), wb_we, wb_addr[2:0], wb_data,
-				gtb_ack, gtb_stall, gtb_data,
+			@$(SLAVE.PORTLIST),
 			gps_err, gps_now, gps_step);
 
 `ifdef	GPSTB

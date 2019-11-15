@@ -46,9 +46,9 @@
 @ACCESS=INCLUDE_ZIPCPU
 @DBGBUS=wbu
 @MASTER.TYPE=CPU
-@MASTER.BUS=zip
-@BUS.NAME=zip
-@BUS.WIDTH=32
+@MASTER.BUS=wb
+@MASTER.BUS.OPT_DBLBUFFER=1'b0
+@BUS.NAME=wb
 @BUS.CLOCK=clk
 @SCOPE.TRIGGER=zip_trigger
 @SCOPE.DATA=zip_debug
@@ -57,8 +57,8 @@
 @INT.ZIP.WIRE=zip_cpu_int
 @INT.ZIP.BUS=buspic
 @CACHABLE.FILE=iscachable.v
-@LGICACHE=10
-@LGDCACHE=0
+@LGICACHE=12
+@LGDCACHE=12
 @TOP.PORTLIST=
 # 		// A reset wire for the ZipCPU
 # 		i_cpu_resetn
@@ -80,11 +80,15 @@
 	//
 	// A 32-bit address indicating where the ZipCPU should start running
 	// from
+`ifdef	BKROM_ACCESS
+	localparam	RESET_ADDRESS = @$(/bkrom.BASE);
+`else
 `ifdef	FLASH_ACCESS
 	localparam	RESET_ADDRESS = @$RESET_ADDRESS;
 `else
-	localparam	RESET_ADDRESS = @$(/bkram.REGBASE);
-`endif
+	localparam	RESET_ADDRESS = @$(/bkram.BASE);
+`endif	// FLASH_ACCESS
+`endif	// BKROM_ACCESS
 	//
 	// The number of valid bits on the bus
 	localparam	ZIP_ADDRESS_WIDTH = @$(BUS.AWID); // Zip-CPU address width
@@ -95,7 +99,11 @@
 	// ZIP_START_HALTED
 	//
 	// A boolean, indicating whether or not the ZipCPU be halted on startup?
+`ifdef	BKROM_ACCESS
+	localparam	ZIP_START_HALTED=1'b0;
+`else
 	localparam	ZIP_START_HALTED=1'b1;
+`endif
 @MAIN.DEFNS=
 	// ZipSystem/ZipCPU connection definitions
 	// All we define here is a set of scope wires
@@ -109,17 +117,22 @@
 	//
 	//
 	assign	zip_int_vector = { alt_int_vector[14:8], sys_int_vector[14:6] };
-	zipsystem #(RESET_ADDRESS,ZIP_ADDRESS_WIDTH,@$(LGICACHE),@$(LGDCACHE),
-			ZIP_START_HALTED,ZIP_INTS)
+	zipsystem #(.RESET_ADDRESS(RESET_ADDRESS),
+			.ADDRESS_WIDTH(ZIP_ADDRESS_WIDTH),
+			.LGICACHE(@$(LGICACHE)),.LGDCACHE(@$(LGDCACHE)),
+			.START_HALTED(ZIP_START_HALTED),
+`ifdef	VERILATOR
+			.RESET_DURATION(20),
+`else
+			.RESET_DURATION(20_000),
+`endif
+			.EXTERNAL_INTERRUPTS(ZIP_INTS))
 		swic(i_clk, (i_reset)||(@$(CPURESET)),
 			// Zippys wishbone interface
-			zip_cyc, zip_stb, zip_we, zip_addr, zip_data, zip_sel,
-					zip_ack, zip_stall, zip_idata, zip_err,
+			@$(MASTER.PORTLIST),
 			zip_int_vector, zip_cpu_int,
 			// Debug wishbone interface
-			(@$(DBGBUS)_cyc), ((@$(DBGBUS)_stb)&&(zip_dbg_sel)),@$(DBGBUS)_we,
-			@$(DBGBUS)_addr[0],
-			@$(DBGBUS)_data, zip_dbg_ack, zip_dbg_stall, zip_dbg_data,
+			@$(SLAVE.PORTLIST),
 			zip_debug);
 	assign	zip_trigger = zip_debug[31];
 @BDEF.INCLUDE=
@@ -155,13 +168,18 @@
 #define	CPU_uCC		0x001e
 #define	CPU_uPC		0x001f
 
+#ifdef	BKROM_ACCESS
+#define	RESET_ADDRESS	@$[0x%08x](bkrom.REGBASE)
+#else
 #ifdef	FLASH_ACCESS
 #define	RESET_ADDRESS	@$[0x%08x](RESET_ADDRESS)
 #else
 #define	RESET_ADDRESS	@$[0x%08x](bkram.REGBASE)
-#endif
+#endif	// FLASH_ACCESS
+#endif	// BKROM_ACCESS
 
 
+@SIM.CLOCK=clk
 @SIM.INCLUDE=
 #include "zipelf.h"
 
@@ -192,11 +210,11 @@
 #define	cpu_ubus_err	CPUVAR(_r_ubus_err_flag)
 #define	cpu_mem_rdaddr	CPUVAR(_domem__DOT__rdaddr)
 #define	cpu_mem_wraddr	CPUVAR(_domem__DOT__wraddr)
-#define	cpu_op_sim	CPUVAR(_op_sim)
+#define	cpu_sim		CPUVAR(_alu_sim)
 #define	cpu_op_valid	CPUVAR(_op_valid)
 #define	cpu_alu_ce	CPUVAR(_alu_ce)
 #define	cpu_new_pc	CPUVAR(_new_pc)
-#define	cpu_sim_immv	CPUVAR(_op_sim_immv)
+#define	cpu_sim_immv	CPUVAR(_alu_sim_immv)
 #define	cpu_alu_pc_valid	CPUVAR(_alu_pc_valid)
 #define	cpu_mem_pc_valid	CPUVAR(_mem_pc_valid)
 #ifdef	OPT_PIPELINED
@@ -249,7 +267,7 @@
 	}
 
 	void dump(const uint32_t *regp) {
-		uint32_t	uccv, iccv;
+		uint32_t	uccv, iccv, ipc, upc;
 		fflush(stderr);
 		fflush(stdout);
 		printf("ZIPM--DUMP: ");
@@ -261,6 +279,8 @@
 
 		iccv = m_core->cpu_iflags;
 		uccv = m_core->cpu_uflags;
+		ipc = m_core->cpu_ipc;
+		upc = m_core->cpu_upc;
 
 		printf("sR0 : %08x ", regp[0]);
 		printf("sR1 : %08x ", regp[1]);
@@ -277,7 +297,7 @@
 		printf("sR12: %08x ", regp[12]);
 		printf("sSP : %08x ", regp[13]);
 		printf("sCC : %08x ", iccv);
-		printf("sPC : %08x\n",regp[15]);
+		printf("sPC : %08x\n",ipc);
 
 		printf("\n");
 
@@ -296,7 +316,7 @@
 		printf("uR12: %08x ", regp[28]);
 		printf("uSP : %08x ", regp[29]);
 		printf("uCC : %08x ", uccv);
-		printf("uPC : %08x\n",regp[31]);
+		printf("uPC : %08x\n",upc);
 		printf("\n");
 		fflush(stderr);
 		fflush(stdout);
@@ -395,9 +415,7 @@
 @SIM.TICK=
 #ifdef	@$(ACCESS)
 		// ZipCPU Sim instruction support
-		if ((m_core->cpu_op_sim)
-			&&(m_core->cpu_op_valid)
-			&&(m_core->cpu_alu_ce)
+		if ((m_core->cpu_sim)
 			&&(!m_core->cpu_new_pc)) {
 			//
 			execsim(m_core->cpu_sim_immv);
@@ -413,17 +431,22 @@
 		}
 #endif	// @$(ACCESS)
 
-#
-#
-#
+##
+##
+##
 @RTL.MAKE.GROUP=ZIPCPU
 @RTL.MAKE.FILES= zipcpu.v cpuops.v pfcache.v pipemem.v pfcache.v idecode.v
 		wbpriarbiter.v zipsystem.v zipcounter.v zipjiffies.v ziptimer.v
 		wbdmac.v icontrol.v wbwatchdog.v busdelay.v cpudefs.v
 @RTL.MAKE.SUBD= cpu
-#
-#
-#
+##
+## @PREFIX=zip_dbg
+@SLAVE.TYPE=OTHER
+@SLAVE.BUS=wbu
+@SLAVE.ORDER=1000000
+@NADDR=2
+##
+##
 @PREFIX=syspic
 @PIC.BUS= sys_int_vector
 @PIC.MAX=15
@@ -453,7 +476,7 @@
 @INT.ALT.WIRE=
 @INT.ALT.PIC= syspic
 @INT.ALT.ID=5
-#
+##
 @PREFIX=altpic
 @PIC.BUS= alt_int_vector
 @PIC.MAX=15
@@ -466,46 +489,41 @@
 @INT.UIC.WIRE=
 @INT.UIC.PIC=altpic
 @INT.UIC.ID=0
-#
+##
 @PREFIX=zip_alt_uoc
 @INT.UOC.WIRE=
 @INT.UOC.PIC=altpic
 @INT.UOC.ID=1
-#
+##
 @PREFIX=zip_alt_upc
 @INT.UPC.WIRE=
 @INT.UPC.PIC=altpic
 @INT.UPC.ID=2
-#
+##
 @PREFIX=zip_alt_utc
 @INT.UTC.WIRE=
 @INT.UTC.PIC=altpic
 @INT.UTC.ID=3
-#
+##
 @PREFIX=zip_alt_mic
 @INT.MIC.WIRE=
 @INT.MIC.PIC=altpic
 @INT.MIC.ID=4
-#
+##
 @PREFIX=zip_alt_moc
 @INT.MOC.WIRE=
 @INT.MOC.PIC=altpic
 @INT.MOC.ID=5
-#
+##
 @PREFIX=zip_alt_mpc
 @INT.MPC.WIRE=
 @INT.MPC.PIC=altpic
 @INT.MPC.ID=6
-#
+##
 @PREFIX=zip_alt_mtc
 @INT.MTC.WIRE=
 @INT.MTC.PIC=altpic
 @INT.MTC.ID=7
-#
-#
-#
-@PREFIX=zip_dbg
-@SLAVE.TYPE=OTHER
-@SLAVE.BUS=wbu
-@SLAVE.ORDER=1000000
-@NADDR=2
+##
+##
+##

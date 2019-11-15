@@ -2,7 +2,7 @@
 ##
 ## Filename: 	rtcdate.txt
 ##
-## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## Project:	VideoZip, a ZipCPU SoC supporting video functionality
 ##
 ## Purpose:	
 ##
@@ -47,8 +47,7 @@
 	// The Calendar DATE
 	//
 	rtcdate	@$(PREFIX)i(i_clk, rtc_ppd,
-		(wb_stb)&&(@$(PREFIX)_sel), wb_we, wb_data, wb_sel,
-			@$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_data);
+		@$(SLAVE.PORTLIST));
 @REGS.N=1
 @REGS.0= 0 R_@$(DEVID) @$(DEVID) DATE
 @BDEF.IONAME=	_@$(PREFIX)
@@ -56,4 +55,5 @@
 @BDEF.OSDEF=	_BOARD_HAS_@$(DEVID)
 @BDEF.OSVAL=	static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME) = ((@$BDEF.IOTYPE *)@$REGBASE);
 @RTL.MAKE.GROUP=@$(DEVID)
+@RTL.MAKE.SUBD=rtc
 @RTL.MAKE.FILES=rtcdate.v

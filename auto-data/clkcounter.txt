@@ -49,11 +49,13 @@
 @MAIN.DEFNS=
 	reg	r_@$(PREFIX)_ack;
 @MAIN.INSERT=
-	clkcounter clk@$(PREFIX)ctr(i_clk, ck_pps, @$(TSTCLOCK), @$(PREFIX)_data);
+	clkcounter clk@$(PREFIX)ctr(i_clk, ck_pps, @$(TSTCLOCK), @$(SLAVE.PREFIX)_idata);
+
+	initial	r_@$(PREFIX)_ack = 0;
 	always @(posedge i_clk)
-		r_@$(PREFIX)_ack <= (wb_stb)&&(@$(PREFIX)_sel);
-	assign	@$(PREFIX)_ack   = r_@$(PREFIX)_ack;
-	assign	@$(PREFIX)_stall = 1'b0;
+		r_@$(PREFIX)_ack <= (@$(SLAVE.PREFIX)_stb);
+	assign	@$(SLAVE.PREFIX)_ack   = r_@$(PREFIX)_ack;
+	assign	@$(SLAVE.PREFIX)_stall = 1'b0;
 @REGS.NOTE = // SYSCLK Clock Counter (measures clock speed)
 @REGS.N = 1
 @REGS.0 = 0 R_@$(DEVID) @$(DEVID)

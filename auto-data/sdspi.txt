@@ -49,37 +49,42 @@
 @SLAVE.TYPE=OTHER
 @SLAVE.BUS=wb
 @BUS.NAME=wb
-# @SCOPE.TRIGGER=sd_debug[31]
-# @SCOPE.DATA=sd_debug
 @INT.SDCARD.WIRE= @$(PREFIX)_int
 @INT.SDCARD.PIC= buspic syspic
 @TOP.PORTLIST=
 		// SD Card
-		o_sd_sck, io_sd_cmd, io_sd, i_sd_cs, i_sd_wp
+		o_sd_sck, io_sd_cmd, io_sd, i_sd_cd_n
 @TOP.IODECL=
 	// SD Card
 	output	wire		o_sd_sck;
 	inout	wire		io_sd_cmd;
 	inout	wire	[3:0]	io_sd;
-	input	wire		i_sd_cs;
-	input	wire		i_sd_wp;
+	input	wire		i_sd_cd_n;
 @TOP.DEFNS=
 	wire		w_sd_cmd;
 	wire	[3:0]	w_sd_data;
+
+	wire		i_sd_cmd;
+	wire	[3:0]	i_sd;
 @TOP.MAIN=
 		// SD Card
-		o_sd_sck, w_sd_cmd, w_sd_data, io_sd_cmd, io_sd, i_sd_cs
+		o_sd_sck, w_sd_cmd, w_sd_data, i_sd_cmd, i_sd, !i_sd_cd_n
 @TOP.INSERT=
 	//
 	//
 	// Wires for setting up the SD Card Controller
 	//
 	//
-	assign io_sd_cmd = w_sd_cmd ? 1'bz:1'b0;
-	assign io_sd[0] = w_sd_data[0]? 1'bz:1'b0;
-	assign io_sd[1] = w_sd_data[1]? 1'bz:1'b0;
-	assign io_sd[2] = w_sd_data[2]? 1'bz:1'b0;
-	assign io_sd[3] = w_sd_data[3]? 1'bz:1'b0;
+	// IOBUF sd_cmd_buf(.T(w_sd_cmd),.O(i_sd_cmd), .I(1'b0), .IO(io_sd_cmd));
+	IOBUF sd_dat0_bf(.T(1'b1),.O(i_sd[0]),.I(1'b1),.IO(io_sd[0]));
+	IOBUF sd_dat1_bf(.T(1'b1),.O(i_sd[1]),.I(1'b1),.IO(io_sd[1]));
+	IOBUF sd_dat2_bf(.T(1'b1),.O(i_sd[2]),.I(1'b1),.IO(io_sd[2]));
+	// IOBUF sd_dat3_bf(.T(w_sd_data[3]),.O(i_sd[3]),.I(1'b0),.IO(io_sd[3]));
+
+	IOBUF sd_cmd_buf(.T(1'b0),.O(i_sd_cmd), .I(w_sd_cmd), .IO(io_sd_cmd));
+	IOBUF sd_dat3_bf(.T(1'b0),.O(i_sd[3]),.I(w_sd_data[3]),.IO(io_sd[3]));
+	
+
 @MAIN.PORTLIST=
 		// The SD-Card wires
 		o_sd_sck, o_sd_cmd, o_sd_data, i_sd_cmd, i_sd_data, i_sd_detect
@@ -90,22 +95,17 @@
 	// verilator lint_off UNUSED
 	input	wire		i_sd_cmd;
 	input	wire	[3:0]	i_sd_data;
-	input	wire		i_sd_detect;
 	// verilator lint_on  UNUSED
+	input	wire		i_sd_detect;
 @MAIN.DEFNS=
 	wire[31:0]	sdspi_debug;
 @MAIN.INSERT=
 	// SPI mapping
 	wire	w_sd_cs_n, w_sd_mosi, w_sd_miso;
 
-	sdspi	@$(PREFIX)i(i_clk,
-		@$(BUS.NAME)_cyc,
-			(@$(BUS.NAME)_stb)&&(@$(PREFIX)_sel),
-			@$(BUS.NAME)_we,
-			@$(BUS.NAME)_addr[1:0],
-			@$(BUS.NAME)_data,
-			@$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_data,
-		w_sd_cs_n, o_sd_sck, w_sd_mosi, w_sd_miso,
+	sdspi	@$(PREFIX)i(i_clk, sd_reset,
+		@$(SLAVE.PORTLIST),
+		w_sd_cs_n, o_sd_sck, w_sd_mosi, w_sd_miso, i_sd_detect,
 		@$(PREFIX)_int, 1'b1, sdspi_debug);
 
 	assign	w_sd_miso = i_sd_data[0];
@@ -133,16 +133,23 @@
 @REGS.2= 2 R_@$(DEVID)_FIFOA	SDFIFOA, SDFIF0, SDFIFA
 @REGS.3= 3 R_@$(DEVID)_FIFOB	SDFIFOB, SDFIF1, SDFIFB
 @BDEF.DEFN=
-#define	@$(DEVID)_SETAUX	0x0ff
-#define	@$(DEVID)_READAUX	0x0bf
-#define	@$(DEVID)_CMD		0x040
+#define	@$(DEVID)_SETAUX	0x0000ff
+#define	@$(DEVID)_READAUX	0x0000bf
+#define	@$(DEVID)_CMD		0x000040
 #define	@$(DEVID)_ACMD		(0x040+55) // CMD55
-#define	@$(DEVID)_FIFO_OP	0x0800	// Read only
-#define	@$(DEVID)_WRITEOP	0x0c00	// Write to the FIFO
-#define	@$(DEVID)_ALTFIFO	0x1000
-#define	@$(DEVID)_BUSY		0x4000
-#define	@$(DEVID)_ERROR	0x8000
-#define	@$(DEVID)_CLEARERR	0x8000
+#define	@$(DEVID)_FIFO_OP	0x000800	// Read only
+#define	@$(DEVID)_WRITEOP	0x000c00	// Write to the FIFO
+#define	@$(DEVID)_ALTFIFO	0x001000
+#define	@$(DEVID)_BUSY		0x004000
+#define	@$(DEVID)_ERROR		0x008000
+#define	@$(DEVID)_CLEARERR	0x008000
+// #define	@$(DEVID)_CRCERR	0x010000
+// #define	@$(DEVID)_ERRTOK	0x020000
+#define	@$(DEVID)_REMOVED	0x040000
+#define	@$(DEVID)_PRESENTN	0x080000
+#define	@$(DEVID)_RESET		0x100000	// Read only
+#define	@$(DEVID)_WATCHDOG	0x200000	// Read only
+#define	@$(DEVID)_GO_IDLE	((@$(DEVID)_REMOVED|@$(DEVID)_CLEARERR|@$(DEVID)_CMD)+0)
 #define	@$(DEVID)_READ_SECTOR	((@$(DEVID)_CMD|@$(DEVID)_CLEARERR|@$(DEVID)_FIFO_OP)+17)
 #define	@$(DEVID)_WRITE_SECTOR	((@$(DEVID)_CMD|@$(DEVID)_CLEARERR|@$(DEVID)_WRITEOP)+24)
 
@@ -153,6 +160,7 @@ typedef	struct @$(DEVID)_S {
 @BDEF.IOTYPE=@$(DEVID)
 @BDEF.OSDEF=_BOARD_HAS_@$(DEVID)
 @BDEF.OSVAL=static volatile @$BDEF.IOTYPE *const @$BDEF.IONAME = ((@$BDEF.IOTYPE *)@$[0x%08x](REGBASE));
+@SIM.CLOCK=clk
 @SIM.INCLUDE=
 #include "sdspisim.h"
 @SIM.DEFNS=
@@ -267,60 +275,7 @@ typedef	struct @$(DEVID)_S {
 						);
 			}
 			*/
-
-#
-#
-#
-@PREFIX=scope_sdcard
-@SLAVE.TYPE=OTHER
-@SLAVE.BUS=wb
-@DEVID=SDSPI
-@NADDR=2
-@BUS.NAME=wb
-@ACCESS=SDSPI_SCOPE
-@DEPENDS=SDSPI_ACCESS
-@INT.SDSCOPE.WIRE=@$(PREFIX)_int
-@INT.SDSCOPE.BUS= buspic
-@MAIN.DEFNS=
-	wire	@$(PREFIX)_trigger,
-		@$(PREFIX)_ce;
-@MAIN.INSERT=
-	assign	@$(PREFIX)_trigger = (@$(BUS.NAME)_stb)
-				&&(sdcard_sel)&&(@$(BUS.NAME)_we);
-	assign	@$(PREFIX)_ce = 1'b1;
-	wbscope #(5'h9) sdspiscope(i_clk, @$(PREFIX)_ce,
-			@$(PREFIX)_trigger,
-			sdspi_debug,
-			i_clk, @$(BUS.NAME)_cyc,
-			(@$(BUS.NAME)_stb)&&(@$(PREFIX)_sel),
-			@$(BUS.NAME)_we,
-			@$(BUS.NAME)_addr[0],
-			@$(BUS.NAME)_data,
-			@$(PREFIX)_ack,
-			@$(PREFIX)_stall,
-			@$(PREFIX)_data,
-			@$(PREFIX)_int);
-
-@REGS.NOTE=// SDSPI Debugging scope
-@REGS.N=2
-@REGS.0= 0 R_@$(DEVID)_SCOPC SDSCOPC SDSCOPE
-@REGS.1= 1 R_@$(DEVID)_SCOPD SDSCOPD
-@BDEF.DEFN=
-#ifndef	WBSCOPE_H
-#define	WBSCOPE_H
-
-#define	WBSCOPE_NO_RESET	0x800000000
-#define	WBSCOPE_TRIGGER		(WBSCOPE_NO_RESET|0x08000000)
-#define	WBSCOPE_MANUAL		(WBSCOPE_TRIGGER)
-#define	WBSCOPE_DISABLE		0x04000000
-
-typedef struct WBSCOPE_S {
-	unsigned s_ctrl, s_data;
-} WBSCOPE;
-#endif
-@BDEF.IONAME= _@$(PREFIX)
-@BDEF.IOTYPE=WBSCOPE
-@BDEF.OSDEF=_BOARD_HAS_SDSPI_SCOPE
-@BDEF.OSVAL=static volatile @$BDEF.IOTYPE *const @$(BDEF.IONAME) = ((@$BDEF.IOTYPE *)@$[0x%08x](REGBASE));
+##
 @RTL.MAKE.GROUP= SDSPI
-@RTL.MAKE.FILES= sdspi.v llsdspi.v wbscope.v
+@RTL.MAKE.SUBD=sdspi
+@RTL.MAKE.FILES= sdspi.v llsdspi.v spicmd.v spirxdata.v spitxdata.v
