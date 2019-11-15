@@ -799,6 +799,26 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 		"// connected to it -- skipping the interconnect\n"
 		"//\n", n->c_str(), mstr->c_str(), slv->c_str());
 
+		fprintf(fp,
+			"\tassign\t%s_cyc  = %s_cyc;\n"
+			"\tassign\t%s_stb  = %s_stb;\n"
+			"\tassign\t%s_we   = %s_we;\n"
+			"\tassign\t%s_addr = %s_addr;\n"
+			"\tassign\t%s_data = %s_data;\n"
+			"\tassign\t%s_sel  = %s_sel;\n",
+			(*pp)->bus_prefix()->c_str(),
+				(*mp)->bus_prefix()->c_str(),
+			(*pp)->bus_prefix()->c_str(),
+				(*mp)->bus_prefix()->c_str(),
+			(*pp)->bus_prefix()->c_str(),
+				(*mp)->bus_prefix()->c_str(),
+			(*pp)->bus_prefix()->c_str(),
+				(*mp)->bus_prefix()->c_str(),
+			(*pp)->bus_prefix()->c_str(),
+				(*mp)->bus_prefix()->c_str(),
+			(*pp)->bus_prefix()->c_str(),
+				(*mp)->bus_prefix()->c_str());
+
 		if (NULL != (strp = getstring((*m_info->m_plist)[0]->p_phash,
 						KYERROR_WIRE))) {
 			fprintf(fp, "\tassign\t%s_err = %s;\n",
@@ -1141,7 +1161,7 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 		unsigned	sz;
 
 		sz = p->name()->size();
-		if (slave_name_width < sz);
+		if (slave_name_width < sz)
 			slave_name_width = sz;
 	}
 
@@ -1218,9 +1238,10 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 		fprintf(fp, "\t\t\t{ %d\'h%0*lx }, // %*s\n",
 			address_width(), (address_width()+3)/4,
 			p->p_mask, slave_name_width, p->name()->c_str());
-	} fprintf(fp, "\t\t\t{ %d\'h%0*lx }\n",
+	} fprintf(fp, "\t\t\t{ %d\'h%0*lx }  // %*s\n",
 			address_width(), (address_width()+3)/4,
-			((*m_info->m_plist)[0]->p_mask));
+			((*m_info->m_plist)[0]->p_mask),
+			slave_name_width, (*m_info->m_plist)[0]->name()->c_str());
 	fprintf(fp, "\t\t})");
 
 	if (bus_option(KY_OPT_LOWPOWER)) {
