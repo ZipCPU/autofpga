@@ -1167,7 +1167,8 @@ module	main(i_clk, i_reset,
 			{ 28'hf800000 }, //    scop_edid
 			{ 28'hf800000 }, //         pmic
 			{ 28'hf800000 }  //     flashcfg
-		}))
+		}),
+		.OPT_DBLBUFFER(1'b1))
 	wb_xbar(
 		.i_clk(i_clk), .i_reset(i_reset),
 		.i_mcyc({
@@ -1409,7 +1410,8 @@ module	main(i_clk, i_reset,
 		.SLAVE_MASK({
 			{ 2'h2 }, //         zip
 			{ 2'h2 }  // wbu_arbiter
-		}))
+		}),
+		.OPT_DBLBUFFER(1'b1))
 	wbu_xbar(
 		.i_clk(i_clk), .i_reset(i_reset),
 		.i_mcyc({
@@ -1508,7 +1510,8 @@ module	main(i_clk, i_reset,
 		}),
 		.SLAVE_MASK({
 			{ 25'h0000000 }  // sdram
-		}))
+		}),
+		.OPT_DBLBUFFER(1'b1))
 	rambus_xbar(
 		.i_clk(i_clk), .i_reset(i_reset),
 		.i_mcyc({
