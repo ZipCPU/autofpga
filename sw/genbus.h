@@ -95,6 +95,8 @@ public:
 	virtual	STRINGP	slave_portlist(PERIPHP p) { return NULL; }
 	virtual	STRINGP	slave_ansi_portlist(PERIPHP p) { return NULL; }
 		STRINGP	name(void);
+	void	slave_addr(FILE *fp, PLIST *pl, const int addr_lsbs = 0);
+	void	slave_mask(FILE *fp, PLIST *pl, const int addr_lsbs = 0);
 	virtual	void	integrity_check(void) {};
 	bool	bus_option(const STRING &str);
 };
@@ -109,7 +111,7 @@ public:
 	virtual	GENBUS	*create(BUSINFO *bi) = 0;
 };
 
-#define	NUM_BUS_CLASSES	2
+#define	NUM_BUS_CLASSES	3
 extern	unsigned	num_bus_classes;
 extern	BUSCLASS	*busclass_list[NUM_BUS_CLASSES];
 #endif	// GENBUS_H

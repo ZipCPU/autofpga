@@ -1,11 +1,11 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	axil.h
+// Filename: 	axi.h
 //
 // Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 //
-// Purpose:	AXI-lite interface--for high speed AXI-lite cores.  (Slow speed
-//		ones should work too if they follow the spec)
+// Purpose:	AXI4 (full) interface--for high speed AXI4 cores--or any AXI4
+//		specification compliant cores.
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
@@ -36,47 +36,49 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 //
-#ifndef	AXIL_H
-#define	AXIL_H
+#ifndef	AXI_H
+#define	AXI_H
 
 #include "../genbus.h"
+#include "axil.h"
 
-class	AXILBUS : public GENBUS {
-protected:
-	PLIST		*m_slist, *m_dlist;
-	MAPDHASH	*m_interconnect;
-	unsigned	m_num_total, m_num_double, m_num_single;
-	bool		m_is_single, m_is_double;
+class	AXIBUS : public AXILBUS {
+	int		m_id_width;
+	// PLIST		*m_slist, *m_dlist;
+	// MAPDHASH	*m_interconnect;
+	// unsigned	m_num_total, m_num_double, m_num_single;
+	// bool		m_is_single, m_is_double;
 
-	void	xbarcon_master(FILE *fp, const char *, const char *,
-			const char *, bool comma=true);
-	void	xbarcon_slave(FILE *fp, PLIST *pl,
-			const char *, const char *, const char *, bool comma=true);
-	STRINGP	master_name(int k);
+	// void	xbarcon_master(FILE *fp, const char *, const char *,
+	//		const char *, bool comma=true);
+	// void	xbarcon_slave(FILE *fp, PLIST *pl,
+	//		const char *, const char *, const char *, bool comma=true);
+	// virtual	STRINGP	master_name(int k);
 	void	allocate_subbus(void);
 
 	BUSINFO *create_sio(void);
 	BUSINFO *create_dio(void);
-	void	countsio(void);
+	// void	countsio(void);
 public:
-	AXILBUS(BUSINFO *bi);
-	~AXILBUS() {};
+	AXIBUS(BUSINFO *bi);
+	~AXIBUS() {};
+	virtual	int	id_width(void);
 	virtual	int	address_width(void);
 	//
 	virtual	void	assign_addresses(void);
 	virtual	bool	get_base_address(MAPDHASH *phash, unsigned &base);
 
-	void		write_addr_range(FILE *fp, const PERIPHP p,
-				const int dalines);
+	// void		write_addr_range(FILE *fp, const PERIPHP p,
+	//			const int dalines);
 	void		writeout_defn_v(FILE *fp, const char *pname,
 				const char *busp, const char *btyp = "");
-	virtual	void	writeout_bus_slave_defns_v(FILE *fp);
-	virtual	void	writeout_bus_master_defns_v(FILE *fp);
+	// virtual	void	writeout_bus_slave_defns_v(FILE *fp);
+	// virtual	void	writeout_bus_master_defns_v(FILE *fp);
 
 	virtual	void	writeout_bus_logic_v(FILE *fp);
 
-	virtual	void	writeout_no_slave_v(FILE *fp, STRINGP prefix);
-	virtual	void	writeout_no_master_v(FILE *fp);
+	// virtual	void	writeout_no_slave_v(FILE *fp, STRINGP prefix);
+	// virtual	void	writeout_no_master_v(FILE *fp);
 	//
 	//
 	virtual	STRINGP	master_portlist(BMASTERP);
@@ -84,10 +86,10 @@ public:
 	virtual	STRINGP	slave_portlist(PERIPHP);
 	virtual	STRINGP	slave_ansi_portlist(PERIPHP);
 
-	virtual	void	integrity_check(void);
+	// virtual	void	integrity_check(void);
 };
 
-class	AXILBUSCLASS : public BUSCLASS {
+class	AXIBUSCLASS : public BUSCLASS {
 public:
 	virtual	STRINGP	name(void);	// i.e. WB
 	virtual	STRINGP	longname(void);	// i.e. "Wishbone"

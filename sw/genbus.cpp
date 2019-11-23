@@ -38,16 +38,20 @@
 //
 //
 #include "genbus.h"
+#include "bitlib.h"
 #include "msgs.h"
 #include "bus/wb.h"
 #include "bus/axil.h"
+#include "bus/axi.h"
 #include "keys.h"
 #include "mapdhash.h"
 
 WBBUSCLASS	wbclass;
 AXILBUSCLASS	axilclass;
+AXIBUSCLASS	axiclass;
 
-BUSCLASS	*busclass_list[NUM_BUS_CLASSES] = { &wbclass, &axilclass };
+BUSCLASS	*busclass_list[NUM_BUS_CLASSES] = {
+		&wbclass, &axilclass, &axiclass };
 unsigned	num_bus_classes = NUM_BUS_CLASSES;
 
 /*
@@ -79,6 +83,73 @@ STRINGP	GENBUS::name(void) {
 	if (m_info)
 		return m_info->name();
 	return NULL;
+}
+
+void	GENBUS::slave_addr(FILE *fp, PLIST *pl, const int addr_lsbs) {
+	// int		lgdw = nextlg(m_info->data_width())-3;
+	unsigned	slave_name_width = 0;
+
+	for(unsigned k=pl->size()-1; k>0; k=k-1) {
+		PERIPHP	p = (*pl)[k];
+		unsigned	sz;
+
+		sz = p->name()->size();
+		if (slave_name_width < sz)
+			slave_name_width = sz;
+	}
+
+	fprintf(fp,
+		"\t\t.SLAVE_ADDR({\n");
+	for(unsigned k=pl->size()-1; k>0; k=k-1) {
+		PERIPHP	p = (*pl)[k];
+
+		fprintf(fp, "\t\t\t{ %d\'h%0*lx },\n",
+			address_width()-addr_lsbs,
+			(address_width()-addr_lsbs+3)/4,
+			((*pl)[k]->p_base)>>addr_lsbs);
+		fprintf(fp, " // %*s: 0x%0*lx\n", slave_name_width,
+			p->name()->c_str(),
+			(address_width()+3)/4, p->p_base);
+
+	} fprintf(fp, "\t\t\t{ %d\'h%0*lx }  // %*s: 0x%0*lx\n",
+			address_width()-addr_lsbs,
+			(address_width()-addr_lsbs+3)/4,
+			((*pl)[0]->p_base)>>addr_lsbs,
+			slave_name_width,
+			(*pl)[0]->name()->c_str(),
+			(address_width()+3)/4,
+			(*pl)[0]->p_base);
+	fprintf(fp, "\t\t}");
+}
+
+void	GENBUS::slave_mask(FILE *fp, PLIST *pl, const int addr_lsbs) {
+	int		lgdw = nextlg(m_info->data_width())-3;
+	unsigned	slave_name_width = 0;
+
+	for(unsigned k=pl->size()-1; k>0; k=k-1) {
+		PERIPHP	p = (*pl)[k];
+		unsigned	sz;
+
+		sz = p->name()->size();
+		if (slave_name_width < sz)
+			slave_name_width = sz;
+	}
+
+	fprintf(fp, "\t\t.SLAVE_MASK({\n");
+	for(unsigned k=pl->size()-1; k>0; k=k-1) {
+		PERIPHP	p = (*pl)[k];
+
+		fprintf(fp, "\t\t\t{ %d\'h%0*lx }, // %*s\n",
+			address_width()-addr_lsbs,
+			(address_width()-addr_lsbs+3)/4,
+			p->p_mask << (addr_lsbs-lgdw),
+			slave_name_width, p->name()->c_str());
+	} fprintf(fp, "\t\t\t{ %d\'h%0*lx }  // %*s\n",
+			address_width()-addr_lsbs,
+			(address_width()-addr_lsbs+3)/4,
+			((*pl)[0]->p_mask << (lgdw - addr_lsbs)),
+			slave_name_width, (*pl)[0]->name()->c_str());
+	fprintf(fp, "\t\t})");
 }
 
 bool	BUSCLASS::matches(BUSINFO *bi) {

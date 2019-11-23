@@ -757,7 +757,8 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 				"\t\tassign\t%s_stall = 1\'b0;\n"
 				"\t\tassign\t%s_ack   = 1\'b0;\n"
 				"\t\tassign\t%s_idata = 0;\n",
-				pfxc, m_info->name->c_str(), pfxc, pfxc, pfxc, pfxc, pfxc, pfxc);
+				pfxc, m_info->name()->c_str(),
+				pfxc, pfxc, pfxc, pfxc, pfxc);
 		}
 
 		return;
