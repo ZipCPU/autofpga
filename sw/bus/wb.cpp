@@ -1247,45 +1247,10 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 			slave_name_width, (*m_info->m_plist)[0]->name()->c_str());
 	fprintf(fp, "\t\t})");
 
-	if (bus_option(KY_OPT_LOWPOWER)) {
-		STRINGP	str;
-		int	val;
-		if (getvalue(*m_info->m_hash, KY_OPT_LOWPOWER, val))
-			fprintf(fp, ",\n\t\t.OPT_LOWPOWER(%d)", val);
-		else if (NULL != (str = getstring(*m_info->m_hash, KY_OPT_LOWPOWER)))
-			fprintf(fp, ",\n\t\t.OPT_LOWPOWER(%s)", str->c_str());
-	}
-
-	if (bus_option(KY_OPT_LGMAXBURST)) {
-		STRINGP	str;
-		int	val;
-		if (getvalue(*m_info->m_hash, KY_OPT_LGMAXBURST, val))
-			fprintf(fp, ",\n\t\t.LGMAXBURST(%d)", val);
-		else if (NULL != (str = getstring(*m_info->m_hash, KY_OPT_LGMAXBURST)))
-			fprintf(fp, ",\n\t\t.LGMAXBURST(%s)", str->c_str());
-		else
-			gbl_msg.warning("OPT_LGMAXBURST parameter found with no value in %d\n", n->c_str());
-	}
-	if (bus_option(KY_OPT_TIMEOUT)) {
-		STRINGP str;
-		int	val;
-		if (getvalue(*m_info->m_hash, KY_OPT_TIMEOUT, val))
-			fprintf(fp, ",\n\t\t.OPT_TIMEOUT(%d)", val);
-		else if (NULL != (str = getstring(*m_info->m_hash, KY_OPT_TIMEOUT)))
-			fprintf(fp, ",\n\t\t.OPT_TIMEOUT(%s)", str->c_str());
-	}
-	if (bus_option(KY_OPT_DBLBUFFER)) {
-		STRINGP str;
-		int	val;
-		if (getvalue(*m_info->m_hash, KY_OPT_DBLBUFFER, val))
-			fprintf(fp, ",\n\t\t.OPT_DBLBUFFER(%d)", val);
-		else if (NULL != (str = getstring(*m_info->m_hash, KY_OPT_DBLBUFFER)))
-			fprintf(fp, ",\n\t\t.OPT_DBLBUFFER(%s)", str->c_str());
-		else
-			fprintf(fp, ",\n\t\t.OPT_DBLBUFFER(1\'b1)");
-	}
-
-
+	xbar_option(fp, KY_OPT_LOWPOWER,   ",\n\t\t.OPT_LOWPOWER(%)");
+	xbar_option(fp, KY_OPT_LGMAXBURST, ",\n\t\t.LGNMAXBURST(%)");
+	xbar_option(fp, KY_OPT_TIMEOUT,    ",\n\t\t.OPT_TIMEOUT(%)");
+	xbar_option(fp, KY_OPT_DBLBUFFER,  ",\n\t\t.OPT_DBLBUFFER(%)", "1\'b1");
 	// OPT_STARVATION_TIMEOUT?
 
 	fprintf(fp,

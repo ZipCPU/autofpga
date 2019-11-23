@@ -79,6 +79,36 @@ bool	GENBUS::bus_option(const STRING &ky) {
 	return	(option != NULL);
 }
 
+void	GENBUS::xbar_option(FILE *fp, const STRING &key, const char *pat, const char *def) {
+	const char *loc = strchr(pat, '%');
+	STRINGP		str;
+	int		val, prech;
+
+	assert(loc != NULL);
+	prech = loc-pat;
+
+	if (!bus_option(key)) {
+		if (NULL != def)
+			fprintf(fp, "%.*s%s%s", prech, pat, def, loc+1);
+		return;
+	}
+
+	if (getvalue(*m_info->m_hash, key, val)) {
+		fprintf(fp, "%.*s%d%s", prech, pat, val, loc+1);
+		return;
+	}
+
+	if (NULL != (str = getstring(*m_info->m_hash, key))) {
+		fprintf(fp, "%.*s%s%s", prech, pat, str->c_str(), loc+1);
+		return;
+	}
+
+	if (NULL != def) {
+		fprintf(fp, "%.*s%s%s", prech, pat, def, loc+1);
+		return;
+	}
+}
+
 STRINGP	GENBUS::name(void) {
 	if (m_info)
 		return m_info->name();

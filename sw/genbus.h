@@ -99,6 +99,8 @@ public:
 	void	slave_mask(FILE *fp, PLIST *pl, const int addr_lsbs = 0);
 	virtual	void	integrity_check(void) {};
 	bool	bus_option(const STRING &str);
+	void	xbar_option(FILE *fp, const STRING&,
+			const char *,const char *d=NULL);
 };
 
 class	BUSCLASS {

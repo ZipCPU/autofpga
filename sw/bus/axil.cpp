@@ -944,37 +944,9 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 	slave_addr(fp, m_info->m_plist); fprintf(fp, ",\n");
 	slave_mask(fp, m_info->m_plist); fprintf(fp, ",\n");
 
-	if (bus_option(KY_OPT_LOWPOWER)) {
-		STRINGP	str;
-		int	val;
-		if (getvalue(*m_info->m_hash, KY_OPT_LOWPOWER, val))
-			fprintf(fp, ",\n\t\t.OPT_LOWPOWER(%d)", val);
-		else if (NULL != (str = getstring(*m_info->m_hash, KY_OPT_LOWPOWER)))
-			fprintf(fp, ",\n\t\t.OPT_LOWPOWER(%s)", str->c_str());
-		else
-			fprintf(fp, ",\n\t\t.OPT_LOWPOWER(1\'b1)");
-	}
-	if (bus_option(KY_OPT_LINGER)) {
-		STRINGP	str;
-		int	val;
-		if (getvalue(*m_info->m_hash, KY_OPT_LOWPOWER, val))
-			fprintf(fp, ",\n\t\t.OPT_LINGER(%d)", val);
-		else if (NULL != (str = getstring(*m_info->m_hash, KY_OPT_LINGER)))
-			fprintf(fp, ",\n\t\t.OPT_LINGER(%s)", str->c_str());
-		else
-			gbl_msg.warning("OPT_LINGER parameter not understood for bus %s\n", n->c_str());
-	}
-
-	if (bus_option(KY_OPT_LGMAXBURST)) {
-		STRINGP	str;
-		int	val;
-		if (getvalue(*m_info->m_hash, KY_OPT_LGMAXBURST, val))
-			fprintf(fp, ",\n\t\t.LGMAXBURST(%d)", val);
-		else if (NULL != (str = getstring(*m_info->m_hash, KY_OPT_LGMAXBURST)))
-			fprintf(fp, ",\n\t\t.LGMAXBURST(%s)", str->c_str());
-		else
-			gbl_msg.warning("OPT_LGMAXBURST parameter found with no value in %d\n", n->c_str());
-	}
+	xbar_option(fp, KY_OPT_LOWPOWER,  ",\n\t\t.OPT_LOWPOWER(%)", "1\'b1");
+	xbar_option(fp, KY_OPT_LINGER,    ",\n\t\t.OPT_LINGER(%)");
+	xbar_option(fp, KY_OPT_LGMAXBURST,",\n\t\t.LGMAXBURST(%)");
 	//
 	fprintf(fp,
 	"\t) %s_xbar(\n"
