@@ -84,7 +84,7 @@ void	build_rtl_make_inc(MAPDHASH &master, FILE *fp, STRING &fname) {
 		mkgroup = getstring(kvpair->second, KYRTL_MAKE_GROUP);
 		mkfiles = getstring(kvpair->second, KYRTL_MAKE_FILES);
 
-		if (mksubd) {
+		if (mksubd && mksubd->size() > 0) {
 			bool	prior_dir = false;
 			for(auto k : subdirs) {
 				if (mksubd->compare(*k)==0) {
@@ -120,7 +120,7 @@ void	build_rtl_make_inc(MAPDHASH &master, FILE *fp, STRING &fname) {
 
 			fprintf(stderr, "WARNING: Creating a temporary group name for %s\n", pfx->c_str());
 		}
-		if (mksubd) {
+		if (mksubd && mksubd->size() > 0) {
 			fprintf(fp, "%sD := %s\n", mkgroup->c_str(),
 				mksubd->c_str());
 			fprintf(fp, "%s  := $(addprefix $(%sD)/,%s)\n",
@@ -145,7 +145,7 @@ void	build_rtl_make_inc(MAPDHASH &master, FILE *fp, STRING &fname) {
 	mkfiles = getstring(master, KYRTL_MAKE_FILES);
 	mksubd  = getstring(master, KYRTL_MAKE_SUBD);
 	if (NULL != mkfiles) {
-		if (mksubd) {
+		if (mksubd && mksubd->size() > 0) {
 			fprintf(fp, "%sD := %s\n", mkgroup->c_str(),
 					mksubd->c_str());
 			fprintf(fp, "%s  := $(addprefix $(%sD)/,%s) \\\t%s\n",
@@ -160,7 +160,7 @@ void	build_rtl_make_inc(MAPDHASH &master, FILE *fp, STRING &fname) {
 		fprintf(fp, "%s := main.v %s\n", mkgroup->c_str(), allgroups.c_str());
 	}
 
-	if (mksubd) {
+	if (mksubd && mksubd->size() > 0) {
 		bool	prior_dir = false;
 		for(auto k : subdirs) {
 			if (mksubd->compare(*k)==0) {
