@@ -151,7 +151,7 @@ public:
 			for(int i=0; i<mx; i++)
 				i_alist[i] = NULL;
 		} else {
-			gbl_msg.error("ERR: Cannot find PIC.MAX!\n");
+			gbl_msg.error("ERR: Cannot find PIC.MAX, the maximum number of interrupts %s can take on\n", (i_name) ? i_name->c_str() : "(No name)");
 			gbl_msg.dump(pic);
 			i_max = 0;
 			i_alist = NULL;
@@ -859,7 +859,7 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 			defnstr = piclist[picid]->i_name;
 			if (defnstr)
 				fprintf(fp, "\twire\t[%d:0]\t%s_int_vec;\n",
-					piclist[picid]->i_max,
+					piclist[picid]->i_max-1,
 					defnstr->c_str());
 		}
 	}
@@ -1003,9 +1003,8 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 				BUSINFO *bi = find_bus_of_peripheral(kvpair->second.u.m_m);
 				STRINGP	pfx = getstring(*kvpair->second.u.m_m,
 							KYPREFIX);
-				if ((bi)&&(pfx)) {
+				if ((bi)&&(pfx))
 					bi->writeout_no_slave_v(fp, pfx);
-				}
 			}
 			kvint    = kvpair->second.u.m_m->find(KY_INT);
 			if ((kvint != kvpair->second.u.m_m->end())
