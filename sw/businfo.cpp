@@ -1168,11 +1168,12 @@ void	build_bus_list(MAPDHASH &master) {
 
 	bl->assign_bus_types();
 
-gbl_ready_for_address_assignment = true;
+	gbl_ready_for_address_assignment = true;
 	for(unsigned i=0; i< bl->size(); i++) {
 		(*bl)[i]->assign_addresses();
 		reeval(master);
 	}
+
 	reeval(master);
 }
 

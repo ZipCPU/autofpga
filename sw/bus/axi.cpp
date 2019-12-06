@@ -245,6 +245,63 @@ bool	AXIBUS::get_base_address(MAPDHASH *phash, unsigned &base) {
 		return m_info->m_plist->get_base_address(phash, base);
 }
 
+bool	compare_idwidths(BMASTERP a, BMASTERP b) {
+	int	aidw, bidw;
+
+	assert(a);
+	assert(b);
+
+	if (!getvalue(a->m_hash, KYMASTER_IDWIDTH, aidw)) {
+		aidw = 0;
+		gbl_msg.error("Bus master %s has no required ID width specified, assuming 0 bits\n", a->name()->c_str());
+	}
+	if (!getvalue(a->m_hash, KYMASTER_IDWIDTH, bidw)) {
+		bidw = 0;
+		gbl_msg.error("Bus master %s has no required ID width specified, assuming 0 bits\n", b->name()->c_str());
+	}
+
+	return (aidw < bidw);
+}
+
+/*
+void	AXIBUS::assign_ids(void) {
+	int	id_width;
+
+	if (!m_info)
+		return;
+	if (m_info->m_ids_assigned)
+		return;
+	gbl_msg.info("AXI4: Assigning IDs for bus %s\n",
+		(name()) ? name()->c_str() : "(No name bus)");
+	if (m_info->m_list->size() == 0) {
+		m_id_width = 0;
+		return;
+	} else if (m_info->m_list->size() == 0) {
+		BMASTERP	m = (*m_info->m_list)[0];
+		if (!getvalue(m->m_hash, KYMASTER_IDWIDTH, m_id_width)) {
+			gbl_msg.warning("Bus master %s has no required ID width specified, assuming 0 bits\n", m->name()->c_str());
+			gbl_msg.info("This is a warning since bus %s has only one master", name()->c_str());
+			m_id_width = 0;
+		}
+		return;
+	}
+
+	sort(m_info->m_list->begin(), m_info->m_list->end(), 
+		compare_idwidths);
+	base = 0;
+	for(auto p=m_info->m_list->begin(); p!=m_info->m_list->end(); p++) {
+		if (!getvalue((*m_info->m_list)[0]->m_hash, KYMASTER_IDWIDTH, iw)
+			iw = 1;
+		id = base + ((1<<iw)-1) & (-1l<<iw);
+		base = id + (1<<iw);
+
+		setvalue((*m_info->m_list)[0]->m_hash, KYMASTER_BUSID, id);
+	}
+
+	setvalue(m_info->m_hash, KY_IDWIDTH, nextlg(base));
+}
+*/
+
 void	AXIBUS::assign_addresses(void) {
 	int	address_width;
 
@@ -366,8 +423,7 @@ BUSINFO *AXIBUS::create_dio(void) {
 }
 
 int	AXIBUS::id_width(void) {
-	gbl_msg.warning("ID Width is not (yet) properly defined\n");
-	return 5;
+	return m_id_width;
 }
 
 void	AXIBUS::writeout_defn_v(FILE *fp, const char *pname,
