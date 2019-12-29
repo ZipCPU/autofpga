@@ -66,7 +66,7 @@ static void	print_cachable(FILE *fp, BUSINFO *bi, unsigned dw,
 	submask = mask_8; // Octets
 	for(unsigned i=0; i<pl->size(); i++)
 		submask |= (*pl)[i]->p_mask << bbits;
-	for(unsigned tmp=mask_8; ((tmp)&&((tmp&1)==0)); tmp >>= 1);
+	for(unsigned tmp=mask_8; ((tmp)&&((tmp&1)==0)); tmp >>= 1)
 		unused_lsbs++;
 	unused_lsbs -= bbits;
 
