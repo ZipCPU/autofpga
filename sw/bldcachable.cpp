@@ -56,7 +56,7 @@
 static void	print_cachable(FILE *fp, BUSINFO *bi, unsigned dw,
 		unsigned mask_8, unsigned addr_8) {
 	unsigned	pbits;
-	unsigned	submask = 0, unused_lsbs = 0, subaddr = 0;
+	unsigned	submask = 0, subaddr = 0;
 	unsigned	lgdw = nextlg(bi->data_width()), bbits=lgdw-3;
 	PLIST		*pl;
 
@@ -66,9 +66,6 @@ static void	print_cachable(FILE *fp, BUSINFO *bi, unsigned dw,
 	submask = mask_8; // Octets
 	for(unsigned i=0; i<pl->size(); i++)
 		submask |= (*pl)[i]->p_mask << bbits;
-	for(unsigned tmp=mask_8; ((tmp)&&((tmp&1)==0)); tmp >>= 1)
-		unused_lsbs++;
-	unused_lsbs -= bbits;
 
 	for(unsigned i=0; i<pl->size(); i++) {
 		if (!(*pl)[i]->p_name) {
