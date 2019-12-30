@@ -719,6 +719,16 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 
 	build_access_ifdefs_v(master, fp);
 
+	fprintf(fp, "//\n" "// Any include files\n//\n"
+		"// These are drawn from anything with a MAIN.INCLUDE definition.\n");
+	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
+		STRINGP	strp = getstring(kvpair->second, KYMAIN_INCLUDE);
+		if (!strp)
+			continue;
+		fprintf(fp, "%s", strp->c_str());
+	}
+
+
 	fprintf(fp, "//\n//\n");
 	fprintf(fp,
 "// Finally, we define our main module itself.  We start with the list of\n"

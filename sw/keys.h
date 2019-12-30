@@ -139,6 +139,7 @@ extern const	STRING	KYTOP_DEFNS;
 extern const	STRING	KYTOP_MAIN;
 extern const	STRING	KYTOP_INSERT;
 // Main definitions
+extern const	STRING	KYMAIN_INCLUDE;
 extern const	STRING	KYMAIN_PORTLIST;
 extern const	STRING	KYMAIN_IODECL;
 extern const	STRING	KYMAIN_PARAM;

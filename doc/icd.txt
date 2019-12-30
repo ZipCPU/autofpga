@@ -121,12 +121,17 @@ TOP.INSERT
 	these need to do some logic.  Any variables needed here need to have
 	been declared in TOP.DEFNS.
 
+MAIN.INCLUDE
+	Specicies logic to be placed before module main in main.v
 MAIN.PARAM
+	Logic placed after the PORTLIST in main.v, used to define parameters
 MAIN.PORTLIST
 	Same as TOP.PORTLIST, only as applied to the main.v file
 MAIN.IODECL
 	Same as TOP.IODECL, only as applied to the main.v file
 MAIN.DEFNS
+	Logic defined after PARAM, PORTLIST, and IODECL.  Used to define
+	global registers or wires used by this component
 MAIN.INSERT
 MAIN.ALT
 

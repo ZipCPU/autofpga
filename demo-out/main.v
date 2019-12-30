@@ -104,6 +104,10 @@
 //
 //
 //
+// Any include files
+//
+// These are drawn from anything with a MAIN.INCLUDE definition.
+//
 //
 // Finally, we define our main module itself.  We start with the list of
 // I/O ports, or wires, passed into (or out of) the main function.
