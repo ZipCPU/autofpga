@@ -62,7 +62,7 @@ static void	print_cachable(FILE *fp, BUSINFO *bi, unsigned dw,
 
 
 	pl = bi->m_plist;
-	fprintf(fp, "\t\t// Bus master: %s\n", bi->m_name->c_str());
+	fprintf(fp, "\t\t// Bus master: %s\n", bi->name()->c_str());
 	submask = mask_8; // Octets
 	for(unsigned i=0; i<pl->size(); i++)
 		submask |= (*pl)[i]->p_mask << bbits;
