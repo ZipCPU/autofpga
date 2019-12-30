@@ -94,8 +94,10 @@ static void	build_script_ld(MAPDHASH &master, MAPDHASH &busmaster, FILE *fp, STR
 	fprintf(fp, "MEMORY\n{\n"
 "\t/* To be listed here, a slave must be of type MEMORY.  If the slave\n"
 "\t* has a defined name in its @%s tag, it will be listed here\n"
-"\t* under that name.  The permissions are given by the @%s tag.\n"
-"\t* If no permission tag exists, a permission of \'r\' will be assumed.\n"
+"\t* under that name, otherwise it will be listed under it\'s\n"
+"\t* @$(PREFIX) tag with an underscore prepended to it.  The permissions\n"
+"\t* are given by the @%s tag.  If no permission tag exists, a\n"
+"\t* permission of \'r\' will be assumed.\n"
 "\t*/\n", KYLD_NAME.c_str(), KYLD_PERM.c_str());
 
 	for(unsigned i=0; i<alist->size(); i++) {
@@ -117,7 +119,11 @@ static void	build_script_ld(MAPDHASH &master, MAPDHASH &busmaster, FILE *fp, STR
 			p->p_regbase,
 			(p->naddr()*(p->p_slave_bus->data_width()/8)));
 
-		if (tolower(perm->c_str()[0]) != 'w') {
+		if (perm != NULL && (perm->compare("wx") != 0)
+				&& (perm->compare("rx") != 0))
+			gbl_msg.warning("%s.LD.PERM=%s is not supported.\nUse either wx or rx as defined by ld\n",
+				name->c_str(), perm->c_str());
+		if ((perm == NULL) || (tolower(perm->c_str()[0]) != 'w')) {
 			// Read only memory must be flash
 			if (!bootmem)
 				bootmem = p;
@@ -366,3 +372,4 @@ void	build_ld_files(MAPDHASH &master, STRINGP subd) {
 		}
 	}
 }
+

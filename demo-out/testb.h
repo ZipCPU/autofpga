@@ -42,16 +42,24 @@
 #ifndef	TESTB_H
 #define	TESTB_H
 
+// #define TRACE_FST
+
 #include <stdio.h>
 #include <stdint.h>
+#ifdef	TRACE_FST
+#define	TRACECLASS	VerilatedFstC
+#include <verilated_fst_c.h>
+#else // TRACE_FST
+#define	TRACECLASS	VerilatedVcdC
 #include <verilated_vcd_c.h>
+#endif
 #include <tbclock.h>
 
 template <class VA>	class TESTB {
 public:
 	VA	*m_core;
 	bool		m_changed;
-	VerilatedVcdC*	m_trace;
+	TRACECLASS*	m_trace;
 	bool		m_done;
 	uint64_t	m_time_ps;
 	// TBCLOCK is a clock support class, enabling multiclock simulation
@@ -83,7 +91,7 @@ public:
 
 	virtual	void	opentrace(const char *vcdname) {
 		if (!m_trace) {
-			m_trace = new VerilatedVcdC;
+			m_trace = new TRACECLASS;
 			m_core->trace(m_trace, 99);
 			m_trace->spTrace()->set_time_resolution("ps");
 			m_trace->spTrace()->set_time_unit("ps");

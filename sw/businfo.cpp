@@ -103,7 +103,7 @@ STRINGP	BUSINFO::prefix(STRINGP p) {
 
 	if (!p)
 		return hash_prefix;
-	
+
 	if (NULL == hash_prefix && NULL != p) {
 		setstring(m_hash, KYPREFIX, p);
 		hash_prefix = p;
@@ -286,7 +286,7 @@ void	BUSINFO::init(STRINGP bname) {
 //	Merge description of bus from multiple disparate sources
 //
 //	Set name, prefix, type, clock, nullsz, data width
-//	
+//
 // }
 
 void	BUSINFO::merge(STRINGP component, MAPDHASH *bp) {
@@ -412,7 +412,6 @@ void	BUSINFO::merge(STRINGP component, MAPDHASH *bp) {
 				&&(NULL != kvpair->second.u.m_m)) {
 			if ((KY_CLOCK.compare(kvpair->first)==0)
 					&&(NULL == m_clock)) {
-				
 		}
 		*/
 
@@ -1041,7 +1040,6 @@ void	BUSLIST::assign_bus_types(void) {
 			gbl_msg.error("No bus logic generator found for bus %s\n", (*this)[k]->name()->c_str());
 		}
 	}
-	
 }
 
 void	BUSLIST::checkforbusdefns(STRINGP prefix, MAPDHASH *map, const STRING &key) {
