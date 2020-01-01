@@ -271,6 +271,27 @@ int	PLIST::add(MAPDHASH *phash) {
 	}
 
 
+	{ STRINGP	strp;
+	if (NULL == (strp = getstring(phash, KYSLAVE_PORTLIST))) {
+		STRING	*portlist;
+		if (naddr > 1) {
+			portlist = new STRING(
+		"@$(SLAVE.BUS.NAME)_cyc, (@$(SLAVE.BUS.NAME)_stb && @$(PREFIX)_sel), @$(SLAVE.BUS.NAME)_we,\n"
+		"\t\t@$(SLAVE.BUS.NAME)_addr[$clog2(@$(NADDR))-1:0], @$(SLAVE.BUS.NAME)_data, @$(SLAVE.BUS.NAME)_sel,\n"
+		"\t\t@$(PREFIX)_stall, @$(PREFIX)_ack, @$(SLAVE.BUS.NAME)_data");
+		} else {
+			portlist = new STRING(
+		"@$(SLAVE.BUS.NAME)_cyc, (@$(SLAVE.BUS.NAME)_stb && @$(PREFIX)_sel), @$(SLAVE.BUS.NAME)_we,\n"
+		"\t\t@$(SLAVE.BUS.NAME)_data, @$(SLAVE.BUS.NAME)_sel,\n"
+		"\t\t@$(PREFIX)_stall, @$(PREFIX)_ack, @$(SLAVE.BUS.NAME)_data");
+		}
+
+		setstring(phash, KYSLAVE_PORTLIST, portlist);
+	}
+	if (NULL == (strp = getstring(phash, KYSLAVE_PREFIX))) {
+		setstring(phash, KYSLAVE_PREFIX, pname);
+	}}
+
 	push_back(p);
 	return size()-1;
 }

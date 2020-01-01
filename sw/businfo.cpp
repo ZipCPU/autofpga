@@ -211,6 +211,15 @@ PERIPH *BUSINFO::add(PERIPHP p) {
 
 	pi = plist->add(p);
 	plist->integrity_check();
+	if (NULL == (strp = getstring(*p->p_phash, KYSLAVE_PORTLIST))) {
+		STRING	*portlist = new STRING(
+	"\t\t@$(SLAVE.BUS.NAME)_cyc, (@$(SLAVE.BUS.NAME)_stb && @$(PREFIX)_sel), @$(SLAVE.BUS.NAME)_we,\n"
+	"\t\t@$(SLAVE.BUS.NAME)_addr[@$(AWID)-1:0], @$(SLAVE.BUS.NAME)_data, @$(SLAVE.BUS.NAME)_sel,\n"
+	"\t\t@$(PREFIX)_stall, @$(PREFIX)_ack, @$(SLAVE.BUS.NAME)_data");
+
+		setstring(*p->p_phash, KYSLAVE_PORTLIST, portlist);
+	}
+
 	if (pi >= 0) {
 		p = (*plist)[pi];
 		p->p_slave_bus = this;
@@ -1582,7 +1591,7 @@ void	BUSINFO::writeout_bus_logic_v(FILE *fp) {
 		} else if (ecount == 1) {
 			fprintf(fp, "||%s);\n", err_bus.c_str());
 		} else
-			fprintf(fp, "\n\t\t\t||%s; // ecount = %d",
+			fprintf(fp, "\n\t\t\t||%s); // ecount = %d",
 				err_bus.c_str(), ecount);
 	}
 }
