@@ -268,12 +268,15 @@ both cores and component descriptions.
 
 # License
 
-AutoFPGA is designed for release under the GPLv3 license.
+AutoFPGA is designed for release under the GPLv3 license.  The AutoFPGA
+generated code is yours, and free to be relicensed as you see fit.
 
 # Commercial Applications
 
 Should you find the GPLv3 license insufficient for your needs, other licenses
-can be purchased from Gisselquist Technology, LLC.
+can be purchased from Gisselquist Technology, LLC.  Given that the AutoFPGA
+generated code is not encumbered by any license requirements, I really don't
+expect any such requests.
 
 Likewise, please contact us should you wish to guide, direct, or otherwise
 fund the development of this project.  You can contact me at my user name,
