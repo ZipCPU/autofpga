@@ -94,10 +94,6 @@ DEPENDS	If the logic of one component is dependent upon another, set the
 	(No spaces are allowed between the ! and the dependency ID)
 
 NADDR	The number of uniquely addressable registers/ports this device has
-/*
-	Future: BUSTYPE, for now the default will be WB-B4/pipeline.
-	Future values may include WB/classic, or perhaps even AXI and AXI-lite.
-*/
 ERROR.WIRE	The name of a wire set by the module, which (if set) will cause
 	a bus error.  Components should only set this if they are being
 	accessed.
