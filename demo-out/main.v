@@ -1695,7 +1695,7 @@ module	main(i_clk, i_reset,
 			wb_zip_addr[28-1:0],
 			wb_zip_data, // 32 bits wide
 			wb_zip_sel,  // 32/8 bits wide
-		wb_zip_stall,wb_zip_ack, wb_zip_idata,wb_zip_err,
+		wb_zip_stall, wb_zip_ack, wb_zip_idata,wb_zip_err,
 			zip_int_vector, zip_cpu_int,
 			// Debug wishbone interface
 			wbu_zip_cyc, wbu_zip_stb, wbu_zip_we,
@@ -1708,12 +1708,12 @@ module	main(i_clk, i_reset,
 `else	// INCLUDE_ZIPCPU
 
 	//
-	// In the case that there is no zip peripheral
+	// In the case that there is no wbu_zip peripheral
 	// responding on the wbu bus
-	assign	zip_ack   = 1'b0;
-	assign	zip_err   = (zip_stb);
-	assign	zip_stall = 0;
-	assign	zip_data  = 0;
+	assign	wbu_zip_ack   = 1'b0;
+	assign	wbu_zip_err   = (wbu_zip_stb);
+	assign	wbu_zip_stall = 0;
+	assign	wbu_zip_data  = 0;
 
 	assign	zip_cpu_int = 1'b0;	// zip.INT.ZIP.WIRE
 `endif	// INCLUDE_ZIPCPU
@@ -1763,12 +1763,12 @@ module	main(i_clk, i_reset,
 	assign	scope_int = 0;
 
 	//
-	// In the case that there is no scope peripheral
+	// In the case that there is no wb_scope peripheral
 	// responding on the wb bus
-	assign	scope_ack   = 1'b0;
-	assign	scope_err   = (scope_stb);
-	assign	scope_stall = 0;
-	assign	scope_data  = 0;
+	assign	wb_scope_ack   = 1'b0;
+	assign	wb_scope_err   = (wb_scope_stb);
+	assign	wb_scope_stall = 0;
+	assign	wb_scope_data  = 0;
 
 `endif	// SCOPE_SCOPE
 
@@ -1786,12 +1786,12 @@ module	main(i_clk, i_reset,
 	assign	scopc_int = 0;
 
 	//
-	// In the case that there is no scopc peripheral
+	// In the case that there is no wb_scopc peripheral
 	// responding on the wb bus
-	assign	scopc_ack   = 1'b0;
-	assign	scopc_err   = (scopc_stb);
-	assign	scopc_stall = 0;
-	assign	scopc_data  = 0;
+	assign	wb_scopc_ack   = 1'b0;
+	assign	wb_scopc_err   = (wb_scopc_stb);
+	assign	wb_scopc_stall = 0;
+	assign	wb_scopc_data  = 0;
 
 `endif	// SCOPC_SCOPC
 
@@ -1836,12 +1836,12 @@ module	main(i_clk, i_reset,
 	assign	o_mic_sck    = 1'b1;
 
 	//
-	// In the case that there is no pmic peripheral
+	// In the case that there is no wb_pmic peripheral
 	// responding on the wb bus
-	assign	pmic_ack   = 1'b0;
-	assign	pmic_err   = (pmic_stb);
-	assign	pmic_stall = 0;
-	assign	pmic_data  = 0;
+	assign	wb_pmic_ack   = 1'b0;
+	assign	wb_pmic_err   = (wb_pmic_stb);
+	assign	wb_pmic_stall = 0;
+	assign	wb_pmic_data  = 0;
 
 	assign	pmic_int = 1'b0;	// pmic.INT.MIC.WIRE
 `endif	// MICROPHONE_ACCESS
@@ -1928,12 +1928,12 @@ module	main(i_clk, i_reset,
 	assign	o_qspi_dat  = 4'b1111;
 
 	//
-	// In the case that there is no flash peripheral
+	// In the case that there is no wb_flash peripheral
 	// responding on the wb bus
-	assign	flash_ack   = 1'b0;
-	assign	flash_err   = (flash_stb);
-	assign	flash_stall = 0;
-	assign	flash_data  = 0;
+	assign	wb_flash_ack   = 1'b0;
+	assign	wb_flash_err   = (wb_flash_stb);
+	assign	wb_flash_stall = 0;
+	assign	wb_flash_data  = 0;
 
 `endif	// FLASH_ACCESS
 
@@ -1948,12 +1948,12 @@ module	main(i_clk, i_reset,
 `else	// BKRAM_ACCESS
 
 	//
-	// In the case that there is no bkram peripheral
+	// In the case that there is no wb_bkram peripheral
 	// responding on the wb bus
-	assign	bkram_ack   = 1'b0;
-	assign	bkram_err   = (bkram_stb);
-	assign	bkram_stall = 0;
-	assign	bkram_data  = 0;
+	assign	wb_bkram_ack   = 1'b0;
+	assign	wb_bkram_err   = (wb_bkram_stb);
+	assign	wb_bkram_stall = 0;
+	assign	wb_bkram_data  = 0;
 
 `endif	// BKRAM_ACCESS
 
@@ -2015,12 +2015,12 @@ module	main(i_clk, i_reset,
 `else	// FLASHCFG_ACCESS
 
 	//
-	// In the case that there is no flashcfg peripheral
+	// In the case that there is no wb_flashcfg peripheral
 	// responding on the wb bus
-	assign	flashcfg_ack   = 1'b0;
-	assign	flashcfg_err   = (flashcfg_stb);
-	assign	flashcfg_stall = 0;
-	assign	flashcfg_data  = 0;
+	assign	wb_flashcfg_ack   = 1'b0;
+	assign	wb_flashcfg_err   = (wb_flashcfg_stb);
+	assign	wb_flashcfg_stall = 0;
+	assign	wb_flashcfg_data  = 0;
 
 `endif	// FLASHCFG_ACCESS
 
@@ -2055,12 +2055,12 @@ module	main(i_clk, i_reset,
 	assign	o_mdwe  = 1'b0;
 
 	//
-	// In the case that there is no mdio peripheral
+	// In the case that there is no wb_mdio peripheral
 	// responding on the wb bus
-	assign	mdio_ack   = 1'b0;
-	assign	mdio_err   = (mdio_stb);
-	assign	mdio_stall = 0;
-	assign	mdio_data  = 0;
+	assign	wb_mdio_ack   = 1'b0;
+	assign	wb_mdio_err   = (wb_mdio_stb);
+	assign	wb_mdio_stall = 0;
+	assign	wb_mdio_data  = 0;
 
 `endif	// NETCTRL_ACCESS
 
@@ -2188,12 +2188,12 @@ module	main(i_clk, i_reset,
 	assign	w_gpsu_rts_n = 1'b0;
 
 	//
-	// In the case that there is no gpsu peripheral
+	// In the case that there is no wb_gpsu peripheral
 	// responding on the wb bus
-	assign	gpsu_ack   = 1'b0;
-	assign	gpsu_err   = (gpsu_stb);
-	assign	gpsu_stall = 0;
-	assign	gpsu_data  = 0;
+	assign	wb_gpsu_ack   = 1'b0;
+	assign	wb_gpsu_err   = (wb_gpsu_stb);
+	assign	wb_gpsu_stall = 0;
+	assign	wb_gpsu_data  = 0;
 
 	assign	gpsutx_int = 1'b0;	// gpsu.INT.GPSTX.WIRE
 	assign	gpsutxf_int = 1'b0;	// gpsu.INT.GPSTXF.WIRE
@@ -2229,12 +2229,12 @@ module	main(i_clk, i_reset,
 `else	// SDRAM_ACCESS
 
 	//
-	// In the case that there is no sdram peripheral
+	// In the case that there is no rambus_sdram peripheral
 	// responding on the rambus bus
-	assign	sdram_ack   = 1'b0;
-	assign	sdram_err   = (sdram_stb);
-	assign	sdram_stall = 0;
-	assign	sdram_data  = 0;
+	assign	rambus_sdram_ack   = 1'b0;
+	assign	rambus_sdram_err   = (rambus_sdram_stb);
+	assign	rambus_sdram_stall = 0;
+	assign	rambus_sdram_data  = 0;
 
 `endif	// SDRAM_ACCESS
 
@@ -2360,12 +2360,12 @@ module	main(i_clk, i_reset,
 `else	// CFG_ACCESS
 
 	//
-	// In the case that there is no cfg peripheral
+	// In the case that there is no wb_cfg peripheral
 	// responding on the wb bus
-	assign	cfg_ack   = 1'b0;
-	assign	cfg_err   = (cfg_stb);
-	assign	cfg_stall = 0;
-	assign	cfg_data  = 0;
+	assign	wb_cfg_ack   = 1'b0;
+	assign	wb_cfg_err   = (wb_cfg_stb);
+	assign	wb_cfg_stall = 0;
+	assign	wb_cfg_data  = 0;
 
 `endif	// CFG_ACCESS
 
@@ -2409,7 +2409,7 @@ module	main(i_clk, i_reset,
 			rambus_xpand_addr[25-1:0],
 			rambus_xpand_data, // 128 bits wide
 			rambus_xpand_sel,  // 128/8 bits wide
-		rambus_xpand_stall,rambus_xpand_ack, rambus_xpand_idata,rambus_xpand_err);
+		rambus_xpand_stall, rambus_xpand_ack, rambus_xpand_idata,rambus_xpand_err);
 `ifdef	SDSPI_ACCESS
 	// SPI mapping
 	wire	w_sd_cs_n, w_sd_mosi, w_sd_miso;
@@ -2432,12 +2432,12 @@ module	main(i_clk, i_reset,
 	assign	o_sd_data  = 4'hf;
 
 	//
-	// In the case that there is no sdcard peripheral
+	// In the case that there is no wb_sdcard peripheral
 	// responding on the wb bus
-	assign	sdcard_ack   = 1'b0;
-	assign	sdcard_err   = (sdcard_stb);
-	assign	sdcard_stall = 0;
-	assign	sdcard_data  = 0;
+	assign	wb_sdcard_ack   = 1'b0;
+	assign	wb_sdcard_err   = (wb_sdcard_stb);
+	assign	wb_sdcard_stall = 0;
+	assign	wb_sdcard_data  = 0;
 
 	assign	sdcard_int = 1'b0;	// sdcard.INT.SDCARD.WIRE
 `endif	// SDSPI_ACCESS
