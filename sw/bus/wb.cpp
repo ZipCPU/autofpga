@@ -1291,7 +1291,7 @@ STRINGP	WBBUS::master_portlist(BMASTERP) {
 	"\t\t\t@$(MASTER.PREFIX)_addr[@$(MASTER.BUS.AWID)-1:0],\n"
 	"\t\t\t@$(MASTER.PREFIX)_data, // @$(MASTER.BUS.WIDTH) bits wide\n"
 	"\t\t\t@$(MASTER.PREFIX)_sel,  // @$(MASTER.BUS.WIDTH)/8 bits wide\n"
-	"\t\t@$(MASTER.PREFIX)_stall,"
+	"\t\t@$(MASTER.PREFIX)_stall, "
 	"@$(MASTER.PREFIX)_ack, "
 	"@$(MASTER.PREFIX)_idata,"
 	"@$(MASTER.PREFIX)_err");
@@ -1305,7 +1305,7 @@ STRINGP	WBBUS::master_ansi_portlist(BMASTERP) {
 	"\t\t\t.i_wb_addr(@$(MASTER.PREFIX)_addr[@$(MASTER.BUS.AWID)-1:0]),\n"
 	"\t\t\t.i_wb_data(@$(MASTER.PREFIX)_data), // @$(MASTER.BUS.WIDTH) bits wide\n"
 	"\t\t\t.i_wb_sel(@$(MASTER.PREFIX)_sel),  // @$(MASTER.BUS.WIDTH)/8 bits wide\n"
-	"\t\t.o_wb_stall(@$(MASTER.PREFIX)_stall),"
+	"\t\t.o_wb_stall(@$(MASTER.PREFIX)_stall), "
 	".o_wb_ack(@$(MASTER.PREFIX)_ack), "
 	".o_wb_data(@$(MASTER.PREFIX)_idata)"
 	".o_wb_err(@$(MASTER.PREFIX)_err)");

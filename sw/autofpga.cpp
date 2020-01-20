@@ -1012,7 +1012,7 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 			if (isperipheral(kvpair->second)) {
 				BUSINFO *bi = find_bus_of_peripheral(kvpair->second.u.m_m);
 				STRINGP	pfx = getstring(*kvpair->second.u.m_m,
-							KYPREFIX);
+							KYSLAVE_PREFIX);
 				if ((bi)&&(pfx))
 					bi->writeout_no_slave_v(fp, pfx);
 			}
