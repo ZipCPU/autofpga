@@ -85,7 +85,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2019, Gisselquist Technology, LLC
+// Copyright (C) 2019-2020, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -644,7 +644,7 @@ void	WBBUS::writeout_no_slave_v(FILE *fp, STRINGP prefix) {
 	fprintf(fp, "\tassign\t%s_err   = (%s_stb);\n",
 			prefix->c_str(), prefix->c_str());
 	fprintf(fp, "\tassign\t%s_stall = 0;\n", prefix->c_str());
-	fprintf(fp, "\tassign\t%s_data  = 0;\n", prefix->c_str());
+	fprintf(fp, "\tassign\t%s_idata = 0;\n", prefix->c_str());
 	fprintf(fp, "\n");
 }
 
@@ -834,7 +834,7 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 		fprintf(fp,
 			"\tassign\t%s_stall = %s_stall;\n"
 			"\tassign\t%s_ack   = %s_ack;\n"
-			"\tassign\t%s_idata = %s_data;\n",
+			"\tassign\t%s_idata = %s_idata;\n",
 			(*mp)->bus_prefix()->c_str(),
 				(*pp)->bus_prefix()->c_str(),
 			(*mp)->bus_prefix()->c_str(),
@@ -886,7 +886,7 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 				slp->c_str(),
 				nextlg(mask)-1, unused_lsbs);
 		for(unsigned j=0; j<m_slist->size(); j++) {
-			fprintf(fp, "\t\t%d'h%lx: " PREFIX "r_%s_data <= %s_idata;\n",
+			fprintf(fp, "\t%d'h%lx: " PREFIX "r_%s_data <= %s_idata;\n",
 				nextlg(mask)-unused_lsbs,
 				((*m_slist)[j]->p_base) >> (unused_lsbs + lgdw),
 				slp->c_str(),
@@ -900,19 +900,19 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 			STRINGP str;
 			if (getvalue(*m_info->m_hash, KY_OPT_LOWPOWER, v))
 				fprintf(fp,
-				"\t\tdefault: " PREFIX
+				"\tdefault: " PREFIX
 					"r_%s_data <= (%d) ? 0 : %s_idata;\n",
 				slp->c_str(), v,
 				(*m_slist)[m_slist->size()-1]->bus_prefix()->c_str());
 			else {
 				str = getstring(*m_info->m_hash, KY_OPT_LOWPOWER);
-				fprintf(fp, "\t\tdefault: " PREFIX "r_%s_data <= (%s) ? 0 : %s_idata;\n",
+				fprintf(fp, "\tdefault: " PREFIX "r_%s_data <= (%s) ? 0 : %s_idata;\n",
 				slp->c_str(), (str) ? str->c_str() : "1\'b0",
 				(*m_slist)[m_slist->size()-1]->bus_prefix()->c_str());
 			}
 
 		} else {
-			fprintf(fp, "\t\tdefault: " PREFIX "r_%s_data <= %s_idata;\n",
+			fprintf(fp, "\tdefault: " PREFIX "r_%s_data <= %s_idata;\n",
 				slp->c_str(),
 				(*m_slist)[m_slist->size()-1]->bus_prefix()->c_str());
 		}}
@@ -1315,10 +1315,11 @@ STRINGP	WBBUS::slave_portlist(PERIPHP p) {
 	STRINGP	errp = getstring(p->p_phash, KYERROR_WIRE);
 	STRING	str = STRING(
 	"@$(SLAVE.PREFIX)_cyc, "
-	"@$(SLAVE.PREFIX)_stb, ");
+	"@$(SLAVE.PREFIX)_stb,");
 
 	if (!p->read_only() && !p->write_only())
-		str = str + STRING("@$(SLAVE.PREFIX)_we,\n");
+		str = str + STRING(" @$(SLAVE.PREFIX)_we,");
+	str = str + STRING("\n");
 	if (p->get_slave_address_width() > 0) {
 		char	tmp[64];
 		STRING	stmp;
