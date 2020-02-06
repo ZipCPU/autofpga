@@ -893,7 +893,7 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 				(*m_slist)[j]->bus_prefix()->c_str());
 		}
 
-		if (nextlg(m_slist->size()-1) == nextlg(m_slist->size())) {
+		if (nextlg(m_slist->size()-1) != nextlg(m_slist->size())) {
 			// We need a default option
 		if (bus_option(KY_OPT_LOWPOWER)) {
 			int	v;
