@@ -251,7 +251,7 @@ void	add_to_clklist(MAPDHASH *ckmap) {
 		STRINGP		wname, wsimclass = NULL;
 		bool		already_defined = false;
 
-		gbl_msg.info("Examining clock: %s %s %s\n",
+		gbl_msg.info("Examining clock: %s %s %s %s\n",
 				pname, (pwire)?pwire:"(Unspec)",
 				(pfreq)?pfreq:"(Unspec)",
 				(ptop)?ptop:"(Unspec)");
@@ -284,8 +284,8 @@ void	add_to_clklist(MAPDHASH *ckmap) {
 				// present
 				//
 				if ((ptop)&&(cklist[i].m_top == NULL)) {
-					cklist[i].m_top = new STRING(ptop);
-					gbl_msg.info("Clock %s\'s top-level wire set to %s\n", pname, ptop);
+					cklist[i].settop(new STRING(ptop));
+					gbl_msg.info("Clock\'s %s top-level wire set to %s\n", pname, ptop);
 				} else if ((ptop)&&(cklist[i].m_top->compare(ptop) != 0)) {
 					gbl_msg.error("Clock %s has a conflicting toplevel wire definition: %s and %s\n", pname, ptop, cklist[i].m_top->c_str());
 				}
@@ -295,7 +295,7 @@ void	add_to_clklist(MAPDHASH *ckmap) {
 				// Name of the simulation class, if present
 				//
 				if ((psimclass)&&(cklist[i].m_simclass == NULL)) {
-					cklist[i].m_simclass = new STRING(psimclass);
+					cklist[i].setclass(new STRING(psimclass));
 					gbl_msg.info("Clock %s\'s simulation class set to %s\n", pname, psimclass);
 				} else if ((psimclass)&&(cklist[i].m_simclass->compare(psimclass) != 0)) {
 					gbl_msg.error("Clock %s has a conflicting simulation class definition: %s and %s\n", pname, psimclass, cklist[i].m_simclass->c_str());
