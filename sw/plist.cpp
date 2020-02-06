@@ -4,17 +4,16 @@
 //
 // Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 //
-// Purpose:	A PLIST is a list of peripherals.  This file defines the methods
-//		associated with such a list.
-//
-//
+// Purpose:	A PLIST is a list of peripherals (i.e. bus slaves, or components
+//		with a SLAVE.BUS tag).  This file defines the methods associated
+//	with such a list.
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017-2019, Gisselquist Technology, LLC
+// Copyright (C) 2017-2020, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -173,7 +172,7 @@ STRINGP	PERIPH::bus_prefix(void) {
 bool	PERIPH::read_only(void) {
 	STRINGP	options;
 
-	options = getstring(*p_phash, KYMASTER_OPTIONS);
+	options = getstring(*p_phash, KYSLAVE_OPTIONS);
 	if (NULL != options)
 		return read_only_option(options);
 	return false;
@@ -182,7 +181,7 @@ bool	PERIPH::read_only(void) {
 bool	PERIPH::write_only(void) {
 	STRINGP	options;
 
-	options = getstring(*p_phash, KYMASTER_OPTIONS);
+	options = getstring(*p_phash, KYSLAVE_OPTIONS);
 	if (NULL != options)
 		return write_only_option(options);
 	return false;

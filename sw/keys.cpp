@@ -15,7 +15,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017-2019, Gisselquist Technology, LLC
+// Copyright (C) 2017-2020, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -74,6 +74,7 @@ const	STRING	KYSLAVE=		"SLAVE",
 		KYSLAVE_BUS_NAME=	"SLAVE.BUS.NAME",
 		KYSLAVE_ORDER=		"SLAVE.ORDER",
 		KYSLAVE_AWID=		"SLAVE.AWID",
+		KYSLAVE_OPTIONS=	"SLAVE.OPTIONS",
 		KYSLAVE_PREFIX=		"SLAVE.PREFIX",
 		KYSLAVE_PORTLIST=	"SLAVE.PORTLIST",
 		KYSLAVE_ANSIPORTLIST="SLAVE.ANSIPORTLIST";

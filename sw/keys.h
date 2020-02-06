@@ -4,14 +4,16 @@
 //
 // Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 //
-// Purpose:	
+// Purpose:	Defines the names of the strings AutoFPGA understands.  These
+//		are the key names understood by AutoFPGA and described by the
+//	ICD.
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017-2019, Gisselquist Technology, LLC
+// Copyright (C) 2017-2020, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -76,6 +78,7 @@ extern const	STRING	KYSLAVE,
 			KYSLAVE_BUS_NAME,
 			KYSLAVE_ORDER,
 			KYSLAVE_AWID,
+			KYSLAVE_OPTIONS,
 			KYSLAVE_PREFIX,
 			KYSLAVE_PORTLIST,
 			KYSLAVE_ANSIPORTLIST;

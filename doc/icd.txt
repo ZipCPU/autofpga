@@ -299,8 +299,7 @@ SLAVE.PREFIX	AutoFPGA will assign a bus prefix to every slave.  Typically
 		@$(SLAVE.PREFIX)_buswire.
 
 (SLAVE.OPTIONS)	(When implemented) will indicate if a slave can be accessed as
-		either read-only or write-only.  This is currently implemented
-		in the bus master only.
+		either read-only (RO) or write-only (WO).
 
 SLAVE.PORTLIST	A helper string that you can use (or not) as you prefer.  This
 		string is created by the bus logic generator, and contains

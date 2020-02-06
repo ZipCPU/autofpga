@@ -4,14 +4,18 @@
 //
 // Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 //
-// Purpose:
+// Purpose:	A predicate is a function that returns true or false.  This
+//		file describes the implementation of a series of functions that
+//	can be used to determine of what type a given design component is.
+//	Is it a bus master?  A bus slave?  A programmable interrupt controller?
+//	etc.
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017-2019, Gisselquist Technology, LLC
+// Copyright (C) 2017-2020, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -221,9 +225,11 @@ bool	read_only_option(STRINGP op) {
 	cstr = strdup(op->c_str());
 	tok = strtok(cstr, DELIMITERS);
 	while(NULL != tok) {
-		if (strcasecmp(tok, "RO")==0)
+		if (strcasecmp(tok, "RO")==0) {
 			read_only = true;
-		strtok(NULL, DELIMITERS);
+			break;
+		}
+		tok = strtok(NULL, DELIMITERS);
 	}
 
 	free(cstr);
@@ -240,7 +246,7 @@ bool	write_only_option(STRINGP op) {
 	while(NULL != tok) {
 		if (strcasecmp(tok, "WO")==0)
 			write_only = true;
-		strtok(NULL, DELIMITERS);
+		tok = strtok(NULL, DELIMITERS);
 	}
 
 	free(cstr);
