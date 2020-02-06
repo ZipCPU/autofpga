@@ -4,14 +4,15 @@
 //
 // Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 //
-// Purpose:
+// Purpose:	Captures the information associated with a clock in a fashion
+//		that can cross the entire design.
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017-2019, Gisselquist Technology, LLC
+// Copyright (C) 2017-2020, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published

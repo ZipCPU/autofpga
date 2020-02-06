@@ -4,14 +4,16 @@
 //
 // Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 //
-// Purpose:	
+// Purpose:	Builds the board.h file, used by the CPU within the design
+//		(if present) to know where particular components are located
+//	on the bus.
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017-2019, Gisselquist Technology, LLC
+// Copyright (C) 2017-2020, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published

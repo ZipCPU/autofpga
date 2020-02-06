@@ -4,14 +4,18 @@
 //
 // Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 //
-// Purpose:
+// Purpose:	The businfo structure is a generic object describing a bus
+//		(in general) and all the properties associated with it.  It is
+//	used by the specific bus logic drivers (in bus/*) to know how much
+//	address space, or data width is used by the bus, or what masters and
+//	slaves are connected to the bus.
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017-2019, Gisselquist Technology, LLC
+// Copyright (C) 2017-2020, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published

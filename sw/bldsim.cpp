@@ -4,33 +4,18 @@
 //
 // Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 //
-// Purpose:	This is the main/master program for the autofpga project.  All
-//		other components server this one.
-//
-//	The purpose of autofpga.cpp is to read a group of configuration files
-//	(.txt currently), and to generate code from those files to connect
-//	the various parts and pieces within them into a design.
-//
-//	Currently that design is dependent upon the Wishbone B4/Pipelined
-//	bus, but that's likely to change in the future.
-//
-//	Design files produced include:
-//
-//	toplevel.v
-//	main.v
-//	regdefs.h
-//	regdefs.cpp
-//	board.h		(Built, but ... not yet tested)
-//	* dev.tex	(Not yet included)
-//	* kernel device tree file
-//
+// Purpose:	Builds a main_tb.cpp simulation file, which can then be called
+//		from a master Verilator based simulation script.  The primary
+//	function of the simulation class defined herein is tick(), which
+//	advances one of the clocks forward by one step while also simulating all
+//	of the peripherals associated with that clock.
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017-2019, Gisselquist Technology, LLC
+// Copyright (C) 2017-2020, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published

@@ -16,7 +16,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017-2019, Gisselquist Technology, LLC
+// Copyright (C) 2017-2020, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -903,20 +903,20 @@ module	main(i_clk, i_reset,
 
 	always	@(posedge i_clk)
 	casez( wb_sio_addr[3:0] )
-		4'h0: r_wb_sio_data <= wb_buildtime_idata;
-		4'h1: r_wb_sio_data <= wb_buserr_idata;
-		4'h2: r_wb_sio_data <= wb_buspic_idata;
-		4'h3: r_wb_sio_data <= wb_clkhdmiin_idata;
-		4'h4: r_wb_sio_data <= wb_clkhdmiout_idata;
-		4'h5: r_wb_sio_data <= wb_gpio_idata;
-		4'h6: r_wb_sio_data <= wb_hdmi_scope_frame_offset_idata;
-		4'h7: r_wb_sio_data <= wb_pwrcount_idata;
-		4'h8: r_wb_sio_data <= wb_rtcdate_idata;
-		4'h9: r_wb_sio_data <= wb_spio_idata;
-		4'ha: r_wb_sio_data <= wb_subseconds_idata;
-		4'hb: r_wb_sio_data <= wb_sysclk_idata;
-		4'hc: r_wb_sio_data <= wb_version_idata;
-		default: r_wb_sio_data <= wb_version_idata;
+	4'h0: r_wb_sio_data <= wb_buildtime_idata;
+	4'h1: r_wb_sio_data <= wb_buserr_idata;
+	4'h2: r_wb_sio_data <= wb_buspic_idata;
+	4'h3: r_wb_sio_data <= wb_clkhdmiin_idata;
+	4'h4: r_wb_sio_data <= wb_clkhdmiout_idata;
+	4'h5: r_wb_sio_data <= wb_gpio_idata;
+	4'h6: r_wb_sio_data <= wb_hdmi_scope_frame_offset_idata;
+	4'h7: r_wb_sio_data <= wb_pwrcount_idata;
+	4'h8: r_wb_sio_data <= wb_rtcdate_idata;
+	4'h9: r_wb_sio_data <= wb_spio_idata;
+	4'ha: r_wb_sio_data <= wb_subseconds_idata;
+	4'hb: r_wb_sio_data <= wb_sysclk_idata;
+	4'hc: r_wb_sio_data <= wb_version_idata;
+	default: r_wb_sio_data <= wb_version_idata;
 	endcase
 	assign	wb_sio_idata = r_wb_sio_data;
 
@@ -1713,7 +1713,7 @@ module	main(i_clk, i_reset,
 	assign	wbu_zip_ack   = 1'b0;
 	assign	wbu_zip_err   = (wbu_zip_stb);
 	assign	wbu_zip_stall = 0;
-	assign	wbu_zip_data  = 0;
+	assign	wbu_zip_idata = 0;
 
 	assign	zip_cpu_int = 1'b0;	// zip.INT.ZIP.WIRE
 `endif	// INCLUDE_ZIPCPU
@@ -1768,7 +1768,7 @@ module	main(i_clk, i_reset,
 	assign	wb_scope_ack   = 1'b0;
 	assign	wb_scope_err   = (wb_scope_stb);
 	assign	wb_scope_stall = 0;
-	assign	wb_scope_data  = 0;
+	assign	wb_scope_idata = 0;
 
 `endif	// SCOPE_SCOPE
 
@@ -1791,7 +1791,7 @@ module	main(i_clk, i_reset,
 	assign	wb_scopc_ack   = 1'b0;
 	assign	wb_scopc_err   = (wb_scopc_stb);
 	assign	wb_scopc_stall = 0;
-	assign	wb_scopc_data  = 0;
+	assign	wb_scopc_idata = 0;
 
 `endif	// SCOPC_SCOPC
 
@@ -1841,7 +1841,7 @@ module	main(i_clk, i_reset,
 	assign	wb_pmic_ack   = 1'b0;
 	assign	wb_pmic_err   = (wb_pmic_stb);
 	assign	wb_pmic_stall = 0;
-	assign	wb_pmic_data  = 0;
+	assign	wb_pmic_idata = 0;
 
 	assign	pmic_int = 1'b0;	// pmic.INT.MIC.WIRE
 `endif	// MICROPHONE_ACCESS
@@ -1933,7 +1933,7 @@ module	main(i_clk, i_reset,
 	assign	wb_flash_ack   = 1'b0;
 	assign	wb_flash_err   = (wb_flash_stb);
 	assign	wb_flash_stall = 0;
-	assign	wb_flash_data  = 0;
+	assign	wb_flash_idata = 0;
 
 `endif	// FLASH_ACCESS
 
@@ -1953,7 +1953,7 @@ module	main(i_clk, i_reset,
 	assign	wb_bkram_ack   = 1'b0;
 	assign	wb_bkram_err   = (wb_bkram_stb);
 	assign	wb_bkram_stall = 0;
-	assign	wb_bkram_data  = 0;
+	assign	wb_bkram_idata = 0;
 
 `endif	// BKRAM_ACCESS
 
@@ -2020,7 +2020,7 @@ module	main(i_clk, i_reset,
 	assign	wb_flashcfg_ack   = 1'b0;
 	assign	wb_flashcfg_err   = (wb_flashcfg_stb);
 	assign	wb_flashcfg_stall = 0;
-	assign	wb_flashcfg_data  = 0;
+	assign	wb_flashcfg_idata = 0;
 
 `endif	// FLASHCFG_ACCESS
 
@@ -2060,7 +2060,7 @@ module	main(i_clk, i_reset,
 	assign	wb_mdio_ack   = 1'b0;
 	assign	wb_mdio_err   = (wb_mdio_stb);
 	assign	wb_mdio_stall = 0;
-	assign	wb_mdio_data  = 0;
+	assign	wb_mdio_idata = 0;
 
 `endif	// NETCTRL_ACCESS
 
@@ -2193,7 +2193,7 @@ module	main(i_clk, i_reset,
 	assign	wb_gpsu_ack   = 1'b0;
 	assign	wb_gpsu_err   = (wb_gpsu_stb);
 	assign	wb_gpsu_stall = 0;
-	assign	wb_gpsu_data  = 0;
+	assign	wb_gpsu_idata = 0;
 
 	assign	gpsutx_int = 1'b0;	// gpsu.INT.GPSTX.WIRE
 	assign	gpsutxf_int = 1'b0;	// gpsu.INT.GPSTXF.WIRE
@@ -2234,7 +2234,7 @@ module	main(i_clk, i_reset,
 	assign	rambus_sdram_ack   = 1'b0;
 	assign	rambus_sdram_err   = (rambus_sdram_stb);
 	assign	rambus_sdram_stall = 0;
-	assign	rambus_sdram_data  = 0;
+	assign	rambus_sdram_idata = 0;
 
 `endif	// SDRAM_ACCESS
 
@@ -2365,7 +2365,7 @@ module	main(i_clk, i_reset,
 	assign	wb_cfg_ack   = 1'b0;
 	assign	wb_cfg_err   = (wb_cfg_stb);
 	assign	wb_cfg_stall = 0;
-	assign	wb_cfg_data  = 0;
+	assign	wb_cfg_idata = 0;
 
 `endif	// CFG_ACCESS
 
@@ -2437,7 +2437,7 @@ module	main(i_clk, i_reset,
 	assign	wb_sdcard_ack   = 1'b0;
 	assign	wb_sdcard_err   = (wb_sdcard_stb);
 	assign	wb_sdcard_stall = 0;
-	assign	wb_sdcard_data  = 0;
+	assign	wb_sdcard_idata = 0;
 
 	assign	sdcard_int = 1'b0;	// sdcard.INT.SDCARD.WIRE
 `endif	// SDSPI_ACCESS

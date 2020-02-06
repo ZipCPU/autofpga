@@ -4,14 +4,20 @@
 //
 // Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 //
-// Purpose:	
+// Purpose:	A subbus component is a special type of bus slave that is also
+//		a bus master on another bus at the same time.  The sub bus
+//	that the peripheral is a master of then determines the address range of
+//	the peripheral on the bus that it is a slave of.
+//
+//	Classic examples of subbus's would be bridges.  DMA components are not
+//	subbus's, but rather masters and slaves in their own right.
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017-2019, Gisselquist Technology, LLC
+// Copyright (C) 2017-2020, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
