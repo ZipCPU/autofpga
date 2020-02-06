@@ -34,7 +34,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017-2019, Gisselquist Technology, LLC
+// Copyright (C) 2017-2020, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -1153,6 +1153,24 @@ void	get_portlist(MAPDHASH &master, PORTLIST &ports) {
 		str = getstring(kvpair->second, KYTOP_PORTLIST);
 		if (str == NULL)
 			str = getstring(kvpair->second, KYMAIN_PORTLIST);
+		if (str == NULL)
+			continue;
+		stripped = remove_comments(str);
+
+		pptr = strtok((char *)stripped->c_str(), DELIMITERS);
+		while(pptr) {
+			ports.push_back(new STRING(pptr));
+			gbl_msg.info("\t%s\n", pptr);
+			pptr = strtok(NULL, DELIMITERS);
+		} delete stripped;
+	}
+
+	// Check any CLOCK.TOP keys
+	for(kvpair = master.begin(); kvpair != master.end(); kvpair++) {
+		const	char	*DELIMITERS = ", \t\n";
+		if (kvpair->second.m_typ != MAPT_MAP)
+			continue;
+		str = getstring(kvpair->second, KYCLOCK_TOP);
 		if (str == NULL)
 			continue;
 		stripped = remove_comments(str);
