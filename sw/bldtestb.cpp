@@ -84,12 +84,19 @@ void	build_testb_h(MAPDHASH &master, FILE *fp, STRING &fname) {
 		fprintf(fp, "#include <tbclock.h>\n");
 
 	fprintf(fp, "\n"
+	"\t//\n"
+	"\t// The TESTB class is a useful wrapper for interacting with a Verilator\n"
+	"\t// based design.  Key to its capabilities are the tick() method for\n"
+	"\t// advancing the simulation timestep, and the opentrace() and\n"
+	"\t// closetrace() methods for handling VCD tracefile generation.  To\n"
+	"\t// use a non-VCD trace, redefine TRACECLASS before calling this\n"
+	"\t// function to the trace class you wish to use.\n//\n"
 "template <class VA>	class TESTB {\n"
 "public:\n"
 "	VA	*m_core;\n"
 "	bool		m_changed;\n"
 "	TRACECLASS*	m_trace;\n"
-"	bool		m_done;\n"
+"	bool		m_done, m_paused_trace;\n"
 "	uint64_t	m_time_ps;\n");
 
 	if (multiclock) {
@@ -101,6 +108,12 @@ void	build_testb_h(MAPDHASH &master, FILE *fp, STRING &fname) {
 					? cklist[i].m_simclass->c_str()
 					: "TBCLOCK",
 				cklist[i].m_name->c_str());
+	} else {
+		fprintf(fp, "\n"
+	"\t//\n"
+	"\t// Since design has only one clock within it, we won't need to use the\n"
+	"\t// multiclock techniques, and so those aren't included here at this time.\n"
+	"\t//\n");
 	}
 
 	fprintf(fp, "\n"
@@ -109,6 +122,7 @@ void	build_testb_h(MAPDHASH &master, FILE *fp, STRING &fname) {
 "		m_time_ps  = 0ul;\n"
 "		m_trace    = NULL;\n"
 "		m_done     = false;\n"
+"		m_paused_trace = false;\n"
 "		Verilated::traceEverOn(true);\n");
 
 	if (multiclock) {
@@ -131,20 +145,61 @@ void	build_testb_h(MAPDHASH &master, FILE *fp, STRING &fname) {
 "		m_core = NULL;\n"
 "	}\n"
 "\n"
-"	virtual	void	opentrace(const char *vcdname) {\n"
+	"\t//\n"
+	"\t// opentrace()\n"
+	"\t//\n"
+	"\t// Useful for beginning a (VCD) trace.  To open such a trace, just call\n"
+	"\t// opentrace() with the name of the VCD file you'd like to trace\n"
+	"\t// everything into\n"
+"	virtual	void	opentrace(const char *vcdname, int depth=99) {\n"
 "		if (!m_trace) {\n"
 "			m_trace = new TRACECLASS;\n"
 "			m_core->trace(m_trace, 99);\n"
 "			m_trace->spTrace()->set_time_resolution(\"ps\");\n"
 "			m_trace->spTrace()->set_time_unit(\"ps\");\n"
 "			m_trace->open(vcdname);\n"
+"			m_paused_trace = false;\n"
 "		}\n"
 "	}\n"
 "\n"
+	"\t//\n"
+	"\t// trace()\n"
+	"\t//\n"
+	"\t// A synonym for opentrace() above.\n"
+	"\t//\n"
 "	void	trace(const char *vcdname) {\n"
 "		opentrace(vcdname);\n"
 "	}\n"
 "\n"
+	"\t//\n"
+	"\t// pausetrace(pause)\n"
+	"\t//\n"
+	"\t// Set/clear a flag telling us whether or not to write to the VCD trace\n"
+	"\t// file.  The default is to write to the file, but this can be changed\n"
+	"\t// by calling pausetrace.  pausetrace(false) will resume tracing,\n"
+	"\t// whereas pausetrace(true) will stop all calls to Verilator's trace()\n"
+	"\t// function\n"
+	"\t//\n"
+"	virtual	bool	pausetrace(bool pausetrace) {\n"
+"		m_paused_trace = pausetrace;\n"
+"		return m_paused_trace;\n"
+"	}\n"
+"\n"
+	"\t//\n"
+	"\t// pausetrace()\n"
+	"\t//\n"
+	"\t// Like pausetrace(bool) above, except that pausetrace() will return\n"
+	"\t// the current status of the pausetrace flag above.  Specifically, it\n"
+	"\t// will return true if the trace has been paused or false otherwise.\n"
+"	virtual	bool	pausetrace(void) {\n"
+"		return m_paused_trace;\n"
+"	}\n"
+"\n"
+	"\t//\n"
+	"\t// closetrace()\n"
+	"\t//\n"
+	"\t// Closes the open trace file.  No more information will be written\n"
+	"\t// to it\n"
 "	virtual	void	closetrace(void) {\n"
 "		if (m_trace) {\n"
 "			m_trace->close();\n"
@@ -153,10 +208,26 @@ void	build_testb_h(MAPDHASH &master, FILE *fp, STRING &fname) {
 "		}\n"
 "	}\n"
 "\n"
+	"\t//\n"
+	"\t// eval()\n"
+	"\t//\n"
+	"\t// This is a synonym for Verilator's eval() function.  It evaluates all\n"
+	"\t// of the logic within the design.  AutoFPGA based designs shouldn't\n"
+	"\t// need to be calling this, they should call tick() instead.  However,\n"
+	"\t// in the off chance that your design inputs depend upon combinatorial\n"
+	"\t// expressions that would be output based upon other input expressions,\n"
+	"\t// you might need to call this function.\n"
 "	virtual	void	eval(void) {\n"
 "		m_core->eval();\n"
 "	}\n"
 "\n"
+	"\t//\n"
+	"\t// tick()\n"
+	"\t//\n"
+	"\t// tick() is the main entry point into this helper core.  In general,\n"
+	"\t// tick() will advance the clock by one clock tick.  In a multiple clock\n"
+	"\t// design, this will advance the clocks up until the nearest clock\n"
+	"\t// transition.\n"
 "	virtual	void	tick(void) {\n");
 
 	if (multiclock) {
@@ -178,7 +249,7 @@ void	build_testb_h(MAPDHASH &master, FILE *fp, STRING &fname) {
 			"that may have changed since the\n\t\t// last clock"
 			"evaluation, and then record that in the trace.\n");
 		fprintf(fp, "\t\teval();\n"
-			"\t\tif (m_trace) m_trace->dump(m_time_ps+1);\n\n");
+			"\t\tif (m_trace && !m_paused_trace) m_trace->dump(m_time_ps+1);\n\n");
 
 		fprintf(fp, "\t\t// Advance each clock\n");
 		for(unsigned i=0; i<cklist.size(); i++)
@@ -201,7 +272,7 @@ void	build_testb_h(MAPDHASH &master, FILE *fp, STRING &fname) {
 			"\t\t// evaluation, and then record that in the\n"
 			"\t\t// trace.\n");
 		fprintf(fp, "\t\teval();\n"
-			"\t\tif (m_trace) m_trace->dump(m_time_ps+%ld);\n\n",
+			"\t\tif (m_trace && !m_paused_trace) m_trace->dump(m_time_ps+%ld);\n\n",
 			quarter_tick);
 
 		fprintf(fp, "\t\t// Advance the one simulation clock, %s\n",
@@ -214,7 +285,7 @@ void	build_testb_h(MAPDHASH &master, FILE *fp, STRING &fname) {
 	fprintf(fp, "\t\teval();\n"
 		"\t\t// If we are keeping a trace, dump the current state to "
 		"that\n\t\t// trace now\n"
-		"\t\tif (m_trace) {\n"
+		"\t\tif (m_trace && !m_paused_trace) {\n"
 			"\t\t\tm_trace->dump(m_time_ps);\n"
 			"\t\t\tm_trace->flush();\n"
 		"\t\t}\n\n");
@@ -241,7 +312,7 @@ void	build_testb_h(MAPDHASH &master, FILE *fp, STRING &fname) {
 		fprintf(fp, "\t\tm_core->%s = 0;\n"
 			"\t\tm_time_ps+= %ld;\n"
 			"\t\teval();\n"
-			"\t\tif (m_trace) m_trace->dump(m_time_ps);\n\n",
+			"\t\tif (m_trace && !m_paused_trace) m_trace->dump(m_time_ps);\n\n",
 				cklist[0].m_wire->c_str(),
 				clock_duration_ps-previous);
 
@@ -278,6 +349,12 @@ void	build_testb_h(MAPDHASH &master, FILE *fp, STRING &fname) {
 "\t}\n\n");
 
 	fprintf(fp, ""
+	"\t//\n"
+	"\t// reset()\n"
+	"\t//\n"
+	"\t// Sets the i_reset input for one clock tick.  It's really just a\n"
+	"\t// function for the capabilies shown below.  You'll want to reset any\n"
+	"\t// external input values before calling this though.\n"
 "	virtual	void	reset(void) {\n"
 "		m_core->i_reset = 1;\n"
 "		tick();\n"
