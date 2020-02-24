@@ -186,19 +186,43 @@ void	CLOCKINFO::setclass(STRINGP simclass) {
 	}
 }
 
+void	CLOCKINFO::setreset(STRINGP ckreset) {
+	STRINGP	strp;
+
+	strp = getstring(*m_hash, KY_RESET);
+	if (NULL == strp) {
+		setstring(*m_hash, KY_RESET, ckreset);
+		m_reset = ckreset;
+	} else if (strp->compare(*ckreset) != 0) {
+		fprintf(stderr, "ERR: Clock with multiple reset wires: %s and %s\n",
+			strp->c_str(), ckreset->c_str());
+		m_reset = strp;
+	} else if (!m_reset) {
+		// Case #3: This is a new RESET tag
+		m_reset = ckreset;
+		MAPT	subfm;
+
+		subfm.m_typ = MAPT_STRING;
+		subfm.u.m_s = ckreset;
+		m_hash->insert(KEYVALUE(KY_RESET, subfm));
+		m_reset = ckreset;
+	}
+}
+
 void	add_to_clklist(MAPDHASH *ckmap) {
 	const	char	DELIMITERS[] = " \t\n,";
 	int	ifreq;
 
-	STRINGP	sname, swire, sfreq, simclass, stop;
-	char	*dname, *dwire, *dfreq, *dsimclass, *dtop;
-	char	*pname, *pwire, *pfreq, *psimclass, *ptop;
-	char	*tname, *twire, *tfreq, *tsimclass, *ttop;
+	STRINGP	sname, swire, sfreq, simclass, stop, sreset;
+	char	*dname, *dwire, *dfreq, *dsimclass, *dtop, *dreset;
+	char	*pname, *pwire, *pfreq, *psimclass, *ptop, *preset;
+	char	*tname, *twire, *tfreq, *tsimclass, *ttop, *treset;
 
 	sname    = getstring(*ckmap, KY_NAME);
 	swire    = getstring(*ckmap, KY_WIRE);
 	simclass = getstring(*ckmap, KY_CLASS);
 	stop     = getstring(*ckmap, KY_TOP);
+	sreset   = getstring(*ckmap, KY_RESET);
 
 	// strtok requires a writable string
 	if (sname) dname = strdup(sname->c_str());
@@ -209,6 +233,8 @@ void	add_to_clklist(MAPDHASH *ckmap) {
 	else	  dsimclass = NULL;
 	if (stop) dtop = strdup(stop->c_str());
 	else	  dtop = NULL;
+	if (sreset) dreset = strdup(sreset->c_str());
+	else	  dreset = NULL;
 
 	{
 		MAPDHASH::iterator	kvfreq;
@@ -239,6 +265,7 @@ void	add_to_clklist(MAPDHASH *ckmap) {
 	pfreq = (dfreq) ? strtok_r(dfreq, DELIMITERS, &tfreq) : NULL;
 	ptop  = (dtop ) ? strtok_r(dtop , DELIMITERS, &ttop) : NULL;
 	psimclass = (dsimclass) ? strtok_r(dsimclass, DELIMITERS, &tsimclass) : NULL;
+	preset = (dreset) ? strtok_r(dreset, DELIMITERS, &treset) : NULL;
 
 	if (!pname)
 		fprintf(stderr, "ERR: CLOCK has no name!\n");
@@ -248,7 +275,7 @@ void	add_to_clklist(MAPDHASH *ckmap) {
 	while(pname) {
 		unsigned	id = cklist.size();
 		unsigned long	clocks_per_second;
-		STRINGP		wname, wsimclass = NULL;
+		STRINGP		wname;
 		bool		already_defined = false;
 
 		gbl_msg.info("Examining clock: %s %s %s %s\n",
@@ -301,7 +328,18 @@ void	add_to_clklist(MAPDHASH *ckmap) {
 					gbl_msg.error("Clock %s has a conflicting simulation class definition: %s and %s\n", pname, psimclass, cklist[i].m_simclass->c_str());
 				}
 
+				//
+				// Name of the associated reset wire, if any
+				//
+				if (preset) {
+					cklist[i].setreset(new STRING(preset));
+					gbl_msg.info("Clock %s\'s associated reset wire set to %s\n", pname, preset);
+				}
 
+
+				//
+				// Set the clocks frequency
+				//
 				if ((pfreq)&&(cklist[i].interval_ps()==CLOCKINFO::UNKNOWN_PS)) {
 					clocks_per_second = strtoul(pfreq, NULL, 0);
 					gbl_msg.info("Setting %s clock frequency to %ld\n", pname, clocks_per_second);
@@ -329,10 +367,12 @@ void	add_to_clklist(MAPDHASH *ckmap) {
 			cki->setwire(wname);
 			if (ptop)
 				cki->settop(new STRING(ptop));
-			if (psimclass) {
-				wsimclass = new STRING(psimclass);
-				cki->setclass(wsimclass);
-			}
+			if (psimclass)
+				cki->setclass(new STRING(psimclass));
+			if (preset) {
+fprintf(stderr, "preset != NULL\n");
+				cki->setreset(new STRING(preset));
+}
 			clocks_per_second = (unsigned)ifreq;
 			if (pfreq) {
 				clocks_per_second = strtoul(pfreq, NULL, 0);
@@ -342,13 +382,23 @@ void	add_to_clklist(MAPDHASH *ckmap) {
 				cki->setfrequency(clocks_per_second);
 			}
 
-			if (clocks_per_second != 0)
-				gbl_msg.userinfo("Clock: %s, %s, at %lu Hz\n",
-					pname, wname->c_str(),
-					clocks_per_second);
-			else
-				gbl_msg.userinfo("Clock: %s, %s\n",
-					pname, wname->c_str());
+			STRING	infostr = STRING("Clock: ") + STRING(pname) + STRING(", is ") + (*wname);
+
+			if (clocks_per_second != 0) {
+				if ((clocks_per_second % 1000000) == 0) {
+					infostr += STRING(" at ") + std::to_string(clocks_per_second/1000000);
+					infostr += " MHz";
+				} else if ((clocks_per_second % 1000) == 0) {
+					infostr += STRING(" at ") + std::to_string(clocks_per_second / 1000);
+					infostr += " kHz";
+				} else {
+					infostr += STRING(" at ") + std::to_string(clocks_per_second);
+					infostr += " Hz";
+				}
+			} if (NULL != cki->reset())
+				infostr += ", w/ associated reset " + (*cki->reset());
+			infostr += "\n";
+			gbl_msg.userinfo(infostr.c_str());
 		}
 
 		if (pname) pname = strtok_r(NULL, DELIMITERS, &tname);
@@ -356,6 +406,7 @@ void	add_to_clklist(MAPDHASH *ckmap) {
 		if (pfreq) pfreq = strtok_r(NULL, DELIMITERS, &tfreq);
 		if (ptop)  ptop  = strtok_r(NULL, DELIMITERS, &ttop);
 		if (psimclass) psimclass = strtok_r(NULL, DELIMITERS, &tsimclass);
+		if (preset) preset = strtok_r(NULL, DELIMITERS, &treset);
 		ifreq = 0;
 	}
 

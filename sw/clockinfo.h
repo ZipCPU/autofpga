@@ -69,6 +69,7 @@ public:
 	void	setwire(STRINGP wire);
 	void	settop(STRINGP top);
 	void	setclass(STRINGP simclass);
+	void	setreset(STRINGP ckreset);
 
 	void set(STRINGP name, STRINGP wire, unsigned long frequency_hz) {
 		setname(name);
