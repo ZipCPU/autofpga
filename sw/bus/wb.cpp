@@ -173,8 +173,6 @@ void	WBBUS::allocate_subbus(void) {
 		if (m_num_double > 0) {
 			m_num_double += m_num_single;
 			m_num_single = 0;
-		} else if (m_num_total > m_num_single) {
-			m_num_single = 0;
 		}
 	} else if (m_num_single == m_num_total) {
 		m_num_single = 0;
@@ -1208,44 +1206,12 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 	unused_lsbs = nextlg(m_info->data_width())-3;
 	fprintf(fp,
 	"\twbxbar #(\n"
-		"\t\t.NM(%ld), .NS(%ld), .AW(%d), .DW(%d),\n"
-		"\t\t.SLAVE_ADDR({\n",
+		"\t\t.NM(%ld), .NS(%ld), .AW(%d), .DW(%d),\n",
 		m_info->m_mlist->size(), m_info->m_plist->size(),
 		address_width(), m_info->data_width());
-	{
-		for(unsigned k=m_info->m_plist->size()-1; k>0; k=k-1) {
-			PERIPHP	p = (*m_info->m_plist)[k];
 
-			fprintf(fp, "\t\t\t{ %d\'h%0*lx },",
-				address_width(), (address_width()+3)/4,
-				p->p_base >> unused_lsbs);
-			fprintf(fp, " // %*s: 0x%0*lx\n", slave_name_width,
-				p->name()->c_str(),
-				(address_width()+unused_lsbs+3)/4, p->p_base);
-
-		} fprintf(fp, "\t\t\t{ %d\'h%0*lx }  // %*s: 0x%0*lx\n",
-				address_width(), (address_width()+3)/4,
-				((*m_info->m_plist)[0]->p_base >> unused_lsbs),
-				slave_name_width,
-				(*m_info->m_plist)[0]->name()->c_str(),
-				(address_width()+unused_lsbs+3)/4,
-				(*m_info->m_plist)[0]->p_base);
-	}
-
-	fprintf(fp,
-	"\t\t}),\n"
-	"\t\t.SLAVE_MASK({\n");
-	for(unsigned k=m_info->m_plist->size()-1; k>0; k=k-1) {
-		PERIPHP	p = (*m_info->m_plist)[k];
-
-		fprintf(fp, "\t\t\t{ %d\'h%0*lx }, // %*s\n",
-			address_width(), (address_width()+3)/4,
-			p->p_mask, slave_name_width, p->name()->c_str());
-	} fprintf(fp, "\t\t\t{ %d\'h%0*lx }  // %*s\n",
-			address_width(), (address_width()+3)/4,
-			((*m_info->m_plist)[0]->p_mask),
-			slave_name_width, (*m_info->m_plist)[0]->name()->c_str());
-	fprintf(fp, "\t\t})");
+	slave_addr(fp, m_info->m_plist); fprintf(fp, ",\n");
+	slave_mask(fp, m_info->m_plist);
 
 	xbar_option(fp, KY_OPT_LOWPOWER,   ",\n\t\t.OPT_LOWPOWER(%)");
 	xbar_option(fp, KY_OPT_LGMAXBURST, ",\n\t\t.LGNMAXBURST(%)");

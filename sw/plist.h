@@ -55,7 +55,11 @@ class	PERIPH {
 public:
 	unsigned long	p_base, p_regbase;	// In octets
 	unsigned long	p_naddr;	// In words, given in file
-	unsigned	p_awid;		// Log_2 (words)
+	//
+	// p_awid = number of address lines for this slave
+	//	In word addressing, this is log_2(p_naddr)
+	//	Otherwise, its defind as log_2(p_naddr * bus->data_width()/8)
+	unsigned	p_awid;		//
 	unsigned long	p_mask;		// Words.  Bit is true if relevant for address selection
 	//
 	unsigned	p_sbaw;

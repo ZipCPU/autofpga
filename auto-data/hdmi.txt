@@ -40,6 +40,7 @@
 @CLOCK.WIRE=i_clk
 @CLOCK.FREQUENCY=100000000
 @CLOCK.TOP=i_clk
+@CLOCK.RESET=i_reset
 #
 #
 @PREFIX=hdmiin

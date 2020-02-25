@@ -112,9 +112,16 @@ bool	PERIPH::ismemory(void) {
 }
 
 unsigned PERIPH::get_slave_address_width(void) {
-	if (p_awid != nextlg(naddr())) {
-		p_awid = nextlg(naddr());
-		setvalue(*p_phash, KYSLAVE_AWID, p_awid);
+	unsigned	awid, lgdw = 0;
+
+	awid = nextlg(naddr());
+	if (p_slave_bus != NULL && !p_slave_bus->word_addressing())
+		lgdw = nextlg(p_slave_bus->data_width()/8);
+	awid += lgdw;
+
+	if (p_awid != (unsigned)awid) {
+		p_awid = awid;
+		setvalue(*p_phash, KYSLAVE_AWID, awid);
 	}
 	return p_awid;
 }
@@ -123,19 +130,28 @@ unsigned PERIPH::naddr(void) {
 	int	value;
 
 	assert(p_phash);
+
 	if (getvalue(*p_phash, KYNADDR, value)) {
 		bool rebuild = false;
-		if (0 == p_naddr) {
-			p_naddr = value;
-			if (p_awid != nextlg(p_naddr))
-				rebuild = true;
-			p_awid  = nextlg(p_naddr);
-		} else if ((int)p_naddr != value) {
+		int	lgdw = 0;
+
+		if (p_slave_bus != NULL && !p_slave_bus->word_addressing())
+			lgdw = nextlg(p_slave_bus->data_width()/8);
+
+		if ((int)p_naddr != value) {
 			gbl_msg.warning("%s's number of addresses changed from %ld to %d\n",
 				p_name->c_str(), p_naddr, value);
+			p_naddr = 0;
+		}
+		if (0 == p_naddr) {
+			// Set p_naddr from value
+
+			int	lgaddr = nextlg(value);
+
 			p_naddr = value;
-			p_awid  = nextlg(p_naddr);
+			lgaddr += lgaddr + lgdw;
 			rebuild = true;
+			p_awid  = lgaddr;
 		}
 		if (rebuild) {
 			setstring(p_phash, KYSLAVE_PORTLIST,
@@ -306,10 +322,8 @@ int	PLIST::add(MAPDHASH *phash) {
 
 	p->p_base = 0;
 	p->p_naddr = naddr;
-	p->p_awid  = (0 == naddr) ? nextlg(p->p_naddr) : 0;
 	p->p_phash = phash;
 	p->p_name  = pname;
-
 	{
 		BUSINFO		*bi;
 		MAPDHASH::iterator	kvsbus;
@@ -321,6 +335,12 @@ int	PLIST::add(MAPDHASH *phash) {
 		assert(bi);
 		p->p_slave_bus = bi;
 	}
+	if (0 != naddr) {
+		// Calculate and set p->p_awid
+		p->get_slave_address_width();
+	} else
+		p->p_awid = 0;
+
 
 	(void)p->bus_prefix();
 
@@ -382,7 +402,7 @@ void	PLIST::assign_addresses(unsigned dwidth, unsigned nullsz,
 		unsigned bus_min_address_width) {
 	unsigned daddr_abits = nextlg(dwidth/8);
 
-assert(gbl_ready_for_address_assignment);
+	assert(gbl_ready_for_address_assignment);
 
 	// Use daddr_abits to convert our addresses between bus addresses and
 	// byte addresses.  The address width involved is in bus words,
@@ -404,6 +424,9 @@ assert(gbl_ready_for_address_assignment);
 				(*this)[0]->p_name->c_str());
 		}
 	} else {
+		assert((*this)[0]->p_slave_bus);
+		if (!(*this)[0]->p_slave_bus->word_addressing())
+			daddr_abits = 0;
 
 		// We'll need a minimum of nextlg(p->size()) bits to address
 		// p->size() separate peripherals.  While we'd like to minimize

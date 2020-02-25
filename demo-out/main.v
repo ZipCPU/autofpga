@@ -916,7 +916,6 @@ module	main(i_clk, i_reset,
 	4'ha: r_wb_sio_data <= wb_subseconds_idata;
 	4'hb: r_wb_sio_data <= wb_sysclk_idata;
 	4'hc: r_wb_sio_data <= wb_version_idata;
-	default: r_wb_sio_data <= wb_version_idata;
 	endcase
 	assign	wb_sio_idata = r_wb_sio_data;
 
@@ -1139,38 +1138,44 @@ module	main(i_clk, i_reset,
 	wbxbar #(
 		.NM(2), .NS(15), .AW(28), .DW(32),
 		.SLAVE_ADDR({
-			{ 28'h8000000 }, //        xpand: 0x20000000
-			{ 28'h7000000 }, //        flash: 0x1c000000
-			{ 28'h6800000 }, //        bkram: 0x1a000000
-			{ 28'h6000000 }, //         netb: 0x18000000
-			{ 28'h5800000 }, //       wb_dio: 0x16000000
-			{ 28'h5000000 }, //         mdio: 0x14000000
-			{ 28'h4800000 }, //          cfg: 0x12000000
-			{ 28'h4000000 }, //       sdcard: 0x10000000
-			{ 28'h3800000 }, //         gpsu: 0x0e000000
-			{ 28'h3000000 }, // scope_hdmiin: 0x0c000000
-			{ 28'h2800000 }, //        scope: 0x0a000000
-			{ 28'h2000000 }, //        scopc: 0x08000000
-			{ 28'h1800000 }, //    scop_edid: 0x06000000
-			{ 28'h1000000 }, //         pmic: 0x04000000
-			{ 28'h0800000 }  //     flashcfg: 0x02000000
+			// Address width    = 28
+			// Address LSBs     = 0
+			// Slave name width = 12
+			{ 28'h20000000 }, //        xpand: 0x20000000
+			{ 28'h1c000000 }, //        flash: 0x1c000000
+			{ 28'h1a000000 }, //        bkram: 0x1a000000
+			{ 28'h18000000 }, //         netb: 0x18000000
+			{ 28'h16000000 }, //       wb_dio: 0x16000000
+			{ 28'h14000000 }, //         mdio: 0x14000000
+			{ 28'h12000000 }, //          cfg: 0x12000000
+			{ 28'h10000000 }, //       sdcard: 0x10000000
+			{ 28'he000000 }, //         gpsu: 0xe000000
+			{ 28'hc000000 }, // scope_hdmiin: 0xc000000
+			{ 28'ha000000 }, //        scope: 0xa000000
+			{ 28'h8000000 }, //        scopc: 0x8000000
+			{ 28'h6000000 }, //    scop_edid: 0x6000000
+			{ 28'h4000000 }, //         pmic: 0x4000000
+			{ 28'h2000000 }  //     flashcfg: 0x2000000
 		}),
 		.SLAVE_MASK({
-			{ 28'h8000000 }, //        xpand
-			{ 28'hf800000 }, //        flash
-			{ 28'hf800000 }, //        bkram
-			{ 28'hf800000 }, //         netb
-			{ 28'hf800000 }, //       wb_dio
-			{ 28'hf800000 }, //         mdio
-			{ 28'hf800000 }, //          cfg
-			{ 28'hf800000 }, //       sdcard
-			{ 28'hf800000 }, //         gpsu
-			{ 28'hf800000 }, // scope_hdmiin
-			{ 28'hf800000 }, //        scope
-			{ 28'hf800000 }, //        scopc
-			{ 28'hf800000 }, //    scop_edid
-			{ 28'hf800000 }, //         pmic
-			{ 28'hf800000 }  //     flashcfg
+			// Address width    = 28
+			// Address LSBs     = 0
+			// Slave name width = 12
+			{ 28'h0000000 }, //        xpand
+			{ 28'h0000000 }, //        flash
+			{ 28'h0000000 }, //        bkram
+			{ 28'h0000000 }, //         netb
+			{ 28'h0000000 }, //       wb_dio
+			{ 28'h0000000 }, //         mdio
+			{ 28'h0000000 }, //          cfg
+			{ 28'h0000000 }, //       sdcard
+			{ 28'h0000000 }, //         gpsu
+			{ 28'h0000000 }, // scope_hdmiin
+			{ 28'h0000000 }, //        scope
+			{ 28'h0000000 }, //        scopc
+			{ 28'h0000000 }, //    scop_edid
+			{ 28'h0000000 }, //         pmic
+			{ 28'h3e000000 }  //     flashcfg
 		}),
 		.OPT_DBLBUFFER(1'b1))
 	wb_xbar(
@@ -1408,12 +1413,18 @@ module	main(i_clk, i_reset,
 	wbxbar #(
 		.NM(1), .NS(2), .AW(2), .DW(32),
 		.SLAVE_ADDR({
-			{ 2'h2 }, //         zip: 0x8
+			// Address width    = 2
+			// Address LSBs     = 0
+			// Slave name width = 11
+			{ 2'h8 }, //         zip: 0x8
 			{ 2'h0 }  // wbu_arbiter: 0x0
 		}),
 		.SLAVE_MASK({
-			{ 2'h2 }, //         zip
-			{ 2'h2 }  // wbu_arbiter
+			// Address width    = 2
+			// Address LSBs     = 0
+			// Slave name width = 11
+			{ 2'h8000000000000000 }, //         zip
+			{ 2'h8 }  // wbu_arbiter
 		}),
 		.OPT_DBLBUFFER(1'b1))
 	wbu_xbar(
@@ -1510,9 +1521,15 @@ module	main(i_clk, i_reset,
 	wbxbar #(
 		.NM(2), .NS(1), .AW(25), .DW(128),
 		.SLAVE_ADDR({
-			{ 25'h0000000 }  // sdram: 0x00000000
+			// Address width    = 25
+			// Address LSBs     = 0
+			// Slave name width = 5
+			{ 25'h0000000 }  // sdram: 0x0000000
 		}),
 		.SLAVE_MASK({
+			// Address width    = 25
+			// Address LSBs     = 0
+			// Slave name width = 5
 			{ 25'h0000000 }  // sdram
 		}),
 		.OPT_DBLBUFFER(1'b1))

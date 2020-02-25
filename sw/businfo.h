@@ -107,6 +107,7 @@ public:
 	bool	need_translator(BUSINFO *b);
 
 	bool	get_base_address(MAPDHASH *phash, unsigned &base);
+	bool	word_addressing(void);
 	void	assign_addresses(void);
 	int	address_width(void);
 	int	data_width(void);

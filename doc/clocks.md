@@ -14,6 +14,21 @@ reason, I typically create a component for each of my clock definitions.
 This defines a clock known to AutoFPGA as `clk`.  Within your `main.v`
 design file it will be known as `i_clk`.
 
+## Associating a reset
+
+Often clock domains also have a reset associated with them.  For this reason,
+AutoFPGA allows the definition of an associated reset.
+
+```text
+@CLOCK.RESET=i_reset
+```
+
+This is primarily a convenience definition that you can use if you wish.
+It may also be used by the bus composer, by any design whose bus doesn't
+have an associated reset.  This will then be used as the reset for that bus,
+otherwise AutoFPGA may generate an error that the bus has no associated
+reset wire.
+
 ## Default clock and reset
 
 The clock named `i_clk` is special.
@@ -59,6 +74,7 @@ mistake during board design, the PLL wasn't available for this pin.)
 @PREFIX=clk
 @CLOCK.TOP=i_clk
 @CLOCK.NAME=clk
+@CLOCK.RESET=i_reset
 @TOP.DEFNS=
 	reg	clk_50mhz;
 	wire	s_clk, s_reset;
@@ -71,6 +87,5 @@ mistake during board design, the PLL wasn't available for this pin.)
 
 	SB_GB global_buffer(clk_50mhz, s_clk);
 
-@CLOCK.NAME=clk
 @CLOCK.FREQUENCY= 50000000
 ```

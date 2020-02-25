@@ -115,11 +115,10 @@ STRINGP	GENBUS::name(void) {
 	return NULL;
 }
 
-void	GENBUS::slave_addr(FILE *fp, PLIST *pl, const int addr_lsbs) {
-	// int		lgdw = nextlg(m_info->data_width())-3;
+unsigned GENBUS::max_name_width(PLIST *pl) {
 	unsigned	slave_name_width = 0;
 
-	for(unsigned k=pl->size()-1; k>0; k=k-1) {
+	for(unsigned k=0; k<pl->size(); k++) {
 		PERIPHP	p = (*pl)[k];
 		unsigned	sz;
 
@@ -128,12 +127,25 @@ void	GENBUS::slave_addr(FILE *fp, PLIST *pl, const int addr_lsbs) {
 			slave_name_width = sz;
 	}
 
+	return slave_name_width;
+}
+
+
+void	GENBUS::slave_addr(FILE *fp, PLIST *pl, const int addr_lsbs) {
+	// int		lgdw = nextlg(m_info->data_width())-3;
+	unsigned	slave_name_width = max_name_width(pl);
+
 	fprintf(fp,
 		"\t\t.SLAVE_ADDR({\n");
+	fprintf(fp,
+		"\t\t\t// Address width    = %d\n"
+		"\t\t\t// Address LSBs     = %d\n"
+		"\t\t\t// Slave name width = %d\n",
+		address_width(), addr_lsbs, slave_name_width);
 	for(unsigned k=pl->size()-1; k>0; k=k-1) {
 		PERIPHP	p = (*pl)[k];
 
-		fprintf(fp, "\t\t\t{ %d\'h%0*lx },\n",
+		fprintf(fp, "\t\t\t{ %d\'h%0*lx },",
 			address_width()-addr_lsbs,
 			(address_width()-addr_lsbs+3)/4,
 			((*pl)[k]->p_base)>>addr_lsbs);
@@ -149,23 +161,22 @@ void	GENBUS::slave_addr(FILE *fp, PLIST *pl, const int addr_lsbs) {
 			(*pl)[0]->name()->c_str(),
 			(address_width()+3)/4,
 			(*pl)[0]->p_base);
-	fprintf(fp, "\t\t}");
+	fprintf(fp, "\t\t})");
 }
 
 void	GENBUS::slave_mask(FILE *fp, PLIST *pl, const int addr_lsbs) {
-	int		lgdw = nextlg(m_info->data_width())-3;
-	unsigned	slave_name_width = 0;
+	int		lgdw = 0;
+	unsigned	slave_name_width = max_name_width(pl);
 
-	for(unsigned k=pl->size()-1; k>0; k=k-1) {
-		PERIPHP	p = (*pl)[k];
-		unsigned	sz;
-
-		sz = p->name()->size();
-		if (slave_name_width < sz)
-			slave_name_width = sz;
-	}
+	if (word_addressing())
+		lgdw = nextlg(m_info->data_width())-3;
 
 	fprintf(fp, "\t\t.SLAVE_MASK({\n");
+	fprintf(fp,
+		"\t\t\t// Address width    = %d\n"
+		"\t\t\t// Address LSBs     = %d\n"
+		"\t\t\t// Slave name width = %d\n",
+		address_width(), addr_lsbs, slave_name_width);
 	for(unsigned k=pl->size()-1; k>0; k=k-1) {
 		PERIPHP	p = (*pl)[k];
 

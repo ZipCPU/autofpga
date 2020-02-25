@@ -64,6 +64,7 @@ public:
 	~AXIBUS() {};
 	virtual	int	id_width(void);
 	virtual	int	address_width(void);
+	virtual	bool	word_addressing(void) { return false; };
 	//
 	virtual	void	assign_addresses(void);
 	virtual	bool	get_base_address(MAPDHASH *phash, unsigned &base);

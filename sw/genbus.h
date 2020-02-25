@@ -71,6 +71,7 @@ public:
 	// ~GENBUS() {};
 
 	virtual	int	address_width(void) = 0;
+	virtual	bool	word_addressing(void) = 0;
 	//
 	virtual	void	assign_addresses(void) = 0;
 	virtual	bool	get_base_address(MAPDHASH *phash, unsigned &base) = 0;
@@ -95,6 +96,7 @@ public:
 	virtual	STRINGP	slave_portlist(PERIPHP p) { return NULL; }
 	virtual	STRINGP	slave_ansi_portlist(PERIPHP p) { return NULL; }
 		STRINGP	name(void);
+	unsigned max_name_width(PLIST *pl);
 	void	slave_addr(FILE *fp, PLIST *pl, const int addr_lsbs = 0);
 	void	slave_mask(FILE *fp, PLIST *pl, const int addr_lsbs = 0);
 	virtual	void	integrity_check(void) {};

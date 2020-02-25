@@ -47,6 +47,7 @@
 #include "subbus.h"
 #include "bitlib.h"
 #include "globals.h"
+#include "msgs.h"
 
 SUBBUS::SUBBUS(MAPDHASH *info, STRINGP subname, BUSINFO *subbus) {
 	p_base = 0;
@@ -63,6 +64,13 @@ SUBBUS::SUBBUS(MAPDHASH *info, STRINGP subname, BUSINFO *subbus) {
 bool	SUBBUS::isbus(void) { return true; }
 unsigned	SUBBUS::get_slave_address_width(void) {
 	assert(p_master_bus);
+	if (p_master_bus == p_slave_bus)
+		gbl_msg.fatal("ERR: Component %s cannot be both slave to bus %s and master of it as a subbus\n",
+			(p_name->c_str()) ? p_name->c_str() : "(Unknown?!?!)",
+			(p_master_bus->name()->c_str()) ?
+				 p_master_bus->name()->c_str() : "(Un-named)",
+			(p_slave_bus->name()->c_str())
+				? p_slave_bus->name()->c_str() : "(Un-named)");
 	assert(p_master_bus != p_slave_bus);
 
 	p_awid = p_master_bus->address_width();

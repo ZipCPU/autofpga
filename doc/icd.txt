@@ -278,6 +278,8 @@ CLOCK.CLASS	A list containing the names of clock support classes used for
 		an advance(int ps) function, and rising_edge() and
 		falling_edge() indicators.  Likewise, an init(ps) function
 		will be called to define the period of the clock.
+CLOCK.RESET	Optionally contains the name of a reset wire, synchronous to
+		the given clock.
 
 SLAVE.TYPE	Indicates the type of peripheral
 SLAVE.BUS	Indicates the name of the bus used by this slave
@@ -360,6 +362,8 @@ BUS.NULLSZ	The number of addresses consumed by the null pointer address
 
 BUS.CLOCK	The name of a previously defined clock from which this bus
 		runs on
+
+BUS.RESET	The name of a reset wire associated with this bus.
 
 BUS.(OPTIONS)
   BUS.OPT_LOWPOWER	When set, any unused bus wires will be set to zero.

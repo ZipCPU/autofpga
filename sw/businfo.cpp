@@ -78,6 +78,11 @@ int	BUSINFO::address_width(void) {
 	return generator()->address_width();
 }
 
+bool	BUSINFO::word_addressing(void) {
+	assert(m_genbus);
+	return	m_genbus->word_addressing();
+}
+
 int	BUSINFO::data_width(void) {
 	int	value;
 
@@ -1088,7 +1093,6 @@ void	build_bus_list(MAPDHASH &master) {
 	if (NULL != (str = getstring(master, KYDEFAULT_BUS))) {
 		bl->adddefault(master, str);
 	}
-
 	//
 	if (refbus(master)) {
 		STRING	cname = "toplevel";
@@ -1112,6 +1116,10 @@ void	build_bus_list(MAPDHASH &master) {
 		bl->checkforbusdefns(prefix, kvpair->second.u.m_m, KYSLAVE_BUS);
 		bl->checkforbusdefns(prefix, kvpair->second.u.m_m, KYMASTER_BUS);
 	}
+
+	// Make certain every bus has an appropriate logic generator
+	for(unsigned k=0; k<bl->size(); k++)
+		(*bl)[k]->generator();
 
 	// Let's now go back through our components, and create a SLAVE.BUS
 	// and (possibly) a MASTER.BUS tags for each component.

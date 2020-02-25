@@ -60,6 +60,7 @@ public:
 	virtual	int	address_width(void);
 	//
 	virtual	void	assign_addresses(void);
+	virtual	bool	word_addressing(void) { return true; };
 	virtual	bool	get_base_address(MAPDHASH *phash, unsigned &base);
 
 	void		write_addr_range(FILE *fp, const PERIPHP p,
