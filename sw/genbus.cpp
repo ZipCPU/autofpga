@@ -151,7 +151,7 @@ void	GENBUS::slave_addr(FILE *fp, PLIST *pl, const int addr_lsbs) {
 			((*pl)[k]->p_base)>>addr_lsbs);
 		fprintf(fp, " // %*s: 0x%0*lx\n", slave_name_width,
 			p->name()->c_str(),
-			(address_width()+3)/4, p->p_base);
+			(address_width()+addr_lsbs+3)/4, p->p_base);
 
 	} fprintf(fp, "\t\t\t{ %d\'h%0*lx }  // %*s: 0x%0*lx\n",
 			address_width(),
@@ -159,7 +159,7 @@ void	GENBUS::slave_addr(FILE *fp, PLIST *pl, const int addr_lsbs) {
 			((*pl)[0]->p_base)>>addr_lsbs,
 			slave_name_width,
 			(*pl)[0]->name()->c_str(),
-			(address_width()+3)/4,
+			(address_width()+addr_lsbs+3)/4,
 			(*pl)[0]->p_base);
 	fprintf(fp, "\t\t})");
 }
