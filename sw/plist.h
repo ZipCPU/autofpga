@@ -58,7 +58,9 @@ public:
 	//
 	// p_awid = number of address lines for this slave
 	//	In word addressing, this is log_2(p_naddr)
-	//	Otherwise, its defind as log_2(p_naddr * bus->data_width()/8)
+	//	Otherwise, its defined as log_2(p_naddr * bus->data_width()/8)
+	//   This is on the *slave* bus.  For subbus's, it may not be the same
+	//	as the width on the *master* bus.
 	unsigned	p_awid;		//
 	unsigned long	p_mask;		// Words.  Bit is true if relevant for address selection
 	//

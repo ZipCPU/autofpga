@@ -63,6 +63,8 @@ SUBBUS::SUBBUS(MAPDHASH *info, STRINGP subname, BUSINFO *subbus) {
 
 bool	SUBBUS::isbus(void) { return true; }
 unsigned	SUBBUS::get_slave_address_width(void) {
+	unsigned	awid;
+
 	assert(p_master_bus);
 	if (p_master_bus == p_slave_bus)
 		gbl_msg.fatal("ERR: Component %s cannot be both slave to bus %s and master of it as a subbus\n",
@@ -73,12 +75,21 @@ unsigned	SUBBUS::get_slave_address_width(void) {
 				? p_slave_bus->name()->c_str() : "(Un-named)");
 	assert(p_master_bus != p_slave_bus);
 
-	p_awid = p_master_bus->address_width();
-	if (p_master_bus->data_width() != p_slave_bus->data_width()) {
-		p_awid += nextlg(p_master_bus->data_width()/8);
-		p_awid -= nextlg(p_slave_bus->data_width()/8);
+	// Calculate the address width for bytes
+	awid = p_master_bus->address_width();
+	if (p_master_bus->word_addressing())
+		awid += nextlg(p_master_bus->data_width()/8);
+
+	p_naddr = (1u<<(awid-nextlg(p_slave_bus->data_width()/8)));
+
+	// Adjust this to be address width for words --- if required
+	if (p_slave_bus->word_addressing())
+		awid -= nextlg(p_slave_bus->data_width()/8);
+
+	if (p_awid != awid) {
+		p_awid = awid;
+		setvalue(*p_phash, KYSLAVE_AWID, awid);
 	}
-	p_naddr = (1u<<p_awid);
 
 	return p_awid;
 }
