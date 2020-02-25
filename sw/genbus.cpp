@@ -146,16 +146,16 @@ void	GENBUS::slave_addr(FILE *fp, PLIST *pl, const int addr_lsbs) {
 		PERIPHP	p = (*pl)[k];
 
 		fprintf(fp, "\t\t\t{ %d\'h%0*lx },",
-			address_width()-addr_lsbs,
-			(address_width()-addr_lsbs+3)/4,
+			address_width(),
+			(address_width()+3)/4,
 			((*pl)[k]->p_base)>>addr_lsbs);
 		fprintf(fp, " // %*s: 0x%0*lx\n", slave_name_width,
 			p->name()->c_str(),
 			(address_width()+3)/4, p->p_base);
 
 	} fprintf(fp, "\t\t\t{ %d\'h%0*lx }  // %*s: 0x%0*lx\n",
-			address_width()-addr_lsbs,
-			(address_width()-addr_lsbs+3)/4,
+			address_width(),
+			(address_width()+3)/4,
 			((*pl)[0]->p_base)>>addr_lsbs,
 			slave_name_width,
 			(*pl)[0]->name()->c_str(),
@@ -181,13 +181,13 @@ void	GENBUS::slave_mask(FILE *fp, PLIST *pl, const int addr_lsbs) {
 		PERIPHP	p = (*pl)[k];
 
 		fprintf(fp, "\t\t\t{ %d\'h%0*lx }, // %*s\n",
-			address_width()-addr_lsbs,
-			(address_width()-addr_lsbs+3)/4,
+			address_width(),
+			(address_width()+3)/4,
 			p->p_mask << (addr_lsbs-lgdw),
 			slave_name_width, p->name()->c_str());
 	} fprintf(fp, "\t\t\t{ %d\'h%0*lx }  // %*s\n",
-			address_width()-addr_lsbs,
-			(address_width()-addr_lsbs+3)/4,
+			address_width(),
+			(address_width()+3)/4,
 			((*pl)[0]->p_mask << (lgdw - addr_lsbs)),
 			slave_name_width, (*pl)[0]->name()->c_str());
 	fprintf(fp, "\t\t})");

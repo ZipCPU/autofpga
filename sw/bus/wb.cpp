@@ -1210,8 +1210,8 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 		m_info->m_mlist->size(), m_info->m_plist->size(),
 		address_width(), m_info->data_width());
 
-	slave_addr(fp, m_info->m_plist); fprintf(fp, ",\n");
-	slave_mask(fp, m_info->m_plist);
+	slave_addr(fp, m_info->m_plist, unused_lsbs); fprintf(fp, ",\n");
+	slave_mask(fp, m_info->m_plist, unused_lsbs);
 
 	xbar_option(fp, KY_OPT_LOWPOWER,   ",\n\t\t.OPT_LOWPOWER(%)");
 	xbar_option(fp, KY_OPT_LGMAXBURST, ",\n\t\t.LGNMAXBURST(%)");
