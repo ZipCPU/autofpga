@@ -91,8 +91,12 @@ public:
 	virtual	void	writeout_no_master_v(FILE *fp) = 0;
 
 
+	virtual	STRINGP	iansi(BMASTERP m) { return NULL; }
+	virtual	STRINGP	oansi(BMASTERP m) { return NULL; }
+	virtual	STRINGP	master_ansprefix(BMASTERP m) { return NULL; }
 	virtual	STRINGP	master_portlist(BMASTERP m) { return NULL; }
 	virtual	STRINGP	master_ansi_portlist(BMASTERP m) { return NULL; }
+	virtual	STRINGP	slave_ansprefix(PERIPHP p) { return NULL; }
 	virtual	STRINGP	slave_portlist(PERIPHP p) { return NULL; }
 	virtual	STRINGP	slave_ansi_portlist(PERIPHP p) { return NULL; }
 		STRINGP	name(void);

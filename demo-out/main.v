@@ -343,7 +343,6 @@ module	main(i_clk, i_reset,
 	// These declarations come from the @MAIN.DEFNS keys found in the
 	// various components comprising the design.
 	//
-// Looking for string: MAIN.DEFNS
 	// ZipSystem/ZipCPU connection definitions
 	// All we define here is a set of scope wires
 	wire	[31:0]	zip_debug;
@@ -1149,13 +1148,13 @@ module	main(i_clk, i_reset,
 			{ 28'h5000000 }, //         mdio: 0x14000000
 			{ 28'h4800000 }, //          cfg: 0x12000000
 			{ 28'h4000000 }, //       sdcard: 0x10000000
-			{ 28'h3800000 }, //         gpsu: 0xe000000
-			{ 28'h3000000 }, // scope_hdmiin: 0xc000000
-			{ 28'h2800000 }, //        scope: 0xa000000
-			{ 28'h2000000 }, //        scopc: 0x8000000
-			{ 28'h1800000 }, //    scop_edid: 0x6000000
-			{ 28'h1000000 }, //         pmic: 0x4000000
-			{ 28'h0800000 }  //     flashcfg: 0x2000000
+			{ 28'h3800000 }, //         gpsu: 0x0e000000
+			{ 28'h3000000 }, // scope_hdmiin: 0x0c000000
+			{ 28'h2800000 }, //        scope: 0x0a000000
+			{ 28'h2000000 }, //        scopc: 0x08000000
+			{ 28'h1800000 }, //    scop_edid: 0x06000000
+			{ 28'h1000000 }, //         pmic: 0x04000000
+			{ 28'h0800000 }  //     flashcfg: 0x02000000
 		}),
 		.SLAVE_MASK({
 			// Address width    = 28
@@ -1524,7 +1523,7 @@ module	main(i_clk, i_reset,
 			// Address width    = 25
 			// Address LSBs     = 4
 			// Slave name width = 5
-			{ 25'h0000000 }  // sdram: 0x0000000
+			{ 25'h0000000 }  // sdram: 0x00000000
 		}),
 		.SLAVE_MASK({
 			// Address width    = 25

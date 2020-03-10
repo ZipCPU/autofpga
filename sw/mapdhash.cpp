@@ -708,6 +708,11 @@ STRINGP getstring(MAPT &m, const STRING &ky) {
 void setstring(MAPDHASH &master, const STRING &ky, STRINGP strp) {
 	MAPDHASH::iterator	kvpair, kvsub;
 
+	if (strp == NULL) {
+		assert(0);
+		return;
+	}
+
 	kvpair = findkey(master, ky);
 	if (kvpair == master.end()) {
 		// The given key was not found in the hash

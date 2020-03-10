@@ -140,6 +140,9 @@ public:
 	STRINGP	prefix(STRINGP p = NULL);
 	STRINGP	btype(void);
 	STRINGP	reset_wire(void);
+	STRINGP	slave_iansi(PERIPHP);
+	STRINGP	slave_oansi(PERIPHP);
+	STRINGP	slave_ansprefix(PERIPHP);
 	STRINGP	slave_portlist(PERIPHP);
 	STRINGP	slave_ansi_portlist(PERIPHP);
 	STRINGP	master_portlist(BMASTERP);

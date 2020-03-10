@@ -158,8 +158,25 @@ unsigned PERIPH::naddr(void) {
 					p_slave_bus->slave_portlist(this));
 			setstring(p_phash, KYSLAVE_ANSIPORTLIST,
 					p_slave_bus->slave_ansi_portlist(this));
-			reeval(p_phash);
 		}
+		if (!getstring(p_phash, KYSLAVE_IANSI)) {
+			setstring(p_phash, KYSLAVE_IANSI,
+					p_slave_bus->slave_iansi(this));
+			rebuild = true;
+		}
+		if (!getstring(p_phash, KYSLAVE_OANSI)) {
+			setstring(p_phash, KYSLAVE_OANSI,
+					p_slave_bus->slave_oansi(this));
+			rebuild = true;
+		}
+		if (!getstring(p_phash, KYSLAVE_ANSPREFIX)) {
+			setstring(p_phash, KYSLAVE_ANSPREFIX,
+					p_slave_bus->slave_ansprefix(this));
+			rebuild = true;
+		}
+
+		if (rebuild)
+			reeval(p_phash);
 	}
 	return p_naddr;
 }
@@ -580,6 +597,15 @@ void	PLIST::assign_addresses(unsigned dwidth, unsigned nullsz,
 						g->slave_portlist(p));
 					setstring(*ph, KYSLAVE_ANSIPORTLIST,
 						g->slave_ansi_portlist(p));
+					if (!getstring(*ph, KYSLAVE_IANSI))
+						setstring(*ph, KYSLAVE_IANSI,
+							g->iansi(NULL));
+					if (!getstring(*ph, KYSLAVE_OANSI))
+						setstring(*ph, KYSLAVE_OANSI,
+							g->oansi(NULL));
+					if (!getstring(*ph, KYSLAVE_ANSPREFIX))
+						setstring(*ph, KYSLAVE_ANSPREFIX,
+							g->slave_ansprefix(p));
 					reeval(*ph);
 				}
 			}

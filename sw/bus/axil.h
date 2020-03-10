@@ -69,7 +69,7 @@ public:
 
 	void		write_addr_range(FILE *fp, const PERIPHP p,
 				const int dalines);
-	void		writeout_defn_v(FILE *fp, const char *pname,
+	virtual	void	writeout_defn_v(FILE *fp, const char *pname,
 				const char *busp, const char *btyp = "");
 	virtual	void	writeout_bus_slave_defns_v(FILE *fp);
 	virtual	void	writeout_bus_master_defns_v(FILE *fp);
@@ -80,8 +80,12 @@ public:
 	virtual	void	writeout_no_master_v(FILE *fp);
 	//
 	//
+	virtual	STRINGP	iansi(BMASTERP);
+	virtual	STRINGP	oansi(BMASTERP);
+	virtual	STRINGP	master_ansprefix(BMASTERP);
 	virtual	STRINGP	master_portlist(BMASTERP);
 	virtual	STRINGP	master_ansi_portlist(BMASTERP);
+	virtual	STRINGP	slave_ansprefix(PERIPHP);
 	virtual	STRINGP	slave_portlist(PERIPHP);
 	virtual	STRINGP	slave_ansi_portlist(PERIPHP);
 

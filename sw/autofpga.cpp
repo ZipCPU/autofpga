@@ -414,7 +414,7 @@ void	writeout(FILE *fp, MAPDHASH &master, const STRING &ky) {
 	MAPDHASH::iterator	kvpair;
 	STRINGP	str;
 
-	fprintf(fp, "// Looking for string: %s\n", ky.c_str());
+	// fprintf(fp, "// Looking for string: %s\n", ky.c_str());
 
 	str = getstring(master, ky);
 	if (NULL != str) {

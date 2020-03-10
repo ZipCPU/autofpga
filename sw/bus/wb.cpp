@@ -1263,6 +1263,18 @@ STRINGP	WBBUS::master_portlist(BMASTERP) {
 	"@$(MASTER.PREFIX)_err");
 }
 
+STRINGP	WBBUS::iansi(BMASTERP) {
+	return new STRING("i_");
+}
+
+STRINGP	WBBUS::oansi(BMASTERP) {
+	return new STRING("o_");
+}
+
+STRINGP	WBBUS::master_ansprefix(BMASTERP) {
+	return new STRING("");
+}
+
 STRINGP	WBBUS::master_ansi_portlist(BMASTERP) {
 	return new STRING(
 	".i_wb_cyc(@$(MASTER.PREFIX)_cyc), "
@@ -1276,6 +1288,11 @@ STRINGP	WBBUS::master_ansi_portlist(BMASTERP) {
 	".o_wb_data(@$(MASTER.PREFIX)_idata)"
 	".o_wb_err(@$(MASTER.PREFIX)_err)");
 }
+
+STRINGP	WBBUS::slave_ansprefix(PERIPHP p) {
+	return new STRING("");
+}
+
 
 STRINGP	WBBUS::slave_portlist(PERIPHP p) {
 	STRINGP	errp = getstring(p->p_phash, KYERROR_WIRE);

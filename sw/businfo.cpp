@@ -165,11 +165,24 @@ void	BUSINFO::assign_addresses(void) {
 
 	if (m_mlist) for(unsigned k=0; k<m_mlist->size(); k++) {
 		// Set the bus prefix for the master
+		STRINGP		mname;
+		MAPDHASH	*hash = (*m_mlist)[k]->m_hash;
+
+		mname = (*m_mlist)[k]->name();
+		gbl_msg.info("BI: Assigning portlists for bus %s, "
+			"master %s\n", m_name->c_str(),
+			(mname) ? mname->c_str() : " (No-name)");
 		(*m_mlist)[k]->bus_prefix();
-		setstring((*m_mlist)[k]->m_hash, KYMASTER_PORTLIST,
+		setstring(hash, KYMASTER_PORTLIST,
 			generator()->master_portlist((*m_mlist)[k]));
-		setstring((*m_mlist)[k]->m_hash, KYMASTER_ANSIPORTLIST,
+		setstring(hash, KYMASTER_ANSIPORTLIST,
 			generator()->master_ansi_portlist((*m_mlist)[k]));
+		if (!getstring(hash, KYMASTER_IANSI))
+			setstring(hash, KYMASTER_IANSI, generator()->iansi((*m_mlist)[k]));
+		if (!getstring(hash, KYMASTER_OANSI))
+			setstring(hash, KYMASTER_OANSI, generator()->oansi((*m_mlist)[k]));
+		if (!getstring(hash, KYMASTER_ANSPREFIX))
+			setstring(hash, KYMASTER_ANSPREFIX, generator()->master_ansprefix((*m_mlist)[k]));
 
 		REHASH;
 	}
@@ -344,15 +357,27 @@ void	BUSINFO::merge(STRINGP component, MAPDHASH *bp) {
 				kvpair = bp->begin();
 			}
 			continue;
+		} if (0== KY_IDWIDTH.compare(kvpair->first)) {
+			if (getvalue(*bp, KY_IDWIDTH, value)) {
+				gbl_msg.info("BUSINFO::INIT(%s).IDWIDTH "
+					"FOUND: %d\n", component->c_str(), value);
+				elm.m_typ = MAPT_INT;
+				elm.u.m_v = value;
+				m_hash->insert(KEYVALUE(KY_IDWIDTH, elm));
+
+				REHASH;
+				kvpair = bp->begin();
+			}
+			continue;
 		}
 
-		if ((kvpair->second.m_typ == MAPT_STRING)
+		if ((MAPT_STRING == kvpair->second.m_typ)
 				&&(NULL != kvpair->second.u.m_s)) {
 			strp = kvpair->second.u.m_s;
 			gbl_msg.info("BUSINFO::MERGE(%s) @%s=%s\n",
 				component->c_str(), kvpair->first.c_str(),
 				kvpair->second.u.m_s->c_str());
-			if (KY_TYPE.compare(kvpair->first)==0) {
+			if (0 == KY_TYPE.compare(kvpair->first)) {
 				if (m_type == NULL) {
 					m_type = strp;
 					elm.m_typ = MAPT_STRING;
@@ -368,24 +393,25 @@ void	BUSINFO::merge(STRINGP component, MAPDHASH *bp) {
 				} else if (m_type->compare(*strp) != 0) {
 					gbl_msg.error("Conflicting bus types "
 						"for %s\n",m_name->c_str());
+					gbl_msg.info("First bus type: %s\n", m_type->c_str());
+					gbl_msg.info("New   bus type: %s\n", strp->c_str());
 				}
 				continue;
-			} else if (KY_RESET.compare(kvpair->first)==0) {
+			} else if (0 == KY_RESET.compare(kvpair->first)) {
 				STRINGP	reset = getstring(m_hash, KY_RESET);
 				if (reset == NULL) {
-					m_type = strp;
 					elm.m_typ = MAPT_STRING;
 					elm.u.m_s = strp;
 					m_hash->insert(KEYVALUE(KY_RESET, elm));
 
 					REHASH;
 					kvpair = bp->begin();
-				} else if (m_type->compare(*strp) != 0) {
+				} else if (reset->compare(*strp) != 0) {
 					gbl_msg.error("Conflicting bus resets "
 						"for %s\n",m_name->c_str());
 				}
 				continue;
-			} else if ((KY_CLOCK.compare(kvpair->first)==0)
+			} else if ((0 == KY_CLOCK.compare(kvpair->first))
 					&&(NULL == m_clock)) {
 				gbl_msg.info("BUSINFO::INIT(%s)."
 					"CLOCK(%s)\n", component->c_str(),
@@ -437,6 +463,24 @@ STRINGP	BUSINFO::slave_portlist(PERIPHP p) {
 	if (!generator())
 		return NULL;
 	return generator()->slave_portlist(p);
+}
+
+STRINGP	BUSINFO::slave_iansi(PERIPHP p) {
+	if (!generator())
+		return NULL;
+	return generator()->oansi(NULL);
+}
+
+STRINGP	BUSINFO::slave_oansi(PERIPHP p) {
+	if (!generator())
+		return NULL;
+	return generator()->iansi(NULL);
+}
+
+STRINGP	BUSINFO::slave_ansprefix(PERIPHP p) {
+	if (!generator())
+		return NULL;
+	return generator()->slave_ansprefix(p);
 }
 
 STRINGP	BUSINFO::slave_ansi_portlist(PERIPHP p) {

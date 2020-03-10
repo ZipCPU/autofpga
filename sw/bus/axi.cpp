@@ -423,6 +423,10 @@ BUSINFO *AXIBUS::create_dio(void) {
 }
 
 int	AXIBUS::id_width(void) {
+	int	value;
+
+	if (m_info && getvalue(m_info->m_hash, KY_IDWIDTH, value))
+		return m_id_width = value;
 	return m_id_width;
 }
 
@@ -437,7 +441,7 @@ void	AXIBUS::writeout_defn_v(FILE *fp, const char *pname,
 		n->c_str(), btyp, pname, busp);
 	fprintf(fp, "\twire\t\t%s_awvalid;\n", busp);
 	fprintf(fp, "\twire\t\t%s_awready;\n", busp);
-	fprintf(fp, "\twire\t[%d:0]\t%s_awid;\n",   iw, busp);
+	fprintf(fp, "\twire\t[%d:0]\t%s_awid;\n",   iw-1, busp);
 	fprintf(fp, "\twire\t[%d:0]\t%s_awaddr;\n", aw-1, busp);
 	fprintf(fp, "\twire\t[7:0]\t%s_awlen;\n", busp);
 	fprintf(fp, "\twire\t[2:0]\t%s_awsize;\n", busp);
@@ -482,8 +486,57 @@ void	AXIBUS::writeout_defn_v(FILE *fp, const char *pname,
 }
 
 // Inherited from AXI-lite
-// void	AXIBUS::writeout_bus_slave_defns_v(FILE *fp)
-// void	AXIBUS::writeout_bus_master_defns_v(FILE *fp)
+void	AXIBUS::writeout_bus_slave_defns_v(FILE *fp) {
+	PLIST	*p = m_info->m_plist;
+	STRINGP	n = name();
+
+	if (m_slist) {
+		for(PLIST::iterator pp=m_slist->begin();
+				pp != m_slist->end(); pp++) {
+			writeout_defn_v(fp, (*pp)->p_name->c_str(),
+				(*pp)->bus_prefix()->c_str(), "(SIO)");
+		}
+	} else if (!m_is_single)
+		fprintf(fp, "\n\t// Bus %s has no SINGLE slaves\n\t//\n", n->c_str());
+	else
+		fprintf(fp, "\n\t// Bus %s is all SINGLE slaves\n\t//\n", n->c_str());
+
+	if (m_dlist) {
+		for(PLIST::iterator pp=m_dlist->begin();
+				pp != m_dlist->end(); pp++) {
+			writeout_defn_v(fp, (*pp)->p_name->c_str(),
+				(*pp)->bus_prefix()->c_str(), "(DIO)");
+		}
+	} else if (!m_is_double)
+		fprintf(fp, "\n\t// Bus %s has no DOUBLE slaves\n\t//\n", n->c_str());
+	else
+		fprintf(fp, "\n\t// Bus %s is all DOUBLE slaves\n\t//\n", n->c_str());
+
+
+	if (p) {
+		for(PLIST::iterator pp=p->begin(); pp != p->end(); pp++) {
+			writeout_defn_v(fp, (*pp)->p_name->c_str(),
+				(*pp)->bus_prefix()->c_str());
+		}
+	} else {
+		gbl_msg.error("%s has no slaves\n", n->c_str());
+	}
+}
+
+void	AXIBUS::writeout_bus_master_defns_v(FILE *fp) {
+	MLIST	*m = m_info->m_mlist;
+	STRINGP	n = name();
+
+	if (m) {
+		for(MLIST::iterator pp=m->begin(); pp != m->end(); pp++) {
+			writeout_defn_v(fp, (*pp)->name()->c_str(),
+			(*pp)->bus_prefix()->c_str());
+		}
+	} else {
+		gbl_msg.error("Bus %s has no masters\n", n->c_str());
+	}
+}
+
 // void	AXIBUS::write_addr_range(FILE *fp, const PERIPHP p, const int dalines)
 // void	AXIBUS::writeout_no_slave_v(FILE *fp, STRINGP prefix)
 // void	AXIBUS::writeout_no_master_v(FILE *fp)
@@ -700,7 +753,7 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 		fprintf(fp,
 			"\t\t.S_AXI_ACLK(%s),\n"
 			"\t\t.S_AXI_ARESETN(%s%s),\n",
-				c->m_name->c_str(),
+				c->m_wire->c_str(),
 				(*(rst->begin()) == '!') ? "":"!",
 				rst->c_str() + ((*(rst->begin())=='!') ? 1:0));
 
@@ -758,7 +811,7 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 			np, np, np, np, np, np, np, np, np, np, np,
 			np, np, np, np, np, np);
 
-		xbarcon_slave(fp, m_slist, "\t\t",".M_AXI_","AWVALID");fprintf(fp,",\n");
+		xbarcon_slave(fp, m_slist, "\t\t",".M_AXI_","AWVALID");
 		fprintf(fp,
 			"\t\t.M_AXI_AWPROT(%s_siow_awprot),\n"
 			"\t\t.M_AXI_WDATA( %s_siow_wdata),\n"
@@ -766,13 +819,13 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 			n->c_str(), n->c_str(), n->c_str());
 		fprintf(fp, "\t\t//\n");
 		fprintf(fp, "\t\t//\n");
-		xbarcon_slave(fp, m_slist, "\t\t",".M_AXI_","BRESP"); fprintf(fp, ",\n");
+		xbarcon_slave(fp, m_slist, "\t\t",".M_AXI_","BRESP");
 		fprintf(fp, "\t\t// Read connections\n");
-		xbarcon_slave(fp, m_slist, "\t\t",".M_AXI_","ARVALID"); fprintf(fp, ",\n");
+		xbarcon_slave(fp, m_slist, "\t\t",".M_AXI_","ARVALID");
 		fprintf(fp,
 			"\t\t.M_AXI_AWPROT(%s_siow_arprot),\n"
 			"\t\t//\n", n->c_str());
-		xbarcon_slave(fp, m_slist, "\t\t",".M_AXI_","RDATA"); fprintf(fp, ",\n");
+		xbarcon_slave(fp, m_slist, "\t\t",".M_AXI_","RDATA");
 		xbarcon_slave(fp, m_slist, "\t\t",".M_AXI_","RRESP");
 		fprintf(fp, "\t\t);\n\n");
 		fprintf(fp,"\t//\n\t// Now connecting the extra slaves wires "
@@ -825,7 +878,7 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 		fprintf(fp,
 			"\t\t.S_AXI_ACLK(%s),\n"
 			"\t\t.S_AXI_ARESETN(%s%s),\n",
-				c->m_name->c_str(),
+				c->m_wire->c_str(),
 				(*(rst->begin()) == '!') ? "":"!",
 				rst->c_str() + ((*(rst->begin())=='!') ? 1:0));
 
@@ -883,7 +936,7 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 			np, np, np, np, np, np, np, np, np, np, np,
 			np, np, np, np, np, np);
 
-		xbarcon_slave(fp, pl, "\t\t",".M_AXI_","AWVALID");fprintf(fp,",\n");
+		xbarcon_slave(fp, pl, "\t\t",".M_AXI_","AWVALID");
 		fprintf(fp,
 			"\t\t.M_AXI_AWID(   %s_diow_awid),  // == 1\'b0\n"
 			"\t\t.M_AXI_AWADDR( %s_diow_awaddr),\n"
@@ -897,7 +950,7 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 			"\t\t.M_AXI_AWQOS(  %s_diow_awqos),\n",
 			np, np, np, np, np,
 			np, np, np, np, np);
-		xbarcon_slave(fp, pl, "\t\t",".M_AXI_","WVALID");fprintf(fp,",\n");
+		xbarcon_slave(fp, pl, "\t\t",".M_AXI_","WVALID");
 		fprintf(fp,
 			"\t\t.M_AXI_WDATA(  %s_diow_wdata),\n"
 			"\t\t.M_AXI_WSTRB(  %s_diow_wstrb),\n"
@@ -907,9 +960,9 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 		fprintf(fp, "\t\t//\n");
 		fprintf(fp,
 			"\t\t.M_AXI_BREADY(  %s_diow_bready),\n", np);
-		xbarcon_slave(fp, pl, "\t\t",".M_AXI_","BRESP"); fprintf(fp, ",\n");
+		xbarcon_slave(fp, pl, "\t\t",".M_AXI_","BRESP");
 		fprintf(fp, "\t\t// Read connections\n");
-		xbarcon_slave(fp, pl, "\t\t",".M_AXI_","ARVALID"); fprintf(fp, ",\n");
+		xbarcon_slave(fp, pl, "\t\t",".M_AXI_","ARVALID");
 		fprintf(fp,
 			"\t\t.M_AXI_ARID(   %s_diow_arid),  // == 1\'b0\n"
 			"\t\t.M_AXI_ARADDR( %s_diow_araddr),\n"
@@ -928,7 +981,7 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 		// Read returns
 		fprintf(fp,
 			"\t\t.M_AXI_RREADY(  %s_diow_rready),\n", np);
-		xbarcon_slave(fp, pl, "\t\t",".M_AXI_","RDATA"); fprintf(fp, ",\n");
+		xbarcon_slave(fp, pl, "\t\t",".M_AXI_","RDATA");
 		xbarcon_slave(fp, pl, "\t\t",".M_AXI_","RRESP");
 		fprintf(fp, "\t\t);\n\n");
 		fprintf(fp,"\t//\n\t// Now connecting the extra slaves wires "
@@ -986,7 +1039,7 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 	//
 	fprintf(fp,
 	"\t//\n"
-	"\t// Connect the %s bus components together using the axilxbar()\n"
+	"\t// Connect the %s bus components together using the axixbar()\n"
 	"\t//\n"
 	"\t//\n", n->c_str());
 
@@ -994,11 +1047,12 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 	"\taxixbar #(\n"
 	"\t\t.C_AXI_ADDR_WIDTH(%d),\n"
 	"\t\t.C_AXI_DATA_WIDTH(%d),\n"
-	"\t\t.NM(%ld),.NS(%ld),\n",
+	"\t\t.NM(%ld), .NS(%ld),\n",
 		address_width(),
 		m_info->data_width(),
 		m_mlist->size(),
 		m_info->m_plist->size());
+	/*
 	fprintf(fp,
 	"\t\t.READ_ACCESS(%ld\'b", m_info->m_plist->size());
 	for(unsigned k=0; k<m_info->m_plist->size(); k++) {
@@ -1017,6 +1071,7 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 		else
 			putc('1', fp);
 	} fprintf(fp, "),\n");
+	*/
 
 	slave_addr(fp, m_info->m_plist); fprintf(fp, ",\n");
 	slave_mask(fp, m_info->m_plist);
@@ -1026,106 +1081,102 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 	xbar_option(fp, KY_OPT_LGMAXBURST,",\n\t\t.LGMAXBURST(%)");
 	//
 	fprintf(fp,
-	"\t) %s_xbar(\n"
-		"\t\t.S_AXI_ACLK(%s)\n",
-		n->c_str(), m_info->m_clock->m_name->c_str());
+	"\n\t) %s_xbar(\n"
+		"\t\t.S_AXI_ACLK(%s),\n",
+		n->c_str(), m_info->m_clock->m_wire->c_str());
 	fprintf(fp, "\t\t.S_AXI_ARESETN(%s%s),\n",
 		(*(rst->begin()) == '!') ? "":"!",
 		rst->c_str() + ((*(rst->begin())=='!') ? 1:0));
 
 	fprintf(fp, "\t\t//\n");
-	xbarcon_master(fp, "\t\t",".S_AXI_","AWVALID"); fprintf(fp, ",\n");
-	xbarcon_master(fp, "\t\t",".S_AXI_","AWREADY"); fprintf(fp, ",\n");
-	xbarcon_master(fp, "\t\t",".S_AXI_","AWID");    fprintf(fp, ",\n");
-	xbarcon_master(fp, "\t\t",".S_AXI_","AWADDR");  fprintf(fp, ",\n");
-	xbarcon_master(fp, "\t\t",".S_AXI_","AWLEN");   fprintf(fp, ",\n");
-	xbarcon_master(fp, "\t\t",".S_AXI_","AWSIZE");  fprintf(fp, ",\n");
-	xbarcon_master(fp, "\t\t",".S_AXI_","AWBURST"); fprintf(fp, ",\n");
-	xbarcon_master(fp, "\t\t",".S_AXI_","AWLOCK");  fprintf(fp, ",\n");
-	xbarcon_master(fp, "\t\t",".S_AXI_","AWCACHE"); fprintf(fp, ",\n");
-	xbarcon_master(fp, "\t\t",".S_AXI_","AWPROT");  fprintf(fp, ",\n");
-	xbarcon_master(fp, "\t\t",".S_AXI_","AWQOS");   fprintf(fp, ",\n");
+	xbarcon_master(fp, "\t\t",".S_AXI_","AWVALID");
+	xbarcon_master(fp, "\t\t",".S_AXI_","AWREADY");
+	xbarcon_master(fp, "\t\t",".S_AXI_","AWID");
+	xbarcon_master(fp, "\t\t",".S_AXI_","AWADDR");
+	xbarcon_master(fp, "\t\t",".S_AXI_","AWLEN");
+	xbarcon_master(fp, "\t\t",".S_AXI_","AWSIZE");
+	xbarcon_master(fp, "\t\t",".S_AXI_","AWBURST");
+	xbarcon_master(fp, "\t\t",".S_AXI_","AWLOCK");
+	xbarcon_master(fp, "\t\t",".S_AXI_","AWCACHE");
+	xbarcon_master(fp, "\t\t",".S_AXI_","AWPROT");
+	xbarcon_master(fp, "\t\t",".S_AXI_","AWQOS");
 	fprintf(fp, "\t\t//\n");
-	xbarcon_master(fp, "\t\t",".S_AXI_","WVALID"); fprintf(fp, ",\n");
-	xbarcon_master(fp, "\t\t",".S_AXI_","WREADY"); fprintf(fp, ",\n");
-	xbarcon_master(fp, "\t\t",".S_AXI_","WDATA");  fprintf(fp, ",\n");
-	xbarcon_master(fp, "\t\t",".S_AXI_","WSTRB");  fprintf(fp, ",\n");
-	xbarcon_master(fp, "\t\t",".S_AXI_","WLAST");  fprintf(fp, ",\n");
+	xbarcon_master(fp, "\t\t",".S_AXI_","WVALID");
+	xbarcon_master(fp, "\t\t",".S_AXI_","WREADY");
+	xbarcon_master(fp, "\t\t",".S_AXI_","WDATA");
+	xbarcon_master(fp, "\t\t",".S_AXI_","WSTRB");
+	xbarcon_master(fp, "\t\t",".S_AXI_","WLAST");
 	fprintf(fp, "\t\t//\n");
-	xbarcon_master(fp, "\t\t",".S_AXI_","BVALID"); fprintf(fp, ",\n");
-	xbarcon_master(fp, "\t\t",".S_AXI_","BREADY"); fprintf(fp, ",\n");
-	xbarcon_master(fp, "\t\t",".S_AXI_","BID");    fprintf(fp, ",\n");
-	xbarcon_master(fp, "\t\t",".S_AXI_","BRESP");  fprintf(fp, ",\n");
+	xbarcon_master(fp, "\t\t",".S_AXI_","BVALID");
+	xbarcon_master(fp, "\t\t",".S_AXI_","BREADY");
+	xbarcon_master(fp, "\t\t",".S_AXI_","BID");
+	xbarcon_master(fp, "\t\t",".S_AXI_","BRESP");
 
 	fprintf(fp, "\t\t//\n");
 	fprintf(fp, "\t\t// Read connections\n");
-	xbarcon_master(fp, "\t\t",".S_AXI_","ARVALID"); fprintf(fp, ",\n");
-	xbarcon_master(fp, "\t\t",".S_AXI_","ARREADY"); fprintf(fp, ",\n");
-	xbarcon_master(fp, "\t\t",".S_AXI_","ARID");    fprintf(fp, ",\n");
-	xbarcon_master(fp, "\t\t",".S_AXI_","ARADDR");  fprintf(fp, ",\n");
-	xbarcon_master(fp, "\t\t",".S_AXI_","ARLEN");   fprintf(fp, ",\n");
-	xbarcon_master(fp, "\t\t",".S_AXI_","ARSIZE");  fprintf(fp, ",\n");
-	xbarcon_master(fp, "\t\t",".S_AXI_","ARBURST"); fprintf(fp, ",\n");
-	xbarcon_master(fp, "\t\t",".S_AXI_","ARLOCK");  fprintf(fp, ",\n");
-	xbarcon_master(fp, "\t\t",".S_AXI_","ARCACHE"); fprintf(fp, ",\n");
-	xbarcon_master(fp, "\t\t",".S_AXI_","ARPROT");  fprintf(fp, ",\n");
-	xbarcon_master(fp, "\t\t",".S_AXI_","ARQOS");   fprintf(fp, ",\n");
+	xbarcon_master(fp, "\t\t",".S_AXI_","ARVALID");
+	xbarcon_master(fp, "\t\t",".S_AXI_","ARREADY");
+	xbarcon_master(fp, "\t\t",".S_AXI_","ARID");
+	xbarcon_master(fp, "\t\t",".S_AXI_","ARADDR");
+	xbarcon_master(fp, "\t\t",".S_AXI_","ARLEN");
+	xbarcon_master(fp, "\t\t",".S_AXI_","ARSIZE");
+	xbarcon_master(fp, "\t\t",".S_AXI_","ARBURST");
+	xbarcon_master(fp, "\t\t",".S_AXI_","ARLOCK");
+	xbarcon_master(fp, "\t\t",".S_AXI_","ARCACHE");
+	xbarcon_master(fp, "\t\t",".S_AXI_","ARPROT");
+	xbarcon_master(fp, "\t\t",".S_AXI_","ARQOS");
 	fprintf(fp, "\t\t//\n");
-	xbarcon_master(fp, "\t\t",".S_AXI_","RVALID"); fprintf(fp, ",\n");
-	xbarcon_master(fp, "\t\t",".S_AXI_","RREADY"); fprintf(fp, ",\n");
-	xbarcon_master(fp, "\t\t",".S_AXI_","RID");    fprintf(fp, ",\n");
-	xbarcon_master(fp, "\t\t",".S_AXI_","RDATA");  fprintf(fp, ",\n");
-	xbarcon_master(fp, "\t\t",".S_AXI_","RLAST");  fprintf(fp, ",\n");
-	xbarcon_master(fp, "\t\t",".S_AXI_","RRESP");  fprintf(fp, ",\n");
+	xbarcon_master(fp, "\t\t",".S_AXI_","RVALID");
+	xbarcon_master(fp, "\t\t",".S_AXI_","RREADY");
+	xbarcon_master(fp, "\t\t",".S_AXI_","RID");
+	xbarcon_master(fp, "\t\t",".S_AXI_","RDATA");
+	xbarcon_master(fp, "\t\t",".S_AXI_","RLAST");
+	xbarcon_master(fp, "\t\t",".S_AXI_","RRESP");
 	fprintf(fp, "\t\t//\n");
 	fprintf(fp, "\t\t// Connections to slaves\n");
 	fprintf(fp, "\t\t//\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","AWVALID"); fprintf(fp, ",\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","AWREADY"); fprintf(fp, ",\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","AWID");    fprintf(fp, ",\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","AWADDR");  fprintf(fp, ",\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","AWLEN");   fprintf(fp, ",\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","AWSIZE");  fprintf(fp, ",\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","AWBURST"); fprintf(fp, ",\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","AWLOCK");  fprintf(fp, ",\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","AWCACHE"); fprintf(fp, ",\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","AWPROT");  fprintf(fp, ",\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","AWQOS");   fprintf(fp, ",\n");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","AWVALID");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","AWREADY");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","AWID");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","AWADDR");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","AWLEN");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","AWSIZE");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","AWBURST");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","AWLOCK");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","AWCACHE");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","AWPROT");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","AWQOS");
 	fprintf(fp, "\t\t//\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","WVALID"); fprintf(fp, ",\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","WREADY"); fprintf(fp, ",\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","WDATA");  fprintf(fp, ",\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","WSTRB");  fprintf(fp, ",\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","WLAST");  fprintf(fp, ",\n");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","WVALID");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","WREADY");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","WDATA");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","WSTRB");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","WLAST");
 	fprintf(fp, "\t\t//\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","BVALID"); fprintf(fp, ",\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","BREADY"); fprintf(fp, ",\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","BID");    fprintf(fp, ",\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","BRESP");  fprintf(fp, ",\n");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","BVALID");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","BREADY");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","BID");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","BRESP");
 	fprintf(fp, "\t\t//\n");
 	fprintf(fp, "\t\t// Read connections\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","ARVALID"); fprintf(fp, ",\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","ARREADY"); fprintf(fp, ",\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","ARID");    fprintf(fp, ",\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","ARADDR");  fprintf(fp, ",\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","ARLEN");   fprintf(fp, ",\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","ARSIZE");  fprintf(fp, ",\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","ARBURST"); fprintf(fp, ",\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","ARLOCK");  fprintf(fp, ",\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","ARCACHE"); fprintf(fp, ",\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","ARPROT");  fprintf(fp, ",\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","ARQOS");   fprintf(fp, ",\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","ARVALID"); fprintf(fp, ",\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","ARREADY"); fprintf(fp, ",\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","ARPROT"); fprintf(fp, ",\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","ARADDR"); fprintf(fp, ",\n");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","ARVALID");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","ARREADY");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","ARID");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","ARADDR");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","ARLEN");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","ARSIZE");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","ARBURST");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","ARLOCK");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","ARCACHE");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","ARPROT");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","ARQOS");
 	fprintf(fp, "\t\t//\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","RVALID"); fprintf(fp, ",\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","RREADY"); fprintf(fp, ",\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","RID");    fprintf(fp, ",\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","RDATA");  fprintf(fp, ",\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","RLAST");  fprintf(fp, ",\n");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","RRESP");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","RVALID");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","RREADY");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","RID");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","RDATA");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","RLAST");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","RRESP", false);
 	fprintf(fp, "\t\t);\n\n");
 
 	for(unsigned k=0; k<m_info->m_plist->size(); k++) {
@@ -1156,7 +1207,7 @@ STRINGP	AXIBUS::master_portlist(BMASTERP m) {
 	"\t\t@$(MASTER.PREFIX)_awvalid,\n"
 	"\t\t@$(MASTER.PREFIX)_awready,\n"
 	"\t\t@$(MASTER.PREFIX)_awid,\n"
-	"\t\t@$(MASTER.PREFIX)_awaddr,\n"
+	"\t\t@$(MASTER.PREFIX)_awaddr[@$(MASTER.BUS.AWID)-1:0],\n"
 	"\t\t@$(MASTER.PREFIX)_awlen,\n"
 	"\t\t@$(MASTER.PREFIX)_awsize,\n"
 	"\t\t@$(MASTER.PREFIX)_awburst,\n"
@@ -1182,7 +1233,7 @@ STRINGP	AXIBUS::master_portlist(BMASTERP m) {
 	"\t\t@$(MASTER.PREFIX)_arvalid,\n"
 	"\t\t@$(MASTER.PREFIX)_arready,\n"
 	"\t\t@$(MASTER.PREFIX)_arid,\n"
-	"\t\t@$(MASTER.PREFIX)_araddr,\n"
+	"\t\t@$(MASTER.PREFIX)_araddr[@$(MASTER.BUS.AWID)-1:0],\n"
 	"\t\t@$(MASTER.PREFIX)_arlen,\n"
 	"\t\t@$(MASTER.PREFIX)_arsize,\n"
 	"\t\t@$(MASTER.PREFIX)_arburst,\n"
@@ -1201,6 +1252,18 @@ STRINGP	AXIBUS::master_portlist(BMASTERP m) {
 	return new STRING(str);
 }
 
+STRINGP	AXIBUS::iansi(BMASTERP m) {
+	return new STRING("");
+}
+
+STRINGP	AXIBUS::oansi(BMASTERP m) {
+	return new STRING("");
+}
+
+STRINGP	AXIBUS::master_ansprefix(BMASTERP m) {
+	return new STRING("M_AXI_");
+}
+
 STRINGP	AXIBUS::master_ansi_portlist(BMASTERP m) {
 	STRING	str;
 
@@ -1210,7 +1273,7 @@ STRINGP	AXIBUS::master_ansi_portlist(BMASTERP m) {
 	"\t\t.@$(MASTER.IANSI)@$(MASTER.ANSPREFIX)AWVALID(@$(MASTER.PREFIX)_awvalid),\n"
 	"\t\t.@$(MASTER.OANSI)@$(MASTER.ANSPREFIX)AWREADY(@$(MASTER.PREFIX)_awready),\n"
 	"\t\t.@$(MASTER.IANSI)@$(MASTER.ANSPREFIX)AWID(   @$(MASTER.PREFIX)_awid),\n"
-	"\t\t.@$(MASTER.IANSI)@$(MASTER.ANSPREFIX)AWADDR( @$(MASTER.PREFIX)_awaddr),\n"
+	"\t\t.@$(MASTER.IANSI)@$(MASTER.ANSPREFIX)AWADDR( @$(MASTER.PREFIX)_awaddr[@$(MASTER.BUS.AWID)-1:0]),\n"
 	"\t\t.@$(MASTER.IANSI)@$(MASTER.ANSPREFIX)AWLEN(  @$(MASTER.PREFIX)_awlen),\n"
 	"\t\t.@$(MASTER.IANSI)@$(MASTER.ANSPREFIX)AWSIZE( @$(MASTER.PREFIX)_awsize),\n"
 	"\t\t.@$(MASTER.IANSI)@$(MASTER.ANSPREFIX)AWBURST(@$(MASTER.PREFIX)_awburst),\n"
@@ -1228,15 +1291,15 @@ STRINGP	AXIBUS::master_ansi_portlist(BMASTERP m) {
 	"\t\t.@$(MASTER.OANSI)@$(MASTER.ANSPREFIX)BVALID(@$(MASTER.PREFIX)_bvalid),\n"
 	"\t\t.@$(MASTER.IANSI)@$(MASTER.ANSPREFIX)BREADY(@$(MASTER.PREFIX)_bready),\n"
 	"\t\t.@$(MASTER.IANSI)@$(MASTER.ANSPREFIX)BID(   @$(MASTER.PREFIX)_bid),\n"
-	"\t\t.@$(MASTER.OANSI)@$(MASTER.ANSPREFIX)BRESP( @$(MASTER.PREFIX)_bresp),\n");
+	"\t\t.@$(MASTER.OANSI)@$(MASTER.ANSPREFIX)BRESP( @$(MASTER.PREFIX)_bresp)");
 	if (!m->read_only() && !m->write_only())
-		str = str + STRING("\t\t// Read connections\n");
+		str = str + STRING(",\n\t\t// Read connections\n");
 	if (!m->write_only())
 		str = str + STRING(
 	"\t\t.@$(MASTER.IANSI)@$(MASTER.ANSPREFIX)ARVALID(@$(MASTER.PREFIX)_arvalid),\n"
 	"\t\t.@$(MASTER.OANSI)@$(MASTER.ANSPREFIX)ARREADY(@$(MASTER.PREFIX)_arready),\n"
 	"\t\t.@$(MASTER.IANSI)@$(MASTER.ANSPREFIX)ARID(   @$(MASTER.PREFIX)_arid),\n"
-	"\t\t.@$(MASTER.IANSI)@$(MASTER.ANSPREFIX)ARADDR( @$(MASTER.PREFIX)_araddr),\n"
+	"\t\t.@$(MASTER.IANSI)@$(MASTER.ANSPREFIX)ARADDR( @$(MASTER.PREFIX)_araddr[@$(MASTER.BUS.AWID)-1:0]),\n"
 	"\t\t.@$(MASTER.IANSI)@$(MASTER.ANSPREFIX)ARLEN(  @$(MASTER.PREFIX)_arlen),\n"
 	"\t\t.@$(MASTER.IANSI)@$(MASTER.ANSPREFIX)ARSIZE( @$(MASTER.PREFIX)_arsize),\n"
 	"\t\t.@$(MASTER.IANSI)@$(MASTER.ANSPREFIX)ARBURST(@$(MASTER.PREFIX)_arburst),\n"
@@ -1255,6 +1318,11 @@ STRINGP	AXIBUS::master_ansi_portlist(BMASTERP m) {
 	return new STRING(str);
 }
 
+STRINGP	AXIBUS::slave_ansprefix(PERIPHP p) {
+	return new STRING("S_AXI_");
+}
+
+
 STRINGP	AXIBUS::slave_portlist(PERIPHP p) {
 	STRING	str;
 
@@ -1264,7 +1332,9 @@ STRINGP	AXIBUS::slave_portlist(PERIPHP p) {
 	"\t\t@$(SLAVE.PREFIX)_awvalid,\n"
 	"\t\t@$(SLAVE.PREFIX)_awready,\n"
 	"\t\t@$(SLAVE.PREFIX)_awid,\n"
-	"\t\t@$(SLAVE.PREFIX)_awaddr,\n"
+	"\t\t@$(SLAVE.PREFIX)_awaddr[")
+		+ std::to_string(p->get_slave_address_width())
+		+ STRING("-1:0],\n"
 	"\t\t@$(SLAVE.PREFIX)_awlen,\n"
 	"\t\t@$(SLAVE.PREFIX)_awsize,\n"
 	"\t\t@$(SLAVE.PREFIX)_awburst,\n"
@@ -1290,7 +1360,9 @@ STRINGP	AXIBUS::slave_portlist(PERIPHP p) {
 	"\t\t@$(SLAVE.PREFIX)_arvalid,\n"
 	"\t\t@$(SLAVE.PREFIX)_arready,\n"
 	"\t\t@$(SLAVE.PREFIX)_arid,\n"
-	"\t\t@$(SLAVE.PREFIX)_araddr,\n"
+	"\t\t@$(SLAVE.PREFIX)_araddr[")
+		+ std::to_string(p->get_slave_address_width())
+		+ STRING("-1:0],\n"
 	"\t\t@$(SLAVE.PREFIX)_arlen,\n"
 	"\t\t@$(SLAVE.PREFIX)_arsize,\n"
 	"\t\t@$(SLAVE.PREFIX)_arburst,\n"
@@ -1318,7 +1390,9 @@ STRINGP	AXIBUS::slave_ansi_portlist(PERIPHP p) {
 	"\t\t.@$(SLAVE.IANSI)@$(SLAVE.ANSPREFIX)AWVALID(@$(SLAVE.PREFIX)_awvalid),\n"
 	"\t\t.@$(SLAVE.OANSI)@$(SLAVE.ANSPREFIX)AWREADY(@$(SLAVE.PREFIX)_awready),\n"
 	"\t\t.@$(SLAVE.IANSI)@$(SLAVE.ANSPREFIX)AWID(   @$(SLAVE.PREFIX)_awid),\n"
-	"\t\t.@$(SLAVE.IANSI)@$(SLAVE.ANSPREFIX)AWADDR( @$(SLAVE.PREFIX)_awaddr),\n"
+	"\t\t.@$(SLAVE.IANSI)@$(SLAVE.ANSPREFIX)AWADDR( @$(SLAVE.PREFIX)_awaddr[")
+		+ std::to_string(p->get_slave_address_width())
+		+ STRING("-1:0]),\n"
 	"\t\t.@$(SLAVE.IANSI)@$(SLAVE.ANSPREFIX)AWLEN(  @$(SLAVE.PREFIX)_awlen),\n"
 	"\t\t.@$(SLAVE.IANSI)@$(SLAVE.ANSPREFIX)AWSIZE( @$(SLAVE.PREFIX)_awsize),\n"
 	"\t\t.@$(SLAVE.IANSI)@$(SLAVE.ANSPREFIX)AWBURST(@$(SLAVE.PREFIX)_awburst),\n"
@@ -1344,7 +1418,9 @@ STRINGP	AXIBUS::slave_ansi_portlist(PERIPHP p) {
 	"\t\t.@$(SLAVE.IANSI)@$(SLAVE.ANSPREFIX)ARVALID(@$(SLAVE.PREFIX)_arvalid),\n"
 	"\t\t.@$(SLAVE.OANSI)@$(SLAVE.ANSPREFIX)ARREADY(@$(SLAVE.PREFIX)_arready),\n"
 	"\t\t.@$(SLAVE.IANSI)@$(SLAVE.ANSPREFIX)ARID(   @$(SLAVE.PREFIX)_arid),\n"
-	"\t\t.@$(SLAVE.IANSI)@$(SLAVE.ANSPREFIX)ARADDR( @$(SLAVE.PREFIX)_araddr),\n"
+	"\t\t.@$(SLAVE.IANSI)@$(SLAVE.ANSPREFIX)ARADDR( @$(SLAVE.PREFIX)_araddr[")
+		+ std::to_string(p->get_slave_address_width())
+		+ STRING("-1:0]),\n"
 	"\t\t.@$(SLAVE.IANSI)@$(SLAVE.ANSPREFIX)ARLEN(  @$(SLAVE.PREFIX)_arlen),\n"
 	"\t\t.@$(SLAVE.IANSI)@$(SLAVE.ANSPREFIX)ARSIZE( @$(SLAVE.PREFIX)_arsize),\n"
 	"\t\t.@$(SLAVE.IANSI)@$(SLAVE.ANSPREFIX)ARBURST(@$(SLAVE.PREFIX)_arburst),\n"
