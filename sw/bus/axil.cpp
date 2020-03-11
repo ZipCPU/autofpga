@@ -842,7 +842,7 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 		else
 			pl = m_info->m_plist;
 		STRING	s = STRING(*(*m_mlist)[0]->bus_prefix());
-		int	aw = nextlg(pl->size())+nextlg(m_info->data_width())-3;
+		int	aw = address_width();
 
 		fprintf(fp,
 			"\t//\n"
