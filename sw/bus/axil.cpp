@@ -656,7 +656,7 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 		}
 
 		return;
-	} else if ((m_info->m_plist->size() == 1)&&(m_mlist->size() == 1)) {
+	} else if ((m_info->m_plist->size() == 1)&&(m_mlist && m_mlist->size() == 1)) {
 		// Only one master connected to only one slave--skip all the
 		// extra connection logic.
 		//
@@ -731,7 +731,7 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 		assert(1 == m_info->m_mlist->size());
 
 		PLIST	*slist = m_info->m_plist;
-		// STRING	s = (*n) + "_sio";
+		const char *np = n->c_str();
 		STRING	s = STRING(*(*m_mlist)[0]->bus_prefix());
 		int	aw = nextlg(slist->size())+nextlg(m_info->data_width())-3;
 
@@ -748,19 +748,16 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 
 		fprintf(fp,
 		"\taxilsingle #(\n"
-			// "\t\t.C_AXI_ADDR_WIDTH(%d),\n"
+			"\t\t// .C_AXI_ADDR_WIDTH(%d), // must be only one word address\n"
 			"\t\t.C_AXI_DATA_WIDTH(%d),\n"
 			"\t\t.NS(%ld)\n"
 		"\t) %s_axilsingle(\n",
-			// address_width(),
-			m_info->data_width(),
-			slist->size(), n->c_str());
+			aw, m_info->data_width(),
+			slist->size(), np);
 		fprintf(fp,
 			"\t\t.S_AXI_ACLK(%s),\n"
-			"\t\t.S_AXI_ARESETN(%s%s),\n",
-				c->m_wire->c_str(),
-				(*(rst->begin()) == '!') ? "":"!",
-				rst->c_str() + ((*(rst->begin())=='!') ? 1:0));
+			"\t\t.S_AXI_ARESETN(%s),\n",
+				c->m_wire->c_str(), rst->c_str());
 
 		fprintf(fp, "\t\t//\n");
 		fprintf(fp,
@@ -835,30 +832,40 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 		}
 
 		return;
-	} else
+	} else if (!m_slist)
 		fprintf(fp, "\t//\n\t// No class SINGLE peripherals on the \"%s\" bus\n\t//\n\n", n->c_str());
 
 	// Then the dlist
 	if (m_is_double) {
-		pl = m_dlist;
-		STRING	s = (*n) + "_dio";
+		if (m_dlist)
+			pl = m_dlist;
+		else
+			pl = m_info->m_plist;
+		STRING	s = STRING(*(*m_mlist)[0]->bus_prefix());
+		int	aw = nextlg(pl->size())+nextlg(m_info->data_width())-3;
 
 		fprintf(fp,
 			"\t//\n"
 			"\t// %s Bus logic to handle %ld DOUBLE slaves\n"
 			"\t//\n"
-			"\t//\n", n->c_str(), m_dlist->size());
+			"\t//\n", n->c_str(), pl->size());
 
 		fprintf(fp,
 			"\t// Some extra wires to capture combined values--values\n"
 			"\t// that will be the same across all slaves of the\n"
 			"\t// class\n"
+			"\twire [%d:0]\t%s_diow_awaddr;\n"
 			"\twire [2:0]\t%s_diow_awprot;\n"
 			"\twire [%d:0]\t%s_diow_wdata;\n"
 			"\twire [%d:0]\t%s_diow_wstrb;\n"
+			"\twire [%d:0]\t%s_diow_araddr;\n"
 			"\twire [2:0]\t%s_diow_arprot;\n\n",
-			n->c_str(), m_info->data_width()-1, n->c_str(),
-			m_info->data_width()/8-1, n->c_str(), n->c_str());
+			address_width()-1, n->c_str(),
+			n->c_str(),
+			m_info->data_width()-1, n->c_str(),
+			m_info->data_width()/8-1, n->c_str(),
+			address_width()-1, n->c_str(),
+			n->c_str());
 
 		fprintf(fp,
 		"\taxildouble #(\n"
@@ -874,44 +881,43 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 			n->c_str());
 		fprintf(fp,
 			"\t\t.S_AXI_ACLK(%s),\n"
-			"\t\t.S_AXI_ARESETN(%s%s),\n",
-				c->m_name->c_str(),
-				(*(rst->begin()) == '!') ? "":"!",
-				rst->c_str() + ((*(rst->begin())=='!') ? 1:0));
+			"\t\t.S_AXI_ARESETN(%s),\n",
+				c->m_wire->c_str(), rst->c_str());
 
 		fprintf(fp, "\t\t//\n");
 		fprintf(fp,
-			"\t\t.S_AXI_AWVALID(%s_dio_awvalid),\n"
-			"\t\t.S_AXI_AWREADY(%s_dio_awready),\n"
-			"\t\t.S_AXI_AWPROT( %s_dio_awprot),\n"
-			"\t\t.S_AXI_AWADDR( %s_dio_awaddr),\n"
+			"\t\t.S_AXI_AWVALID(%s_awvalid),\n"
+			"\t\t.S_AXI_AWREADY(%s_awready),\n"
+			"\t\t.S_AXI_AWADDR( %s_awaddr[%d:0]),\n"
+			"\t\t.S_AXI_AWPROT( %s_awprot),\n"
 			"\t\t//\n"
-			"\t\t.S_AXI_WVALID( %s_dio_wvalid),\n"
-			"\t\t.S_AXI_WREADY( %s_dio_wready),\n"
-			"\t\t.S_AXI_WDATA(  %s_dio_wdata),\n"
-			"\t\t.S_AXI_WSTRB(  %s_dio_wstrb),\n"
+			"\t\t.S_AXI_WVALID( %s_wvalid),\n"
+			"\t\t.S_AXI_WREADY( %s_wready),\n"
+			"\t\t.S_AXI_WDATA(  %s_wdata),\n"
+			"\t\t.S_AXI_WSTRB(  %s_wstrb),\n"
 			"\t\t//\n"
-			"\t\t.S_AXI_BVALID( %s_dio_bvalid),\n"
-			"\t\t.S_AXI_BREADY( %s_dio_bready),\n"
-			"\t\t.S_AXI_BERSP(  %s_dio_bresp),\n"
+			"\t\t.S_AXI_BVALID( %s_bvalid),\n"
+			"\t\t.S_AXI_BREADY( %s_bready),\n"
+			"\t\t.S_AXI_BRESP(  %s_bresp),\n"
+			"\t\t//\n"
 			"\t\t// Read connections\n"
-			"\t\t.S_AXI_ARVALID(%s_dio_arvalid),\n"
-			"\t\t.S_AXI_ARREADY(%s_dio_arready),\n"
-			"\t\t.S_AXI_ARPROT( %s_dio_arprot),\n"
-			"\t\t.S_AXI_ARADDR( %s_dio_araddr),\n"
+			"\t\t.S_AXI_ARVALID(%s_arvalid),\n"
+			"\t\t.S_AXI_ARREADY(%s_arready),\n"
+			"\t\t.S_AXI_ARADDR( %s_araddr[%d:0]),\n"
+			"\t\t.S_AXI_ARPROT( %s_arprot),\n"
 			"\t\t//\n"
-			"\t\t.S_AXI_RVALID( %s_dio_rvalid),\n"
-			"\t\t.S_AXI_RREADY( %s_dio_rready),\n"
-			"\t\t.S_AXI_RDATA(  %s_dio_rdata),\n"
-			"\t\t.S_AXI_RRESP(  %s_dio_rresp),\n"
+			"\t\t.S_AXI_RVALID( %s_rvalid),\n"
+			"\t\t.S_AXI_RREADY( %s_rready),\n"
+			"\t\t.S_AXI_RDATA(  %s_rdata),\n"
+			"\t\t.S_AXI_RRESP(  %s_rresp),\n"
 			"\t\t//\n"
 			"\t\t// Connections to slaves\n"
 			"\t\t//\n",
-			n->c_str(), n->c_str(), n->c_str(), n->c_str(),
-			n->c_str(), n->c_str(), n->c_str(), n->c_str(),
-			n->c_str(), n->c_str(), n->c_str(),
-			n->c_str(), n->c_str(), n->c_str(), n->c_str(),
-			n->c_str(), n->c_str(), n->c_str(), n->c_str());
+			s.c_str(), s.c_str(), s.c_str(), aw-1, s.c_str(),
+			s.c_str(), s.c_str(), s.c_str(), s.c_str(),
+			s.c_str(), s.c_str(), s.c_str(),
+			s.c_str(), s.c_str(), s.c_str(), aw-1, s.c_str(),
+			s.c_str(), s.c_str(), s.c_str(), s.c_str());
 
 		xbarcon_slave(fp, pl, "\t\t",".M_AXI_","AWVALID");
 		fprintf(fp,
@@ -933,27 +939,28 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 		xbarcon_slave(fp, pl, "\t\t",".M_AXI_","RRESP", false);
 		fprintf(fp, "\t\t);\n\n");
 		fprintf(fp,"\t//\n\t// Now connecting the extra slaves wires "
-			"to the AXISINGLE controller\n\t//\n");
+			"to the AXILDOUBLE controller\n\t//\n");
 
 		for(int k=pl->size(); k>0; k--) {
 			PERIPHP p = (*pl)[k-1];
-			const char *pn = p->p_name->c_str();
+			const char *pn = p->p_name->c_str(),
+				*pfx = p->bus_prefix()->c_str();
 			int	aw = p->p_awid + unused_lsbs;
 
 			fprintf(fp, "\t// %s\n", pn);
-			fprintf(fp, "\tassign %s_awaddr = %s_diow_awaddr[%d-1:0];\n", pn, n->c_str(), aw);
-			fprintf(fp, "\tassign %s_awprot = %s_diow_awprot;\n", pn, n->c_str());
-			fprintf(fp, "\tassign %s_wvalid = %s_awvalid;\n", pn, pn);
-			fprintf(fp, "\tassign %s_wdata = %s_diow_wdata;\n", pn, n->c_str());
-			fprintf(fp, "\tassign %s_wstrb = %s_diow_wstrb;\n", pn, n->c_str());
-			fprintf(fp, "\tassign %s_bready = 1\'b1;\n", pn);
-			fprintf(fp, "\tassign %s_araddr = %s_diow_araddr[%d-1:0];\n", pn, n->c_str(), aw);
-			fprintf(fp, "\tassign %s_arprot = %s_diow_arprot;\n", pn, n->c_str());
-			fprintf(fp, "\tassign %s_rready = 1\'b1;\n", pn);
+			fprintf(fp, "\tassign %s_awaddr = %s_diow_awaddr[%d-1:0];\n", pfx, n->c_str(), aw);
+			fprintf(fp, "\tassign %s_awprot = %s_diow_awprot;\n", pfx, n->c_str());
+			fprintf(fp, "\tassign %s_wvalid = %s_awvalid;\n", pfx, pfx);
+			fprintf(fp, "\tassign %s_wdata = %s_diow_wdata;\n", pfx, n->c_str());
+			fprintf(fp, "\tassign %s_wstrb = %s_diow_wstrb;\n", pfx, n->c_str());
+			fprintf(fp, "\tassign %s_bready = 1\'b1;\n", pfx);
+			fprintf(fp, "\tassign %s_araddr = %s_diow_araddr[%d-1:0];\n", pfx, n->c_str(), aw);
+			fprintf(fp, "\tassign %s_arprot = %s_diow_arprot;\n", pfx, n->c_str());
+			fprintf(fp, "\tassign %s_rready = 1\'b1;\n", pfx);
 		}
 
 		return;
-	} else
+	} else if (!m_dlist)
 		fprintf(fp, "\t//\n\t// No class DOUBLE peripherals on the \"%s\" bus\n\t//\n\n", n->c_str());
 
 	//
@@ -978,79 +985,9 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 	//
 	// Now create the crossbar interconnect
 	//
-	if ((m_mlist->size() == 1)&&(m_info->m_plist->size() == 1)) {
-		STRINGP	src, dst;
-		STRINGP	busp = n;
-		BMASTER *m = (*m_info->m_mlist)[0];
+	// if ((m_mlist->size() == 1)&&(m_info->m_plist->size() == 1))
+	//	special case we dealt with above
 
-		fprintf(fp,
-	"\t//\n"
-	"\t// The %s bus has only one slave and one master connected to it.\n"
-	"\t// In this case, we can skip all the interconnect logic, and just\n"
-	"\t// connect the two ends together\n"
-	"\t//\n", n->c_str());
-		// Not a single nor a double bus, everything's normal, save
-		// only that there's only a single master and a single
-		// slave.  
-
-		src = m->bus_prefix();
-		dst = (*pl)[0]->bus_prefix();
-
-		fprintf(fp,
-		"\t// Connect %s write address channel\n"
-		"\tassign %s_awvalid = %s_awvalid;\n"
-		"\tassign %s_awready = %s_awready;\n"
-		"\tassign %s_awaddr  = %s_awaddr;\n"
-		"\tassign %s_awprot  = %s_awprot;\n"
-
-		"\t// Connect %s write data channel\n"
-		"\tassign %s_wvalid = %s_wvalid;\n"
-		"\tassign %s_wready = %s_wready;\n"
-		"\tassign %s_wdata  = %s_wdata;\n"
-		"\tassign %s_wstrb  = %s_wstrb;\n"
-
-		"\t// Connect %s write return channel\n"
-		"\tassign %s_bvalid = %s_bvalid;\n"
-		"\tassign %s_bready = %s_bready;\n"
-		"\tassign %s_bresp  = %s_bresp;\n"
-
-		"\t// Connect %s read address channel\n"
-		"\tassign %s_arvalid = %s_arvalid;\n"
-		"\tassign %s_arready = %s_arready;\n"
-		"\tassign %s_araddr  = %s_araddr;\n"
-		"\tassign %s_arprot  = %s_arprot;\n"
-
-		"\t// Connect %s read return channel\n"
-		"\tassign %s_rvalid = %s_rvalid;\n"
-		"\tassign %s_rready = %s_rready;\n"
-		"\tassign %s_rdata  = %s_rdata;\n"
-		"\tassign %s_rresp  = %s_rresp;\n",
-			busp->c_str(),
-			dst->c_str(), src->c_str(),
-			src->c_str(), dst->c_str(),
-			dst->c_str(), src->c_str(),
-			dst->c_str(), src->c_str(),
-			busp->c_str(),
-			dst->c_str(), src->c_str(),
-			src->c_str(), dst->c_str(),
-			dst->c_str(), src->c_str(),
-			dst->c_str(), src->c_str(),
-			busp->c_str(),
-			src->c_str(), dst->c_str(),
-			dst->c_str(), src->c_str(),
-			src->c_str(), dst->c_str(),
-			busp->c_str(),
-			dst->c_str(), src->c_str(),
-			src->c_str(), dst->c_str(),
-			dst->c_str(), src->c_str(),
-			dst->c_str(), src->c_str(),
-			busp->c_str(),
-			src->c_str(), dst->c_str(),
-			dst->c_str(), src->c_str(),
-			src->c_str(), dst->c_str(),
-			src->c_str(), dst->c_str());
-
-	} else {
 	fprintf(fp,
 	"\t//\n"
 	"\t// Connect the %s bus components together using the axilxbar()\n"
@@ -1077,9 +1014,7 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 	"\n\t) %s_xbar(\n"
 		"\t\t.S_AXI_ACLK(%s),\n",
 		n->c_str(), m_info->m_clock->m_name->c_str());
-	fprintf(fp, "\t\t.S_AXI_ARESETN(%s%s),\n",
-		(*(rst->begin()) == '!') ? "":"!",
-		rst->c_str() + ((*(rst->begin())=='!') ? 1:0));
+	fprintf(fp, "\t\t.S_AXI_ARESETN(%s),\n", rst->c_str());
 
 	fprintf(fp, "\t\t//\n");
 	xbarcon_master(fp, "\t\t",".S_AXI_","AWVALID");
@@ -1132,9 +1067,8 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","RDATA");
 	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","RRESP", false);
 	fprintf(fp, "\t\t);\n\n");
-	}
 
-	for(unsigned k=0; k<m_info->m_plist->size(); k++) {
+	for(unsigned k=0; k < m_info->m_plist->size(); k++) {
 		PERIPHP p = (*m_info->m_plist)[k];
 		STRINGP	busp = p->bus_prefix();
 

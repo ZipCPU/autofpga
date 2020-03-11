@@ -671,9 +671,10 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 			*mp = mstr->c_str();
 
 		fprintf(fp,
-		"\t//\n"
-		"\t// The %s bus has only one masters assigned to it\n"
-		"\t//\n"
+		"//\n"
+		"// Bus %s has only one master (%s) and one slave (%s)\n"
+		"// connected to it -- skipping the interconnect\n"
+		"//\n"
 		"\tassign	%s_awvalid = %s_awvalid;\n"
 		"\tassign	%s_awready = %s_awready;\n"
 		"\tassign	%s_awid    = %s_awid;\n"
@@ -686,7 +687,8 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 		"\tassign	%s_awprot  = %s_awprot;\n"
 		"\tassign	%s_awqos   = %s_awqos;\n"
 		"\t//\n",
-			sp,
+		n->c_str(), master_name(0)->c_str(),
+		(*m_info->m_plist)[0]->p_name->c_str(),
 			sp, mp, mp, sp,
 			sp, mp, sp, mp, sp, mp, sp, mp,
 			sp, mp, sp, mp, sp, mp, sp, mp,
@@ -736,82 +738,94 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 	}
 
 	// Start with the slist
-	if (m_slist) {
-		STRING	s = (*n) + "_sio";
+	if (m_is_single) {
+		assert(1 == m_info->m_mlist->size());
+
+		PLIST	*slist = m_info->m_plist;
 		const char *np = n->c_str();
+		STRING	s = STRING(*(*m_mlist)[0]->bus_prefix());
+		int	aw = nextlg(slist->size())+nextlg(m_info->data_width())-3;
 
 		gbl_msg.error("AXI-Single logic hasn\'t yet been implemented\n");
 		fprintf(fp,
 		"\t// (AXI-Single isn\'t yet written)\n"
 		"\taxisingle #(\n"
-			"\t\t.C_AXI_ADDR_WIDTH(%d),\n"
+			"\t\t// .C_AXI_ADDR_WIDTH(%d),\n"
 			"\t\t.C_AXI_DATA_WIDTH(%d),\n"
 			"\t\t.NS(%ld)\n"
 		"\t) %s_axisingle(\n",
-			address_width(), m_info->data_width(),
-			m_slist->size(), np);
+			aw, m_info->data_width(),
+			slist->size(), np);
 		fprintf(fp,
 			"\t\t.S_AXI_ACLK(%s),\n"
-			"\t\t.S_AXI_ARESETN(%s%s),\n",
-				c->m_wire->c_str(),
-				(*(rst->begin()) == '!') ? "":"!",
-				rst->c_str() + ((*(rst->begin())=='!') ? 1:0));
+			"\t\t.S_AXI_ARESETN(%s),\n",
+				c->m_wire->c_str(), rst->c_str());
 
 		fprintf(fp, "\t\t//\n");
 		fprintf(fp,
-			"\t\t.S_AXI_AWVALID(%s_sio_awvalid),\n"
-			"\t\t.S_AXI_AWREADY(%s_sio_awready),\n"
-			"\t\t.S_AXI_AWID(   %s_sio_awid),\n"
-			"\t\t.S_AXI_AWADDR( %s_sio_awaddr),\n"
-			"\t\t.S_AXI_AWLEN(  %s_sio_awlen),\n"
-			"\t\t.S_AXI_AWSIZE( %s_sio_awsize),\n"
-			"\t\t.S_AXI_AWBURST(%s_sio_awburst),\n"
-			"\t\t.S_AXI_AWLOCK( %s_sio_awlock),\n"
-			"\t\t.S_AXI_AWCACHE(%s_sio_awcache),\n"
-			"\t\t.S_AXI_AWPROT( %s_sio_awprot),\n"
-			"\t\t.S_AXI_AWQOS(  %s_sio_awqos),\n"
+			"\t\t.S_AXI_AWVALID(%s_awvalid),\n"
+			"\t\t.S_AXI_AWREADY(%s_awready),\n"
+			"\t\t.S_AXI_AWID(   %s_awid),\n"
+			"\t\t.S_AXI_AWADDR( %s_awaddr[%d:0]),\n"
+			"\t\t.S_AXI_AWLEN(  %s_awlen),\n"
+			"\t\t.S_AXI_AWSIZE( %s_awsize),\n"
+			"\t\t.S_AXI_AWBURST(%s_awburst),\n"
+			"\t\t.S_AXI_AWLOCK( %s_awlock),\n"
+			"\t\t.S_AXI_AWCACHE(%s_awcache),\n"
+			"\t\t.S_AXI_AWPROT( %s_awprot),\n"
+			"\t\t.S_AXI_AWQOS(  %s_awqos),\n"
 			"\t\t//\n"
-			"\t\t.S_AXI_WVALID( %s_sio_wvalid),\n"
-			"\t\t.S_AXI_WREADY( %s_sio_wready),\n"
-			"\t\t.S_AXI_WDATA(  %s_sio_wdata),\n"
-			"\t\t.S_AXI_WSTRB(  %s_sio_wstrb),\n"
-			"\t\t.S_AXI_WLAST(  %s_sio_wlast),\n"
+			"\t\t.S_AXI_WVALID( %s_wvalid),\n"
+			"\t\t.S_AXI_WREADY( %s_wready),\n"
+			"\t\t.S_AXI_WDATA(  %s_wdata),\n"
+			"\t\t.S_AXI_WSTRB(  %s_wstrb),\n"
+			"\t\t.S_AXI_WLAST(  %s_wlast),\n"
 			"\t\t//\n"
-			"\t\t.S_AXI_BVALID( %s_sio_bvalid),\n"
-			"\t\t.S_AXI_BREADY( %s_sio_bready),\n"
-			"\t\t.S_AXI_BID(    %s_sio_bid),\n"
-			"\t\t.S_AXI_BRESP(  %s_sio_bresp),\n"
+			"\t\t.S_AXI_BVALID( %s_bvalid),\n"
+			"\t\t.S_AXI_BREADY( %s_bready),\n"
+			"\t\t.S_AXI_BID(    %s_bid),\n"
+			"\t\t.S_AXI_BRESP(  %s_bresp),\n"
 			"\t\t//\n",
-			np, np, np, np, np, np, np, np, np, np, np,
-			np, np, np, np, np,
-			np, np, np, np);
+			s.c_str(), s.c_str(), s.c_str(), s.c_str(), aw-1,
+			s.c_str(), s.c_str(), s.c_str(), s.c_str(),
+			s.c_str(), s.c_str(), s.c_str(),
+			//
+			s.c_str(), s.c_str(), s.c_str(), s.c_str(),
+			s.c_str(),
+			//
+			s.c_str(), s.c_str(), s.c_str(), s.c_str());
+
 		fprintf(fp,
 			"\t\t// Read connections\n"
-			"\t\t.S_AXI_ARVALID(%s_sio_arvalid),\n"
-			"\t\t.S_AXI_ARREADY(%s_sio_arready),\n"
-			"\t\t.S_AXI_ARID(   %s_sio_arid),\n"
-			"\t\t.S_AXI_ARADDR( %s_sio_araddr),\n"
-			"\t\t.S_AXI_ARLEN(  %s_sio_arlen),\n"
-			"\t\t.S_AXI_ARSIZE( %s_sio_arsize),\n"
-			"\t\t.S_AXI_ARBURST(%s_sio_arburst),\n"
-			"\t\t.S_AXI_ARLOCK( %s_sio_arlock),\n"
-			"\t\t.S_AXI_ARCACHE(%s_sio_arcache),\n"
-			"\t\t.S_AXI_ARPROT( %s_sio_arprot),\n"
-			"\t\t.S_AXI_ARQOS(  %s_sio_arqos),\n"
+			"\t\t.S_AXI_ARVALID(%s_arvalid),\n"
+			"\t\t.S_AXI_ARREADY(%s_arready),\n"
+			"\t\t.S_AXI_ARID(   %s_arid),\n"
+			"\t\t.S_AXI_ARADDR( %s_araddr[%d:0]),\n"
+			"\t\t.S_AXI_ARLEN(  %s_arlen),\n"
+			"\t\t.S_AXI_ARSIZE( %s_arsize),\n"
+			"\t\t.S_AXI_ARBURST(%s_arburst),\n"
+			"\t\t.S_AXI_ARLOCK( %s_arlock),\n"
+			"\t\t.S_AXI_ARCACHE(%s_arcache),\n"
+			"\t\t.S_AXI_ARPROT( %s_arprot),\n"
+			"\t\t.S_AXI_ARQOS(  %s_arqos),\n"
 			"\t\t//\n"
-			"\t\t.S_AXI_RVALID( %s_sio_rvalid),\n"
-			"\t\t.S_AXI_RREADY( %s_sio_rready),\n"
-			"\t\t.S_AXI_RID(    %s_sio_rid),\n"
-			"\t\t.S_AXI_RDATA(  %s_sio_rdata),\n"
-			"\t\t.S_AXI_RLAST(  %s_sio_rlast),\n"
-			"\t\t.S_AXI_RRESP(  %s_sio_rresp),\n"
+			"\t\t.S_AXI_RVALID( %s_rvalid),\n"
+			"\t\t.S_AXI_RREADY( %s_rready),\n"
+			"\t\t.S_AXI_RID(    %s_rid),\n"
+			"\t\t.S_AXI_RDATA(  %s_rdata),\n"
+			"\t\t.S_AXI_RLAST(  %s_rlast),\n"
+			"\t\t.S_AXI_RRESP(  %s_rresp),\n"
 			"\t\t//\n"
 			"\t\t// Connections to slaves\n"
 			"\t\t//\n",
-			np, np, np, np, np, np, np, np, np, np, np,
-			np, np, np, np, np, np);
+			s.c_str(), s.c_str(), s.c_str(), s.c_str(), aw-1,
+			s.c_str(), s.c_str(), s.c_str(), s.c_str(),
+			s.c_str(), s.c_str(), s.c_str(),
+			//
+			s.c_str(), s.c_str(), s.c_str(), s.c_str(),
+			s.c_str(), s.c_str());
 
-		xbarcon_slave(fp, m_slist, "\t\t",".M_AXI_","AWVALID");
+		xbarcon_slave(fp, slist, "\t\t",".M_AXI_","AWVALID");
 		fprintf(fp,
 			"\t\t.M_AXI_AWPROT(%s_siow_awprot),\n"
 			"\t\t.M_AXI_WDATA( %s_siow_wdata),\n"
@@ -819,20 +833,20 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 			n->c_str(), n->c_str(), n->c_str());
 		fprintf(fp, "\t\t//\n");
 		fprintf(fp, "\t\t//\n");
-		xbarcon_slave(fp, m_slist, "\t\t",".M_AXI_","BRESP");
+		xbarcon_slave(fp, slist, "\t\t",".M_AXI_","BRESP");
 		fprintf(fp, "\t\t// Read connections\n");
-		xbarcon_slave(fp, m_slist, "\t\t",".M_AXI_","ARVALID");
+		xbarcon_slave(fp, slist, "\t\t",".M_AXI_","ARVALID");
 		fprintf(fp,
-			"\t\t.M_AXI_AWPROT(%s_siow_arprot),\n"
+			"\t\t.M_AXI_ARPROT(%s_siow_arprot),\n"
 			"\t\t//\n", n->c_str());
-		xbarcon_slave(fp, m_slist, "\t\t",".M_AXI_","RDATA");
-		xbarcon_slave(fp, m_slist, "\t\t",".M_AXI_","RRESP");
-		fprintf(fp, "\t\t);\n\n");
+		xbarcon_slave(fp, slist, "\t\t",".M_AXI_","RDATA");
+		xbarcon_slave(fp, slist, "\t\t",".M_AXI_","RRESP", false);
+		fprintf(fp, "\t);\n\n");
 		fprintf(fp,"\t//\n\t// Now connecting the extra slaves wires "
 			"to the AXISINGLE controller\n\t//\n");
 
-		for(int k=m_slist->size(); k>0; k--) {
-			PERIPHP p = (*m_slist)[k-1];
+		for(int k=slist->size(); k>0; k--) {
+			PERIPHP p = (*slist)[k-1];
 			const char *pn = p->p_name->c_str(),
 				*ns = n->c_str();
 
@@ -848,93 +862,108 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 			fprintf(fp, "\tassign %s_arprot = %s_siow_arprot;\n", pn, ns);
 			fprintf(fp, "\tassign %s_rready = 1\'b1;\n", pn);
 		}
-	}
+
+		return;
+	} else if (!m_slist)
+		fprintf(fp, "\t//\n\t// No class SINGLE peripherals on the \"%s\" bus\n\t//\n\n", n->c_str());
 
 	// Then the dlist
-	if (m_dlist) {
-		pl = m_dlist;
+	if (m_is_double) {
+		if (m_dlist)
+			pl = m_dlist;
+		else
+			pl = m_info->m_plist;
 		STRING	s = (*n) + "_dio";
-		const char *np = n->c_str();
+		int	aw = address_width();
+		if (m_info->m_mlist->size() == 1)
+			s = (*n) + "_" + (*(*m_info->m_mlist)[0]->name());
 
 		fprintf(fp,
 			"\t//\n"
 			"\t// %s Bus logic to handle %ld DOUBLE slaves\n"
 			"\t//\n"
-			"\t//\n", n->c_str(), m_dlist->size());
+			"\t//\n", n->c_str(), pl->size());
 
 		fprintf(fp,
 		"\taxidouble #(\n"
 			"\t\t.C_AXI_ADDR_WIDTH(%d),\n"
 			"\t\t.C_AXI_DATA_WIDTH(%d),\n"
-			"\t\t.C_AXI_ID_WIDTH(%d),\n",
+			"\t\t.C_AXI_ID_WIDTH(%d),\n"
+			"\t\t.NS(%ld),\n",
 			address_width(), m_info->data_width(),
-			id_width());
-		slave_addr(fp, m_dlist); fprintf(fp, ",\n");
-		slave_mask(fp, m_dlist); fprintf(fp, ",\n");
+			id_width(), pl->size());
+		slave_addr(fp, pl); fprintf(fp, ",\n");
+		slave_mask(fp, pl); fprintf(fp, "\n");
 		fprintf(fp,
-			"\t\t.NS(%ld)\n"
 		"\t) %s_axidouble(\n",
-			m_slist->size(), n->c_str());
+			n->c_str());
 		fprintf(fp,
 			"\t\t.S_AXI_ACLK(%s),\n"
-			"\t\t.S_AXI_ARESETN(%s%s),\n",
-				c->m_wire->c_str(),
-				(*(rst->begin()) == '!') ? "":"!",
-				rst->c_str() + ((*(rst->begin())=='!') ? 1:0));
+			"\t\t.S_AXI_ARESETN(%s),\n",
+				c->m_wire->c_str(), rst->c_str());
 
 		fprintf(fp, "\t\t//\n");
 		fprintf(fp,
-			"\t\t.S_AXI_AWVALID(%s_dio_awvalid),\n"
-			"\t\t.S_AXI_AWREADY(%s_dio_awready),\n"
-			"\t\t.S_AXI_AWID(   %s_dio_awid),\n"
-			"\t\t.S_AXI_AWADDR( %s_dio_awaddr),\n"
-			"\t\t.S_AXI_AWLEN(  %s_dio_awlen),\n"
-			"\t\t.S_AXI_AWSIZE( %s_dio_awsize),\n"
-			"\t\t.S_AXI_AWBURST(%s_dio_awburst),\n"
-			"\t\t.S_AXI_AWLOCK( %s_dio_awlock),\n"
-			"\t\t.S_AXI_AWCACHE(%s_dio_awcache),\n"
-			"\t\t.S_AXI_AWPROT( %s_dio_awprot),\n"
-			"\t\t.S_AXI_AWQOS(  %s_dio_awqos),\n"
+			"\t\t.S_AXI_AWVALID(%s_awvalid),\n"
+			"\t\t.S_AXI_AWREADY(%s_awready),\n"
+			"\t\t.S_AXI_AWID(   %s_awid),\n"
+			"\t\t.S_AXI_AWADDR( %s_awaddr[%d:0]),\n"
+			"\t\t.S_AXI_AWLEN(  %s_awlen),\n"
+			"\t\t.S_AXI_AWSIZE( %s_awsize),\n"
+			"\t\t.S_AXI_AWBURST(%s_awburst),\n"
+			"\t\t.S_AXI_AWLOCK( %s_awlock),\n"
+			"\t\t.S_AXI_AWCACHE(%s_awcache),\n"
+			"\t\t.S_AXI_AWPROT( %s_awprot),\n"
+			"\t\t.S_AXI_AWQOS(  %s_awqos),\n"
 			"\t\t//\n"
-			"\t\t.S_AXI_WVALID( %s_dio_wvalid),\n"
-			"\t\t.S_AXI_WREADY( %s_dio_wready),\n"
-			"\t\t.S_AXI_WDATA(  %s_dio_wdata),\n"
-			"\t\t.S_AXI_WSTRB(  %s_dio_wstrb),\n"
-			"\t\t.S_AXI_WLAST(  %s_dio_wlast),\n"
+			"\t\t.S_AXI_WVALID( %s_wvalid),\n"
+			"\t\t.S_AXI_WREADY( %s_wready),\n"
+			"\t\t.S_AXI_WDATA(  %s_wdata),\n"
+			"\t\t.S_AXI_WSTRB(  %s_wstrb),\n"
+			"\t\t.S_AXI_WLAST(  %s_wlast),\n"
 			"\t\t//\n"
-			"\t\t.S_AXI_BVALID( %s_dio_bvalid),\n"
-			"\t\t.S_AXI_BREADY( %s_dio_bready),\n"
-			"\t\t.S_AXI_BID(    %s_dio_bid),\n"
-			"\t\t.S_AXI_BRESP(  %s_dio_bresp),\n"
+			"\t\t.S_AXI_BVALID( %s_bvalid),\n"
+			"\t\t.S_AXI_BREADY( %s_bready),\n"
+			"\t\t.S_AXI_BID(    %s_bid),\n"
+			"\t\t.S_AXI_BRESP(  %s_bresp),\n"
 			"\t\t//\n",
-			np, np, np, np, np, np, np, np, np, np, np,
-			np, np, np, np, np,
-			np, np, np, np);
+			s.c_str(), s.c_str(), s.c_str(), s.c_str(), aw-1,
+			s.c_str(), s.c_str(), s.c_str(), s.c_str(),
+			s.c_str(), s.c_str(), s.c_str(),
+			//
+			s.c_str(), s.c_str(), s.c_str(), s.c_str(),
+			s.c_str(),
+			//
+			s.c_str(), s.c_str(), s.c_str(), s.c_str());
 		fprintf(fp,
 			"\t\t// Read connections\n"
-			"\t\t.S_AXI_ARVALID(%s_dio_arvalid),\n"
-			"\t\t.S_AXI_ARREADY(%s_dio_arready),\n"
-			"\t\t.S_AXI_ARID(   %s_dio_arid),\n"
-			"\t\t.S_AXI_ARADDR( %s_dio_araddr),\n"
-			"\t\t.S_AXI_ARLEN(  %s_dio_arlen),\n"
-			"\t\t.S_AXI_ARSIZE( %s_dio_arsize),\n"
-			"\t\t.S_AXI_ARBURST(%s_dio_arburst),\n"
-			"\t\t.S_AXI_ARLOCK( %s_dio_arlock),\n"
-			"\t\t.S_AXI_ARCACHE(%s_dio_arcache),\n"
-			"\t\t.S_AXI_ARPROT( %s_dio_arprot),\n"
-			"\t\t.S_AXI_ARQOS(  %s_dio_arqos),\n"
+			"\t\t.S_AXI_ARVALID(%s_arvalid),\n"
+			"\t\t.S_AXI_ARREADY(%s_arready),\n"
+			"\t\t.S_AXI_ARID(   %s_arid),\n"
+			"\t\t.S_AXI_ARADDR( %s_araddr[%d:0]),\n"
+			"\t\t.S_AXI_ARLEN(  %s_arlen),\n"
+			"\t\t.S_AXI_ARSIZE( %s_arsize),\n"
+			"\t\t.S_AXI_ARBURST(%s_arburst),\n"
+			"\t\t.S_AXI_ARLOCK( %s_arlock),\n"
+			"\t\t.S_AXI_ARCACHE(%s_arcache),\n"
+			"\t\t.S_AXI_ARPROT( %s_arprot),\n"
+			"\t\t.S_AXI_ARQOS(  %s_arqos),\n"
 			"\t\t//\n"
-			"\t\t.S_AXI_RVALID( %s_dio_rvalid),\n"
-			"\t\t.S_AXI_RREADY( %s_dio_rready),\n"
-			"\t\t.S_AXI_RID(    %s_dio_rid),\n"
-			"\t\t.S_AXI_RDATA(  %s_dio_rdata),\n"
-			"\t\t.S_AXI_RLAST(  %s_dio_rlast),\n"
-			"\t\t.S_AXI_RRESP(  %s_dio_rresp),\n"
+			"\t\t.S_AXI_RVALID( %s_rvalid),\n"
+			"\t\t.S_AXI_RREADY( %s_rready),\n"
+			"\t\t.S_AXI_RID(    %s_rid),\n"
+			"\t\t.S_AXI_RDATA(  %s_rdata),\n"
+			"\t\t.S_AXI_RLAST(  %s_rlast),\n"
+			"\t\t.S_AXI_RRESP(  %s_rresp),\n"
 			"\t\t//\n"
 			"\t\t// Connections to slaves\n"
 			"\t\t//\n",
-			np, np, np, np, np, np, np, np, np, np, np,
-			np, np, np, np, np, np);
+			s.c_str(), s.c_str(), s.c_str(), s.c_str(), aw-1,
+			s.c_str(), s.c_str(), s.c_str(), s.c_str(),
+			s.c_str(), s.c_str(), s.c_str(),
+			//
+			s.c_str(), s.c_str(), s.c_str(), s.c_str(),
+			s.c_str(), s.c_str());
 
 		xbarcon_slave(fp, pl, "\t\t",".M_AXI_","AWVALID");
 		fprintf(fp,
@@ -948,18 +977,18 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 			"\t\t.M_AXI_AWCACHE(%s_diow_awcache),\n"
 			"\t\t.M_AXI_AWPROT( %s_diow_awprot),\n"
 			"\t\t.M_AXI_AWQOS(  %s_diow_awqos),\n",
-			np, np, np, np, np,
-			np, np, np, np, np);
+			s.c_str(), s.c_str(), s.c_str(), s.c_str(), s.c_str(),
+			s.c_str(), s.c_str(), s.c_str(), s.c_str(), s.c_str());
 		xbarcon_slave(fp, pl, "\t\t",".M_AXI_","WVALID");
 		fprintf(fp,
 			"\t\t.M_AXI_WDATA(  %s_diow_wdata),\n"
 			"\t\t.M_AXI_WSTRB(  %s_diow_wstrb),\n"
 			"\t\t.M_AXI_WLAST(  %s_diow_wlast), // == 1\n",
-			np, np, np);
+			s.c_str(), s.c_str(), s.c_str());
 		fprintf(fp, "\t\t//\n");
 		fprintf(fp, "\t\t//\n");
 		fprintf(fp,
-			"\t\t.M_AXI_BREADY(  %s_diow_bready),\n", np);
+			"\t\t.M_AXI_BREADY(  %s_diow_bready),\n", s.c_str());
 		xbarcon_slave(fp, pl, "\t\t",".M_AXI_","BRESP");
 		fprintf(fp, "\t\t// Read connections\n");
 		xbarcon_slave(fp, pl, "\t\t",".M_AXI_","ARVALID");
@@ -975,56 +1004,60 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 			"\t\t.M_AXI_ARPROT( %s_diow_arprot),\n"
 			"\t\t.M_AXI_ARQOS(  %s_diow_arqos),  //== 0\n"
 			"\t\t//\n",
-			np, np, np, np, np,
-			np, np, np, np, np);
+			s.c_str(), s.c_str(), s.c_str(),
+			s.c_str(), s.c_str(), s.c_str(),
+			s.c_str(), s.c_str(), s.c_str(),
+			s.c_str());
 
 		// Read returns
 		fprintf(fp,
-			"\t\t.M_AXI_RREADY(  %s_diow_rready),\n", np);
+			"\t\t.M_AXI_RREADY(  %s_diow_rready),\n", s.c_str());
 		xbarcon_slave(fp, pl, "\t\t",".M_AXI_","RDATA");
-		xbarcon_slave(fp, pl, "\t\t",".M_AXI_","RRESP");
+		xbarcon_slave(fp, pl, "\t\t",".M_AXI_","RRESP", false);
 		fprintf(fp, "\t\t);\n\n");
 		fprintf(fp,"\t//\n\t// Now connecting the extra slaves wires "
 			"to the AXIDOUBLE controller\n\t//\n");
 
-		for(int k=m_slist->size(); k>0; k--) {
-			PERIPHP p = (*m_slist)[k-1];
-			const char *pn = p->p_name->c_str();
+		for(int k=pl->size(); k>0; k--) {
+			PERIPHP p = (*pl)[k-1];
+			const char *pn = p->p_name->c_str(),
+				*pfx = p->bus_prefix()->c_str();
 			int	aw = p->p_awid + unused_lsbs,
 				iw = id_width();
 
 			fprintf(fp, "\t// %s\n", pn);
-			fprintf(fp, "\tassign %s_awvalid= %s_diow_awvalid[%d];\n", pn, n->c_str(), iw);
-			fprintf(fp, "\tassign %s_awid   = %s_diow_awid[%d-1:0];\n", pn, n->c_str(), iw);
-			fprintf(fp, "\tassign %s_awaddr = %s_diow_awaddr[%d-1:0];\n", pn, n->c_str(), aw);
-			fprintf(fp, "\tassign %s_awlen  = %s_diow_awlen;\n", pn, n->c_str());
-			fprintf(fp, "\tassign %s_awsize = %s_diow_awsize;\n", pn, n->c_str());
-			fprintf(fp, "\tassign %s_awburst= %s_diow_awburst;\n", pn, n->c_str());
-			fprintf(fp, "\tassign %s_awlock = %s_diow_awlock;\n", pn, n->c_str());
-			fprintf(fp, "\tassign %s_awcache= %s_diow_awcache;\n", pn, n->c_str());
-			fprintf(fp, "\tassign %s_awprot = %s_diow_awprot;\n", pn, n->c_str());
-			fprintf(fp, "\tassign %s_awqos  = %s_diow_awqos;\n", pn, n->c_str());
+			fprintf(fp, "\tassign %s_awid   = %s_diow_awid[%d-1:0];\n", pfx, n->c_str(), iw);
+			fprintf(fp, "\tassign %s_awaddr = %s_diow_awaddr[%d-1:0];\n", pfx, n->c_str(), aw);
+			fprintf(fp, "\tassign %s_awlen  = %s_diow_awlen;\n", pfx, n->c_str());
+			fprintf(fp, "\tassign %s_awsize = %s_diow_awsize;\n", pfx, n->c_str());
+			fprintf(fp, "\tassign %s_awburst= %s_diow_awburst;\n", pfx, n->c_str());
+			fprintf(fp, "\tassign %s_awlock = %s_diow_awlock;\n", pfx, n->c_str());
+			fprintf(fp, "\tassign %s_awcache= %s_diow_awcache;\n", pfx, n->c_str());
+			fprintf(fp, "\tassign %s_awprot = %s_diow_awprot;\n", pfx, n->c_str());
+			fprintf(fp, "\tassign %s_awqos  = %s_diow_awqos;\n", pfx, n->c_str());
 			//
-			fprintf(fp, "\tassign %s_wvalid = %s_awvalid[%d];\n", pn, pn, k);
-			fprintf(fp, "\tassign %s_wdata = %s_diow_wdata;\n", pn, n->c_str());
-			fprintf(fp, "\tassign %s_wstrb = %s_diow_wstrb;\n", pn, n->c_str());
-			fprintf(fp, "\tassign %s_wlast = %s_diow_wlast;\n", pn, n->c_str());
-			fprintf(fp, "\tassign %s_bready = 1\'b1;\n", pn);
-			fprintf(fp, "\tassign %s_arvalid= %s_arvalid[%d];\n", pn, pn, k);
+			fprintf(fp, "\tassign %s_wvalid = %s_awvalid;\n", pfx, pfx);
+			fprintf(fp, "\tassign %s_wdata = %s_diow_wdata;\n", pfx, n->c_str());
+			fprintf(fp, "\tassign %s_wstrb = %s_diow_wstrb;\n", pfx, n->c_str());
+			fprintf(fp, "\tassign %s_wlast = %s_diow_wlast;\n", pfx, n->c_str());
+			fprintf(fp, "\tassign %s_bready = 1\'b1;\n", pfx);
+			fprintf(fp, "\tassign %s_arvalid= %s_arvalid[%d];\n", pfx, pn, k);
 			// arready is set by the slave ... and ignored
-			fprintf(fp, "\tassign %s_arid   = %s_diow_arid[%d-1:0];\n", pn, n->c_str(), iw);
-			fprintf(fp, "\tassign %s_araddr = %s_diow_araddr[%d-1:0];\n", pn, n->c_str(), aw);
-			fprintf(fp, "\tassign %s_arlen  = %s_diow_arlen;\n", pn, n->c_str());
-			fprintf(fp, "\tassign %s_arsize = %s_diow_arsize;\n", pn, n->c_str());
-			fprintf(fp, "\tassign %s_arburst= %s_diow_arburst;\n", pn, n->c_str());
-			fprintf(fp, "\tassign %s_arlock = %s_diow_arlock;\n", pn, n->c_str());
-			fprintf(fp, "\tassign %s_arcache= %s_diow_arcache;\n", pn, n->c_str());
-			fprintf(fp, "\tassign %s_arprot = %s_diow_arprot;\n", pn, n->c_str());
-			fprintf(fp, "\tassign %s_arqos  = %s_diow_arqos;\n", pn, n->c_str());
-			fprintf(fp, "\tassign %s_arprot = %s_diow_arprot;\n", pn, n->c_str());
-			fprintf(fp, "\tassign %s_rready = 1\'b1;\n", pn);
+			fprintf(fp, "\tassign %s_arid   = %s_diow_arid[%d-1:0];\n", pfx, n->c_str(), iw);
+			fprintf(fp, "\tassign %s_araddr = %s_diow_araddr[%d-1:0];\n", pfx, n->c_str(), aw);
+			fprintf(fp, "\tassign %s_arlen  = %s_diow_arlen;\n", pfx, n->c_str());
+			fprintf(fp, "\tassign %s_arsize = %s_diow_arsize;\n", pfx, n->c_str());
+			fprintf(fp, "\tassign %s_arburst= %s_diow_arburst;\n", pfx, n->c_str());
+			fprintf(fp, "\tassign %s_arlock = %s_diow_arlock;\n", pfx, n->c_str());
+			fprintf(fp, "\tassign %s_arcache= %s_diow_arcache;\n", pfx, n->c_str());
+			fprintf(fp, "\tassign %s_arprot = %s_diow_arprot;\n", pfx, n->c_str());
+			fprintf(fp, "\tassign %s_arqos  = %s_diow_arqos;\n", pfx, n->c_str());
+			fprintf(fp, "\tassign %s_arprot = %s_diow_arprot;\n", pfx, n->c_str());
+			fprintf(fp, "\tassign %s_rready = 1\'b1;\n", pfx);
 		}
-	} else
+
+		return;
+	} else if (!m_dlist)
 		fprintf(fp, "\t//\n\t// No class DOUBLE peripherals on the \"%s\" bus\n\t//\n\n", n->c_str());
 
 	//
@@ -1033,6 +1066,18 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 	//
 	//
 	pl = m_info->m_plist;
+
+	unsigned	slave_name_width = 4;
+	// Find the maximum width of any slaves name, for our comment tables
+	// below
+	for(unsigned k=0; k<m_info->m_plist->size(); k++) {
+		PERIPHP	p = (*m_info->m_plist)[k];
+		unsigned	sz;
+
+		sz = p->name()->size();
+		if (slave_name_width < sz)
+			slave_name_width = sz;
+	}
 
 	//
 	// Now create the crossbar interconnect
@@ -1084,9 +1129,7 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 	"\n\t) %s_xbar(\n"
 		"\t\t.S_AXI_ACLK(%s),\n",
 		n->c_str(), m_info->m_clock->m_wire->c_str());
-	fprintf(fp, "\t\t.S_AXI_ARESETN(%s%s),\n",
-		(*(rst->begin()) == '!') ? "":"!",
-		rst->c_str() + ((*(rst->begin())=='!') ? 1:0));
+	fprintf(fp, "\t\t.S_AXI_ARESETN(%s),\n", rst->c_str());
 
 	fprintf(fp, "\t\t//\n");
 	xbarcon_master(fp, "\t\t",".S_AXI_","AWVALID");
@@ -1177,7 +1220,7 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","RDATA");
 	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","RLAST");
 	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","RRESP", false);
-	fprintf(fp, "\t\t);\n\n");
+	fprintf(fp, "\t);\n\n");
 
 	for(unsigned k=0; k<m_info->m_plist->size(); k++) {
 		PERIPHP p = (*m_info->m_plist)[k];
