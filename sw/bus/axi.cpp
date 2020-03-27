@@ -752,10 +752,13 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 		"\taxisingle #(\n"
 			"\t\t// .C_AXI_ADDR_WIDTH(%d),\n"
 			"\t\t.C_AXI_DATA_WIDTH(%d),\n"
-			"\t\t.NS(%ld)\n"
-		"\t) %s_axisingle(\n",
+			"\t\t.NS(%ld)",
 			aw, m_info->data_width(),
-			slist->size(), np);
+			slist->size());
+		xbar_option(fp, KY_OPT_LOWPOWER,  ",\n\t\t.OPT_LOWPOWER(%)",
+			"1\'b1");
+		fprintf(fp,
+		"\n\t) %s_axisingle(\n", np);
 		fprintf(fp,
 			"\t\t.S_AXI_ACLK(%s),\n"
 			"\t\t.S_AXI_ARESETN(%s),\n",
@@ -892,6 +895,8 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 			"\t\t.NS(%ld),\n",
 			address_width(), m_info->data_width(),
 			id_width(), pl->size());
+		xbar_option(fp, KY_OPT_LOWPOWER,  ",\n\t\t.OPT_LOWPOWER(%)",
+			"1\'b1");
 		slave_addr(fp, pl); fprintf(fp, ",\n");
 		slave_mask(fp, pl); fprintf(fp, "\n");
 		fprintf(fp,
@@ -1027,7 +1032,7 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 
 			fprintf(fp, "\t// %s\n", pn);
 			fprintf(fp, "\tassign %s_awid   = %s_diow_awid[%d-1:0];\n", pfx, n->c_str(), iw);
-			fprintf(fp, "\tassign %s_awaddr = %s_diow_awaddr[%d-1:0];\n", pfx, n->c_str(), aw);
+			fprintf(fp, "\tassign %s_awaddr = %s_diow_awaddr;\n", pfx, n->c_str());
 			fprintf(fp, "\tassign %s_awlen  = %s_diow_awlen;\n", pfx, n->c_str());
 			fprintf(fp, "\tassign %s_awsize = %s_diow_awsize;\n", pfx, n->c_str());
 			fprintf(fp, "\tassign %s_awburst= %s_diow_awburst;\n", pfx, n->c_str());
@@ -1044,7 +1049,7 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 			fprintf(fp, "\tassign %s_arvalid= %s_arvalid[%d];\n", pfx, pn, k);
 			// arready is set by the slave ... and ignored
 			fprintf(fp, "\tassign %s_arid   = %s_diow_arid[%d-1:0];\n", pfx, n->c_str(), iw);
-			fprintf(fp, "\tassign %s_araddr = %s_diow_araddr[%d-1:0];\n", pfx, n->c_str(), aw);
+			fprintf(fp, "\tassign %s_araddr = %s_diow_araddr;\n", pfx, n->c_str());
 			fprintf(fp, "\tassign %s_arlen  = %s_diow_arlen;\n", pfx, n->c_str());
 			fprintf(fp, "\tassign %s_arsize = %s_diow_arsize;\n", pfx, n->c_str());
 			fprintf(fp, "\tassign %s_arburst= %s_diow_arburst;\n", pfx, n->c_str());
@@ -1092,9 +1097,11 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 	"\taxixbar #(\n"
 	"\t\t.C_AXI_ADDR_WIDTH(%d),\n"
 	"\t\t.C_AXI_DATA_WIDTH(%d),\n"
+	"\t\t.C_AXI_ID_WIDTH(%d),\n"
 	"\t\t.NM(%ld), .NS(%ld),\n",
 		address_width(),
 		m_info->data_width(),
+		id_width(),
 		m_mlist->size(),
 		m_info->m_plist->size());
 	/*

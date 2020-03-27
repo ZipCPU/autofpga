@@ -446,7 +446,8 @@ void	BUSINFO::merge(STRINGP component, MAPDHASH *bp) {
 		else if ((kvpair->second.m_typ == MAPT_MAP)
 				&&(NULL != kvpair->second.u.m_m)) {
 			if ((KY_CLOCK.compare(kvpair->first)==0)
-					&&(NULL == m_clock)) {
+					&&(NULL == m_clock))
+				;
 		}
 		*/
 

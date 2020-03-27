@@ -750,10 +750,13 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 		"\taxilsingle #(\n"
 			"\t\t// .C_AXI_ADDR_WIDTH(%d), // must be only one word address\n"
 			"\t\t.C_AXI_DATA_WIDTH(%d),\n"
-			"\t\t.NS(%ld)\n"
-		"\t) %s_axilsingle(\n",
+			"\t\t.NS(%ld)",
 			aw, m_info->data_width(),
-			slist->size(), np);
+			slist->size());
+		xbar_option(fp, KY_OPT_LOWPOWER,  ",\n\t\t.OPT_LOWPOWER(%)",
+			"1\'b1");
+		fprintf(fp,
+		"\n\t) %s_axilsingle(\n", np);
 		fprintf(fp,
 			"\t\t.S_AXI_ACLK(%s),\n"
 			"\t\t.S_AXI_ARESETN(%s),\n",
@@ -874,6 +877,8 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 			"\t\t.NS(%ld),\n",
 			address_width(), m_info->data_width(),
 			pl->size());
+		xbar_option(fp, KY_OPT_LOWPOWER,  "\t\t.OPT_LOWPOWER(%),\n",
+			"1\'b1");
 		slave_addr(fp, pl); fprintf(fp, ",\n");
 		slave_mask(fp, pl); fprintf(fp, "\n");
 		fprintf(fp,
@@ -948,13 +953,13 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 			int	aw = p->p_awid + unused_lsbs;
 
 			fprintf(fp, "\t// %s\n", pn);
-			fprintf(fp, "\tassign %s_awaddr = %s_diow_awaddr[%d-1:0];\n", pfx, n->c_str(), aw);
+			fprintf(fp, "\tassign %s_awaddr = %s_diow_awaddr;\n", pfx, n->c_str());
 			fprintf(fp, "\tassign %s_awprot = %s_diow_awprot;\n", pfx, n->c_str());
 			fprintf(fp, "\tassign %s_wvalid = %s_awvalid;\n", pfx, pfx);
 			fprintf(fp, "\tassign %s_wdata = %s_diow_wdata;\n", pfx, n->c_str());
 			fprintf(fp, "\tassign %s_wstrb = %s_diow_wstrb;\n", pfx, n->c_str());
 			fprintf(fp, "\tassign %s_bready = 1\'b1;\n", pfx);
-			fprintf(fp, "\tassign %s_araddr = %s_diow_araddr[%d-1:0];\n", pfx, n->c_str(), aw);
+			fprintf(fp, "\tassign %s_araddr = %s_diow_araddr;\n", pfx, n->c_str());
 			fprintf(fp, "\tassign %s_arprot = %s_diow_arprot;\n", pfx, n->c_str());
 			fprintf(fp, "\tassign %s_rready = 1\'b1;\n", pfx);
 		}
