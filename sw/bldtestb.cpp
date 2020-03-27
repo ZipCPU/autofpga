@@ -277,9 +277,9 @@ void	build_testb_h(MAPDHASH &master, FILE *fp, STRING &fname) {
 
 		fprintf(fp, "\t\t// Advance the one simulation clock, %s\n",
 				cklist[0].m_name->c_str());
-		fprintf(fp, "\t\tm_core->%s = 1;\n", cklist[0].m_wire->c_str());
 
 		fprintf(fp, "\t\tm_time_ps+= %ld;\n", half_tick);
+		fprintf(fp, "\t\tm_core->%s = 1;\n", cklist[0].m_wire->c_str());
 	}
 
 	fprintf(fp, "\t\teval();\n"
