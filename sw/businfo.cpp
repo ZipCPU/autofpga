@@ -358,15 +358,23 @@ void	BUSINFO::merge(STRINGP component, MAPDHASH *bp) {
 			}
 			continue;
 		} if (0== KY_IDWIDTH.compare(kvpair->first)) {
-			if (getvalue(*bp, KY_IDWIDTH, value)) {
+			if (0 != getvalue(*bp, KY_IDWIDTH, value)) {
+				MAPDHASH::iterator kvprev;
 				gbl_msg.info("BUSINFO::INIT(%s).IDWIDTH "
 					"FOUND: %d\n", component->c_str(), value);
-				elm.m_typ = MAPT_INT;
-				elm.u.m_v = value;
-				m_hash->insert(KEYVALUE(KY_IDWIDTH, elm));
+				if (m_hash->end() == (kvprev =
+						findkey(*m_hash, KY_IDWIDTH))){
+					elm.m_typ = MAPT_INT;
+					elm.u.m_v = value;
+					m_hash->insert(KEYVALUE(KY_IDWIDTH, elm));
 
-				REHASH;
-				kvpair = bp->begin();
+					REHASH;
+					kvpair = bp->begin();
+				} else if (kvprev->second.m_typ != MAPT_INT){
+					gbl_msg.info("BUSINFO::INIT(%s).IDWIDTH not an integer??\n", component->c_str());
+				} else if (kvprev->second.u.m_v != value) {
+					gbl_msg.error("BUSINFO::INIT(%s).IDWIDTH has conflicting values, %d and %d\n", component->c_str(), value, kvprev->second.u.m_v);
+				}
 			}
 			continue;
 		}
