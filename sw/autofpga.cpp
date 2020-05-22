@@ -677,12 +677,18 @@ void	build_toplevel_v( MAPDHASH &master, FILE *fp, STRING &fname) {
 		if (!strp)
 			continue;
 
+		STRING	tmps(*strp);
+		STRING::iterator si;
+		for(si=tmps.end()-1; si>=tmps.begin(); si--) {
+			if (isspace(*si))
+				*si = '\0';
+			else
+				break;
+		} if (tmps.size() == 0)
+			continue;
 		if (!first)
 			fprintf(fp, ",\n");
 		first=0;
-		STRING	tmps(*strp);
-		while(isspace(*tmps.rbegin()))
-			*tmps.rbegin() = '\0';
 		fprintf(fp, "%s", tmps.c_str());
 	} fprintf(fp, ");\n");
 
@@ -748,12 +754,19 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 		STRINGP	strp = getstring(*kvpair->second.u.m_m, str);
 		if (!strp)
 			continue;
+
+		STRING	tmps(*strp);
+		STRING::iterator si;
+		for(si=tmps.end()-1; si>=tmps.begin(); si--) {
+			if (isspace(*si))
+				*si = '\0';
+			else
+				break;
+		} if (tmps.size() == 0)
+			continue;
 		if (!first)
 			fprintf(fp, ",\n");
 		first=0;
-		STRING	tmps(*strp);
-		while(isspace(*tmps.rbegin()))
-			*tmps.rbegin() = '\0';
 		fprintf(fp, "%s", tmps.c_str());
 	} fprintf(fp, ");\n");
 
