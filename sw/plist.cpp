@@ -432,13 +432,33 @@ void	PLIST::assign_addresses(unsigned dwidth, unsigned nullsz,
 			m_address_width = 0;
 		return;
 	} else if ((size() < 2)&&(nullsz == 0)) {
-		(*this)[0]->p_base = 0;
-		(*this)[0]->p_mask = 0;
-		setvalue(*(*this)[0]->p_phash, KYBASE, (*this)[0]->p_base);
-		m_address_width = (*this)[0]->get_slave_address_width();
+		PERIPHP	p = (*this)[0];
+		MAPDHASH	*ph = p->p_phash;
+		GENBUS		*g = p->p_slave_bus->generator();
+
+		p->p_base = 0;
+		p->p_mask = 0;
+		setvalue(*p->p_phash, KYBASE, p->p_base);
+		setvalue(*p->p_phash, KYMASK, p->p_mask);
+		m_address_width = p->get_slave_address_width();
 		if (m_address_width <= 0) {
 			gbl_msg.error("Slave %s has zero NADDR (now address assigned)\n",
-				(*this)[0]->p_name->c_str());
+				p->p_name->c_str());
+		}
+
+		if (g) {
+			setstring(*ph, KYSLAVE_PORTLIST,
+				g->slave_portlist(p));
+			setstring(*ph, KYSLAVE_ANSIPORTLIST,
+				g->slave_ansi_portlist(p));
+			if (!getstring(*ph, KYSLAVE_IANSI))
+				setstring(*ph, KYSLAVE_IANSI, g->iansi(NULL));
+			if (!getstring(*ph, KYSLAVE_OANSI))
+				setstring(*ph, KYSLAVE_OANSI, g->oansi(NULL));
+			if (!getstring(*ph, KYSLAVE_ANSPREFIX))
+				setstring(*ph, KYSLAVE_ANSPREFIX,
+							g->slave_ansprefix(p));
+			reeval(*ph);
 		}
 	} else {
 		assert((*this)[0]->p_slave_bus);
