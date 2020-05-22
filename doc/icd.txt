@@ -229,21 +229,19 @@ RTL.MAKE.GROUP	A make variable name which will contain the file list for this
 RTL.MAKE.FILES	The files composing this component
 RTL.MAKE.SUBD	The location of the Verilog files for this component
 
-SIM.INCLUDE	Place any #includes here.  #includes will be included before
-		anything else
 SIM.DEFINES	#define's follow any #includes.  You can place those here.
 SIM.DEFNS	Any variables necessary in the Verilog simulation class can
 		be defined within this tag.
+SIM.INCLUDE	Place any #includes here.  #includes will be included before
+		anything else
 SIM.INIT	If variables need to be initialized when the verilog simulation
 		object is initialized, place that initialization code within
 		this tag
-SIM.SETRESET	If your component has specific simulation actions that need
-		to take place when the reset pin is set high, place that code
-		in this block.
 SIM.CLRRESET	CLRRESET code goes in the same block as the reset method, but
 		gets called after the reset tick.
-SIM.TICK	If you want your simulation software to be called as part of
-		a simulation tick, place that code within this tag
+SIM.CLOCK	Specifies the clock that is used for the SIM.TICK method.  Only
+		one clock is allowed.  If you need another, make another
+		component using the other clock.
 SIM.DBGCONDITION	If you might need to debug your component, you can
 		put a debug condition here.  The condition code should set
 		the bool "writeout" to true, or leave it as it is.
@@ -259,9 +257,11 @@ SIM.LOAD	If your component is a memory that might need to be loaded
 SIM.METHODS	If your code requires the definition of methods to be used
 		within the Verilator simulator class, place those definitions
 		here.
-SIM.CLOCK	Specifies the clock that is used for the SIM.TICK method.  Only
-		one clock is allowed.  If you need another, make another
-		component using the other clock.
+SIM.SETRESET	If your component has specific simulation actions that need
+		to take place when the reset pin is set high, place that code
+		in this block.
+SIM.TICK	If you want your simulation software to be called as part of
+		a simulation tick, place that code within this tag
 
 CLOCK.NAME	A list of the clocks used by this component
 CLOCK.WIRE	A list of the clock names used by this component.  These
