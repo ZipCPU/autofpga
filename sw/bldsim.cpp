@@ -60,10 +60,24 @@
 extern	void	writeout(FILE *fp, MAPDHASH &master, const STRING &ky);
 
 bool	tb_same_clock(MAPDHASH &info, STRINGP ckname) {
+	MAPDHASH::iterator	kvpair;
 	STRINGP	simclk;
-	if (NULL != (simclk = getstring(info, KYSIM_CLOCK))) {
-		return (ckname->compare(*simclk)==0);
-	} if (NULL != (simclk = getstring(info, KYCLOCK_NAME))) {
+
+	kvpair = findkey(info, KYSIM_CLOCK);
+	if (info.end() != kvpair) {
+		if (kvpair->second.m_typ == MAPT_MAP)
+			kvpair = findkey(*kvpair->second.u.m_m, KY_NAME);
+		if (info.end()== kvpair || kvpair->second.m_typ != MAPT_STRING)
+			return false;
+		simclk = kvpair->second.u.m_s;
+		return (NULL != simclk) && (ckname->compare(*simclk)==0);
+	}
+
+	kvpair = findkey(info, KYCLOCK_NAME);
+	if (info.end() == kvpair || kvpair->second.m_typ != MAPT_STRING)
+		return false;
+	simclk = kvpair->second.u.m_s;
+	if (NULL != simclk) {
 		const	char	DELIMITERS[] = " \t\n,";
 		char	*dstr, *tok;
 		bool	result;
@@ -108,11 +122,14 @@ bool	tb_tick(MAPDHASH &info, STRINGP ckname, FILE *fp) {
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
 		MAPDHASH	*p = kvpair->second.u.m_m;
+		MAPDHASH::iterator	ckp;
 		STRINGP	tick = getstring(*p, *ky);
 
 		if (!tick)
 			continue;
-		if (NULL == getstring(*p, KYSIM_CLOCK))
+
+		ckp = findkey(*p, KYSIM_CLOCK);
+		if (p->end() == ckp)
 			gbl_msg.warning("%s defines SIM.TICK, but not SIM.CLOCK\n",
 				kvpair->first.c_str());
 		if (!tb_same_clock(*p, ckname))
