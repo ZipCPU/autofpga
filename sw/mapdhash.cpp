@@ -673,7 +673,7 @@ STRINGP getstring(MAPDHASH &master, const STRING &ky) {
 			else
 				prefix = new STRING("(Unknown context)");
 
-			gbl_msg.error("ERR: STRING expression for KEY \"%s\""
+			gbl_msg.error("STRING expression for KEY \"%s\""
 				" in %s isnt a string!!\n\t... it's a map,"
 				" with sub-elements\n", ky.c_str(),
 				prefix->c_str());
@@ -687,7 +687,7 @@ STRINGP getstring(MAPDHASH &master, const STRING &ky) {
 		else
 			prefix = new STRING("(Unknown context)");
 
-		gbl_msg.error("ERR: STRING expression for KEY \"%s\" in %s isnt a string!! --- it's a %d\n", ky.c_str(), prefix->c_str(), r->second.m_typ);
+		gbl_msg.error("STRING expression for KEY \"%s\" in %s isnt a string!!\n", ky.c_str(), prefix->c_str());
 		return NULL;
 	}
 	return r->second.u.m_s;

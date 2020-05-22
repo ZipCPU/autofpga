@@ -560,7 +560,7 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 	CLOCKINFO	*c = m_info->m_clock;
 	PLIST::iterator	pp;
 	PLISTP		pl;
-	unsigned	unused_lsbs;
+	// unsigned	unused_lsbs;
 	MLISTP		m_mlist = m_info->m_mlist;
 
 	if (NULL == m_info->m_plist)
@@ -583,7 +583,7 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 	}
 
 
-	unused_lsbs = nextlg(m_info->data_width())-3;
+	// unused_lsbs = nextlg(m_info->data_width())-3;
 	if (m_info->m_plist->size() == 0) {
 		fprintf(fp, "\t//\n"
 			"\t// Bus %s has no slaves\n"
@@ -671,10 +671,10 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 			*mp = mstr->c_str();
 
 		fprintf(fp,
-		"//\n"
-		"// Bus %s has only one master (%s) and one slave (%s)\n"
-		"// connected to it -- skipping the interconnect\n"
-		"//\n"
+		"\t//\n"
+		"\t// Bus %s has only one master (%s) and one slave (%s)\n"
+		"\t// connected to it -- skipping the interconnect\n"
+		"\t//\n"
 		"\tassign	%s_awvalid = %s_awvalid;\n"
 		"\tassign	%s_awready = %s_awready;\n"
 		"\tassign	%s_awid    = %s_awid;\n"
@@ -1027,7 +1027,7 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 			PERIPHP p = (*pl)[k-1];
 			const char *pn = p->p_name->c_str(),
 				*pfx = p->bus_prefix()->c_str();
-			int	aw = p->p_awid + unused_lsbs,
+			int	// aw = p->p_awid + unused_lsbs,
 				iw = id_width();
 
 			fprintf(fp, "\t// %s\n", pn);

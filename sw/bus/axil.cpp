@@ -567,7 +567,7 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 	CLOCKINFO	*c = m_info->m_clock;
 	PLIST::iterator	pp;
 	PLISTP		pl;
-	unsigned	unused_lsbs;
+	// unsigned	unused_lsbs;
 	MLISTP		m_mlist = m_info->m_mlist;
 
 	if (NULL == m_info->m_plist)
@@ -590,7 +590,7 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 	}
 
 
-	unused_lsbs = nextlg(m_info->data_width())-3;
+	// unused_lsbs = nextlg(m_info->data_width())-3;
 	if (m_info->m_plist->size() == 0) {
 		fprintf(fp, "\t//\n"
 			"\t// Bus %s has no slaves\n"
@@ -667,33 +667,33 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 		STRINGP	mstr = (*m_mlist)[0]->bus_prefix();
 
 		fprintf(fp,
-		"//\n"
-		"// Bus %s has only one master (%s) and one slave (%s)\n"
-		"// connected to it -- skipping the interconnect\n"
-		"//\n"
-		"assign	%s_awvalid = %s_awvalid;\n"
-		"assign	%s_awready = %s_awready;\n"
-		"assign	%s_awaddr  = %s_awaddr;\n"
-		"assign	%s_awprot  = %s_awprot;\n"
-		"//\n"
-		"assign	%s_wvalid = %s_wvalid;\n"
-		"assign	%s_wready = %s_wready;\n"
-		"assign	%s_wdata  = %s_wdata;\n"
-		"assign	%s_wstrb  = %s_wstrb;\n"
-		"//\n"
-		"assign	%s_bvalid = %s_bvalid;\n"
-		"assign	%s_bready = %s_bready;\n"
-		"assign	%s_bresp  = %s_bresp;\n"
-		"//\n"
-		"assign	%s_arvalid = %s_arvalid;\n"
-		"assign	%s_arready = %s_arready;\n"
-		"assign	%s_araddr  = %s_araddr;\n"
-		"assign	%s_arprot  = %s_arprot;\n"
-		"//\n"
-		"assign	%s_rvalid = %s_rvalid;\n"
-		"assign	%s_rready = %s_rready;\n"
-		"assign	%s_rdata  = %s_rdata;\n"
-		"assign	%s_rresp  = %s_rresp;\n"
+		"\t//\n"
+		"\t// Bus %s has only one master (%s) and one slave (%s)\n"
+		"\t// connected to it -- skipping the interconnect\n"
+		"\t//\n"
+		"\tassign	%s_awvalid = %s_awvalid;\n"
+		"\tassign	%s_awready = %s_awready;\n"
+		"\tassign	%s_awaddr  = %s_awaddr;\n"
+		"\tassign	%s_awprot  = %s_awprot;\n"
+		"\t//\n"
+		"\tassign	%s_wvalid = %s_wvalid;\n"
+		"\tassign	%s_wready = %s_wready;\n"
+		"\tassign	%s_wdata  = %s_wdata;\n"
+		"\tassign	%s_wstrb  = %s_wstrb;\n"
+		"\t//\n"
+		"\tassign	%s_bvalid = %s_bvalid;\n"
+		"\tassign	%s_bready = %s_bready;\n"
+		"\tassign	%s_bresp  = %s_bresp;\n"
+		"\t//\n"
+		"\tassign	%s_arvalid = %s_arvalid;\n"
+		"\tassign	%s_arready = %s_arready;\n"
+		"\tassign	%s_araddr  = %s_araddr;\n"
+		"\tassign	%s_arprot  = %s_arprot;\n"
+		"\t//\n"
+		"\tassign	%s_rvalid = %s_rvalid;\n"
+		"\tassign	%s_rready = %s_rready;\n"
+		"\tassign	%s_rdata  = %s_rdata;\n"
+		"\tassign	%s_rresp  = %s_rresp;\n"
 		"\n\n",
 		n->c_str(), master_name(0)->c_str(),
 		(*m_info->m_plist)[0]->p_name->c_str(),
@@ -950,7 +950,7 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 			PERIPHP p = (*pl)[k-1];
 			const char *pn = p->p_name->c_str(),
 				*pfx = p->bus_prefix()->c_str();
-			int	aw = p->p_awid + unused_lsbs;
+			// int	aw = p->p_awid + unused_lsbs;
 
 			fprintf(fp, "\t// %s\n", pn);
 			fprintf(fp, "\tassign %s_awaddr = %s_diow_awaddr;\n", pfx, n->c_str());
