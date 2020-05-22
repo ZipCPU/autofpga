@@ -874,12 +874,11 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 			unused_lsbs++;
 		lgdw = nextlg(m_info->data_width())-3;
 
-		fprintf(fp, "\talways\t@(posedge %s)\n"
+		fprintf(fp, "\talways\t@(posedge %s)\n", c->m_wire->c_str());
 			// "\t\t// mask        = %08x\n"
 			// "\t\t// lgdw        = %d\n"
 			// "\t\t// unused_lsbs = %d\n"
-			"\tcasez( %s_addr[%d:%d] )\n",
-				c->m_wire->c_str(),
+		fprintf(fp, "\tcasez( %s_addr[%d:%d] )\n",
 				// mask, lgdw, unused_lsbs,
 				slp->c_str(),
 				nextlg(mask)-1, unused_lsbs);
@@ -891,7 +890,7 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 				(*m_slist)[j]->bus_prefix()->c_str());
 		}
 
-		if (nextlg(m_slist->size()-1) != nextlg(m_slist->size())) {
+		if (m_slist->size() != (1u<<nextlg(m_slist->size()))) {
 			// We need a default option
 		if (bus_option(KY_OPT_LOWPOWER)) {
 			int	v;
@@ -913,7 +912,12 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 			fprintf(fp, "\tdefault: " PREFIX "r_%s_data <= %s_idata;\n",
 				slp->c_str(),
 				(*m_slist)[m_slist->size()-1]->bus_prefix()->c_str());
-		}}
+		}} else {
+			fprintf(fp, "\t// No default: SIZE = %d, [Guru meditation: %d != %d]\n",
+				(int)m_slist->size(),
+				(int)nextlg(m_slist->size()-1),
+				(int)nextlg(m_slist->size()));
+		}
 		fprintf(fp, "\tendcase\n");
 		fprintf(fp, "\tassign\t" PREFIX "%s_idata = " PREFIX "r_%s_data;\n\n",
 			slp->c_str(), slp->c_str());
