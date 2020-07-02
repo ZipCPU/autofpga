@@ -574,9 +574,8 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 		return;
 
 	if (NULL == m_info->m_mlist) {
-		gbl_msg.error("No masters assigned to bus %s\n",
+		gbl_msg.warning("No masters assigned to bus %s\n",
 				n->c_str());
-		return;
 	}
 	if (NULL == (rst = m_info->reset_wire())) {
 		gbl_msg.warning("Bus %s has no associated reset wire, using \'i_reset\'\n", n->c_str());
@@ -607,24 +606,30 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 				"\t//\n"
 				"\t// The %s bus has no slaves assigned to it\n"
 				"\t//\n"
-		"\tassign	%s_awready = %s_bvalid && %s_bready;\n"
-		"\tassign	%s_wready  = %s_awready;\n"
-		"\tassign	%s_bvalid = %s_awvalid && %s_wvalid;\n"
-		"\tassign	%s_bresp = 2'b11;\n"
-		"\t//\n"
-		"\tassign	%s_arready = %s_rready;\n"
-		"\tassign	%s_rvalid = %s_arvalid;\n"
-		"\tassign	%s_rresp = 2'b11;\n\n",
+				"\t// The no-slave peripheral\n"
+				"\t//\n"
+	"\taxilempty #(\n"
+	"\t\t.C_AXI_ADDR_WIDTH(%d),\n"
+	"\t\t.C_AXI_DATA_WIDTH(%d)\n"
+	"\t) %s_no_slavep (\n"
+	"\t\t.S_AXI_ACLK(%s), .S_AXI_ARESETN(%s),\n"
+	"\t\t//\n"
+	"\t\t.S_AXI_AWVALID(%s_awvalid), .S_AXI_AWREADY(%s_awready),\n"
+	"\t\t.S_AXI_WVALID(%s_wvalid),   .S_AXI_WREADY(%s_wready),\n"
+	"\t\t.S_AXI_BVALID(%s_bvalid),   .S_AXI_BREADY(%s_bready),\n"
+	"\t\t.S_AXI_BRESP(%s_bresp),\n"
+	"\t\t//\n"
+	"\t\t.S_AXI_ARVALID(%s_arvalid), .S_AXI_ARREADY(%s_arready),\n"
+	"\t\t.S_AXI_RVALID(%s_rvalid),   .S_AXI_RREADY(%s_rready),\n"
+	"\t\t.S_AXI_RDATA(%s_rdata),   .S_AXI_RREADY(%s_rresp)\n"
+	"\t);\n\n",
 				mp,
-				//
-				mp, mp, mp,
-				mp, mp,
-				mp, mp, mp,
+				address_width(), m_info->data_width(),
 				mp,
+				c->m_wire->c_str(), rst->c_str(),
 				//
-				mp, mp,
-				mp, mp,
-				mp);
+				mp, mp, mp, mp, mp, mp, mp,
+				mp, mp, mp, mp, mp, mp);
 		}
 
 		return;

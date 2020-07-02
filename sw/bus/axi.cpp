@@ -533,7 +533,7 @@ void	AXIBUS::writeout_bus_master_defns_v(FILE *fp) {
 			(*pp)->bus_prefix()->c_str());
 		}
 	} else {
-		gbl_msg.error("Bus %s has no masters\n", n->c_str());
+		gbl_msg.warning("Bus %s has no masters\n", n->c_str());
 	}
 }
 
@@ -567,9 +567,8 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 		return;
 
 	if (NULL == m_info->m_mlist) {
-		gbl_msg.error("No masters assigned to bus %s\n",
+		gbl_msg.warning("No masters assigned to bus %s\n",
 				n->c_str());
-		return;
 	}
 	if (NULL == (rst = m_info->reset_wire())) {
 		gbl_msg.warning("Bus %s has no associated reset wire, using \'i_reset\'\n", n->c_str());
@@ -594,11 +593,56 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 		//
 		// Need to loop through all possible masters ...
 		for(unsigned m=0; m_info && m < m_info->m_mlist->size(); m++) {
-			STRINGP	mstr = master_name(m);
+			const char *pfx = (*m_info->m_mlist)[m]->bus_prefix()->c_str();
 			//
 			// No easy way to create a non-slave at present
-			gbl_msg.error("Bus master %s has no slaves\n",
-				mstr->c_str());
+			// gbl_msg.error("Bus master %s has no slaves\n",
+			//	mstr->c_str());
+
+			fprintf(fp,
+			"\t//\n"
+			"\t// The %s bus has no slaves assigned to it\n"
+			"\t//\n", pfx);
+
+			fprintf(fp,
+				"\t// The no-slave peripheral\n"
+				"\t//\n"
+				"\taxiempty #(\n"
+				"\t\t\t.C_AXI_ADDR_WIDTH(%d),\n"
+				"\t\t\t.C_AXI_DATA_WIDTH(%d),\n"
+				"\t\t\t.C_AXI_ID_WIDTH(%d),\n",
+					address_width(),
+					m_info->data_width(),
+					id_width());
+
+			fprintf(fp,
+	"\t) %s_no_slavep (\n"
+		"\t\t.S_AXI_ACLK(%s), .S_AXI_ARESETN(%s),\n"
+		"\t\t//\n",
+				pfx, c->m_wire->c_str(), rst->c_str());
+			fprintf(fp,
+		"\t\t.S_AXI_AWVALID(%s_awvalid), .S_AXI_AWREADY(%s_awready),\n"
+		"\t\t\t.S_AXI_AWID(%s_awid),\n"
+		"\t\t//\n"
+		"\t\t.S_AXI_WVALID(%s_wvalid), .S_AXI_WREADY(%s_wready),\n"
+		"\t\t\t.S_AXI_WLAST(%s_wlast),\n"
+		"\t\t//\n"
+		"\t\t.S_AXI_BVALID(%s_bvalid), .S_AXI_BREADY(%s_bready),\n"
+		"\t\t\t.S_AXI_BID(%s_bid), .S_AXI_BRESP(%s_bresp),\n"
+		"\t\t//\n"
+		"\t\t.S_AXI_ARVALID(%s_awvalid), .S_AXI_ARREADY(%s_awready),\n"
+		"\t\t\t.S_AXI_ARLEN(%s_arlen), .S_AXI_ARID(%s_awid),\n"
+		"\t\t//\n"
+		"\t\t.S_AXI_RVALID(%s_rvalid), .S_AXI_RREADY(%s_rready),\n"
+		"\t\t\t.S_AXI_RID(%s_rid), .S_AXI_RDATA(%s_rdata),\n"
+		"\t\t\t.S_AXI_RLAST(%s_rlast), .S_AXI_RRESP(%s_rresp)\n"
+	"\t);\n\n",
+				pfx, pfx, pfx,
+				pfx, pfx, pfx,
+				pfx, pfx, pfx, pfx,
+				pfx, pfx, pfx, pfx,
+				pfx, pfx, pfx, pfx, pfx, pfx);
+
 		}
 			
 
