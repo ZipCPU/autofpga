@@ -494,7 +494,7 @@ void	AXILBUS::writeout_bus_master_defns_v(FILE *fp) {
 			(*pp)->bus_prefix()->c_str());
 		}
 	} else {
-		gbl_msg.error("Bus %s has no masters\n", n->c_str());
+		gbl_msg.warning("Bus %s has no masters\n", n->c_str());
 	}
 }
 
@@ -658,6 +658,22 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 		pstr->c_str(), pstr->c_str(),
 		pstr->c_str(), pstr->c_str(),
 		pstr->c_str());
+
+			fprintf(fp,
+		"\t//\n"
+		"\t//\n"
+		"\twire	%s_unused;\n"
+		"\tassign	%s_unused = &{ 1\'b0, %s_awready, %s_wready,\n"
+			"\t\t%s_bvalid, %s_bresp,\n"
+			"\t\t%s_arready,\n"
+			"\t\t%s_rvalid, %s_rdata, %s_rresp\n"
+			"\t\t};\n",
+			pstr->c_str(), pstr->c_str(),
+			pstr->c_str(), pstr->c_str(),
+			pstr->c_str(), pstr->c_str(),
+			pstr->c_str(),
+			pstr->c_str(),pstr->c_str(),pstr->c_str()
+			);
 		}
 
 		return;
@@ -686,20 +702,19 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 		"\tassign	%s_wdata  = %s_wdata;\n"
 		"\tassign	%s_wstrb  = %s_wstrb;\n"
 		"\t//\n"
-		"\tassign	%s_bvalid = %s_bvalid;\n"
-		"\tassign	%s_bready = %s_bready;\n"
-		"\tassign	%s_bresp  = %s_bresp;\n"
+		"\tassign	%s_bvalid  = %s_bvalid;\n"
+		"\tassign	%s_bready  = %s_bready;\n"
+		"\tassign	%s_bresp   = %s_bresp;\n"
 		"\t//\n"
 		"\tassign	%s_arvalid = %s_arvalid;\n"
 		"\tassign	%s_arready = %s_arready;\n"
 		"\tassign	%s_araddr  = %s_araddr;\n"
 		"\tassign	%s_arprot  = %s_arprot;\n"
 		"\t//\n"
-		"\tassign	%s_rvalid = %s_rvalid;\n"
-		"\tassign	%s_rready = %s_rready;\n"
-		"\tassign	%s_rdata  = %s_rdata;\n"
-		"\tassign	%s_rresp  = %s_rresp;\n"
-		"\n\n",
+		"\tassign	%s_rvalid  = %s_rvalid;\n"
+		"\tassign	%s_rready  = %s_rready;\n"
+		"\tassign	%s_rdata   = %s_rdata;\n"
+		"\tassign	%s_rresp   = %s_rresp;\n\n",
 		n->c_str(), master_name(0)->c_str(),
 		(*m_info->m_plist)[0]->p_name->c_str(),
 		//

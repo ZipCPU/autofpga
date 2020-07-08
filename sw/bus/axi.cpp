@@ -699,6 +699,25 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 			pstr->c_str(), pstr->c_str(), pstr->c_str(),
 			pstr->c_str(), pstr->c_str(), pstr->c_str(),
 			pstr->c_str(), pstr->c_str());
+
+
+			fprintf(fp,
+		"\t//\n"
+		"\t//\n"
+		"\twire	%s_unused;\n"
+		"\tassign	%s_unused = &{ 1\'b0, %s_awready, %s_wready,\n"
+			"\t\t%s_bvalid, %s_bid, %s_bresp,\n"
+			"\t\t%s_arready,\n"
+			"\t\t%s_rvalid, %s_rid, %s_rdata,\n"
+				"\t\t\t%s_rlast, %s_rresp\n"
+			"\t\t};\n",
+			pstr->c_str(), pstr->c_str(),
+			pstr->c_str(), pstr->c_str(),
+			pstr->c_str(), pstr->c_str(), pstr->c_str(),
+			pstr->c_str(),
+			pstr->c_str(), pstr->c_str(), pstr->c_str(),
+				pstr->c_str(), pstr->c_str()
+			);
 		}
 
 		return;
@@ -746,10 +765,12 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 		"\tassign	%s_wlast   = %s_wlast;\n"
 		"\t//\n"
 		"\tassign	%s_bvalid  = %s_bvalid;\n"
-		"\tassign	%s_bready  = %s_bready;\n",
+		"\tassign	%s_bready  = %s_bready;\n"
+		"\tassign	%s_bid     = %s_bid;\n"
+		"\tassign	%s_bresp   = %s_bresp;\n",
 			sp, mp, mp, sp,
 			sp, mp, sp, mp, sp, mp,
-			mp, sp, sp, mp);
+			mp, sp, sp, mp, mp, sp, mp, sp);
 
 		fprintf(fp,
 		"\t//\n"
