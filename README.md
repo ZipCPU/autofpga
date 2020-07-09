@@ -12,7 +12,7 @@ they all have a set of bus masters, such as the
 [UART-to-wishbone](https://github.com/ZipCPU/zbasic/blob/master/rtl/wbubus.v)
 bridge that I use, the [hexbus](https://github.com/ZipCPU/dbgbus) debugging
 bus that offers a simpler version of the same, or even the
-[zipcpu](https://github.com/ZipCPU/zipcpu). 
+[zipcpu](https://github.com/ZipCPU/zipcpu).
 Many of these designs have also started to use (and reuse) many of the
 peripherals I've developed, such as
 the generic [UART](https://github.com/ZipCPU/wbuart),
@@ -279,7 +279,7 @@ These include: a [Flash](auto-data/flash.txt) controller,
 a very simple [GPIO controller](auto-data/gpio.txt),
 [RMII ethernet controller](auto-data/enet.txt),
 [MDIO ethernet control interface](auto-data/mdio.txt),
-a [GPS UART and PPS-driven internal clock](auto-data/gps.txt), 
+a [GPS UART and PPS-driven internal clock](auto-data/gps.txt),
 a [Real-Time (GPS driven) Clock](auto-data/rtcgps.txt),
 a [PS/2 Mouse](auto-data/wbmouse.txt),
 an [OLED component](auto-data/wboledbw.txt), and more.
