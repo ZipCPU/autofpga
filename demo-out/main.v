@@ -915,6 +915,7 @@ module	main(i_clk, i_reset,
 	4'ha: r_wb_sio_data <= wb_subseconds_idata;
 	4'hb: r_wb_sio_data <= wb_sysclk_idata;
 	4'hc: r_wb_sio_data <= wb_version_idata;
+	default: r_wb_sio_data <= wb_version_idata;
 	endcase
 	assign	wb_sio_idata = r_wb_sio_data;
 
