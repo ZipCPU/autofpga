@@ -289,7 +289,7 @@ void	addtomap(MAPDHASH &fm, STRING ky, STRING vl) {
 			elm.m_typ = MAPT_AST;
 			elm.u.m_a = parse_ast(vl);
 			if (NULL == elm.u.m_a)
-				gbl_msg.fatal("Could not parse %s\n", vl);
+				gbl_msg.fatal("Could not parse %s\n", vl.c_str());
 			fm.insert(KEYVALUE(*trimmed, elm ) );
 			if ((elm.u.m_a->isdefined())&&(*trimmed == KYEXPR)) {
 				AST *ast = elm.u.m_a;
