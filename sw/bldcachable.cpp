@@ -176,7 +176,7 @@ void build_cachable_v(MAPDHASH &master, STRINGP subd) {
 			continue;
 		} else if ((*fnamep)[0] == '/') {
 			gbl_msg.error("Cowardly refusing to write cachable with an absolute pathname, %s\n",
-				(*fnamep));
+				fnamep->c_str());
 			continue;
 		}
 
@@ -185,7 +185,7 @@ void build_cachable_v(MAPDHASH &master, STRINGP subd) {
 			fname += ".v";
 		fp = fopen(fname.c_str(), "w");
 		if (fp == NULL)
-			gbl_msg.error("Could not write cachable file: %s\n", fname);
+			gbl_msg.error("Could not write cachable file: %s\n", fname.c_str());
 		else {
 			build_cachable_core_v(master, *kvpair->second.u.m_m,
 				fp, fname);
