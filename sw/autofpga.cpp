@@ -1677,7 +1677,7 @@ int	main(int argc, char **argv) {
 
 	gbl_hash = &master;
 
-	STRINGP	subd;
+	STRINGP	subd = NULL;
 	if (subdir) {
 		subd = new STRING(subdir);
 		setstring(master, KYSUBD, subd);
@@ -1693,7 +1693,7 @@ int	main(int argc, char **argv) {
 			"Cowardly refusing to place output products into the "
 			"root directory, '/'\n", subd->c_str());
 	} if ((*subd)[subd->size()-1] == '/')
-		(*subd)[subd->size()-1] = '\0';
+		(*subd).erase(subd->size()-1);
 
 	{	// Build ourselves a subdirectory for our outputs
 		// First, check if the directory exists.
