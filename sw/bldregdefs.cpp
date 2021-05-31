@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Filename: 	bldregdefs.cpp
-//
+// {{{
 // Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 //
 // Purpose:	To build the regdefs.h and regdefs.cpp files.
@@ -10,9 +10,9 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2017-2021, Gisselquist Technology, LLC
-//
+// {{{
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
@@ -27,14 +27,14 @@
 // with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
 // target there if the PDF file isn't present.)  If not, see
 // <http://www.gnu.org/licenses/> for a copy.
-//
+// }}}
 // License:	GPL, v3, as defined and found on www.gnu.org,
+// {{{
 //		http://www.gnu.org/licenses/gpl.html
-//
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+// }}}
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
@@ -63,6 +63,7 @@ extern	bool	isperipheral(MAPT &pmap);
 extern	bool	isperipheral(MAPDHASH &phash);
 
 int	get_longest_defname(APLIST *alist) {
+	// {{{
 	unsigned	longest_defname = 0;
 	STRING		str;
 
@@ -123,10 +124,11 @@ int	get_longest_defname(APLIST *alist) {
 
 	return longest_defname;
 }
+// }}}
 
 //
 // write_regdefs
-//
+// {{{
 // This writes out the definitions of all the registers found within the plist
 // to the C++ header file given by fp.  It takes as a parameter the longest
 // name definition, which we use to try to line things up in a prettier fashion
@@ -205,11 +207,11 @@ void write_regdefs(FILE *fp, APLIST *alist, unsigned longest_defname) {
 	}
 	fprintf(fp, "\n\n");
 }
+// }}}
 
 //
 // build_regdefs_h
-//
-//
+// {{{
 // This builds a regdefs.h file, a file that can be used on a host in order
 // to access our design.
 //
@@ -337,10 +339,11 @@ void	build_regdefs_h(  MAPDHASH &master, FILE *fp, STRING &fname) {
 
 	fprintf(fp, "#endif\t// REGDEFS_H\n");
 }
+// }}}
 
 //
 // get_longest_uname
-//
+// {{{
 // This is very similar to the get longest defname (get length of the longest
 // variable definition name) above, save that this is applied to the user
 // names within regdefs.cpp
@@ -364,6 +367,9 @@ unsigned	get_longest_uname(APLIST *alist) {
 			char	nstr[32];
 			sprintf(nstr, "%d", j);
 			strp = getstring(*ph, str=STRING("REGS.")+nstr);
+
+			if (!strp)
+				continue;
 			STRING	scpy = *strp;
 
 			char	*nxtp, *rv;
@@ -388,10 +394,11 @@ unsigned	get_longest_uname(APLIST *alist) {
 
 	return longest_uname;
 }
+// }}}
 
 //
 // write_regnames
-//
+// {{{
 //
 void write_regnames(FILE *fp, APLIST *alist,
 		unsigned longest_defname, unsigned longest_uname) {
@@ -412,8 +419,9 @@ void write_regnames(FILE *fp, APLIST *alist,
 			char	nstr[32];
 			sprintf(nstr, "%d", j);
 			strp = getstring(*ph,str=STRING("REGS.")+nstr);
+			if (!strp)
+				continue;
 			STRING	scpy = *strp;
-
 			char	*nxtp, *rname, *rv;
 
 			// 1. Read the number
@@ -437,11 +445,11 @@ void write_regnames(FILE *fp, APLIST *alist,
 		}
 	}
 }
-
+// }}}
 
 //
 // build_regdefs_cpp
-//
+// {{{
 void	build_regdefs_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 	STRINGP	strp;
 	STRING	str;
@@ -507,4 +515,5 @@ void	build_regdefs_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 		fputs(strp->c_str(), fp);
 	}
 }
+// }}}
 
