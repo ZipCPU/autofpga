@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Filename: 	axi.h
-//
+// {{{
 // Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 //
 // Purpose:	AXI4 (full) interface--for high speed AXI4 cores--or any AXI4
@@ -11,11 +11,11 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
-// Copyright (C) 2019-2020, Gisselquist Technology, LLC
-//
+// }}}
+// Copyright (C) 2019-2021, Gisselquist Technology, LLC
+// {{{
 // This program is free software (firmware): you can redistribute it and/or
-// modify it under the terms of  the GNU General Public License as published
+// modify it under the terms of the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
 // your option) any later version.
 //
@@ -28,14 +28,14 @@
 // with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
 // target there if the PDF file isn't present.)  If not, see
 // <http://www.gnu.org/licenses/> for a copy.
-//
+// }}}
 // License:	GPL, v3, as defined and found on www.gnu.org,
+// {{{
 //		http://www.gnu.org/licenses/gpl.html
-//
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+// }}}
 #ifndef	AXI_H
 #define	AXI_H
 
@@ -71,7 +71,8 @@ public:
 
 	// void		write_addr_range(FILE *fp, const PERIPHP p,
 	//			const int dalines);
-	virtual	void	writeout_defn_v(FILE *fp, const char *pname,
+	virtual	void	writeout_defn_v(FILE *fp, const char *mstype,
+				const char *pname,
 				const char *busp, const char *btyp = "");
 	virtual	void	writeout_bus_slave_defns_v(FILE *fp);
 	virtual	void	writeout_bus_master_defns_v(FILE *fp);

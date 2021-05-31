@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Filename: 	axil.cpp
-//
+// {{{
 // Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 //
 // Purpose:
@@ -71,11 +71,11 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
-// Copyright (C) 2019-2020, Gisselquist Technology, LLC
-//
+// }}}
+// Copyright (C) 2019-2021, Gisselquist Technology, LLC
+// {{{
 // This program is free software (firmware): you can redistribute it and/or
-// modify it under the terms of  the GNU General Public License as published
+// modify it under the terms of the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
 // your option) any later version.
 //
@@ -88,14 +88,14 @@
 // with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
 // target there if the PDF file isn't present.)  If not, see
 // <http://www.gnu.org/licenses/> for a copy.
-//
+// }}}
 // License:	GPL, v3, as defined and found on www.gnu.org,
+// {{{
 //		http://www.gnu.org/licenses/gpl.html
-//
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+// }}}
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -132,6 +132,7 @@ extern	AXILBUSCLASS	axilclass;
 const	unsigned	AXI_MIN_ADDRESS_WIDTH = 12;
 
 AXILBUS::AXILBUS(BUSINFO *bi) {
+	// {{{
 	m_info = bi;
 	m_slist = NULL;
 	m_dlist = NULL;
@@ -143,8 +144,10 @@ AXILBUS::AXILBUS(BUSINFO *bi) {
 	m_num_double = 0;
 	m_num_total = 0;
 }
+// }}}
 
 void	AXILBUS::allocate_subbus(void) {
+	// {{{
 	PLIST	*pl = m_info->m_plist;
 	BUSINFO	*sbi = NULL, *dbi = NULL;
 
@@ -238,13 +241,17 @@ void	AXILBUS::allocate_subbus(void) {
 		setstring(dbi->m_hash, KY_TYPE, axilclass.name());
 	REHASH;
 }
+// }}}
 
 int	AXILBUS::address_width(void) {
+	// {{{
 	assert(m_info);
 	return m_info->m_address_width;
 }
+// }}}
 
 bool	AXILBUS::get_base_address(MAPDHASH *phash, unsigned &base) {
+	// {{{
 	if (!m_info || !m_info->m_plist) {
 		gbl_msg.error("BUS[%s] has no peripherals!\n",
 			(name()) ? name()->c_str() : "(No name)");
@@ -252,8 +259,10 @@ bool	AXILBUS::get_base_address(MAPDHASH *phash, unsigned &base) {
 	} else
 		return m_info->m_plist->get_base_address(phash, base);
 }
+// }}}
 
 void	AXILBUS::assign_addresses(void) {
+	// {{{
 	int	address_width;
 
 	if (m_info->m_addresses_assigned)
@@ -289,8 +298,10 @@ void	AXILBUS::assign_addresses(void) {
 		}
 	} m_info->m_addresses_assigned = true;
 }
+// }}}
 
 BUSINFO *AXILBUS::create_sio(void) {
+	// {{{
 	assert(m_info);
 
 	BUSINFO	*sbi;
@@ -333,8 +344,10 @@ assert(subp->p_master_bus == sbi);
 
 	return sbi;
 }
+// }}}
 
 BUSINFO *AXILBUS::create_dio(void) {
+	// {{{
 	assert(m_info);
 
 	BUSINFO	*dbi;
@@ -381,8 +394,10 @@ assert(isarbiter(*shash));
 
 	return dbi;
 }
+// }}}
 
 void	AXILBUS::countsio(void) {
+	// {{{
 	PLIST	*pl = m_info->m_plist;
 	STRINGP	strp;
 
@@ -405,8 +420,10 @@ void	AXILBUS::countsio(void) {
 			m_num_total++;	// Default to OTHER if no type is given
 	}
 }
+// }}}
 
 void	AXILBUS::integrity_check(void) {
+	// {{{
 	// GENBUS::integrity_check();
 
 	if (m_info && m_info->m_data_width <= 0) {
@@ -414,15 +431,17 @@ void	AXILBUS::integrity_check(void) {
 			name()->c_str());
 	}
 }
+// }}}
 
-void	AXILBUS::writeout_defn_v(FILE *fp, const char *pname,
-		const char* busp, const char *btyp){
+void	AXILBUS::writeout_defn_v(FILE *fp, const char *mstype,
+		const char *pname, const char* busp, const char *btyp){
+	// {{{
 	STRINGP	n = name();
 	int	aw = address_width();
 
-	fprintf(fp, "\t//\t// AXI-lite slave definitions for bus %s%s,\n"
-		"\t// component %s, with prefix %s\n\t//\n",
-		n->c_str(), btyp, pname, busp);
+	fprintf(fp, "\t//\n\t// AXI-lite %s definitions for bus %s%s,\n"
+		"\t// component %s, with prefix %s\n\t// {{{\n",
+		mstype, n->c_str(), btyp, pname, busp);
 	fprintf(fp, "\t// Verilator lint_off UNUSED\n");
 	fprintf(fp, "\twire\t\t%s_awready, %s_wready,\n\t\t\t%s_arready;\n",
 			busp, busp, busp);
@@ -444,17 +463,21 @@ void	AXILBUS::writeout_defn_v(FILE *fp, const char *pname,
 		busp, busp,
 			m_info->data_width()-1, busp,
 			(m_info->data_width()/8)-1, busp);
-	fprintf(fp, "\t// Verilator lint_on  UNUSED\n");
+	fprintf(fp,
+		"\t// Verilator lint_on  UNUSED\n"
+		"\t// }}}\n");
 }
+// }}}
 
 void	AXILBUS::writeout_bus_slave_defns_v(FILE *fp) {
+	// {{{
 	PLIST	*p = m_info->m_plist;
 	STRINGP	n = name();
 
 	if (m_slist) {
 		for(PLIST::iterator pp=m_slist->begin();
 				pp != m_slist->end(); pp++) {
-			writeout_defn_v(fp, (*pp)->p_name->c_str(),
+			writeout_defn_v(fp, "slave", (*pp)->p_name->c_str(),
 				(*pp)->bus_prefix()->c_str(), "(SIO)");
 		}
 	} else if (!m_is_single)
@@ -465,7 +488,7 @@ void	AXILBUS::writeout_bus_slave_defns_v(FILE *fp) {
 	if (m_dlist) {
 		for(PLIST::iterator pp=m_dlist->begin();
 				pp != m_dlist->end(); pp++) {
-			writeout_defn_v(fp, (*pp)->p_name->c_str(),
+			writeout_defn_v(fp, "slave", (*pp)->p_name->c_str(),
 				(*pp)->bus_prefix()->c_str(), "(DIO)");
 		}
 	} else if (!m_is_double)
@@ -476,29 +499,33 @@ void	AXILBUS::writeout_bus_slave_defns_v(FILE *fp) {
 
 	if (p) {
 		for(PLIST::iterator pp=p->begin(); pp != p->end(); pp++) {
-			writeout_defn_v(fp, (*pp)->p_name->c_str(),
+			writeout_defn_v(fp, "slave", (*pp)->p_name->c_str(),
 				(*pp)->bus_prefix()->c_str());
 		}
 	} else {
 		gbl_msg.error("%s has no slaves\n", n->c_str());
 	}
 }
+// }}}
 
 void	AXILBUS::writeout_bus_master_defns_v(FILE *fp) {
+	// {{{
 	MLIST	*m = m_info->m_mlist;
 	STRINGP	n = name();
 
 	if (m) {
 		for(MLIST::iterator pp=m->begin(); pp != m->end(); pp++) {
-			writeout_defn_v(fp, (*pp)->name()->c_str(),
+			writeout_defn_v(fp, "master", (*pp)->name()->c_str(),
 			(*pp)->bus_prefix()->c_str());
 		}
 	} else {
 		gbl_msg.warning("Bus %s has no masters\n", n->c_str());
 	}
 }
+// }}}
 
 void	AXILBUS::write_addr_range(FILE *fp, const PERIPHP p, const int dalines) {
+	// {{{
 	unsigned	w = address_width();
 	w = (w+3)/4;
 	if (p->p_naddr == 1)
@@ -507,9 +534,12 @@ void	AXILBUS::write_addr_range(FILE *fp, const PERIPHP p, const int dalines) {
 		fprintf(fp, " // 0x%0*lx - 0x%0*lx", w, p->p_base,
 			w, p->p_base + (p->p_naddr << (dalines))-1);
 }
+// }}}
 
 void	AXILBUS::writeout_no_slave_v(FILE *fp, STRINGP prefix) {
+	// {{{
 }
+// }}}
 
 void	AXILBUS::writeout_no_master_v(FILE *fp) {
 	if (!m_info || !name())
@@ -517,10 +547,12 @@ void	AXILBUS::writeout_no_master_v(FILE *fp) {
 }
 
 STRINGP	AXILBUS::master_name(int k) {
+	// {{{
 	MLISTP ml = m_info->m_mlist;
 
 	return (*ml)[k]->name();
 }
+// }}}
 
 //
 // Connect this master to the crossbar.  Specifically, we want to output
@@ -590,7 +622,8 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 
 
 	// unused_lsbs = nextlg(m_info->data_width())-3;
-	if (m_info->m_plist->size() == 0) {
+	if (m_info->m_plist->size() == 0) {	// No slaves
+		// {{{
 		fprintf(fp, "\t//\n"
 			"\t// Bus %s has no slaves\n"
 			"\t//\n\n", n->c_str());
@@ -609,9 +642,12 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 				"\t// The no-slave peripheral\n"
 				"\t//\n"
 	"\taxilempty #(\n"
+	"\t\t// {{{\n"
 	"\t\t.C_AXI_ADDR_WIDTH(%d),\n"
 	"\t\t.C_AXI_DATA_WIDTH(%d)\n"
+	"\t\t// }}}\n"
 	"\t) %s_no_slavep (\n"
+		"\t\t// {{{\n"
 	"\t\t.S_AXI_ACLK(%s), .S_AXI_ARESETN(%s),\n"
 	"\t\t//\n"
 	"\t\t.S_AXI_AWVALID(%s_awvalid), .S_AXI_AWREADY(%s_awready),\n"
@@ -633,7 +669,9 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 		}
 
 		return;
-	} else if (NULL == m_mlist || m_mlist->size() == 0) {
+		// }}}
+	} else if (NULL == m_mlist || m_mlist->size() == 0) { // No masters
+		// {{{
 		for(unsigned p=0; p < m_info->m_plist->size(); p++) {
 			STRINGP	pstr = (*m_info->m_plist)[p]->bus_prefix();
 			fprintf(fp,
@@ -677,7 +715,9 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 		}
 
 		return;
+		// }}}
 	} else if ((m_info->m_plist->size() == 1)&&(m_mlist && m_mlist->size() == 1)) {
+		// {{{
 		// Only one master connected to only one slave--skip all the
 		// extra connection logic.
 		//
@@ -744,13 +784,15 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 		);
 
 		return;
+		// }}}
 	}
 
 	// Start with the slist
-	if (m_is_single) {
+	if (m_is_single || m_slist) {
+		// {{{
 		assert(1 == m_info->m_mlist->size());
 
-		PLIST	*slist = m_info->m_plist;
+		PLIST	*slist = (m_is_single) ? m_info->m_plist : m_slist;
 		const char *np = n->c_str();
 		STRING	s = STRING(*(*m_mlist)[0]->bus_prefix());
 		int	aw = nextlg(slist->size())+nextlg(m_info->data_width())-3;
@@ -768,6 +810,7 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 
 		fprintf(fp,
 		"\taxilsingle #(\n"
+			"\t\t// {{{\n"
 			"\t\t// .C_AXI_ADDR_WIDTH(%d), // must be only one word address\n"
 			"\t\t.C_AXI_DATA_WIDTH(%d),\n"
 			"\t\t.NS(%ld)",
@@ -776,13 +819,16 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 		xbar_option(fp, KY_OPT_LOWPOWER,  ",\n\t\t.OPT_LOWPOWER(%)",
 			"1\'b1");
 		fprintf(fp,
-		"\n\t) %s_axilsingle(\n", np);
+		"\n\t\t// }}}\n"
+		"\t) %s_axilsingle(\n", np);
 		fprintf(fp,
+			"\t\t// {{{\n"
 			"\t\t.S_AXI_ACLK(%s),\n"
 			"\t\t.S_AXI_ARESETN(%s),\n",
 				c->m_wire->c_str(), rst->c_str());
 
-		fprintf(fp, "\t\t//\n");
+		fprintf(fp, "\t\t// Connect our SIO slave wires to axilsingle\n"
+			"\t\t// {{{\n");
 		fprintf(fp,
 			"\t\t.S_AXI_AWVALID(%s_awvalid),\n"
 			"\t\t.S_AXI_AWREADY(%s_awready),\n"
@@ -807,9 +853,9 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 			"\t\t.S_AXI_RREADY( %s_rready),\n"
 			"\t\t.S_AXI_RDATA(  %s_rdata),\n"
 			"\t\t.S_AXI_RRESP(  %s_rresp),\n"
-			"\t\t//\n"
-			"\t\t// Connections to slaves\n"
-			"\t\t//\n",
+			"\t\t// }}}\n"
+			"\t\t// Connections to varous AXI-lite (SINGLE) slaves\n"
+			"\t\t// {{{\n",
 			s.c_str(), s.c_str(), s.c_str(), aw-1, s.c_str(),
 			s.c_str(), s.c_str(), s.c_str(), s.c_str(),
 			s.c_str(), s.c_str(), s.c_str(),
@@ -822,8 +868,8 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 			"\t\t.M_AXI_WDATA( %s_siow_wdata),\n"
 			"\t\t.M_AXI_WSTRB( %s_siow_wstrb),\n",
 			n->c_str(), n->c_str(), n->c_str());
-		fprintf(fp, "\t\t//\n");
-		fprintf(fp, "\t\t//\n");
+		fprintf(fp, "\t\t//\n"
+			"\t\t//\n");
 		xbarcon_slave(fp, slist, "\t\t",".M_AXI_","BRESP");
 		fprintf(fp, "\t\t// Read connections\n");
 		xbarcon_slave(fp, slist, "\t\t",".M_AXI_","ARVALID");
@@ -832,9 +878,12 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 			"\t\t//\n", n->c_str());
 		xbarcon_slave(fp, slist, "\t\t",".M_AXI_","RDATA");
 		xbarcon_slave(fp, slist, "\t\t",".M_AXI_","RRESP", false);
-		fprintf(fp, "\t);\n\n");
+		fprintf(fp, "\t\t// }}}\n"
+			"\t\t// }}}\n"
+			"\t);\n\n");
 		fprintf(fp,"\t//\n\t// Now connecting the extra slaves wires "
-			"to the AXISINGLE controller\n\t//\n");
+			"to the AXILSINGLE controller\n"
+			"\t// {{{\n");
 
 		for(int k=slist->size(); k>0; k--) {
 			PERIPHP p = (*slist)[k-1];
@@ -852,20 +901,25 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 			fprintf(fp, "\tassign %s_araddr = 0;\n", pn);
 			fprintf(fp, "\tassign %s_arprot = %s_siow_arprot;\n", pn, ns);
 			fprintf(fp, "\tassign %s_rready = 1\'b1;\n", pn);
-		}
-
+		} fprintf(fp, "\t// }}}\n");
+		// }}}
 		return;
+		// }}}
 	} else if (!m_slist)
 		fprintf(fp, "\t//\n\t// No class SINGLE peripherals on the \"%s\" bus\n\t//\n\n", n->c_str());
 
 	// Then the dlist
-	if (m_is_double) {
+	if (m_is_double || m_dlist) {
+		// {{{
 		if (m_dlist)
 			pl = m_dlist;
 		else
 			pl = m_info->m_plist;
 		STRING	s = STRING(*(*m_mlist)[0]->bus_prefix());
 		int	aw = address_width();
+
+		if (!m_is_double)
+			s = (*n) + "_dio";
 
 		fprintf(fp,
 			"\t//\n"
@@ -892,6 +946,7 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 
 		fprintf(fp,
 		"\taxildouble #(\n"
+			"\t\t// {{{\n"
 			"\t\t.C_AXI_ADDR_WIDTH(%d),\n"
 			"\t\t.C_AXI_DATA_WIDTH(%d),\n"
 			"\t\t.NS(%ld),\n",
@@ -902,15 +957,19 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 		slave_addr(fp, pl); fprintf(fp, ",\n");
 		slave_mask(fp, pl); fprintf(fp, "\n");
 		fprintf(fp,
+		"\t\t// }}}\n"
 		"\t) %s_axildouble(\n",
 			n->c_str());
 		fprintf(fp,
+			"\t\t// {{{\n"
 			"\t\t.S_AXI_ACLK(%s),\n"
 			"\t\t.S_AXI_ARESETN(%s),\n",
 				c->m_wire->c_str(), rst->c_str());
 
 		fprintf(fp, "\t\t//\n");
 		fprintf(fp,
+			"\t\t// Slave port\n"
+			"\t\t// {{{\n"
 			"\t\t.S_AXI_AWVALID(%s_awvalid),\n"
 			"\t\t.S_AXI_AWREADY(%s_awready),\n"
 			"\t\t.S_AXI_AWADDR( %s_awaddr[%d:0]),\n"
@@ -935,9 +994,9 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 			"\t\t.S_AXI_RREADY( %s_rready),\n"
 			"\t\t.S_AXI_RDATA(  %s_rdata),\n"
 			"\t\t.S_AXI_RRESP(  %s_rresp),\n"
-			"\t\t//\n"
+			"\t\t// }}}\n"
 			"\t\t// Connections to slaves\n"
-			"\t\t//\n",
+			"\t\t// {{{\n",
 			s.c_str(), s.c_str(), s.c_str(), aw-1, s.c_str(),
 			s.c_str(), s.c_str(), s.c_str(), s.c_str(),
 			s.c_str(), s.c_str(), s.c_str(),
@@ -962,7 +1021,10 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 			"\t\t//\n", n->c_str(), n->c_str());
 		xbarcon_slave(fp, pl, "\t\t",".M_AXI_","RDATA");
 		xbarcon_slave(fp, pl, "\t\t",".M_AXI_","RRESP", false);
-		fprintf(fp, "\t\t);\n\n");
+		fprintf(fp,
+			"\t\t// }}}\n"
+			"\t\t// }}}\n"
+			"\t);\n\n");
 		fprintf(fp,"\t//\n\t// Now connecting the extra slaves wires "
 			"to the AXILDOUBLE controller\n\t//\n");
 
@@ -972,7 +1034,8 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 				*pfx = p->bus_prefix()->c_str();
 			// int	aw = p->p_awid + unused_lsbs;
 
-			fprintf(fp, "\t// %s\n", pn);
+			fprintf(fp, "\t// %s\n"
+				"\t// {{{\n", pn);
 			fprintf(fp, "\tassign %s_awaddr = %s_diow_awaddr;\n", pfx, n->c_str());
 			fprintf(fp, "\tassign %s_awprot = %s_diow_awprot;\n", pfx, n->c_str());
 			fprintf(fp, "\tassign %s_wvalid = %s_awvalid;\n", pfx, pfx);
@@ -981,10 +1044,13 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 			fprintf(fp, "\tassign %s_bready = 1\'b1;\n", pfx);
 			fprintf(fp, "\tassign %s_araddr = %s_diow_araddr;\n", pfx, n->c_str());
 			fprintf(fp, "\tassign %s_arprot = %s_diow_arprot;\n", pfx, n->c_str());
-			fprintf(fp, "\tassign %s_rready = 1\'b1;\n", pfx);
+			fprintf(fp, "\tassign %s_rready = 1\'b1;\n"
+				"\t// }}}\n", pfx);
 		}
 
-		return;
+		if (m_is_double)
+			return;
+		// }}}
 	} else if (!m_dlist)
 		fprintf(fp, "\t//\n\t// No class DOUBLE peripherals on the \"%s\" bus\n\t//\n\n", n->c_str());
 
@@ -1016,11 +1082,12 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 	fprintf(fp,
 	"\t//\n"
 	"\t// Connect the %s bus components together using the axilxbar()\n"
-	"\t//\n"
+	"\t// {{{\n"
 	"\t//\n", n->c_str());
 
 	fprintf(fp,
 	"\taxilxbar #(\n"
+	"\t\t// {{{\n"
 	"\t\t.C_AXI_ADDR_WIDTH(%d),\n"
 	"\t\t.C_AXI_DATA_WIDTH(%d),\n"
 	"\t\t.NM(%ld), .NS(%ld),\n",
@@ -1036,16 +1103,19 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 	xbar_option(fp, KY_OPT_LGMAXBURST,",\n\t\t.LGMAXBURST(%)");
 	//
 	fprintf(fp,
-	"\n\t) %s_xbar(\n"
+	"\n\t\t// }}}\n"
+	"\t) %s_xbar(\n"
+		"\t\t// {{{\n"
 		"\t\t.S_AXI_ACLK(%s),\n",
-		n->c_str(), m_info->m_clock->m_name->c_str());
+		n->c_str(), m_info->m_clock->m_wire->c_str());
 	fprintf(fp, "\t\t.S_AXI_ARESETN(%s),\n", rst->c_str());
 
-	fprintf(fp, "\t\t//\n");
+	fprintf(fp, "\t\t// Connections from masters\n"
+		"\t\t// {{{\n");
 	xbarcon_master(fp, "\t\t",".S_AXI_","AWVALID");
 	xbarcon_master(fp, "\t\t",".S_AXI_","AWREADY");
-	xbarcon_master(fp, "\t\t",".S_AXI_","AWPROT");
 	xbarcon_master(fp, "\t\t",".S_AXI_","AWADDR");
+	xbarcon_master(fp, "\t\t",".S_AXI_","AWPROT");
 	fprintf(fp, "\t\t//\n");
 	xbarcon_master(fp, "\t\t",".S_AXI_","WVALID");
 	xbarcon_master(fp, "\t\t",".S_AXI_","WREADY");
@@ -1058,20 +1128,20 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 	fprintf(fp, "\t\t// Read connections\n");
 	xbarcon_master(fp, "\t\t",".S_AXI_","ARVALID");
 	xbarcon_master(fp, "\t\t",".S_AXI_","ARREADY");
-	xbarcon_master(fp, "\t\t",".S_AXI_","ARPROT");
 	xbarcon_master(fp, "\t\t",".S_AXI_","ARADDR");
+	xbarcon_master(fp, "\t\t",".S_AXI_","ARPROT");
 	fprintf(fp, "\t\t//\n");
 	xbarcon_master(fp, "\t\t",".S_AXI_","RVALID");
 	xbarcon_master(fp, "\t\t",".S_AXI_","RREADY");
 	xbarcon_master(fp, "\t\t",".S_AXI_","RDATA");
 	xbarcon_master(fp, "\t\t",".S_AXI_","RRESP");
-	fprintf(fp, "\t\t//\n");
+	fprintf(fp, "\t\t// }}}\n");
 	fprintf(fp, "\t\t// Connections to slaves\n");
-	fprintf(fp, "\t\t//\n");
+	fprintf(fp, "\t\t// {{{\n");
 	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","AWVALID");
 	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","AWREADY");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","AWPROT");
 	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","AWADDR");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","AWPROT");
 	fprintf(fp, "\t\t//\n");
 	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","WVALID");
 	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","WREADY");
@@ -1084,16 +1154,19 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 	fprintf(fp, "\t\t// Read connections\n");
 	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","ARVALID");
 	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","ARREADY");
-	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","ARPROT");
 	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","ARADDR");
+	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","ARPROT");
 	fprintf(fp, "\t\t//\n");
 	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","RVALID");
 	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","RREADY");
 	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","RDATA");
 	xbarcon_slave(fp, pl, "\t\t",".M_AXI_","RRESP", false);
-	fprintf(fp, "\t\t);\n\n");
+	fprintf(fp, "\t\t// }}}\n"
+		"\t\t// }}}\n\t);\n\n");
 
 	for(unsigned k=0; k < m_info->m_plist->size(); k++) {
+		// Handle read only or write only slaves
+		// {{{
 		PERIPHP p = (*m_info->m_plist)[k];
 		STRINGP	busp = p->bus_prefix();
 
@@ -1117,18 +1190,21 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 					busp->c_str(), busp->c_str(),
 					busp->c_str());
 		}
+		// }}}
 	}
 }
 
 STRINGP	AXILBUS::master_portlist(BMASTERP m) {
+	// {{{
 	STRING	str;
 
+	if (m->write_only())
+		str = str + STRING("// Master is write-only\n");
 	if (m->read_only())
 		str = str + STRING("// Master is read only\n\t\t");
 	else
 		str = str + STRING(
-	"//\n"
-	"\t\t@$(MASTER.PREFIX)_awvalid,\n"
+	"@$(MASTER.PREFIX)_awvalid,\n"
 	"\t\t@$(MASTER.PREFIX)_awready,\n"
 	"\t\t@$(MASTER.PREFIX)_awaddr[@$(MASTER.BUS.AWID)-1:0],\n"
 	"\t\t@$(MASTER.PREFIX)_awprot,\n"
@@ -1140,12 +1216,10 @@ STRINGP	AXILBUS::master_portlist(BMASTERP m) {
 	"\t\t//\n"
 	"\t\t@$(MASTER.PREFIX)_bvalid,\n"
 	"\t\t@$(MASTER.PREFIX)_bready,\n"
-	"\t\t@$(MASTER.PREFIX)_bresp,\n\t\t");
+	"\t\t@$(MASTER.PREFIX)_bresp");
 	if (!m->read_only() && !m->write_only())
-		str = str + STRING("// Read connections\n\t\t");
-	if (m->write_only())
-		str = str + STRING("// Master is write-only\n");
-	else
+		str = str + STRING(",\n\t\t// Read connections\n\t\t");
+	if (!m->write_only())
 		str = str + STRING(
 	"@$(MASTER.PREFIX)_arvalid,\n"
 	"\t\t@$(MASTER.PREFIX)_arready,\n"
@@ -1159,6 +1233,7 @@ STRINGP	AXILBUS::master_portlist(BMASTERP m) {
 
 	return new STRING(str);
 }
+// }}}
 
 STRINGP	AXILBUS::iansi(BMASTERP m) {
 	return new STRING("");
@@ -1173,29 +1248,29 @@ STRINGP	AXILBUS::master_ansprefix(BMASTERP m) {
 }
 
 STRINGP	AXILBUS::master_ansi_portlist(BMASTERP m) {
+	// {{{
 	STRING	str;
 
 	if (!m->read_only())
 		str = str + STRING(
-	"//\n"
-	"\t\t.@$(MASTER.IANSI)@$(MASTER.ANSPREFIX)AWVALID(@$(MASTER.PREFIX)_awvalid),\n"
+	".@$(MASTER.IANSI)@$(MASTER.ANSPREFIX)AWVALID(@$(MASTER.PREFIX)_awvalid),\n"
 	"\t\t.@$(MASTER.OANSI)@$(MASTER.ANSPREFIX)AWREADY(@$(MASTER.PREFIX)_awready),\n"
 	"\t\t.@$(MASTER.IANSI)@$(MASTER.ANSPREFIX)AWADDR( @$(MASTER.PREFIX)_awaddr[@$(MASTER.BUS.AWID)-1:0]),\n"
 	"\t\t.@$(MASTER.IANSI)@$(MASTER.ANSPREFIX)AWPROT( @$(MASTER.PREFIX)_awprot),\n"
-	"//\n"
+	"\t\t//\n"
 	"\t\t.@$(MASTER.IANSI)@$(MASTER.ANSPREFIX)WVALID(@$(MASTER.PREFIX)_wvalid),\n"
 	"\t\t.@$(MASTER.OANSI)@$(MASTER.ANSPREFIX)WREADY(@$(MASTER.PREFIX)_wready),\n"
 	"\t\t.@$(MASTER.IANSI)@$(MASTER.ANSPREFIX)WDATA( @$(MASTER.PREFIX)_wdata),\n"
 	"\t\t.@$(MASTER.IANSI)@$(MASTER.ANSPREFIX)WSTRB( @$(MASTER.PREFIX)_wstrb),\n"
-	"//\n"
+	"\t\t//\n"
 	"\t\t.@$(MASTER.OANSI)@$(MASTER.ANSPREFIX)BVALID(@$(MASTER.PREFIX)_bvalid),\n"
 	"\t\t.@$(MASTER.IANSI)@$(MASTER.ANSPREFIX)BREADY(@$(MASTER.PREFIX)_bready),\n"
-	"\t\t.@$(MASTER.OANSI)@$(MASTER.ANSPREFIX)BRESP( @$(MASTER.PREFIX)_bresp),\n");
+	"\t\t.@$(MASTER.OANSI)@$(MASTER.ANSPREFIX)BRESP( @$(MASTER.PREFIX)_bresp)");
 	if (!m->read_only() && !m->write_only())
-		str = str + STRING("\t\t// Read connections\n");
+		str = str + STRING(",\n\t\t// Read connections\n\t\t");
 	if (!m->write_only())
 		str = str + STRING(
-	"\t\t.@$(MASTER.IANSI)@$(MASTER.ANSPREFIX)ARVALID(@$(MASTER.PREFIX)_arvalid),\n"
+	".@$(MASTER.IANSI)@$(MASTER.ANSPREFIX)ARVALID(@$(MASTER.PREFIX)_arvalid),\n"
 	"\t\t.@$(MASTER.OANSI)@$(MASTER.ANSPREFIX)ARREADY(@$(MASTER.PREFIX)_arready),\n"
 	"\t\t.@$(MASTER.IANSI)@$(MASTER.ANSPREFIX)ARADDR( @$(MASTER.PREFIX)_araddr[@$(MASTER.BUS.AWID)-1:0]),\n"
 	"\t\t.@$(MASTER.IANSI)@$(MASTER.ANSPREFIX)ARPROT( @$(MASTER.PREFIX)_arprot),\n"
@@ -1207,19 +1282,22 @@ STRINGP	AXILBUS::master_ansi_portlist(BMASTERP m) {
 
 	return new STRING(str);
 }
+// }}}
 
 STRINGP	AXILBUS::slave_ansprefix(PERIPHP m) {
 	return new STRING("S_AXI_");
 }
 
 STRINGP	AXILBUS::slave_portlist(PERIPHP p) {
+	// {{{
 	STRING	str;
 
+	if (p->write_only())
+		str = str + STRING("// Slave is write-only\n\t\t");
 	if (p->read_only())
 		str = str + STRING("// Slave is read only\n\t\t");
 	else {
 		str = str + STRING(
-	"//\n"
 	"\t\t@$(SLAVE.PREFIX)_awvalid,\n"
 	"\t\t@$(SLAVE.PREFIX)_awready,\n"
 	"\t\t@$(SLAVE.PREFIX)_awaddr[")
@@ -1234,13 +1312,11 @@ STRINGP	AXILBUS::slave_portlist(PERIPHP p) {
 	"//\n"
 	"\t\t@$(SLAVE.PREFIX)_bvalid,\n"
 	"\t\t@$(SLAVE.PREFIX)_bready,\n"
-	"\t\t@$(SLAVE.PREFIX)_bresp,\n\t\t");
+	"\t\t@$(SLAVE.PREFIX)_bresp");
 	}
 	if (!p->read_only() && !p->write_only())
-		str = str + STRING("// Read connections\n");
-	if (p->write_only())
-		str = str + STRING("// Slave is write-only\n");
-	else {
+		str = str + STRING(",\n\t\t// Read connections\n");
+	if (!p->write_only())
 		str = str + STRING(
 	"\t\t@$(SLAVE.PREFIX)_arvalid,\n"
 	"\t\t@$(SLAVE.PREFIX)_arready,\n"
@@ -1253,18 +1329,18 @@ STRINGP	AXILBUS::slave_portlist(PERIPHP p) {
 	"\t\t@$(SLAVE.PREFIX)_rready,\n"
 	"\t\t@$(SLAVE.PREFIX)_rdata,\n"
 	"\t\t@$(SLAVE.PREFIX)_rresp");
-	}
 
 	return new STRING(str);
 }
+// }}}
 
 STRINGP	AXILBUS::slave_ansi_portlist(PERIPHP p) {
+	// {{{
 	STRING	str;
 
 	if (!p->read_only())
 		str = str + STRING(
-	"//\n"
-	"\t\t.@$(SLAVE.IANSI)@$(SLAVE.ANSPREFIX)AWVALID(@$(SLAVE.PREFIX)_awvalid),\n"
+	".@$(SLAVE.IANSI)@$(SLAVE.ANSPREFIX)AWVALID(@$(SLAVE.PREFIX)_awvalid),\n"
 	"\t\t.@$(SLAVE.OANSI)@$(SLAVE.ANSPREFIX)AWREADY(@$(SLAVE.PREFIX)_awready),\n"
 	"\t\t.@$(SLAVE.IANSI)@$(SLAVE.ANSPREFIX)AWADDR( @$(SLAVE.PREFIX)_awaddr[")
 		+ std::to_string(p->get_slave_address_width())
@@ -1297,6 +1373,7 @@ STRINGP	AXILBUS::slave_ansi_portlist(PERIPHP p) {
 
 	return new STRING(str);
 }
+// }}}
 
 ////////////////////////////////////////////////////////////////////////
 //
