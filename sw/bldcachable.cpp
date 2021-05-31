@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Filename: 	bldcachable.cpp
-//
+// {{{
 // Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 //
 // Purpose:	Creates a verilog file, upon request, containing combinatorial
@@ -14,11 +14,11 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2018-2021, Gisselquist Technology, LLC
-//
+// {{{
 // This program is free software (firmware): you can redistribute it and/or
-// modify it under the terms of  the GNU General Public License as published
+// modify it under the terms of the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
 // your option) any later version.
 //
@@ -31,14 +31,14 @@
 // with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
 // target there if the PDF file isn't present.)  If not, see
 // <http://www.gnu.org/licenses/> for a copy.
-//
+// }}}
 // License:	GPL, v3, as defined and found on www.gnu.org,
+// {{{
 //		http://www.gnu.org/licenses/gpl.html
-//
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+// }}}
 #include <stdlib.h>
 #include <string>
 #include <vector>
@@ -76,7 +76,10 @@ static void	print_cachable(FILE *fp, BUSINFO *bi, unsigned dw,
 
 
 		// Octets
-		submask = ((*pl)[i]->p_mask<<bbits) | mask_8;
+		if (bi->word_addressing())
+			submask = ((*pl)[i]->p_mask<<bbits) | mask_8;
+		else
+			submask = ((*pl)[i]->p_mask) | mask_8;
 		subaddr = ((*pl)[i]->p_base | addr_8) & submask;
 		pbits = nextlg(submask);
 		if ((1u<<pbits) <= submask)
@@ -133,11 +136,11 @@ void build_cachable_core_v(MAPDHASH &master, MAPDHASH &busmaster,
 	fprintf(fp,
 "`default_nettype none\n"
 "//\n"
-"module %s(i_addr, o_cachable);\n"
-	"\tlocalparam		AW = %d;\n"
-	"\tinput\twire\t[AW-1:0]\ti_addr;\n"
-	"\toutput\treg\t\t\to_cachable;\n"
-"\n", modulename, bi->address_width());
+"module %s(\n"
+	"\t\tinput\twire\t[%d-1:0]\ti_addr,\n"
+	"\t\toutput\treg\t\t\to_cachable\n"
+	"\t);\n"
+	"\n", modulename, bi->address_width());
 	free(modulename);
 
 	fprintf(fp,
