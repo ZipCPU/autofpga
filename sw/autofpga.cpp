@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Filename: 	autofpga.cpp
-//
+// {{{
 // Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 //
 // Purpose:	This is the main/master program for the autofpga project.  All
@@ -33,11 +33,11 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2017-2021, Gisselquist Technology, LLC
-//
+// {{{
 // This program is free software (firmware): you can redistribute it and/or
-// modify it under the terms of  the GNU General Public License as published
+// modify it under the terms of the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
 // your option) any later version.
 //
@@ -50,14 +50,14 @@
 // with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
 // target there if the PDF file isn't present.)  If not, see
 // <http://www.gnu.org/licenses/> for a copy.
-//
+// }}}
 // License:	GPL, v3, as defined and found on www.gnu.org,
+// {{{
 //		http://www.gnu.org/licenses/gpl.html
-//
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+// }}}
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
@@ -723,9 +723,16 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 	// Build a set of ifdefs to turn things on or off
 	fprintf(fp, "`default_nettype\tnone\n");
 
+	fprintf(fp,
+		"////////////////////////////////////////////////////////////////////////////////\n"
+		"//\n" "// Macro defines\n" "// {{{\n");
 	build_access_ifdefs_v(master, fp);
+	fprintf(fp, "// }}}\n");
 
-	fprintf(fp, "//\n" "// Any include files\n//\n"
+	fprintf(fp,
+		"////////////////////////////////////////////////////////////////////////////////\n"
+		"//\n"
+		"// Any include files\n// {{{\n"
 		"// These are drawn from anything with a MAIN.INCLUDE definition.\n");
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
 		STRINGP	strp = getstring(kvpair->second, KYMAIN_INCLUDE);
@@ -735,7 +742,7 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 	}
 
 
-	fprintf(fp, "//\n//\n");
+	fprintf(fp, "// }}}\n//\n");
 	fprintf(fp,
 "// Finally, we define our main module itself.  We start with the list of\n"
 "// I/O ports, or wires, passed into (or out of) the main function.\n"
@@ -745,7 +752,7 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 "//\n");
 
 	// Define our external ports within a port list
-	fprintf(fp, "module\tmain(i_clk, i_reset,\n");
+	fprintf(fp, "module\tmain(i_clk, i_reset,\n\t// {{{\n");
 	str = "MAIN.PORTLIST";
 	first = 1;
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
@@ -768,9 +775,11 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 			fprintf(fp, ",\n");
 		first=0;
 		fprintf(fp, "%s", tmps.c_str());
-	} fprintf(fp, ");\n");
+	} fprintf(fp, "\t// }}}\n);\n");
 
-	fprintf(fp, "//\n" "// Any parameter definitions\n//\n"
+	fprintf(fp,
+		"////////////////////////////////////////////////////////////////////////////////\n"
+		"//\n" "// Any parameter definitions\n// {{{\n"
 		"// These are drawn from anything with a MAIN.PARAM definition.\n"
 		"// As they aren\'t connected to the toplevel at all, it would\n"
 		"// be best to use localparam over parameter, but here we don\'t\n"
@@ -782,7 +791,11 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 		fprintf(fp, "%s", strp->c_str());
 	}
 
-	fprintf(fp, "//\n"
+	fprintf(fp, "// }}}\n"
+"////////////////////////////////////////////////////////////////////////////////\n"
+"//\n"
+"// Port declarations\n"
+"// {{{\n"
 "// The next step is to declare all of the various ports that were just\n"
 "// listed above.  \n"
 "//\n"
@@ -805,16 +818,20 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 		if (strp)
 			fprintf(fp, "%s", strp->c_str());
 	}
+	fprintf(fp, "// }}}\n");
 
 	fprintf(fp,
-"\t// Make Verilator happy ... defining bus wires for lots of components\n"
-"\t// often ends up with unused wires lying around.  We'll turn off\n"
-"\t// Ver1lator\'s lint warning here that checks for unused wires.\n"
-"\t// verilator lint_off UNUSED\n\n");
+"\t// Make Verilator happy\n"
+"\t// {{{\n"
+"\t// Defining bus wires for lots of components often ends up with unused\n"
+"\t// wires lying around.  We'll turn off Ver1lator\'s lint warning\n"
+"\t// here that checks for unused wires.\n"
+"\t// }}}\n"
+"\t// verilator lint_off UNUSED\n");
 
 	fprintf(fp,
-	"\n\n"
-	"\t//\n\t// Declaring interrupt lines\n\t//\n"
+	"\t////////////////////////////////////////////////////////////////////////\n"
+	"\t//\n\t// Declaring interrupt lines\n\t// {{{\n"
 	"\t// These declarations come from the various components values\n"
 	"\t// given under the @INT.<interrupt name>.WIRE key.\n\t//\n");
 	// Define any interrupt wires
@@ -850,18 +867,20 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 				kvwire->first.c_str());
 		}
 	}
+	fprintf(fp, "\t// }}}\n");
 
 	fprintf(fp,
-	"\n\n"
-	"\t//\n\t// Component declarations\n\t//\n"
+	"\t////////////////////////////////////////////////////////////////////////\n"
+	"\t//\n\t// Component declarations\n\t// {{{\n"
 	"\t// These declarations come from the @MAIN.DEFNS keys found in the\n"
 	"\t// various components comprising the design.\n\t//\n");
 	writeout(fp, master, KYMAIN_DEFNS);
 
 	// Declare interrupt vector wires.
 	fprintf(fp,
-	"\n\n"
-	"\t//\n\t// Declaring interrupt vector wires\n\t//\n"
+	"\n// }}}\n"
+	"\t////////////////////////////////////////////////////////////////////////\n"
+	"\t//\n\t// Declaring interrupt vector wires\n\t// {{{\n"
 	"\t// These declarations come from the various components having\n"
 	"\t// PIC and PIC.MAX keys.\n\t//\n");
 	for(unsigned picid=0; picid < piclist.size(); picid++) {
@@ -886,17 +905,19 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 					defnstr->c_str());
 		}
 	}
-
+	fprintf(fp, "\t// }}}\n");
 	writeout_bus_defns_v(fp);
 
 	// Define the select lines
-	fprintf(fp, "\n"
+	fprintf(fp, "\t////////////////////////////////////////////////////////////////////////\n"
 	"\t//\n"
-	"\t// Peripheral address decoding\n\t//\n");
+	"\t// Peripheral address decoding, bus handling\n\t// {{{\n");
 
 	writeout_bus_logic_v(fp);
 
-	fprintf(fp, "\t//\n\t// Declare the interrupt busses\n\t//\n"
+	fprintf(fp, "\t// }}}\n"
+	"\t////////////////////////////////////////////////////////////////////////\n"
+	"\t//\n\t// Declare the interrupt busses\n\t// {{{\n"
 "\t// Interrupt busses are defined by anything with a @PIC tag.\n"
 "\t// The @PIC.BUS tag defines the name of the wire bus below,\n"
 "\t// while the @PIC.MAX tag determines the size of the bus width.\n"
@@ -945,9 +966,19 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 		}
 		fprintf(fp, "\t};\n");
 	}
+	fprintf(fp, "\t// }}}\n");
 
-	fprintf(fp, "\n\n\t//\n");
-	fprintf(fp, "\t//\n\t// Now we turn to defining all of the parts and pieces of what\n"
+	fprintf(fp,
+		"\t////////////////////////////////////////////////////////////////////////\n"
+		"\t////////////////////////////////////////////////////////////////////////\n"
+		"\t//\n\t// @MAIN.INSERT and @MAIN.ALT\n"
+		"\t// {{{\n"
+		"\t////////////////////////////////////////////////////////////////////////\n"
+		"\t////////////////////////////////////////////////////////////////////////\n");
+	fprintf(fp,
+	"\t//\n"
+	"\t//\n"
+	"\t// Now we turn to defining all of the parts and pieces of what\n"
 	"\t// each of the various peripherals does, and what logic it needs.\n"
 	"\t//\n"
 	"\t// This information comes from the @MAIN.INSERT and @MAIN.ALT tags.\n"
@@ -998,15 +1029,19 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 				fprintf(fp, "`ifndef\t%s\n", accessptr);
 			} else {
 				fprintf(fp, "`ifdef\t%s\n", accessptr);
+				fprintf(fp, "\t// {{{\n");
 				fputs(insert->c_str(), fp);
+				fprintf(fp, "\t// }}}\n");
 				fprintf(fp, "`else\t// %s\n", accessptr);
 			}
+			fprintf(fp, "\t// {{{\n");
 
 			if (!noalt) {
 				fputs(alt->c_str(), fp);
 			}
 
 			if (isbusmaster(kvpair->second)) {
+				// {{{
 				STRINGP	pfx = getstring(*kvpair->second.u.m_m,
 							KYPREFIX);
 				if (pfx) {
@@ -1016,24 +1051,34 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 					if (busname) {
 						BUSINFO *bus = find_bus(busname);
 						if (bus) {
+							fprintf(fp, "\t// Null bus master\n\t// {{{\n");
 							bus->writeout_no_master_v(fp);
+							fprintf(fp, "\t// }}}\n");
 						}
 					}
 				}
+				// }}}
 			}
 
 			if (isperipheral(kvpair->second)) {
+				// {{{
 				BUSINFO *bi = find_bus_of_peripheral(kvpair->second.u.m_m);
 				STRINGP	pfx = getstring(*kvpair->second.u.m_m,
 							KYSLAVE_PREFIX);
-				if ((bi)&&(pfx))
+				if ((bi)&&(pfx)) {
+					fprintf(fp, "\t// Null bus slave\n\t// {{{\n");
 					bi->writeout_no_slave_v(fp, pfx);
+					fprintf(fp, "\t// }}}\n");
+				}
+				// }}}
 			}
 			kvint    = kvpair->second.u.m_m->find(KY_INT);
 			if ((kvint != kvpair->second.u.m_m->end())
 					&&(kvint->second.m_typ == MAPT_MAP)) {
 				MAPDHASH	*imap = kvint->second.u.m_m,
 						*smap;
+				fprintf(fp, "\t// Null interrupt definitions\n"
+					"\t// {{{\n");
 				for(kvsub=imap->begin(); kvsub != imap->end();
 						kvsub++) {
 					// p.INT.SUB
@@ -1055,13 +1100,15 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 						kvsub->first.c_str(),
 						kvwire->first.c_str());
 				}
+				fprintf(fp, "\t// }}}\n");
 			}
+			fprintf(fp, "\t// }}}\n");
 			fprintf(fp, "`endif\t// %s\n\n", accessptr);
 		}
 	}
 
 
-	fprintf(fp, "\n\nendmodule // main.v\n");
+	fprintf(fp, "\t// }}}\nendmodule // main.v\n");
 
 }
 

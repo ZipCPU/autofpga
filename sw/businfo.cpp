@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Filename: 	businfo.cpp
-//
+// {{{
 // Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 //
 // Purpose:	The businfo structure is a generic object describing a bus
@@ -14,11 +14,11 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2017-2021, Gisselquist Technology, LLC
-//
+// {{{
 // This program is free software (firmware): you can redistribute it and/or
-// modify it under the terms of  the GNU General Public License as published
+// modify it under the terms of the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
 // your option) any later version.
 //
@@ -31,14 +31,14 @@
 // with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
 // target there if the PDF file isn't present.)  If not, see
 // <http://www.gnu.org/licenses/> for a copy.
-//
+// }}}
 // License:	GPL, v3, as defined and found on www.gnu.org,
+// {{{
 //		http://www.gnu.org/licenses/gpl.html
-//
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+// }}}
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -874,12 +874,18 @@ void	BUSINFO::writeout_bus_defns_v(FILE *fp) {
 }
 
 void	writeout_bus_defns_v(FILE *fp) {
-	fprintf(fp, "\t//\n\t//\n\t// Define bus wires\n\t//\n\t//\n\n");
+	fprintf(fp, "\t////////////////////////////////////////////////////////////////////////\n"
+		"\t//\n"
+		"\t// Declare bus signals\n"
+		"\t// {{{\n"
+		"\t////////////////////////////////////////////////////////////////////////\n\n");
 	BUSLIST	*bl = gbl_blist;
 	for(BUSLIST::iterator bp=bl->begin(); bp != bl->end(); bp++) {
-		fprintf(fp, "\t// Bus %s\n", (*bp)->name()->c_str());
+		fprintf(fp, "\t// Bus %s\n\t// {{{\n", (*bp)->name()->c_str());
 		(*bp)->writeout_bus_defns_v(fp);
+		fprintf(fp, "\t// }}}\n");
 	}
+	fprintf(fp, "\t// }}}\n");
 }
 
 void	BUSINFO::writeout_no_slave_v(FILE *fp, STRINGP prefix) {
@@ -916,9 +922,11 @@ void	BUSINFO::writeout_bus_logic_v(FILE *fp) {
 
 void	writeout_bus_logic_v(FILE *fp) {
 	for(unsigned i=0; i<gbl_blist->size(); i++) {
-		fprintf(fp, "\t//\n\t// BUS-LOGIC for %s\n\t//\n",
+		fprintf(fp, "\t//\n\t// BUS-LOGIC for %s\n\t// {{{\n",
 			(*gbl_blist)[i]->name()->c_str());
 		(*gbl_blist)[i]->writeout_bus_logic_v(fp);
+		fprintf(fp, "\t// End of bus logic for %s\n"
+			"\t// }}}\n", (*gbl_blist)[i]->name()->c_str());
 	}
 }
 

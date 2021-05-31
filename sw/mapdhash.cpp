@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Filename: 	mapdhash.cpp
-//
+// {{{
 // Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 //
 // Purpose:	To handle processing our key-value pair data structure.  This
@@ -12,11 +12,11 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2017-2021, Gisselquist Technology, LLC
-//
+// {{{
 // This program is free software (firmware): you can redistribute it and/or
-// modify it under the terms of  the GNU General Public License as published
+// modify it under the terms of the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
 // your option) any later version.
 //
@@ -29,14 +29,14 @@
 // with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
 // target there if the PDF file isn't present.)  If not, see
 // <http://www.gnu.org/licenses/> for a copy.
-//
+// }}}
 // License:	GPL, v3, as defined and found on www.gnu.org,
+// {{{
 //		http://www.gnu.org/licenses/gpl.html
-//
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+// }}}
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -450,7 +450,7 @@ void	trimkey(MAPDHASH &mp, const STRING &sky) {
 /*
  * trimall
  *
- * Find all keys of  the given name, then find the strings they refer to, then
+ * Find all keys of the given name, then find the strings they refer to, then
  * trim any white space from those strings.
  */
 void	trimall(MAPDHASH &mp, const STRING &sky) {

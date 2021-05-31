@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Filename: 	wb.cpp
-//
+// {{{
 // Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 //
 // Purpose:
@@ -84,11 +84,11 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
-// Copyright (C) 2019-2020, Gisselquist Technology, LLC
-//
+// }}}
+// Copyright (C) 2019-2021, Gisselquist Technology, LLC
+// {{{
 // This program is free software (firmware): you can redistribute it and/or
-// modify it under the terms of  the GNU General Public License as published
+// modify it under the terms of the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
 // your option) any later version.
 //
@@ -101,15 +101,14 @@
 // with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
 // target there if the PDF file isn't present.)  If not, see
 // <http://www.gnu.org/licenses/> for a copy.
-//
+// }}}
 // License:	GPL, v3, as defined and found on www.gnu.org,
+// {{{
 //		http://www.gnu.org/licenses/gpl.html
-//
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
-
+// }}}
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
@@ -144,6 +143,7 @@
 extern	WBBUSCLASS	wbclass;
 
 WBBUS::WBBUS(BUSINFO *bi) {
+	// {{{
 	m_info = bi;
 	m_slist = NULL;
 	m_dlist = NULL;
@@ -155,8 +155,10 @@ WBBUS::WBBUS(BUSINFO *bi) {
 	m_num_double = 0;
 	m_num_total = 0;
 }
+// }}}
 
 void	WBBUS::allocate_subbus(void) {
+	// {{{
 	PLIST	*pl = m_info->m_plist;
 	BUSINFO	*sbi = NULL, *dbi = NULL;
 
@@ -239,6 +241,7 @@ void	WBBUS::allocate_subbus(void) {
 		setstring(dbi->m_hash, KY_TYPE, wbclass.name());
 	REHASH;
 }
+// }}}
 
 int	WBBUS::address_width(void) {
 	assert(m_info);
@@ -246,6 +249,7 @@ int	WBBUS::address_width(void) {
 }
 
 bool	WBBUS::get_base_address(MAPDHASH *phash, unsigned &base) {
+	// {{{
 	if (!m_info || !m_info->m_plist) {
 		gbl_msg.error("BUS[%s] has no peripherals!\n",
 			(name()) ? name()->c_str() : "(No name)");
@@ -253,8 +257,10 @@ bool	WBBUS::get_base_address(MAPDHASH *phash, unsigned &base) {
 	} else
 		return m_info->m_plist->get_base_address(phash, base);
 }
+// }}}
 
 void	WBBUS::assign_addresses(void) {
+	// {{{
 	int	address_width;
 
 	if (m_info->m_addresses_assigned)
@@ -290,8 +296,10 @@ void	WBBUS::assign_addresses(void) {
 		}
 	} m_info->m_addresses_assigned = true;
 }
+// }}}
 
 BUSINFO *WBBUS::create_sio(void) {
+	// {{{
 	assert(m_info);
 
 	BUSINFO	*sbi;
@@ -334,8 +342,10 @@ assert(subp->p_master_bus == sbi);
 
 	return sbi;
 }
+// }}}
 
 BUSINFO *WBBUS::create_dio(void) {
+	// {{{
 	assert(m_info);
 
 	BUSINFO	*dbi;
@@ -382,8 +392,10 @@ assert(isarbiter(*shash));
 
 	return dbi;
 }
+// }}}
 
 void	WBBUS::countsio(void) {
+	// {{{
 	PLIST	*pl = m_info->m_plist;
 	STRINGP	strp;
 
@@ -406,8 +418,10 @@ void	WBBUS::countsio(void) {
 			m_num_total++;	// Default to OTHER if no type is given
 	}
 }
+// }}}
 
 void	WBBUS::integrity_check(void) {
+	// {{{
 	// GENBUS::integrity_check();
 
 	if (m_info && m_info->m_data_width <= 0) {
@@ -415,6 +429,7 @@ void	WBBUS::integrity_check(void) {
 			name()->c_str());
 	}
 }
+// }}}
 
 void	WBBUS::writeout_defn_v(FILE *fp, const char* pname,
 		const char *pfx,
