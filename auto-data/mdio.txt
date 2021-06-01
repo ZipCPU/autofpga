@@ -4,7 +4,7 @@
 ## {{{
 ## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 ##
-## Purpose:	This file describes how the network MDIO core is to be 
+## Purpose:	This file describes how the network MDIO core is to be
 ##		connected to the rest of the design, for use by the autofpga
 ##	program.
 ##

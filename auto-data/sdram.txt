@@ -132,7 +132,7 @@
 		.io_ddr_data(ddr3_dq)
 		,  .o_ram_dbg(@$(PREFIX)_dbg)
 		);
- 	
+
 @MAIN.PORTLIST=
 		// SDRAM ports
 		o_@$(PREFIX)_cyc, o_@$(PREFIX)_stb, o_@$(PREFIX)_we,

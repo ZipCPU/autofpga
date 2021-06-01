@@ -126,7 +126,7 @@ void build_cachable_core_v(MAPDHASH &master, MAPDHASH &busmaster,
 		modulename = strdup(fname.c_str());
 	else
 		modulename = strdup(ptr+1);
-	
+
 	assert((strlen(modulename)>2)
 		&& strcmp(&modulename[strlen(modulename)-2],".v")==0);
 
@@ -151,7 +151,7 @@ void build_cachable_core_v(MAPDHASH &master, MAPDHASH &busmaster,
 	dw = bi->data_width();
 	dw = nextlg(dw)-3;
 	print_cachable(fp, bi, dw, 0, 0);
-	
+
 	fprintf(fp,
 	"\tend\n"
 "\n"

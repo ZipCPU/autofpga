@@ -83,7 +83,7 @@
 
 	IOBUF sd_cmd_buf(.T(1'b0),.O(i_sd_cmd), .I(w_sd_cmd), .IO(io_sd_cmd));
 	IOBUF sd_dat3_bf(.T(1'b0),.O(i_sd[3]),.I(w_sd_data[3]),.IO(io_sd[3]));
-	
+
 
 @MAIN.PORTLIST=
 		// The SD-Card wires

@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Filename: 	wbuart.txt
+## Filename:	wbuart.txt
 ## {{{
 ## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 ##
@@ -88,9 +88,9 @@
 	output	wire		o_@$(PREFIX)_tx, @$RTS;
 @MAIN.INSERT=
 	wbuart #(.INITIAL_SETUP(@$.UARTSETUP))
- 		@$(PREFIX)_uart(i_clk, 1'b0,
+		@$(PREFIX)_uart(i_clk, 1'b0,
 			@$(SLAVE.PORTLIST),
- 			i_@$(PREFIX)_rx, o_@$(PREFIX)_tx, @$CTS, @$RTS,
+			i_@$(PREFIX)_rx, o_@$(PREFIX)_tx, @$CTS, @$RTS,
 			@$(PREFIX)rx_int, @$(PREFIX)tx_int,
 			@$(PREFIX)rxf_int, @$(PREFIX)txf_int);
 @MAIN.ALT=

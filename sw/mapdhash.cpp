@@ -966,7 +966,7 @@ void	flatten_maps(MAPDHASH &node, MAPDHASH &sub, STRING &here) {
 				// element this was.  BOMB!
 				gbl_msg.fatal("FLATTEN(MAP)::UNKNOWN TYPE, %d\n",
 					kvpair->second.m_typ);
-	
+
 			//
 			// Put this newly copied key into the parent map.
 			//

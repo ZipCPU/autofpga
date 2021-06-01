@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Filename: 	wbpmic.txt
+## Filename:	wbpmic.txt
 ## {{{
 ## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 ##
@@ -54,7 +54,7 @@
 	input	wire		i_mic_din;
 @MAIN.INSERT=
 	wbmic #(.DEFAULT_RELOAD(@$.CLKSPERSAMPLE))
- 		microphone(i_clk, 1'b0,
+		microphone(i_clk, 1'b0,
 			@$(SLAVE.PORTLIST),
 			o_mic_csn, o_mic_sck, i_mic_din, pmic_int);
 @MAIN.ALT=

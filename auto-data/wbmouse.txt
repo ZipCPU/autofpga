@@ -5,7 +5,7 @@
 ## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 ##
 ## Purpose:	A description of how to create/modify Verilog files, add or
-##		subtract them, etc., this one focusing specifically on a 
+##		subtract them, etc., this one focusing specifically on a
 ##	wishbone controlled mouse.
 ##
 ## Creator:	Dan Gisselquist, Ph.D.

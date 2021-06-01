@@ -50,18 +50,18 @@
 @$BUS_ADDRESS_WIDTH=@$(MASTER.BUS.AWID)
 @BP=@$(MASTER.PREFIX)
 # @TOP.PORTLIST=
-# 		// UART/host to wishbone interface
-# 		i_host_uart_rx, o_host_uart_tx
+#		// UART/host to wishbone interface
+#		i_host_uart_rx, o_host_uart_tx
 # @TOP.IODECL=
-# 	// UART/host to wishbone interface
-# 	input	wire		i_host_uart_rx;
-# 	output	wire		o_host_uart_tx;
+#	// UART/host to wishbone interface
+#	input	wire		i_host_uart_rx;
+#	output	wire		o_host_uart_tx;
 # @TOP.MAIN=
-# 		// External USB-UART bus control
-# 		i_host_uart_rx, o_host_uart_tx
+#		// External USB-UART bus control
+#		i_host_uart_rx, o_host_uart_tx
 @MAIN.PORTLIST=
- 		// UART/host to wishbone interface
- 		i_host_uart_rx, o_host_uart_tx
+		// UART/host to wishbone interface
+		i_host_uart_rx, o_host_uart_tx
 @MAIN.IODECL=
 	input	wire		i_host_uart_rx;
 	output	wire		o_host_uart_tx;
