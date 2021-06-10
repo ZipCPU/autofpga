@@ -1192,6 +1192,7 @@ void	AXILBUS::writeout_bus_logic_v(FILE *fp) {
 		}
 		// }}}
 	}
+	fprintf(fp, "\t\t// }}}\n");
 }
 
 STRINGP	AXILBUS::master_portlist(BMASTERP m) {
