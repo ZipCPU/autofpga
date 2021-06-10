@@ -98,7 +98,9 @@ static void	build_script_ld(MAPDHASH &master, MAPDHASH &busmaster, FILE *fp, STR
 "\t* has a defined name in its @%s tag, it will be listed here\n"
 "\t* under that name, otherwise it will be listed under it\'s\n"
 "\t* @$(PREFIX) tag with an underscore prepended to it.  The permissions\n"
-"\t* are given by the @%s tag.  If no permission tag exists, a\n"
+"\t* are given by the @%s tag.  Allowable permissions include\n"
+"\t* \'r\' (read only), \'rx\' (read and execute, but no writes),\n"
+"\t* \'wx\' (read, write, and execute).  If no permission tag exists, a\n"
 "\t* permission of \'r\' will be assumed.\n"
 "\t*/\n", KYLD_NAME.c_str(), KYLD_PERM.c_str());
 
