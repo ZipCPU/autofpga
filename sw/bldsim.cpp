@@ -434,9 +434,8 @@ void	build_main_tb_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 	for(kvpair = master.begin(); kvpair != master.end(); kvpair++) {
 		if (kvpair->second.m_typ != MAPT_MAP)
 				continue;
-		MAPDHASH *dev = kvpair->second.u.m_m;
-		int	base, naddr,
-			lgnb = 2; // Log of the byte width of this bus
+		MAPDHASH *dev = kvpair->second.u.m_m, *bus;
+		int	base, naddr, dw;
 		STRINGP	accessp;
 		const	char *accessptr;
 
@@ -447,7 +446,13 @@ void	build_main_tb_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 			continue;
 		if (!getvalue(*dev, KYNADDR, naddr))
 			continue;
-		accessp = getstring(*dev, KYACCESS);
+		if (NULL == (bus = getmap(*dev, KYSLAVE_BUS))) {
+			gbl_msg.error("No map found for %s\n", kvpair->first.c_str());
+			continue;
+		} if (!getvalue(*bus, KY_WIDTH, dw)) {
+			gbl_msg.error("No bus width found for %s\n", kvpair->first.c_str());
+			continue;
+		} accessp = getstring(*dev, KYACCESS);
 
 		if (prestr[0]) {
 			fprintf(fp, "%s", prestr.c_str());
@@ -458,7 +463,7 @@ void	build_main_tb_cpp(MAPDHASH &master, FILE *fp, STRING &fname) {
 			kvpair->first.c_str());
 		fprintf(fp, "\t\tbase  = 0x%08x; // in octets\n"
 				"\t\tadrln = 0x%08x;\n\n",
-			base, naddr << lgnb);
+			base, naddr * (dw/8));
 		fprintf(fp, "\t\tif ((addr >= base)&&(addr < base + adrln)) {\n");
 		fprintf(fp, "\t\t\t// If the start access is in %s\n", kvpair->first.c_str());
 		fprintf(fp, "\t\t\tstart = (addr > base) ? (addr-base) : 0;\n");
