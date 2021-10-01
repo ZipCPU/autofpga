@@ -53,6 +53,7 @@ class	GENBUS;
 #include "mlist.h"
 #include "clockinfo.h"
 #include "keys.h"
+#include "bitlib.h"
 
 #include "genbus.h"
 
@@ -107,6 +108,20 @@ public:
 	bool	need_translator(BUSINFO *b);
 
 	bool	get_base_address(MAPDHASH *phash, unsigned &base);
+	int	word_address_width(void) {
+			if (word_addressing())
+				return address_width();
+			else
+				return address_width() - nextlg(data_width()/8);
+	}
+
+	int	byte_address_width(void) {
+		if (word_addressing())
+			return address_width() + nextlg(data_width()/8);
+		else
+			return address_width();
+	}
+
 	bool	word_addressing(void);
 	void	assign_addresses(void);
 	int	address_width(void);

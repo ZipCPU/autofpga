@@ -53,8 +53,10 @@
 #include "msgs.h"
 
 
-static void	print_cachable(FILE *fp, BUSINFO *bi, unsigned dw,
-		unsigned mask_8, unsigned addr_8) {
+static void	print_cachable(FILE *fp, BUSINFO *bi,
+		unsigned dw,
+		unsigned mask_8,
+		unsigned addr_8) {
 	unsigned	pbits;
 	unsigned	submask = 0, subaddr = 0;
 	unsigned	lgdw = nextlg(bi->data_width()), bbits=lgdw-3;
@@ -65,7 +67,7 @@ static void	print_cachable(FILE *fp, BUSINFO *bi, unsigned dw,
 	fprintf(fp, "\t\t// Bus master: %s\n", bi->name()->c_str());
 	submask = mask_8; // Octets
 	for(unsigned i=0; i<pl->size(); i++)
-		submask |= (*pl)[i]->p_mask << bbits;
+		submask |= (*pl)[i]->p_mask << bbits;	// bytes
 
 	for(unsigned i=0; i<pl->size(); i++) {
 		if (!(*pl)[i]->p_name) {
@@ -95,13 +97,13 @@ static void	print_cachable(FILE *fp, BUSINFO *bi, unsigned dw,
 			continue;
 		}
 
-		pbits -= dw;
+		// pbits -= dw;
 		fprintf(fp, "\t\t// %s\n"
 		"\t\tif ((i_addr[%d:0] & %d'h%0*x) == %d'h%0*x)\n"
 				"\t\t\to_cachable = 1'b1;\n",
 			(*pl)[i]->p_name->c_str(), pbits - 1,
-			pbits, (pbits+3)/4, submask>>dw,
-			pbits, (pbits+3)/4, subaddr>>dw);
+			pbits, (pbits+3)/4, submask,
+			pbits, (pbits+3)/4, subaddr);
 	}
 }
 
@@ -137,10 +139,12 @@ void build_cachable_core_v(MAPDHASH &master, MAPDHASH &busmaster,
 "`default_nettype none\n"
 "//\n"
 "module %s(\n"
+	"\t\t// {{{\n"
 	"\t\tinput\twire\t[%d-1:0]\ti_addr,\n"
 	"\t\toutput\treg\t\t\to_cachable\n"
+	"\t\t// }}}\n"
 	"\t);\n"
-	"\n", modulename, bi->address_width());
+	"\n", modulename, bi->byte_address_width());
 	free(modulename);
 
 	fprintf(fp,
