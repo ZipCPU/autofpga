@@ -626,59 +626,54 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 		//
 		// Need to loop through all possible masters ...
 		for(unsigned m=0; m_info && m < m_info->m_mlist->size(); m++) {
-			const char *pfx = (*m_info->m_mlist)[m]->bus_prefix()->c_str();
-			//
-			// No easy way to create a non-slave at present
-			// gbl_msg.error("Bus master %s has no slaves\n",
-			//	mstr->c_str());
-
+			STRINGP	mstr = master_name(m);
+			const	char *mp = mstr->c_str();
+			// const char *pfx = (*m_info->m_mlist)[m]->bus_prefix()->c_str();
 			fprintf(fp,
-			"\t//\n"
-			"\t// The %s bus has no slaves assigned to it\n"
-			"\t//\n", pfx);
+				"\t//\n"
+				"\t// The %s bus has no slaves assigned to it\n"
+				"\t//\n", mp);
 
 			fprintf(fp,
 				"\t// The no-slave peripheral\n"
 				"\t//\n"
 	"\taxiempty #(\n"
 	"\t\t// {{{\n"
-	"\t\t\t.C_AXI_ADDR_WIDTH(%d),\n"
-	"\t\t\t.C_AXI_DATA_WIDTH(%d),\n"
-	"\t\t\t.C_AXI_ID_WIDTH(%d),\n",
-		address_width(),
-		m_info->data_width(),
-		id_width());
-
+	"\t\t.C_AXI_ADDR_WIDTH(%d),\n"
+	"\t\t.C_AXI_DATA_WIDTH(%d),\n"
+	"\t\t.C_AXI_ID_WIDTH(%d),\n"
+	"\t\t// }}}\n",
+				address_width(),
+				m_info->data_width(),
+				id_width());
 			fprintf(fp,
-	"\t\t// }}}\n"
 	"\t) %s_no_slavep (\n"
 		"\t\t// {{{\n"
 		"\t\t.S_AXI_ACLK(%s), .S_AXI_ARESETN(%s),\n"
 		"\t\t//\n",
-				pfx, c->m_wire->c_str(), rst->c_str());
+			mp, c->m_wire->c_str(), rst->c_str());
 			fprintf(fp,
 		"\t\t.S_AXI_AWVALID(%s_awvalid), .S_AXI_AWREADY(%s_awready),\n"
 		"\t\t\t.S_AXI_AWID(%s_awid),\n"
 		"\t\t//\n"
-		"\t\t.S_AXI_WVALID(%s_wvalid), .S_AXI_WREADY(%s_wready),\n"
+		"\t\t.S_AXI_WVALID(%s_wvalid),   .S_AXI_WREADY(%s_wready),\n"
 		"\t\t\t.S_AXI_WLAST(%s_wlast),\n"
 		"\t\t//\n"
-		"\t\t.S_AXI_BVALID(%s_bvalid), .S_AXI_BREADY(%s_bready),\n"
-		"\t\t\t.S_AXI_BID(%s_bid), .S_AXI_BRESP(%s_bresp),\n"
+		"\t\t.S_AXI_BVALID(%s_bvalid),   .S_AXI_BREADY(%s_bready),\n"
+		"\t\t\t.S_AXI_BID(%s_bid),       .S_AXI_BRESP(%s_bresp),\n"
 		"\t\t//\n"
-		"\t\t.S_AXI_ARVALID(%s_awvalid), .S_AXI_ARREADY(%s_awready),\n"
-		"\t\t\t.S_AXI_ARLEN(%s_arlen), .S_AXI_ARID(%s_awid),\n"
+		"\t\t.S_AXI_ARVALID(%s_arvalid), .S_AXI_ARREADY(%s_arready),\n"
+		"\t\t\t.S_AXI_ARLEN(%s_arlen),   .S_AXI_ARID(%s_awid),\n"
 		"\t\t//\n"
-		"\t\t.S_AXI_RVALID(%s_rvalid), .S_AXI_RREADY(%s_rready),\n"
-		"\t\t\t.S_AXI_RID(%s_rid), .S_AXI_RDATA(%s_rdata),\n"
-		"\t\t\t.S_AXI_RLAST(%s_rlast), .S_AXI_RRESP(%s_rresp)\n"
-	"\t);\n\n",
-				pfx, pfx, pfx,
-				pfx, pfx, pfx,
-				pfx, pfx, pfx, pfx,
-				pfx, pfx, pfx, pfx,
-				pfx, pfx, pfx, pfx, pfx, pfx);
-
+		"\t\t.S_AXI_RVALID(%s_rvalid),   .S_AXI_RREADY(%s_rready),\n"
+		"\t\t\t.S_AXI_RID(%s_rid),       .S_AXI_RDATA(%s_rdata),\n"
+		"\t\t\t.S_AXI_RLAST(%s_rlast),   .S_AXI_RRESP(%s_rresp)\n"
+		"\t);\n\n",
+				mp, mp, mp,
+				mp, mp, mp,
+				mp, mp, mp, mp,
+				mp, mp, mp, mp,
+				mp, mp, mp, mp, mp, mp);
 		}
 
 		return;
@@ -712,13 +707,15 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 		"\tassign	%s_wdata   = 0;\n"
 		"\tassign	%s_wstrb   = 0;\n"
 		"\tassign	%s_wlast   = 1\'b1;\n"
-		"\t//\n"
-		"\tassign	%s_bready  = 1\'b0;\n",
-			pstr->c_str(), pstr->c_str(), pstr->c_str(),
+		"\t//\n",
+			pstr->c_str(), pstr->c_str(),
 			pstr->c_str(), pstr->c_str());
 
 			fprintf(fp,
-		"\t//\n"
+		"\tassign	%s_bready  = 1\'b0;\n",
+			pstr->c_str());
+
+			fprintf(fp,
 		"\t//\n"
 		"\tassign	%s_arvalid = 1\'b0;\n"
 		"\tassign	%s_arid    = 0;\n"
@@ -730,13 +727,15 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 		"\tassign	%s_arcache = 4\'h0;\n"
 		"\tassign	%s_arprot  = 3\'h0;\n"
 		"\tassign	%s_arqos   = 4\'h0;\n"
-		"\t//\n"
-		"\tassign	%s_rready  = 1\'b1;\n\n",
+		"\t//\n",
 			pstr->c_str(), pstr->c_str(), pstr->c_str(),
 			pstr->c_str(), pstr->c_str(), pstr->c_str(),
 			pstr->c_str(), pstr->c_str(), pstr->c_str(),
-			pstr->c_str(), pstr->c_str());
+			pstr->c_str());
 
+			fprintf(fp,
+		"\tassign	%s_rready  = 1\'b1;\n",
+			pstr->c_str());
 
 			fprintf(fp,
 		"\t//\n"
@@ -768,7 +767,7 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 		// one master
 		//
 		STRINGP	slv  = (*m_info->m_plist)[0]->bus_prefix();
-		STRINGP	mstr = (*m_mlist)[0]->bus_prefix();
+		STRINGP	mstr = master_name(0);
 		const char *sp = slv->c_str(),
 			*mp = mstr->c_str();
 
@@ -776,7 +775,10 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 		"\t//\n"
 		"\t// Bus %s has only one master (%s) and one slave (%s)\n"
 		"\t// connected to it -- skipping the interconnect\n"
-		"\t//\n"
+		"\t//\n",
+		n->c_str(), master_name(0)->c_str(), sp);
+
+			fprintf(fp,
 		"\tassign	%s_awvalid = %s_awvalid;\n"
 		"\tassign	%s_awready = %s_awready;\n"
 		"\tassign	%s_awid    = %s_awid;\n"
@@ -789,29 +791,30 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 		"\tassign	%s_awprot  = %s_awprot;\n"
 		"\tassign	%s_awqos   = %s_awqos;\n"
 		"\t//\n",
-		n->c_str(), master_name(0)->c_str(),
-		(*m_info->m_plist)[0]->p_name->c_str(),
 			sp, mp, mp, sp,
 			sp, mp, sp, mp, sp, mp, sp, mp,
 			sp, mp, sp, mp, sp, mp, sp, mp,
 			sp, mp);
 
-		fprintf(fp,
+			fprintf(fp,
 		"\tassign	%s_wvalid  = %s_wvalid;\n"
 		"\tassign	%s_wready  = %s_wready;\n"
 		"\tassign	%s_wdata   = %s_wdata;\n"
 		"\tassign	%s_wstrb   = %s_wstrb;\n"
 		"\tassign	%s_wlast   = %s_wlast;\n"
-		"\t//\n"
+		"\t//\n",
+			sp, mp, mp, sp,
+			sp, mp, sp, mp, sp, mp);
+
+			fprintf(fp,
 		"\tassign	%s_bvalid  = %s_bvalid;\n"
 		"\tassign	%s_bready  = %s_bready;\n"
 		"\tassign	%s_bid     = %s_bid;\n"
 		"\tassign	%s_bresp   = %s_bresp;\n",
-			sp, mp, mp, sp,
-			sp, mp, sp, mp, sp, mp,
-			mp, sp, sp, mp, mp, sp, mp, sp);
+			mp, sp, sp, mp,
+			mp, sp, mp, sp);
 
-		fprintf(fp,
+			fprintf(fp,
 		"\t//\n"
 		"\t//\n"
 		"\tassign	%s_arvalid = %s_arvalid;\n"
@@ -825,17 +828,19 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 		"\tassign	%s_arcache = %s_arcache;\n"
 		"\tassign	%s_arprot  = %s_arprot;\n"
 		"\tassign	%s_arqos   = %s_arqos;\n"
-		"\t//\n"
+		"\t//\n",
+			sp, mp, mp, sp,
+			sp, mp, sp, mp,
+			sp, mp, sp, mp, sp, mp, sp, mp,
+			sp, mp, sp, mp, sp, mp);
+
+			fprintf(fp,
 		"\tassign	%s_rvalid  = %s_rvalid;\n"
 		"\tassign	%s_rready  = %s_rready;\n"
 		"\tassign	%s_rid     = %s_rid;\n"
 		"\tassign	%s_rdata   = %s_rdata;\n"
 		"\tassign	%s_rlast   = %s_rlast;\n"
 		"\tassign	%s_rresp   = %s_rresp;\n\n",
-			sp, mp, mp, sp,
-			sp, mp, sp, mp, sp, mp, sp, mp, sp, mp,
-			sp, mp, sp, mp, sp, mp, sp, mp,
-			//
 			mp, sp, sp, mp,
 			mp, sp, mp, sp, mp, sp, mp, sp);
 		return;
@@ -865,8 +870,8 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 		xbar_option(fp, KY_OPT_LOWPOWER,  ",\n\t\t.OPT_LOWPOWER(%)",
 			"1\'b1");
 		fprintf(fp,
-		"\t\t// }}}\n"
-		"\n\t) %s_axisingle(\n", np);
+		"\n\t\t// }}}\n"
+		"\t) %s_axisingle(\n", np);
 		fprintf(fp,
 			"\t\t// {{{\n"
 			"\t\t.S_AXI_ACLK(%s),\n"
@@ -991,16 +996,65 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 			pl = m_dlist;
 		else
 			pl = m_info->m_plist;
-		STRING	s = (*n) + "_dio";
+		STRING	s = STRING(*(*m_mlist)[0]->bus_prefix());
 		int	aw = address_width();
-		if (m_info->m_mlist->size() == 1)
-			s = (*n) + "_" + (*(*m_info->m_mlist)[0]->name());
+
+		if (!m_is_double)
+			s = (*n) + "_dio";
 
 		fprintf(fp,
 			"\t//\n"
 			"\t// %s Bus logic to handle %ld DOUBLE slaves\n"
 			"\t//\n"
 			"\t//\n", n->c_str(), pl->size());
+
+		fprintf(fp,
+			"\t// Some extra wires to capture combined values--values\n"
+			"\t// that will be the same across all slaves of the\n"
+			"\t// class\n"
+			"\twire [0:0]\t%s_diow_awid;\n"
+			"\twire [%d:0]\t%s_diow_awaddr;\n"
+			"\twire [7:0]\t%s_diow_awlen;\n"
+			"\twire [2:0]\t%s_diow_awsize;\n"
+			"\twire [1:0]\t%s_diow_awburst;\n"
+			"\twire\t%s_diow_awlock;\n"
+			"\twire [3:0]\t%s_diow_awcache;\n"
+			"\twire [2:0]\t%s_diow_awprot;\n"
+			"\twire [3:0]\t%s_diow_awqos;\n"
+			"\t//\n",
+			n->c_str(),
+			address_width()-1, n->c_str(),
+			n->c_str(), n->c_str(), n->c_str(), n->c_str(),
+			n->c_str(), n->c_str(), n->c_str());
+
+		fprintf(fp,
+			"\twire [%d:0]\t%s_diow_wdata;\n"
+			"\twire [%d:0]\t%s_diow_wstrb;\n"
+			"\twire\t%s_diow_wlast;\n"
+			"\t//\n"
+			"\twire\t%s_diow_bready;\n"
+			"\t//\n",
+			m_info->data_width()-1, n->c_str(),
+			m_info->data_width()/8-1, n->c_str(),
+			n->c_str(), n->c_str());
+
+		fprintf(fp,
+			"\twire [0:0]\t%s_diow_arid;\n"
+			"\twire [%d:0]\t%s_diow_araddr;\n"
+			"\twire [7:0]\t%s_diow_arlen;\n"
+			"\twire [2:0]\t%s_diow_arsize;\n"
+			"\twire [1:0]\t%s_diow_arburst;\n\n"
+			"\twire\t%s_diow_arlock;\n"
+			"\twire [3:0]\t%s_diow_arcache;\n"
+			"\twire [2:0]\t%s_diow_arprot;\n"
+			"\twire [3:0]\t%s_diow_arqos;\n"
+			"\t//\n"
+			"\twire\t%s_diow_rready;\n"
+			"\t//\n",
+			n->c_str(),
+			address_width()-1, n->c_str(),
+			n->c_str(), n->c_str(), n->c_str(), n->c_str(),
+			n->c_str(), n->c_str(), n->c_str(), n->c_str());
 
 		fprintf(fp,
 		"\taxidouble #(\n"
@@ -1011,7 +1065,7 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 			"\t\t.NS(%ld),\n",
 			address_width(), m_info->data_width(),
 			id_width(), pl->size());
-		xbar_option(fp, KY_OPT_LOWPOWER,  ",\n\t\t.OPT_LOWPOWER(%)",
+		xbar_option(fp, KY_OPT_LOWPOWER,  "\t\t.OPT_LOWPOWER(%),\n",
 			"1\'b1");
 		slave_addr(fp, pl); fprintf(fp, ",\n");
 		slave_mask(fp, pl); fprintf(fp, "\n");
@@ -1052,14 +1106,16 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 			"\t\t.S_AXI_BID(    %s_bid),\n"
 			"\t\t.S_AXI_BRESP(  %s_bresp),\n"
 			"\t\t//\n",
+			// AW
 			s.c_str(), s.c_str(), s.c_str(), s.c_str(), aw-1,
 			s.c_str(), s.c_str(), s.c_str(), s.c_str(),
 			s.c_str(), s.c_str(), s.c_str(),
-			//
+			// W
 			s.c_str(), s.c_str(), s.c_str(), s.c_str(),
 			s.c_str(),
-			//
+			// B
 			s.c_str(), s.c_str(), s.c_str(), s.c_str());
+
 		fprintf(fp,
 			"\t\t// Read connections\n"
 			"\t\t.S_AXI_ARVALID(%s_arvalid),\n"
@@ -1083,10 +1139,11 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 			"\t\t// }}}\n"
 			"\t\t// Connections to slaves\n"
 			"\t\t// {{{\n",
+			// AR
 			s.c_str(), s.c_str(), s.c_str(), s.c_str(), aw-1,
 			s.c_str(), s.c_str(), s.c_str(), s.c_str(),
 			s.c_str(), s.c_str(), s.c_str(),
-			//
+			// R
 			s.c_str(), s.c_str(), s.c_str(), s.c_str(),
 			s.c_str(), s.c_str());
 
@@ -1098,22 +1155,23 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 			"\t\t.M_AXI_AWSIZE( %s_diow_awsize),\n"
 			"\t\t.M_AXI_AWBURST(%s_diow_awburst), // ==INC==2\'b01\n"
 			"\t\t.M_AXI_AWLOCK( %s_diow_awlock), // == 0\n"
-			"\t\t.M_AXI_AWLEN(  %s_diow_awlen), // == 0\n"
 			"\t\t.M_AXI_AWCACHE(%s_diow_awcache),\n"
 			"\t\t.M_AXI_AWPROT( %s_diow_awprot),\n"
 			"\t\t.M_AXI_AWQOS(  %s_diow_awqos),\n",
-			s.c_str(), s.c_str(), s.c_str(), s.c_str(), s.c_str(),
-			s.c_str(), s.c_str(), s.c_str(), s.c_str(), s.c_str());
+			n->c_str(), n->c_str(), n->c_str(), n->c_str(),
+			n->c_str(), n->c_str(), n->c_str(), n->c_str(),
+			n->c_str());
+
 		xbarcon_slave(fp, pl, "\t\t",".M_AXI_","WVALID");
 		fprintf(fp,
 			"\t\t.M_AXI_WDATA(  %s_diow_wdata),\n"
 			"\t\t.M_AXI_WSTRB(  %s_diow_wstrb),\n"
 			"\t\t.M_AXI_WLAST(  %s_diow_wlast), // == 1\n",
-			s.c_str(), s.c_str(), s.c_str());
+			n->c_str(), n->c_str(), n->c_str());
 		fprintf(fp, "\t\t//\n");
 		fprintf(fp, "\t\t//\n");
 		fprintf(fp,
-			"\t\t.M_AXI_BREADY(  %s_diow_bready),\n", s.c_str());
+			"\t\t.M_AXI_BREADY(  %s_diow_bready),\n", n->c_str());
 		xbarcon_slave(fp, pl, "\t\t",".M_AXI_","BRESP");
 		fprintf(fp, "\t\t// Read connections\n");
 		xbarcon_slave(fp, pl, "\t\t",".M_AXI_","ARVALID");
@@ -1124,19 +1182,17 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 			"\t\t.M_AXI_ARSIZE( %s_diow_arsize),\n"
 			"\t\t.M_AXI_ARBURST(%s_diow_arburst),//==INC==2\'b01\n"
 			"\t\t.M_AXI_ARLOCK( %s_diow_arlock),// == 0\n"
-			"\t\t.M_AXI_ARLEN(  %s_diow_arlen), // == 0\n"
 			"\t\t.M_AXI_ARCACHE(%s_diow_arcache),//== 0\n"
 			"\t\t.M_AXI_ARPROT( %s_diow_arprot),\n"
 			"\t\t.M_AXI_ARQOS(  %s_diow_arqos),  //== 0\n"
 			"\t\t//\n",
-			s.c_str(), s.c_str(), s.c_str(),
-			s.c_str(), s.c_str(), s.c_str(),
-			s.c_str(), s.c_str(), s.c_str(),
-			s.c_str());
+			n->c_str(), n->c_str(), n->c_str(),
+			n->c_str(), n->c_str(), n->c_str(),
+			n->c_str(), n->c_str(), n->c_str());
 
 		// Read returns
 		fprintf(fp,
-			"\t\t.M_AXI_RREADY(  %s_diow_rready),\n", s.c_str());
+			"\t\t.M_AXI_RREADY(  %s_diow_rready),\n", n->c_str());
 		xbarcon_slave(fp, pl, "\t\t",".M_AXI_","RDATA");
 		xbarcon_slave(fp, pl, "\t\t",".M_AXI_","RRESP", false);
 		fprintf(fp,
@@ -1155,7 +1211,7 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 
 			fprintf(fp, "\t// %s\n"
 				"\t// {{{\n", pn);
-			fprintf(fp, "\tassign %s_awid   = %s_diow_awid[%d-1:0];\n", pfx, n->c_str(), iw);
+			fprintf(fp, "\tassign %s_awid   = {(%d){1\'b0}};\n", pfx, iw);
 			fprintf(fp, "\tassign %s_awaddr = %s_diow_awaddr;\n", pfx, n->c_str());
 			fprintf(fp, "\tassign %s_awlen  = %s_diow_awlen;\n", pfx, n->c_str());
 			fprintf(fp, "\tassign %s_awsize = %s_diow_awsize;\n", pfx, n->c_str());
@@ -1165,14 +1221,12 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 			fprintf(fp, "\tassign %s_awprot = %s_diow_awprot;\n", pfx, n->c_str());
 			fprintf(fp, "\tassign %s_awqos  = %s_diow_awqos;\n", pfx, n->c_str());
 			//
-			fprintf(fp, "\tassign %s_wvalid = %s_awvalid;\n", pfx, pfx);
-			fprintf(fp, "\tassign %s_wdata = %s_diow_wdata;\n", pfx, n->c_str());
-			fprintf(fp, "\tassign %s_wstrb = %s_diow_wstrb;\n", pfx, n->c_str());
-			fprintf(fp, "\tassign %s_wlast = %s_diow_wlast;\n", pfx, n->c_str());
+			fprintf(fp, "\tassign %s_wdata  = %s_diow_wdata;\n", pfx, n->c_str());
+			fprintf(fp, "\tassign %s_wstrb  = %s_diow_wstrb;\n", pfx, n->c_str());
+			fprintf(fp, "\tassign %s_wlast  = %s_diow_wlast;\n", pfx, n->c_str());
 			fprintf(fp, "\tassign %s_bready = 1\'b1;\n", pfx);
-			fprintf(fp, "\tassign %s_arvalid= %s_arvalid[%d];\n", pfx, pn, k);
 			// arready is set by the slave ... and ignored
-			fprintf(fp, "\tassign %s_arid   = %s_diow_arid[%d-1:0];\n", pfx, n->c_str(), iw);
+			fprintf(fp, "\tassign %s_arid   = {(%d){1\'b0}};\n", pfx, iw);
 			fprintf(fp, "\tassign %s_araddr = %s_diow_araddr;\n", pfx, n->c_str());
 			fprintf(fp, "\tassign %s_arlen  = %s_diow_arlen;\n", pfx, n->c_str());
 			fprintf(fp, "\tassign %s_arsize = %s_diow_arsize;\n", pfx, n->c_str());
@@ -1270,7 +1324,7 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 		n->c_str(), m_info->m_clock->m_wire->c_str());
 	fprintf(fp, "\t\t.S_AXI_ARESETN(%s),\n", rst->c_str());
 
-	fprintf(fp, "\t\t// Master ports\n"
+	fprintf(fp, "\t\t// Connections from masters\n"
 		"\t\t// {{{\n");
 	xbarcon_master(fp, "\t\t",".S_AXI_","AWVALID");
 	xbarcon_master(fp, "\t\t",".S_AXI_","AWREADY");
@@ -1367,19 +1421,85 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 		// Handle read only or write only slaves
 		// {{{
 		PERIPHP p = (*m_info->m_plist)[k];
-		// STRINGP	busp = p->bus_prefix();
+		STRINGP	busp = p->bus_prefix();
+		const char	*bp = busp->c_str();
 
 		if (p->write_only()) {
-			/*
-			*	Need a better solution for write-only slaves
-			*/
-			gbl_msg.error("Write-only AXI4 slave logic not implemented\n");
+			fprintf(fp,
+	"\taxiempty #(\n"
+	"\t\t// {{{\n"
+	"\t\t.C_AXI_ADDR_WIDTH(%d),\n"
+	"\t\t.C_AXI_DATA_WIDTH(%d)\n"
+	"\t\t// }}}\n",
+				address_width(),
+				m_info->data_width());
+			fprintf(fp,
+	"\t) %s_no_slavep (\n"
+		"\t\t// {{{\n"
+		"\t\t.S_AXI_ACLK(%s), .S_AXI_ARESETN(%s),\n"
+		"\t\t//\n",
+			bp, c->m_wire->c_str(), rst->c_str());
+
+			fprintf(fp,
+		"\t\t// Verilator lint_off PINCONNECTEMPTY\n"
+		"\t\t.S_AXI_AWVALID(1\'b0), .S_AXI_AWREADY(),\n"
+		"\t\t.S_AXI_WVALID(1\'b0),  .S_AXI_WREADY(),\n"
+		"\t\t.S_AXI_WLAST(1\'b0),\n"
+		"\t\t//\n"
+		"\t\t.S_AXI_BVALID(),   .S_AXI_BREADY(1\'b1),\n"
+		"\t\t.S_AXI_BID(), .S_AXI_BRESP(),\n"
+		"\t\t// Verilator lint_on PINCONNECTEMPTY\n"
+		"\t\t//\n"
+		"\t\t.S_AXI_ARVALID(%s_arvalid), .S_AXI_ARREADY(%s_arready),\n"
+		"\t\t.S_AXI_ARID(%s_arid), .S_AXI_ARLEN(%s_arlen),\n"
+		"\t\t.S_AXI_RVALID(%s_rvalid),   .S_AXI_RREADY(%s_rready),\n"
+		"\t\t.S_AXI_RDATA(%s_rdata),   .S_AXI_RLAST(%s_rlast),\n"
+		"\t\t.S_AXI_RRESP(%s_rresp)\n"
+		"\t);\n\n",
+				// AW, W, B
+				//
+				bp, bp, bp, bp,
+				bp, bp, bp, bp, bp);
+
 		}
 		if (p->read_only()) {
-			/*
-			*	Need a better solution for read-only slaves
-			*/
-			gbl_msg.error("Read-only AXI4 slave logic not implemented\n");
+
+			fprintf(fp,
+	"\taxiempty #(\n"
+	"\t\t// {{{\n"
+	"\t\t.C_AXI_ADDR_WIDTH(%d),\n"
+	"\t\t.C_AXI_DATA_WIDTH(%d)\n"
+	"\t\t// }}}\n",
+				address_width(),
+				m_info->data_width());
+			fprintf(fp,
+	"\t) %s_no_slavep (\n"
+		"\t\t// {{{\n"
+		"\t\t.S_AXI_ACLK(%s), .S_AXI_ARESETN(%s),\n"
+		"\t\t//\n",
+			bp, c->m_wire->c_str(), rst->c_str());
+
+			fprintf(fp,
+		"\t\t.S_AXI_AWVALID(%s_awvalid), .S_AXI_AWREADY(%s_awready),\n"
+		"\t\t.S_AXI_WVALID(%s_wvalid),  .S_AXI_WREADY(%s_wready),\n"
+		"\t\t.S_AXI_WLAST(%s_wlast),\n"
+		"\t\t//\n"
+		"\t\t.S_AXI_BVALID(%s_bvalid),   .S_AXI_BREADY(%s_bready),\n"
+		"\t\t.S_AXI_BID(%s_bid), .S_AXI_BRESP(%s_bresp),\n"
+		"\t\t//\n"
+		"\t\t// Verilator lint_off PINCONNECTEMPTY\n"
+		"\t\t.S_AXI_ARVALID(1\'b0), .S_AXI_ARREADY(),\n"
+		"\t\t.S_AXI_ARID(0), .S_AXI_ARLEN(8'h00),\n"
+		"\t\t//\n"
+		"\t\t.S_AXI_RVALID(),   .S_AXI_RREADY(1\'b1),\n"
+		"\t\t.S_AXI_RDATA(),   .S_AXI_RLAST(),\n"
+		"\t\t.S_AXI_RRESP()\n"
+		"\t\t// Verilator lint_on PINCONNECTEMPTY\n"
+		"\t);\n\n",
+				// AW, W
+				bp, bp, bp, bp, bp,
+				// B
+				bp, bp, bp, bp);
 		}
 		// }}}
 	}
