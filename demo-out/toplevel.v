@@ -460,7 +460,7 @@ module	toplevel(i_clk,
 
 	IOBUF sd_cmd_buf(.T(1'b0),.O(i_sd_cmd), .I(w_sd_cmd), .IO(io_sd_cmd));
 	IOBUF sd_dat3_bf(.T(1'b0),.O(i_sd[3]),.I(w_sd_data[3]),.IO(io_sd[3]));
-	
+
 
 
 
@@ -547,7 +547,7 @@ module	toplevel(i_clk,
 		.io_ddr_data(ddr3_dq)
 		,  .o_ram_dbg(sdram_dbg)
 		);
- 	
+
 
 	assign	o_led = { w_led[8-1:2], (w_led[1] || !clocks_locked),
 			w_led[0] | s_reset };

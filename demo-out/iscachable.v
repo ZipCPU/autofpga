@@ -42,8 +42,10 @@
 `default_nettype none
 //
 module iscachable(
-		input	wire	[28-1:0]	i_addr,
+		// {{{
+		input	wire	[30-1:0]	i_addr,
 		output	reg			o_cachable
+		// }}}
 	);
 
 	always @(*)
@@ -53,14 +55,14 @@ module iscachable(
 		// Bus master: wb_dio
 		// Bus master: wb_sio
 		// bkram
-		if ((i_addr[27:0] & 28'hf800000) == 28'h6800000)
+		if ((i_addr[29:0] & 30'h3e000000) == 30'h1a000000)
 			o_cachable = 1'b1;
 		// flash
-		if ((i_addr[27:0] & 28'hf800000) == 28'h7000000)
+		if ((i_addr[29:0] & 30'h3e000000) == 30'h1c000000)
 			o_cachable = 1'b1;
 		// Bus master: rambus
 		// sdram
-		if ((i_addr[27:0] & 28'h8000000) == 28'h8000000)
+		if ((i_addr[29:0] & 30'h20000000) == 30'h20000000)
 			o_cachable = 1'b1;
 	end
 
