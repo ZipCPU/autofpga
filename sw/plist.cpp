@@ -461,6 +461,8 @@ void	PLIST::assign_addresses(unsigned dwidth, unsigned nullsz,
 			reeval(*ph);
 		}
 	} else {
+		bool	m_full_decode = false;
+
 		assert((*this)[0]->p_slave_bus);
 		if (!(*this)[0]->p_slave_bus->word_addressing())
 			daddr_abits = 0;
@@ -546,11 +548,12 @@ void	PLIST::assign_addresses(unsigned dwidth, unsigned nullsz,
 		// selectable, and may be zero.
 		start_address = nullsz;
 		for(unsigned i=0; i<size(); i++) {
-			unsigned	pa;
+			unsigned	pa, pfull, pmsk;
 
 			// pa is the width in the number of address bits
 			// required to address one octet of this peripheral.
-			pa = (*this)[i]->get_slave_address_width()+daddr_abits;
+			pfull=(*this)[i]->get_slave_address_width()+daddr_abits;
+			pa = pfull;
 			if (pa <= 0) {
 				// p_base is in octets
 				(*this)[i]->p_base = start_address;
@@ -584,7 +587,8 @@ void	PLIST::assign_addresses(unsigned dwidth, unsigned nullsz,
 				// peripheral uses--we'll trim it back down
 				// to the minimum required bits in a mask in
 				// a moment
-				(*this)[i]->p_mask = (-1)<<(pa-daddr_abits);
+				pmsk = (m_full_decode) ? pfull : pa;
+				(*this)[i]->p_mask = (-1)<<(pmsk-daddr_abits);
 				assert((*this)[i]->p_mask != 0);
 			}
 		}
