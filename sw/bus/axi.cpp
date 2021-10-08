@@ -767,7 +767,7 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 		// one master
 		//
 		STRINGP	slv  = (*m_info->m_plist)[0]->bus_prefix();
-		STRINGP	mstr = master_name(0);
+		STRINGP	mstr = (*m_mlist)[0]->bus_prefix();
 		const char *sp = slv->c_str(),
 			*mp = mstr->c_str();
 
