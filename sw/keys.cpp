@@ -15,7 +15,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 // }}}
-// Copyright (C) 2017-2021, Gisselquist Technology, LLC
+// Copyright (C) 2017-2022, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published
@@ -140,6 +140,7 @@ const	STRING	KYBDEF_INSERT=	"BDEF.INSERT";
 // Top definitions
 const	STRING	KYTOP_PORTLIST=	"TOP.PORTLIST";
 const	STRING	KYTOP_IODECL=	"TOP.IODECL";
+const	STRING	KYTOP_PARAM=	"TOP.PARAM";
 const	STRING	KYTOP_DEFNS=	"TOP.DEFNS";
 const	STRING	KYTOP_MAIN=	"TOP.MAIN";
 const	STRING	KYTOP_INSERT=	"TOP.INSERT";

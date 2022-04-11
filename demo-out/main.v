@@ -91,15 +91,21 @@
 // Any core with both an @ACCESS and a @DEPENDS tag will show up here.
 // The @DEPENDS tag will turn into a series of ifdef's, with the @ACCESS
 // being defined only if all of the ifdef's are true//
+// Deplist for @$(PREFIX)=sdram
+// Deplist for @$(PREFIX)=rtcdate
 `ifdef	RTC_ACCESS
 `define	RTCDATE_ACCESS
 `endif	// RTC_ACCESS
+// Deplist for @$(PREFIX)=flashcfg
 `ifdef	FLASH_ACCESS
 `define	FLASHCFG_ACCESS
 `endif	// FLASH_ACCESS
-// The following have unmet dependencies.  They are listed
+// Deplist for @$(PREFIX)=sdram
+//
+// The following macros have unmet dependencies.  They are listed
 // here for reference, but their dependencies cannot be met.
-`ifdef	ALLCLOCKS_PRESENT
+// Unmet Dependency list for @$(PREFIX)=sdram
+`ifdef	ALLCLOCKS_PRESENT // This value is unknown
 `define	SDRAM_ACCESS
 `endif
 
@@ -173,8 +179,9 @@ module	main(i_clk, i_reset,
 		// UART/host to wishbone interface
 		i_host_uart_rx, o_host_uart_tx,
 		// HDMI input EDID I2C ports
-		i_hdmi_in_scl, i_hdmi_in_sda, o_hdmi_in_scl, o_hdmi_in_sda	// }}}
-);
+		i_hdmi_in_scl, i_hdmi_in_sda, o_hdmi_in_scl, o_hdmi_in_sda
+	// }}}
+	);
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Any parameter definitions

@@ -109,6 +109,48 @@ module	toplevel(i_clk,
 		// HDMI input EDID I2C ports
 		io_hdmi_in_scl, io_hdmi_in_sda);
 	//
+	// Declaring any top level parameters.
+	//
+	// These declarations just copy data from the @TOP.PARAM key,
+	// or from the @MAIN.PARAM key if @TOP.PARAM is absent.  For
+	// those peripherals that don't do anything at the top level,
+	// the @MAIN.PARAM key should be sufficient, so the @TOP.PARAM
+	// key may be left undefined.
+	//
+	//
+	//
+	// Variables/definitions needed by the ZipCPU BUS master
+	//
+	//
+	// A 32-bit address indicating where the ZipCPU should start running
+	// from
+`ifdef	BKROM_ACCESS
+	localparam	RESET_ADDRESS = @$(/bkrom.BASE);
+`else
+`ifdef	FLASH_ACCESS
+	localparam	RESET_ADDRESS = @$RESET_ADDRESS;
+`else
+	localparam	RESET_ADDRESS = 436207616;
+`endif	// FLASH_ACCESS
+`endif	// BKROM_ACCESS
+	//
+	// The number of valid bits on the bus
+	localparam	ZIP_ADDRESS_WIDTH = 28; // Zip-CPU address width
+	//
+	// Number of ZipCPU interrupts
+	localparam	ZIP_INTS = 16;
+	//
+	// ZIP_START_HALTED
+	//
+	// A boolean, indicating whether or not the ZipCPU be halted on startup?
+`ifdef	BKROM_ACCESS
+	localparam	ZIP_START_HALTED=1'b0;
+`else
+	localparam	ZIP_START_HALTED=1'b1;
+`endif
+	localparam [31:0] GPSCLOCK_DEFAULT_STEP = 32'haabcc771;
+	localparam	ICAPE_LGDIV=3;
+	//
 	// Declaring our input and output ports.  We listed these above,
 	// now we are declaring them here.
 	//

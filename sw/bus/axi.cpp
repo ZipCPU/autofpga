@@ -72,7 +72,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 // }}}
-// Copyright (C) 2019-2021, Gisselquist Technology, LLC
+// Copyright (C) 2019-2022, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published
@@ -1429,10 +1429,12 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 	"\taxiempty #(\n"
 	"\t\t// {{{\n"
 	"\t\t.C_AXI_ADDR_WIDTH(%d),\n"
-	"\t\t.C_AXI_DATA_WIDTH(%d)\n"
+	"\t\t.C_AXI_DATA_WIDTH(%d),\n"
+	"\t\t.C_AXI_ID_WIDTH(%d)\n"
 	"\t\t// }}}\n",
 				address_width(),
-				m_info->data_width());
+				m_info->data_width(),
+				id_width());
 			fprintf(fp,
 	"\t) %s_no_slavep (\n"
 		"\t\t// {{{\n"
@@ -1455,6 +1457,7 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 		"\t\t.S_AXI_RVALID(%s_rvalid),   .S_AXI_RREADY(%s_rready),\n"
 		"\t\t.S_AXI_RDATA(%s_rdata),   .S_AXI_RLAST(%s_rlast),\n"
 		"\t\t.S_AXI_RRESP(%s_rresp)\n"
+		"\t\t// }}}\n"
 		"\t);\n\n",
 				// AW, W, B
 				//
@@ -1468,10 +1471,12 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 	"\taxiempty #(\n"
 	"\t\t// {{{\n"
 	"\t\t.C_AXI_ADDR_WIDTH(%d),\n"
-	"\t\t.C_AXI_DATA_WIDTH(%d)\n"
+	"\t\t.C_AXI_DATA_WIDTH(%d),\n"
+	"\t\t.C_AXI_ID_WIDTH(%d)\n"
 	"\t\t// }}}\n",
 				address_width(),
-				m_info->data_width());
+				m_info->data_width(),
+				id_width());
 			fprintf(fp,
 	"\t) %s_no_slavep (\n"
 		"\t\t// {{{\n"
@@ -1481,6 +1486,7 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 
 			fprintf(fp,
 		"\t\t.S_AXI_AWVALID(%s_awvalid), .S_AXI_AWREADY(%s_awready),\n"
+		"\t\t\t.S_AXI_AWID(%s_awid),\n"
 		"\t\t.S_AXI_WVALID(%s_wvalid),  .S_AXI_WREADY(%s_wready),\n"
 		"\t\t.S_AXI_WLAST(%s_wlast),\n"
 		"\t\t//\n"
@@ -1495,9 +1501,10 @@ void	AXIBUS::writeout_bus_logic_v(FILE *fp) {
 		"\t\t.S_AXI_RDATA(),   .S_AXI_RLAST(),\n"
 		"\t\t.S_AXI_RRESP()\n"
 		"\t\t// Verilator lint_on PINCONNECTEMPTY\n"
+		"\t\t// }}}\n"
 		"\t);\n\n",
 				// AW, W
-				bp, bp, bp, bp, bp,
+				bp, bp, bp, bp, bp, bp,
 				// B
 				bp, bp, bp, bp);
 		}

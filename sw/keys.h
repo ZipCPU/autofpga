@@ -13,7 +13,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 // }}}
-// Copyright (C) 2017-2021, Gisselquist Technology, LLC
+// Copyright (C) 2017-2022, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published
@@ -144,6 +144,7 @@ extern const	STRING	KYBDEF_INSERT;
 // Top definitions
 extern const	STRING	KYTOP_PORTLIST;
 extern const	STRING	KYTOP_IODECL;
+extern const	STRING	KYTOP_PARAM;
 extern const	STRING	KYTOP_DEFNS;
 extern const	STRING	KYTOP_MAIN;
 extern const	STRING	KYTOP_INSERT;

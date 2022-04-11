@@ -321,6 +321,8 @@ public:
 	virtual	void	reset(void) {
 		m_core->i_reset = 1;
 		tick();
+		while(!m_core->i_clk)
+			tick();
 		m_core->i_reset = 0;
 		// printf("RESET\n");
 	}

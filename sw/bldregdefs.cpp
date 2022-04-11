@@ -11,7 +11,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 // }}}
-// Copyright (C) 2017-2021, Gisselquist Technology, LLC
+// Copyright (C) 2017-2022, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published
@@ -64,6 +64,7 @@ extern	bool	isperipheral(MAPDHASH &phash);
 
 int	get_longest_defname(APLIST *alist) {
 	// {{{
+	const char DELIMITERS[] = ", \t\n";
 	unsigned	longest_defname = 0;
 	STRING		str;
 
@@ -116,7 +117,7 @@ int	get_longest_defname(APLIST *alist) {
 			}
 
 			// 2. Get the C name
-			rname = strtok(nxtp, " \t\n,");
+			rname = strtok(nxtp, DELIMITERS);
 			if (strlen(rname) > longest_defname)
 				longest_defname = strlen(rname);
 		}
@@ -135,6 +136,7 @@ int	get_longest_defname(APLIST *alist) {
 // than we could without it.
 //
 void write_regdefs(FILE *fp, APLIST *alist, unsigned longest_defname) {
+	const char DELIMITERS[] = ", \t\n";
 	STRING	str;
 
 	gbl_msg.info("WRITE-REGDEFS\n");
@@ -190,14 +192,14 @@ void write_regdefs(FILE *fp, APLIST *alist, unsigned longest_defname) {
 			}
 
 			// 2. Get the C name
-			rname = strtok(nxtp, " \t\n,");
+			rname = strtok(nxtp, DELIMITERS);
 			fprintf(fp, "#define\t%-*s\t0x%08lx", longest_defname,
 				rname, (roff<<2)+(*alist)[i]->p_regbase);
 
 			fprintf(fp, "\t// %08lx, wbregs names: ", (*alist)[i]->p_regbase);
 			int	first = 1;
 			// 3. Get the various user names
-			while(NULL != (rv = strtok(NULL, " \t\n,"))) {
+			while(NULL != (rv = strtok(NULL, DELIMITERS))) {
 				if (!first)
 					fprintf(fp, ", ");
 				first = 0;
@@ -349,6 +351,7 @@ void	build_regdefs_h(  MAPDHASH &master, FILE *fp, STRING &fname) {
 // names within regdefs.cpp
 //
 unsigned	get_longest_uname(APLIST *alist) {
+	const char DELIMITERS[] = ", \t\n";
 	unsigned	longest_uname = 0;
 	STRING	str;
 	STRINGP	strp;
@@ -381,11 +384,11 @@ unsigned	get_longest_uname(APLIST *alist) {
 			}
 
 			// 2. Get (and ignore) the C definition name
-			strtok(nxtp, " \t\n,");
+			strtok(nxtp, DELIMITERS); // (Ignore first result)
 
 			// 3. Every token that follows will be a user (string)
 			// name.  Find the one of these with the longest length.
-			while(NULL != (rv = strtok(NULL, " \t\n,"))) {
+			while(NULL != (rv = strtok(NULL, DELIMITERS))) {
 				if (strlen(rv) > longest_uname)
 					longest_uname = strlen(rv);
 			}
@@ -402,6 +405,7 @@ unsigned	get_longest_uname(APLIST *alist) {
 //
 void write_regnames(FILE *fp, APLIST *alist,
 		unsigned longest_defname, unsigned longest_uname) {
+	const char DELIMITERS[] = ", \t\n";
 	STRING	str;
 	STRINGP	strp;
 	int	first = 1;
@@ -432,9 +436,9 @@ void write_regnames(FILE *fp, APLIST *alist,
 			}
 
 			// 2. Get the C name
-			rname = strtok(nxtp, " \t\n,");
+			rname = strtok(nxtp, DELIMITERS);
 			// 3. Get the various user names and ... define them
-			while(NULL != (rv = strtok(NULL, " \t\n,"))) {
+			while(NULL != (rv = strtok(NULL, DELIMITERS))) {
 				if (!first)
 					fprintf(fp, ",\n");
 				first = 0;

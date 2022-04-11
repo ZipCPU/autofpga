@@ -15,7 +15,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 // }}}
-// Copyright (C) 2017-2021, Gisselquist Technology, LLC
+// Copyright (C) 2017-2022, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published
@@ -477,13 +477,13 @@ STRINGP	BUSINFO::slave_portlist(PERIPHP p) {
 STRINGP	BUSINFO::slave_iansi(PERIPHP p) {
 	if (!generator())
 		return NULL;
-	return generator()->oansi(NULL);
+	return generator()->iansi(NULL);
 }
 
 STRINGP	BUSINFO::slave_oansi(PERIPHP p) {
 	if (!generator())
 		return NULL;
-	return generator()->iansi(NULL);
+	return generator()->oansi(NULL);
 }
 
 STRINGP	BUSINFO::slave_ansprefix(PERIPHP p) {

@@ -85,7 +85,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 // }}}
-// Copyright (C) 2019-2021, Gisselquist Technology, LLC
+// Copyright (C) 2019-2022, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published
@@ -1291,25 +1291,25 @@ STRINGP	WBBUS::oansi(BMASTERP) {
 }
 
 STRINGP	WBBUS::master_ansprefix(BMASTERP) {
-	return new STRING("");
+	return new STRING("wb_");
 }
 
 STRINGP	WBBUS::master_ansi_portlist(BMASTERP) {
 	return new STRING(
-	".i_wb_cyc(@$(MASTER.PREFIX)_cyc), "
-	".i_wb_stb(@$(MASTER.PREFIX)_stb), "
-	".i_wb_we(@$(MASTER.PREFIX)_we),\n"
-	"\t\t\t.i_wb_addr(@$(MASTER.PREFIX)_addr[@$(MASTER.BUS.AWID)-1:0]),\n"
-	"\t\t\t.i_wb_data(@$(MASTER.PREFIX)_data), // @$(MASTER.BUS.WIDTH) bits wide\n"
-	"\t\t\t.i_wb_sel(@$(MASTER.PREFIX)_sel),  // @$(MASTER.BUS.WIDTH)/8 bits wide\n"
-	"\t\t.o_wb_stall(@$(MASTER.PREFIX)_stall), "
-	".o_wb_ack(@$(MASTER.PREFIX)_ack), "
-	".o_wb_data(@$(MASTER.PREFIX)_idata)"
-	".o_wb_err(@$(MASTER.PREFIX)_err)");
+	".@$(OANSI)@$(MASTER.ANSPREFIX)cyc(@$(MASTER.PREFIX)_cyc), "
+	".@$(OANSI)@$(MASTER.ANSPREFIX)stb(@$(MASTER.PREFIX)_stb), "
+	".@$(OANSI)@$(MASTER.ANSPREFIX)we(@$(MASTER.PREFIX)_we),\n"
+	"\t\t\t.@$(OANSI)@$(MASTER.ANSPREFIX)addr(@$(MASTER.PREFIX)_addr[@$(MASTER.BUS.AWID)-1:0]),\n"
+	"\t\t\t.@$(OANSI)@$(MASTER.ANSPREFIX)data(@$(MASTER.PREFIX)_data), // @$(MASTER.BUS.WIDTH) bits wide\n"
+	"\t\t\t.@$(OANSI)@$(MASTER.ANSPREFIX)sel(@$(MASTER.PREFIX)_sel),  // @$(MASTER.BUS.WIDTH)/8 bits wide\n"
+	"\t\t.@$(IANSI)@$(MASTER.ANSPREFIX)stall(@$(MASTER.PREFIX)_stall), "
+	".@$(IANSI)@$(MASTER.ANSPREFIX)ack(@$(MASTER.PREFIX)_ack), "
+	".@$(IANSI)@$(MASTER.ANSPREFIX)data(@$(MASTER.PREFIX)_idata), "
+	".@$(IANSI)@$(MASTER.ANSPREFIX)err(@$(MASTER.PREFIX)_err)");
 }
 
 STRINGP	WBBUS::slave_ansprefix(PERIPHP p) {
-	return new STRING("");
+	return new STRING("wb_");
 }
 
 
@@ -1347,27 +1347,27 @@ STRINGP	WBBUS::slave_ansi_portlist(PERIPHP p) {
 	STRINGP	errp = getstring(p->p_phash, KYERROR_WIRE);
 	STRING	str = STRING(
 
-	".i_wb_cyc(@$(SLAVE.PREFIX)_cyc), "
-	".i_wb_stb(@$(SLAVE.PREFIX)_stb), ");
+	".@$(IANSI)@$(SLAVE.ANSPREFIX)cyc(@$(SLAVE.PREFIX)_cyc), "
+	".@$(IANSI)@$(SLAVE.ANSPREFIX)stb(@$(SLAVE.PREFIX)_stb), ");
 	if (!p->read_only() && !p->write_only())
-		str = str + STRING(".i_wb_we(@$(SLAVE.PREFIX)_we),\n");
+		str = str + STRING(".@$(IANSI)@$(SLAVE.ANSPREFIX)we(@$(SLAVE.PREFIX)_we),\n");
 	if (p->get_slave_address_width() > 0) {
 		char	tmp[64];
 		STRING	stmp;
 		sprintf(tmp, "_addr[%d-1:0]),\n", p->get_slave_address_width());
-		stmp = STRING("\t\t\t.i_wb_addr(@$(SLAVE.PREFIX)") + STRING(tmp);
+		stmp = STRING("\t\t\t.@$(IANSI)@$(SLAVE.ANSPREFIX)addr(@$(SLAVE.PREFIX)") + STRING(tmp);
 		str = str + stmp;
 	}
 	if (!p->read_only())
 		str = str + STRING(
-	"\t\t\t.i_wb_data(@$(SLAVE.PREFIX)_data), // @$(SLAVE.BUS.WIDTH) bits wide\n"
-	"\t\t\t.i_wb_sel(@$(SLAVE.PREFIX)_sel),  // @$(SLAVE.BUS.WIDTH)/8 bits wide\n");
+	"\t\t\t.@$(IANSI)@$(SLAVE.ANSPREFIX)data(@$(SLAVE.PREFIX)_data), // @$(SLAVE.BUS.WIDTH) bits wide\n"
+	"\t\t\t.@$(IANSI)@$(SLAVE.ANSPREFIX)sel(@$(SLAVE.PREFIX)_sel),  // @$(SLAVE.BUS.WIDTH)/8 bits wide\n");
 	str = str + STRING(
-	"\t\t.o_wb_stall(@$(SLAVE.PREFIX)_stall),"
-	".o_wb_ack(@$(SLAVE.PREFIX)_ack)");
+	"\t\t.@$(OANSI)@$(SLAVE.ANSPREFIX)stall(@$(SLAVE.PREFIX)_stall),"
+	".@$(OANSI)@$(SLAVE.ANSPREFIX)ack(@$(SLAVE.PREFIX)_ack)");
 
 	if (!p->write_only())
-		str = str + STRING(", .o_wb_data(@$(SLAVE.PREFIX)_idata)");
+		str = str + STRING(", .@$(OANSI)@$(SLAVE.ANSPREFIX)data(@$(SLAVE.PREFIX)_idata)");
 	if (NULL != errp)
 		str = str + STRING(", @$(SLAVE.PREFIX)_err");
 	return new STRING(str);

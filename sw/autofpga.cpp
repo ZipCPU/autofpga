@@ -34,7 +34,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 // }}}
-// Copyright (C) 2017-2021, Gisselquist Technology, LLC
+// Copyright (C) 2017-2022, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published
@@ -88,9 +88,9 @@
 #include "msgs.h"
 #include "bldcachable.h"
 
-//
+// class INFINFO
 // The ILIST, a list of interrupt lines within the design
-//
+// {{{
 //
 class INTINFO {
 public:
@@ -108,9 +108,10 @@ public:
 };
 typedef	INTINFO	INTID, *INTP;
 typedef	std::vector<INTP>	ILIST;
+// }}}
 
-
-//
+// class PICINFO
+// {{{
 // The PICINFO structure, one that keeps track of all of the information used
 // by a given Programmable Interrupt Controller (PIC)
 //
@@ -277,14 +278,15 @@ public:
 typedef	PICINFO	PICI, *PICP;
 typedef	std::vector<PICP>	PICLIST;
 
-
 // A list of all of our interrupt controllers
 PICLIST	piclist;
 unsigned	unusedmsk;
+// }}}
 
 // Return the number of interrupt controllers within this design.  If no such
 // field/tag exists, count the number and add it to the hash.
 int count_pics(MAPDHASH &info) {
+	// {{{
 	MAPDHASH::iterator	kvpair, kvpic;
 	int	npics=0;
 
@@ -302,9 +304,10 @@ int count_pics(MAPDHASH &info) {
 	setvalue(info, KYNPIC, npics);
 	return npics;
 }
-
+// }}}
 
 void	assign_int_to_pics(const STRING &iname, MAPDHASH &ihash) {
+	// {{{
 	STRINGP	picname;
 	int inum;
 
@@ -331,6 +334,7 @@ void	assign_int_to_pics(const STRING &iname, MAPDHASH &ihash) {
 		tok = strtok_r(NULL, ", \t\n", &sr);
 	} free(cpy);
 }
+// }}}
 
 //
 // assign_interrupts
@@ -340,6 +344,7 @@ void	assign_int_to_pics(const STRING &iname, MAPDHASH &ihash) {
 // multiple interrupt controllers.
 //
 void	assign_interrupts(MAPDHASH &master) {
+	// {{{
 	MAPDHASH::iterator	kvpair, kvint, kvline;
 	MAPDHASH	*submap, *intmap;
 	STRINGP		sintlist;
@@ -409,8 +414,10 @@ void	assign_interrupts(MAPDHASH &master) {
 		piclist[picid]->assignids();
 	reeval(master);
 }
+// }}}
 
 void	writeout(FILE *fp, MAPDHASH &master, const STRING &ky) {
+	// {{{
 	MAPDHASH::iterator	kvpair;
 	STRINGP	str;
 
@@ -431,8 +438,11 @@ void	writeout(FILE *fp, MAPDHASH &master, const STRING &ky) {
 		fprintf(fp, "%s", str->c_str());
 	}
 }
+// }}}
 
 void	build_board_h(    MAPDHASH &master, FILE *fp, STRING &fname) {
+	// {{{
+	const	char	DELIMITERS[] = " \t\n";
 	MAPDHASH::iterator	kvpair;
 	STRING	str, astr;
 	STRINGP	defns;
@@ -465,7 +475,7 @@ void	build_board_h(    MAPDHASH &master, FILE *fp, STRING &fname) {
 
 
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
-		const	char	*accessptr;
+		char	*dup, *tok;
 		STRINGP	osdef, osval, access;
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
@@ -475,21 +485,25 @@ void	build_board_h(    MAPDHASH &master, FILE *fp, STRING &fname) {
 		if ((!osdef)&&(!osval))
 			continue;
 		access= getstring(kvpair->second, KYACCESS);
+		dup = NULL;
+		tok = NULL;
 
 		if (access) {
-			accessptr = access->c_str();
-			if (accessptr[0] == '!')
-				accessptr++;
-			fprintf(fp, "#ifdef\t%s\n", accessptr);
-		} else	accessptr = NULL;
+			dup = strdup(access->c_str());
+			tok = strtok(dup, DELIMITERS);
+			if (tok[0] == '!')
+				tok++;
+		} else	tok = NULL;
+		if (tok)
+			fprintf(fp, "#ifdef\t%s\n", tok);
 		if (osdef)
 			fprintf(fp, "#define\t%s\n", osdef->c_str());
 		if (osval) {
 			fputs(osval->c_str(), fp);
 			if (osval->c_str()[strlen(osval->c_str())-1] != '\n')
 				fputc('\n', fp);
-		} if (access)
-			fprintf(fp, "#endif\t// %s\n", accessptr);
+		} if (tok)
+			fprintf(fp, "#endif\t// %s\n", tok);
 	}
 
 	fprintf(fp, "//\n// Interrupt assignments (%ld PICs)\n//\n", piclist.size());
@@ -525,8 +539,10 @@ void	build_board_h(    MAPDHASH &master, FILE *fp, STRING &fname) {
 
 	fprintf(fp, "#endif\t// BOARD_H\n");
 }
+// }}}
 
 void	build_latex_tbls( MAPDHASH &master) {
+	// {{{
 	// legal_notice(master, fp, fname);
 #ifdef	NEW_FILE_FORMAT
 	printf("\n\n\n// TO BE PLACED INTO doc/src\n");
@@ -538,11 +554,13 @@ void	build_latex_tbls( MAPDHASH &master) {
 	printf("\n\n\n// TO BE PLACED INTO doc/src\n");
 #endif
 }
+// }}}
 
 //
 // void	build_device_tree(MAPDHASH &master)
 //
 void	build_toplevel_v( MAPDHASH &master, FILE *fp, STRING &fname) {
+	// {{{
 	MAPDHASH::iterator	kvpair, kvaccess, kvsearch;
 	STRING	str = "ACCESS", astr;
 	int	first;
@@ -605,6 +623,26 @@ void	build_toplevel_v( MAPDHASH &master, FILE *fp, STRING &fname) {
 	} fprintf(fp, ");\n");
 
 	// External declarations (input/output) for our various ports
+	fprintf(fp, "\t//\n"
+	"\t// Declaring any top level parameters.\n"
+	"\t//\n"
+	"\t// These declarations just copy data from the @TOP.PARAM key,\n"
+	"\t// or from the @MAIN.PARAM key if @TOP.PARAM is absent.  For\n"
+	"\t// those peripherals that don't do anything at the top level,\n"
+	"\t// the @MAIN.PARAM key should be sufficient, so the @TOP.PARAM\n"
+	"\t// key may be left undefined.\n"
+	"\t//\n");
+	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
+		if (kvpair->second.m_typ != MAPT_MAP)
+			continue;
+
+		STRINGP strp = getstring(*kvpair->second.u.m_m, KYTOP_PARAM);
+		if (!strp)
+			strp = getstring(*kvpair->second.u.m_m, KYMAIN_PARAM);
+		if (strp)
+			fprintf(fp, "%s", strp->c_str());
+	}
+
 	fprintf(fp, "\t//\n"
 	"\t// Declaring our input and output ports.  We listed these above,\n"
 	"\t// now we are declaring them here.\n"
@@ -710,8 +748,11 @@ void	build_toplevel_v( MAPDHASH &master, FILE *fp, STRING &fname) {
 	fprintf(fp, "\n\nendmodule // end of toplevel.v module definition\n");
 
 }
+// }}}
 
 void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
+	// {{{
+	char	DELIMITERS[] = ", \t\n";
 	MAPDHASH::iterator	kvpair, kvaccess, kvsearch;
 	STRING	str, astr, sellist, acklist, siosel_str, diosel_str;
 	int		first;
@@ -775,7 +816,7 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 			fprintf(fp, ",\n");
 		first=0;
 		fprintf(fp, "%s", tmps.c_str());
-	} fprintf(fp, "\t// }}}\n);\n");
+	} fprintf(fp, "\n\t// }}}\n\t);\n");
 
 	fprintf(fp,
 		"////////////////////////////////////////////////////////////////////////////////\n"
@@ -997,7 +1038,7 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 		MAPDHASH::iterator	kvint, kvsub, kvwire;
 		bool			nomain, noaccess, noalt;
 		STRINGP			insert, alt, access;
-		const	char	 	*accessptr;
+		char			*accessdup, *accesstok;
 
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
@@ -1008,15 +1049,16 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 		nomain   = false;
 		noaccess = false;
 		noalt    = false;
+		accessdup= NULL;
 		if (NULL == insert)
 			nomain = true;
 		if (NULL == access) {
 			noaccess= true;
-			accessptr = NULL;
 		} else {
-			accessptr = access->c_str();
-			if (accessptr[0] == '!')
-				accessptr++;
+			accessdup = strdup(access->c_str());
+			accesstok = strtok(accessdup, DELIMITERS);
+			if (accesstok[0] == '!')
+				accesstok++;
 		}
 		if (NULL == alt)
 			noalt = true;
@@ -1026,13 +1068,13 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 				fputs(insert->c_str(), fp);
 		} else if ((!nomain)||(!noalt)) {
 			if (nomain) {
-				fprintf(fp, "`ifndef\t%s\n", accessptr);
+				fprintf(fp, "`ifndef\t%s\n", accesstok);
 			} else {
-				fprintf(fp, "`ifdef\t%s\n", accessptr);
+				fprintf(fp, "`ifdef\t%s\n", accesstok);
 				fprintf(fp, "\t// {{{\n");
 				fputs(insert->c_str(), fp);
 				fprintf(fp, "\t// }}}\n");
-				fprintf(fp, "`else\t// %s\n", accessptr);
+				fprintf(fp, "`else\t// %s\n", accesstok);
 			}
 			fprintf(fp, "\t// {{{\n");
 
@@ -1103,14 +1145,18 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 				fprintf(fp, "\t// }}}\n");
 			}
 			fprintf(fp, "\t// }}}\n");
-			fprintf(fp, "`endif\t// %s\n\n", accessptr);
+			fprintf(fp, "`endif\t// %s\n\n", accesstok);
 		}
+
+		if (accessdup)
+			free(accessdup);
 	}
 
 
 	fprintf(fp, "\t// }}}\nendmodule // main.v\n");
 
 }
+// }}}
 
 STRINGP	remove_comments(STRINGP s) {
 	STRINGP	r;
@@ -1263,6 +1309,8 @@ void	build_xdc(MAPDHASH &master, FILE *fp, STRING &fname) {
 		gbl_msg.fatal("Could not find or open %s\n", str->c_str());
 	}
 
+	// Uncomment any lines referencing top-level ports
+	// {{{
 	while(fgets(line, sizeof(line), fpsrc)) {
 		const char	*GET_PORTS_KEY = "get_ports",
 				*SET_PROPERTY_KEY = "set_property";
@@ -1331,16 +1379,21 @@ void	build_xdc(MAPDHASH &master, FILE *fp, STRING &fname) {
 		} else
 			fprintf(fp, "%s\n", line);
 	}
+	// }}}
 
 	fclose(fpsrc);
 
 	fprintf(fp, "\n## Adding in any XDC_INSERT tags\n\n");
+	// {{{
 	for(kvpair = master.begin(); kvpair != master.end(); kvpair++) {
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
 		str = getstring(kvpair->second, KYXDC_INSERT);
-		if (NULL == str)
+		if (NULL == str) {
+			fprintf(fp, "## No XDC.INSERT tag in %s\n",
+				kvpair->first.c_str());
 			continue;
+		}
 
 		fprintf(fp, "## From %s\n%s", kvpair->first.c_str(),
 			str->c_str());
@@ -1350,6 +1403,7 @@ void	build_xdc(MAPDHASH &master, FILE *fp, STRING &fname) {
 		fprintf(fp, "## From the global level\n%s",
 			str->c_str());
 	}
+	// }}}
 }
 
 void	build_pcf(MAPDHASH &master, FILE *fp, STRING &fname) {
@@ -1371,6 +1425,8 @@ void	build_pcf(MAPDHASH &master, FILE *fp, STRING &fname) {
 		gbl_msg.fatal("Could not find or open %s\n", str->c_str());
 	}
 
+	// Uncomment any lines referencing top-level ports
+	// {{{
 	while(fgets(line, sizeof(line), fpsrc)) {
 		const char	*SET_IO_KEY = "set_io";
 		const	char	*cptr;
@@ -1423,17 +1479,20 @@ void	build_pcf(MAPDHASH &master, FILE *fp, STRING &fname) {
 			fprintf(fp, "%s\n", &line[start]);
 		} else
 			fprintf(fp, "%s\n", line);
-	}
-
-	fclose(fpsrc);
+	} fclose(fpsrc);
+	// }}}
 
 	fprintf(fp, "\n## Adding in any PCF_INSERT tags\n\n");
+	// {{{
 	for(kvpair = master.begin(); kvpair != master.end(); kvpair++) {
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
 		str = getstring(kvpair->second, KYPCF_INSERT);
-		if (NULL == str)
+		if (NULL == str) {
+			fprintf(fp, "## No PCF.INSERT tag in %s\n",
+				kvpair->first.c_str());
 			continue;
+		}
 
 		fprintf(fp, "## From %s\n%s", kvpair->first.c_str(),
 			str->c_str());
@@ -1443,6 +1502,7 @@ void	build_pcf(MAPDHASH &master, FILE *fp, STRING &fname) {
 		fprintf(fp, "## From the global level\n%s",
 			str->c_str());
 	}
+	// }}}
 }
 
 void	build_lpf(MAPDHASH &master, FILE *fp, STRING &fname) {
@@ -1457,6 +1517,8 @@ void	build_lpf(MAPDHASH &master, FILE *fp, STRING &fname) {
 
 	get_portlist(master, ports);
 
+	// Uncomment any lines referencing top-level ports
+	// {{{
 	str = getstring(master, KYLPF_FILE);
 	fpsrc = open_in(master, *str);
 
@@ -1527,11 +1589,11 @@ void	build_lpf(MAPDHASH &master, FILE *fp, STRING &fname) {
 			fprintf(fp, "%s\n", &line[start]);
 		} else
 			fprintf(fp, "%s\n", line);
-	}
-
-	fclose(fpsrc);
+	} fclose(fpsrc);
+	// }}}
 
 	fprintf(fp, "\n## Adding in any LPF_INSERT tags\n\n");
+	// {{{
 	for(kvpair = master.begin(); kvpair != master.end(); kvpair++) {
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
@@ -1547,6 +1609,7 @@ void	build_lpf(MAPDHASH &master, FILE *fp, STRING &fname) {
 		fprintf(fp, "## From the global level\n%s",
 			str->c_str());
 	}
+	// }}}
 }
 
 void	build_ucf(MAPDHASH &master, FILE *fp, STRING &fname) {
@@ -1561,6 +1624,8 @@ void	build_ucf(MAPDHASH &master, FILE *fp, STRING &fname) {
 
 	get_portlist(master, ports);
 
+	// Uncomment any lines referencing top-level ports
+	// {{{
 	str = getstring(master, KYUCF_FILE);
 	fpsrc = open_in(master, *str);
 
@@ -1623,12 +1688,11 @@ void	build_ucf(MAPDHASH &master, FILE *fp, STRING &fname) {
 				fprintf(fp, "%s", line);
 		} else
 			fprintf(fp, "%s", line);
-	}
-
-	fclose(fpsrc);
-
+	} fclose(fpsrc);
+	// }}}
 
 	fprintf(fp, "\n## Adding in any UCF_INSERT tags\n\n");
+	// {{{
 	for(kvpair = master.begin(); kvpair != master.end(); kvpair++) {
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
@@ -1638,12 +1702,12 @@ void	build_ucf(MAPDHASH &master, FILE *fp, STRING &fname) {
 
 		fprintf(fp, "## From %s\n%s", kvpair->first.c_str(),
 			str->c_str());
-	}
-	str = getstring(master, KYUCF_INSERT);
+	} str = getstring(master, KYUCF_INSERT);
 	if (NULL != str) {
 		fprintf(fp, "## From the global level\n%s",
 			str->c_str());
 	}
+	// }}}
 }
 
 int	main(int argc, char **argv) {

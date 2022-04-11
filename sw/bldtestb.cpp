@@ -12,7 +12,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 // }}}
-// Copyright (C) 2017-2021, Gisselquist Technology, LLC
+// Copyright (C) 2017-2022, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published
@@ -377,7 +377,13 @@ void	build_testb_h(MAPDHASH &master, FILE *fp, STRING &fname) {
 	"\t// external input values before calling this though.\n"
 	"\tvirtual	void	reset(void) {\n"
 	"\t	m_core->i_reset = 1;\n"
-	"\t	tick();\n"
+	"\t	tick();\n");
+	if (cklist.size() > 1) {
+		fprintf(fp, ""
+	"\t	while(!m_core->i_clk)\n"
+	"\t		tick();\n");
+	}
+	fprintf(fp, ""
 	"\t	m_core->i_reset = 0;\n"
 	"\t	// printf(\"RESET\\n\");\n"
 	"\t}\n"

@@ -11,7 +11,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 // }}}
-// Copyright (C) 2017-2021, Gisselquist Technology, LLC
+// Copyright (C) 2017-2022, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published
@@ -86,7 +86,7 @@ bool	AST_BRANCH::define(MAPSTACK &stack, MAPDHASH &here) {
 }
 void	AST_BRANCH::dump(FILE *fp, int offset) {
 	fprintf(fp, "%*s%c\n", offset, "", m_op);
-	 m_left->dump(fp, offset+2);
+	m_left->dump(fp, offset+2);
 	m_right->dump(fp, offset+2);
 }
 

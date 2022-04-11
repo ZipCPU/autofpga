@@ -67,6 +67,7 @@ extern	bool	isperipheral(MAPT &pmap);
 extern	bool	isperipheral(MAPDHASH &phash);
 
 void	build_access_ifdefs_v(MAPDHASH &master, FILE *fp) {
+	const	char	DELIMITERS[] = ", \t\n";
 	MAPDHASH::iterator	kvpair;
 	STRING		already_defined;
 	MAPDHASH	dephash;
@@ -84,6 +85,7 @@ void	build_access_ifdefs_v(MAPDHASH &master, FILE *fp) {
 "// be listed here.\n"
 "//\n");
 	fprintf(fp, "// First, the independent access fields for any bus masters\n");
+	// {{{
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
@@ -97,12 +99,23 @@ void	build_access_ifdefs_v(MAPDHASH &master, FILE *fp) {
 		if (NULL != dep) {
 			dephash.insert(*kvpair);
 		} else {
-			fprintf(fp, "`define\t%s\n", accessp->c_str());
-			already_defined = already_defined + " " + (*accessp);
+			char *dup = strdup(accessp->c_str());
+			char *tok = strtok(dup, DELIMITERS);
+
+			while(tok != NULL) {
+				if (tok[0] == '!')
+					tok++;
+				fprintf(fp, "`define\t%s\n", tok);
+				already_defined = already_defined
+							+ " " + STRING(tok);
+				tok = strtok(NULL, DELIMITERS);
+			} free(dup);
 		}
 	}
+	// }}}
 
 	fprintf(fp, "// And then for the independent peripherals\n");
+	// {{{
 	for(kvpair=master.begin(); kvpair != master.end(); kvpair++) {
 		if (kvpair->second.m_typ != MAPT_MAP)
 			continue;
@@ -116,10 +129,20 @@ void	build_access_ifdefs_v(MAPDHASH &master, FILE *fp) {
 		else if (NULL != dep) {
 			dephash.insert(*kvpair);
 		} else {
-			fprintf(fp, "`define\t%s\n", accessp->c_str());
-			already_defined = already_defined + " " + STRING(*accessp);
+			char *dup = strdup(accessp->c_str());
+			char *tok = strtok(dup, DELIMITERS);
+
+			while(tok != NULL) {
+				if (tok[0] == '!')
+					tok++;
+				fprintf(fp, "`define\t%s\n", tok);
+				already_defined = already_defined
+							+ " " + STRING(tok);
+				tok = strtok(NULL, DELIMITERS);
+			} free(dup);
 		}
 	}
+	// }}}
 
 	if (dephash.begin() != dephash.end()) {
 		fprintf(fp, "//\n//\n// The list of those things that have @DEPENDS tags\n//\n//\n");
@@ -130,6 +153,7 @@ void	build_access_ifdefs_v(MAPDHASH &master, FILE *fp) {
 "// The @DEPENDS tag will turn into a series of ifdef\'s, with the @ACCESS\n"
 "// being defined only if all of the ifdef\'s are true"
 "//\n");
+		// {{{
 
 		bool	done;
 		do {
@@ -137,7 +161,7 @@ void	build_access_ifdefs_v(MAPDHASH &master, FILE *fp) {
 			STRING	depstr, endstr;
 
 			for(kvpair=dephash.begin(); kvpair != dephash.end(); kvpair++) {
-				const char	DELIMITERS[] = ", \t\n";
+				// {{{
 				if (kvpair->second.m_typ != MAPT_MAP)
 					continue;
 				STRINGP	dep, accessp;
@@ -151,7 +175,7 @@ void	build_access_ifdefs_v(MAPDHASH &master, FILE *fp) {
 
 				depstr = "";
 				endstr = "";
-
+				fprintf(fp, "// Deplist for @$(PREFIX)=%s\n", kvpair->first.c_str());
 				dependency = strtok(deplist, DELIMITERS);
 				while(dependency) {
 					char	*rawdep, *baredep;
@@ -163,7 +187,8 @@ void	build_access_ifdefs_v(MAPDHASH &master, FILE *fp) {
 					STRING	mstr = STRING(" ")+STRING(baredep)
 						+STRING(" ");
 					if (NULL == strstr(already_defined.c_str(),
-							mstr.c_str())) {
+							baredep)) {
+						// fprintf(fp, "// -- Dependency not met: %s\n", baredep);
 						depsmet = false;
 						break;
 					}
@@ -186,32 +211,46 @@ void	build_access_ifdefs_v(MAPDHASH &master, FILE *fp) {
 
 
 				if (depsmet) {
+					char *dup = strdup(accessp->c_str());
+					char *tok = strtok(dup, DELIMITERS);
+
 					fprintf(fp, "%s", depstr.c_str());
-					fprintf(fp, "`define\t%s\n", accessp->c_str());
+					while(tok != NULL) {
+						if (tok[0] == '!')
+							tok++;
+						if (NULL == strstr(already_defined.c_str(), tok)) {
+							fprintf(fp, "`define\t%s\n", tok);
+							already_defined = already_defined
+								+ " " + STRING(tok);
+
+							// We changed something, so ...
+							done = false;
+						}
+						tok = strtok(NULL, DELIMITERS);
+					} free(dup);
+
 					fprintf(fp, "%s", endstr.c_str());
 
-					already_defined = already_defined + STRING(" ")
-						+ (*accessp) + STRING(" ");
 					dephash.erase(kvpair);
 					kvpair = dephash.begin();
 					if (kvpair == dephash.end())
 						break;
-
-					// We changed something, so ...
-					done = false;
 				}
+				// }}}
 			}
-
 
 			if (dephash.begin() == dephash.end())
 				done = true;
 		} while(!done);
+		// }}}
 	}
 
 	if (dephash.begin() != dephash.end()) {
-		fprintf(fp, "// The following have unmet dependencies.  They are listed\n"
-			"// here for reference, but their dependencies cannot be met.\n");
-
+		fprintf(fp,
+"//\n"
+"// The following macros have unmet dependencies.  They are listed\n"
+"// here for reference, but their dependencies cannot be met.\n");
+		// {{{
 
 		for(kvpair=dephash.begin(); kvpair != dephash.end(); kvpair++) {
 			const char	DELIMITERS[] = ", \t\n";
@@ -230,19 +269,55 @@ void	build_access_ifdefs_v(MAPDHASH &master, FILE *fp) {
 			depstr = "";
 			endstr = "";
 
+			fprintf(fp,
+				"// Unmet Dependency list for @$(PREFIX)=%s\n",
+				kvpair->first.c_str());
+
 			dependency = strtok(deplist, DELIMITERS);
 			while(dependency) {
-				depstr += STRING("`ifdef\t")
-					+STRING(dependency)
-					+STRING("\n");
+				const char *baredep = dependency;
+				bool		defined = false;
+
+				if (baredep[0] == '!')
+					baredep++;
+
+				if (NULL != strstr(already_defined.c_str(), baredep))
+					defined = true;
+
+				if (dependency[0] == '!') {
+					depstr += STRING("`ifndef\t")
+						+STRING(baredep);
+					if (!defined)
+						depstr += " // This value is unknown";
+					depstr += STRING("\n");
+				} else {
+					depstr += STRING("`ifdef\t")
+						+STRING(baredep);
+					if (!defined)
+						depstr += " // This value is unknown";
+					depstr += STRING("\n");
+				}
 				endstr += STRING("`endif\n");
 				dependency = strtok(NULL, DELIMITERS);
 			}
 
 			fprintf(fp, "%s", depstr.c_str());
-			fprintf(fp, "`define\t%s\n", accessp->c_str());
+
+			{
+				char *dup = strdup(accessp->c_str());
+				char *tok = strtok(dup, DELIMITERS);
+
+				while(tok != NULL) {
+					if (tok[0] == '!')
+						tok++;
+					fprintf(fp, "`define\t%s\n", tok);
+					tok = strtok(NULL, DELIMITERS);
+				} free(dup);
+			}
+
 			fprintf(fp, "%s\n", endstr.c_str());
 		}
+		// }}}
 	}
 
 	fprintf(fp, "//\n// End of dependency list\n//\n//\n");
