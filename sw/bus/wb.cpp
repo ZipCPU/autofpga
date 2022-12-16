@@ -435,6 +435,7 @@ void	WBBUS::writeout_defn_v(FILE *fp, const char* pname,
 		const char *pfx,
 		const int aw, const int dw,
 		const char *errwire, const char *btyp) {
+	// {{{
 	STRINGP	n = name();
 
 	fprintf(fp, "\t// Wishbone definitions for bus %s%s, component %s\n",
@@ -455,8 +456,10 @@ void	WBBUS::writeout_defn_v(FILE *fp, const char* pname,
 	fprintf(fp, "\twire\t[%d:0]\t%s_idata;\n", dw-1, pfx);
 	fprintf(fp, "\t// Verilator lint_on UNUSED\n");
 }
+// }}}
 
 void	WBBUS::writeout_bus_slave_defns_v(FILE *fp) {
+	// {{{
 	PLIST	*p = m_info->m_plist;
 	STRINGP	n = name();
 
@@ -499,8 +502,10 @@ void	WBBUS::writeout_bus_slave_defns_v(FILE *fp) {
 		gbl_msg.error("%s has no slaves\n", n->c_str());
 	}
 }
+// }}}
 
 void	WBBUS::writeout_bus_master_defns_v(FILE *fp) {
+	// {{{
 	MLIST	*m = m_info->m_mlist;
 	if (m) {
 		for(MLIST::iterator pp=m->begin(); pp != m->end(); pp++) {
@@ -513,8 +518,10 @@ void	WBBUS::writeout_bus_master_defns_v(FILE *fp) {
 		gbl_msg.error("Bus %s has no masters\n", name()->c_str());
 	}
 }
+// }}}
 
 void	WBBUS::write_addr_range(FILE *fp, const PERIPHP p, const int dalines) {
+	// {{{
 	unsigned	w = address_width();
 	w = (w+3)/4;
 	if (p->p_naddr == 1)
@@ -523,9 +530,12 @@ void	WBBUS::write_addr_range(FILE *fp, const PERIPHP p, const int dalines) {
 		fprintf(fp, " // 0x%0*lx - 0x%0*lx", w, p->p_base,
 			w, p->p_base + (p->p_naddr << (dalines))-1);
 }
+// }}}
 
 void	WBBUS::writeout_bus_select_v(FILE *fp) {
+	// {{{
 #ifdef	DEPRECATED_CODE
+	// {{{
 	STRINGP	n = name();
 	STRING	addrbus = STRING((*n)+"_addr");
 	unsigned	sbaw = address_width();
@@ -643,10 +653,13 @@ void	WBBUS::writeout_bus_select_v(FILE *fp) {
 			fprintf(fp, "//x2\tWas a master bus as well\n");
 		}
 	} fprintf(fp, "\t//\n\n");
+	// }}}
 #endif
 }
+// }}}
 
 void	WBBUS::writeout_no_slave_v(FILE *fp, STRINGP prefix) {
+	// {{{
 	STRINGP	n = m_info->name();
 
 	fprintf(fp, "\n\t//\n");
@@ -660,8 +673,10 @@ void	WBBUS::writeout_no_slave_v(FILE *fp, STRINGP prefix) {
 	fprintf(fp, "\tassign\t%s_idata = 0;\n", prefix->c_str());
 	fprintf(fp, "\n");
 }
+// }}}
 
 void	WBBUS::writeout_no_master_v(FILE *fp) {
+	// {{{
 /*
 	if (!m_info || !m_info->m_name)
 		gbl_msg.error("(Unnamed bus) has no name!\n");
@@ -689,6 +704,7 @@ void	WBBUS::writeout_no_master_v(FILE *fp) {
 	fprintf(fp, "\n");
 */
 }
+// }}}
 
 //
 // Connect this master to the crossbar.  Specifically, we want to output
@@ -696,6 +712,7 @@ void	WBBUS::writeout_no_master_v(FILE *fp) {
 //
 void	WBBUS::xbarcon_master(FILE *fp, const char *tabs,
 		const char *pfx, const char *sig, bool comma) {
+	// {{{
 	fprintf(fp, "%s%s({\n", tabs, pfx);
 	for(unsigned k = m_info->m_mlist->size()-1; k>0; k--) {
 		BMASTERP m = (*m_info->m_mlist)[k];
@@ -705,6 +722,7 @@ void	WBBUS::xbarcon_master(FILE *fp, const char *tabs,
 			 (*m_info->m_mlist)[0]->bus_prefix()->c_str(),
 			sig, tabs, (comma) ? ",":"");
 }
+// }}}
 
 //
 // Output a list of connections to slave bus wires.  Used in connecting the
@@ -712,6 +730,7 @@ void	WBBUS::xbarcon_master(FILE *fp, const char *tabs,
 //
 void	WBBUS::xbarcon_slave(FILE *fp, PLIST *pl, const char *tabs,
 		const char *pfx, const char *sig, bool comma) {
+	// {{{
 	fprintf(fp, "%s%s({\n", tabs, pfx);
 	for(unsigned k = pl->size()-1; k>0; k--) {
 		PERIPHP p = (*pl)[k];
@@ -721,8 +740,10 @@ void	WBBUS::xbarcon_slave(FILE *fp, PLIST *pl, const char *tabs,
 		(*pl)[0]->bus_prefix()->c_str(), sig,
 		tabs, (comma) ? ",":"");
 }
+// }}}
 
 void	WBBUS::writeout_bus_logic_v(FILE *fp) {
+	// {{{
 	STRINGP		n = name(), rst;
 	CLOCKINFO	*c = m_info->m_clock;
 	PLIST::iterator	pp;
@@ -1267,8 +1288,10 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 	fprintf(fp, "\t\t);\n\n");
 
 }
+// }}}
 
 STRINGP	WBBUS::master_portlist(BMASTERP) {
+	// {{{
 	return new STRING(
 	"@$(MASTER.PREFIX)_cyc, "
 	"@$(MASTER.PREFIX)_stb, "
@@ -1281,6 +1304,7 @@ STRINGP	WBBUS::master_portlist(BMASTERP) {
 	"@$(MASTER.PREFIX)_idata,"
 	"@$(MASTER.PREFIX)_err");
 }
+// }}}
 
 STRINGP	WBBUS::iansi(BMASTERP) {
 	return new STRING("i_");
@@ -1295,6 +1319,7 @@ STRINGP	WBBUS::master_ansprefix(BMASTERP) {
 }
 
 STRINGP	WBBUS::master_ansi_portlist(BMASTERP) {
+	// {{{
 	return new STRING(
 	".@$(OANSI)@$(MASTER.ANSPREFIX)cyc(@$(MASTER.PREFIX)_cyc), "
 	".@$(OANSI)@$(MASTER.ANSPREFIX)stb(@$(MASTER.PREFIX)_stb), "
@@ -1307,6 +1332,7 @@ STRINGP	WBBUS::master_ansi_portlist(BMASTERP) {
 	".@$(IANSI)@$(MASTER.ANSPREFIX)data(@$(MASTER.PREFIX)_idata), "
 	".@$(IANSI)@$(MASTER.ANSPREFIX)err(@$(MASTER.PREFIX)_err)");
 }
+// }}}
 
 STRINGP	WBBUS::slave_ansprefix(PERIPHP p) {
 	return new STRING("wb_");
@@ -1314,6 +1340,7 @@ STRINGP	WBBUS::slave_ansprefix(PERIPHP p) {
 
 
 STRINGP	WBBUS::slave_portlist(PERIPHP p) {
+	// {{{
 	STRINGP	errp = getstring(p->p_phash, KYERROR_WIRE);
 	STRING	str = STRING(
 	"@$(SLAVE.PREFIX)_cyc, "
@@ -1342,8 +1369,10 @@ STRINGP	WBBUS::slave_portlist(PERIPHP p) {
 
 	return new STRING(str);
 }
+// }}}
 
 STRINGP	WBBUS::slave_ansi_portlist(PERIPHP p) {
+	// {{{
 	STRINGP	errp = getstring(p->p_phash, KYERROR_WIRE);
 	STRING	str = STRING(
 
@@ -1369,9 +1398,10 @@ STRINGP	WBBUS::slave_ansi_portlist(PERIPHP p) {
 	if (!p->write_only())
 		str = str + STRING(", .@$(OANSI)@$(SLAVE.ANSPREFIX)data(@$(SLAVE.PREFIX)_idata)");
 	if (NULL != errp)
-		str = str + STRING(", @$(SLAVE.PREFIX)_err");
+		str = str + STRING(", .@$(OANSI)@$(SLAVE.ANSPREFIX)err(@$(SLAVE.PREFIX)_err)");
 	return new STRING(str);
 }
+// }}}
 
 ////////////////////////////////////////////////////////////////////////
 //
