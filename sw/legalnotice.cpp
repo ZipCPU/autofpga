@@ -66,6 +66,7 @@
 #include "kveval.h"
 #include "msgs.h"
 
+extern	FILE *open_in(MAPDHASH &info, const STRING &fname);
 
 //
 // Place a legal notice at the top of every file.  The legal notice is given
@@ -89,7 +90,7 @@ void	legal_notice(MAPDHASH &info, FILE *fp, STRING &fname,
 		return;
 	}
 
-	lglfp = fopen(legal_fname->c_str(), "r");
+	lglfp = open_in(info, *legal_fname);
 	if (!lglfp) {
 		gbl_msg.error("Cannot open copyright notice file, %s\n", legal_fname->c_str());
 		fprintf(fp, "%s WARNING: NO COPYRIGHT NOTICE\n\n"

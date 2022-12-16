@@ -1229,7 +1229,9 @@ FILE	*open_in(MAPDHASH &info, const STRING &fname) {
 	char	*tok;
 	FILE	*fp;
 
-	if (path) {
+	if (!path)
+		path = getstring(gbl_hash, KYPATH);
+	if (path && fname[0] != '.' && fname[0] != '/') {
 		pathcpy = *path;
 		tok =strtok((char *)pathcpy.c_str(), delimiters);
 		while(NULL != tok) {

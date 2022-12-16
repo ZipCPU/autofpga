@@ -61,8 +61,10 @@ bool	get_named_kvpair(MAPSTACK &stack, MAPDHASH &here, STRING &key,
 
 		kvpair = findkey(here, KYPLUSDOT);
 		if (kvpair == here.end())
+			// +. not found
 			return false;
 		if (kvpair->second.m_typ != MAPT_MAP)
+			// It was found, but wasn't a MAP
 			return false;
 		kvsub = kvpair->second.u.m_m->begin();
 		kvnxt = kvsub; kvnxt++;
