@@ -97,7 +97,11 @@ NADDR	The number of uniquely addressable registers/ports this device has
 ERROR.WIRE	The name of a wire set by the module, which (if set) will cause
 	a bus error.  Components should only set this if they are being
 	accessed.
-
+INCLUDEFILE
+	Defines a file with default key values within it.  If those key values
+	are then not defined in the main file, the include file will be checked
+	for default values.  The include path searched can be controlled via
+	the '-I' command line option.
 TOP.PORTLIST
 	This string gets added into the toplevel( portlist ) declaration,
 	allowing each peripheral to control external wires.  If not specified,
