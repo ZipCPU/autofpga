@@ -1724,7 +1724,7 @@ int	main(int argc, char **argv) {
 
 	if (argc > 0) {
 		cmdline = STRING(argv[0]);
-		for(argn=0; argn<argc; argn++) {
+		for(argn=1; argn<argc; argn++) {
 			cmdline = cmdline + " " + STRING(argv[argn]);
 		}
 
