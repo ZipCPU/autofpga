@@ -164,35 +164,20 @@ void	AXIBUS::allocate_subbus(void) {
 	if (m_num_single == m_num_total) {
 		m_num_single = 0;
 		m_is_single = true;
-	} else if (m_num_single <= 2) {
-		if (m_num_double > 0) {
-			// Merge single and double busses, making single
-			// slaves into double slaves
-			m_num_double += m_num_single;
-			m_num_single = 0;
-		}
-		// else if (m_num_total > m_num_single) {
-		//	Merge single slaves into full fledged peripherals
-		//	  This doesn't work, though, if the slaves have been
-		//	  simplified
-		//	m_num_single = 0;
-		// }
+	} else if ((m_num_single <= 2)&&(m_num_double > 0)) {
+		// Merge single and double busses, making single
+		// slaves into double slaves
+		m_num_double += m_num_single;
+		m_num_single = 0;
 	}
 
-	// if (m_num_double <= 2)
-	//	Merge our double peripherals into the regular set
-	//	  Doesn't work in case the slaves have been simplified
-	//	  They might not work on a full bus
-	//	m_num_double = 0;
-	// else
-	if (m_num_double == m_num_total) {
+	if (!m_is_single && m_num_single + m_num_double == m_num_total) {
+		m_num_single = 0;
 		m_num_double = 0;
 		m_is_double  = true;
-	} else if (m_num_single + m_num_double == m_num_total) {
-		m_is_double  = true;
-		m_num_double = 0;
 	}
 
+	assert(!m_is_single || !m_is_double);
 	assert(m_num_single < 50);
 	assert(m_num_double < 50);
 	assert(m_num_total >= m_num_single + m_num_double);

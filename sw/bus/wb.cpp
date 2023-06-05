@@ -171,26 +171,21 @@ void	WBBUS::allocate_subbus(void) {
 		(name()) ? name()->c_str() : "(No-name)");
 	countsio();
 
-	if (m_num_single <= 2) {
-		if (m_num_double > 0) {
-			m_num_double += m_num_single;
-			m_num_single = 0;
-		}
-	} else if (m_num_single == m_num_total) {
+	if (m_num_single == m_num_total) {
 		m_num_single = 0;
 		m_is_single = true;
+	} else if ((m_num_single <= 2)&&(m_num_double > 0)) {
+		m_num_double += m_num_single;
+		m_num_single = 0;
 	}
 
-	if (m_num_double <= 2)
-		m_num_double = 0;
-	else if (m_num_double == m_num_total) {
+	if (!m_is_single && m_num_single + m_num_double == m_num_total) {
 		m_num_double = 0;
 		m_is_double  = true;
-	} else if (m_num_single + m_num_double == m_num_total) {
-		m_is_double = true;
+	} else if (m_num_double <= 2)
 		m_num_double = 0;
-	}
 
+	assert(!m_is_single || !m_is_double);
 	assert(m_num_single < 50);
 	assert(m_num_double < 50);
 	assert(m_num_total >= m_num_single + m_num_double);
@@ -450,7 +445,7 @@ void	WBBUS::writeout_defn_v(FILE *fp, const char* pname,
 	if ((errwire)&&(errwire[0] != '\0')
 			&&(STRING(STRING(pfx)+"_err").compare(errwire)!=0))
 		fprintf(fp, ", %s;\n"
-			"\tassign\t\t%s_err = %s;\n", errwire, pfx, errwire);
+			"\tassign\t\t%s_err = %s; // P\n", errwire, pfx, errwire);
 	else
 		fprintf(fp, ";\n");
 	fprintf(fp, "\twire\t[%d:0]\t%s_idata;\n", dw-1, pfx);
@@ -857,13 +852,15 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 
 		if (NULL != (strp = getstring((*m_info->m_plist)[0]->p_phash,
 						KYERROR_WIRE))) {
-			fprintf(fp, "\tassign\t%s_err = %s;\n",
-				(*pp)->bus_prefix()->c_str(),
-				strp->c_str());
+			if (strp->compare(STRING(STRING(*(*pp)->bus_prefix())
+						+ STRING("_err"))) != 0)
+				fprintf(fp, "\tassign\t%s_err = %s; // X\n",
+					(*pp)->bus_prefix()->c_str(),
+					strp->c_str());
 		} else
 			fprintf(fp, "\tassign\t%s_err = 1\'b0;\n",
 				(*pp)->bus_prefix()->c_str());
-		fprintf(fp, "\tassign\t%s_err = %s_err;\n",
+		fprintf(fp, "\tassign\t%s_err = %s_err; // Y\n",
 			(*mp)->bus_prefix()->c_str(), (*pp)->bus_prefix()->c_str());
 		fprintf(fp,
 			"\tassign\t%s_stall = %s_stall;\n"
@@ -1227,7 +1224,7 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 				fprintf(fp, "\t// info: @ERROR.WIRE for %s, = %s, doesn\'t match the buses wire %s_err\n",
 					p->name()->c_str(), err->c_str(),
 					pn);
-				fprintf(fp, "\tassign\t%s_err = %s;\n",
+				fprintf(fp, "\tassign\t%s_err = %s; // Z\n",
 					pn, err->c_str());
 			}
 		} else
