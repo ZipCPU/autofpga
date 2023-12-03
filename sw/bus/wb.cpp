@@ -510,7 +510,7 @@ void	WBBUS::writeout_bus_master_defns_v(FILE *fp) {
 				NULL);
 		}
 	} else {
-		gbl_msg.error("Bus %s has no masters\n", name()->c_str());
+		gbl_msg.warning("Bus %s has no masters\n", name()->c_str());
 	}
 }
 // }}}
@@ -749,9 +749,9 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 		return;
 
 	if (NULL == m_info->m_mlist) {
-		gbl_msg.error("No masters assigned to bus %s\n",
+		gbl_msg.warning("No masters assigned to bus %s\n",
 				n->c_str());
-		return;
+		// return;
 	}
 	if (NULL == (rst = m_info->reset_wire())) {
 		gbl_msg.warning("Bus %s has no associated reset wire, using \'i_reset\'\n", n->c_str());
@@ -803,7 +803,7 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 		"\tassign	%s_we  = 1\'b0;\n"
 		"\tassign	%s_addr= 0;\n"
 		"\tassign	%s_data= 0;\n"
-		"\tassign	%s_sel;\n\n",
+		"\tassign	%s_sel = 0;\n\n",
 		pstr->c_str(),
 		//
 		pstr->c_str(), pstr->c_str(), pstr->c_str(),

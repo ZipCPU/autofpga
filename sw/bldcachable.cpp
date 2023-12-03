@@ -84,7 +84,7 @@ static void	print_cachable(FILE *fp, BUSINFO *bi,
 			submask = ((*pl)[i]->p_mask) | mask_8;
 		subaddr = ((*pl)[i]->p_base | addr_8) & submask;
 		pbits = nextlg(submask);
-		if ((1u<<pbits) <= submask)
+		if ((1ul<<pbits) <= submask)
 			pbits++;	// log_2 Octets
 
 		if ((*pl)[i]->p_master_bus) {

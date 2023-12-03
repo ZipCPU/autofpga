@@ -139,9 +139,8 @@ void	GENBUS::slave_addr(FILE *fp, PLIST *pl, const int addr_lsbs) {
 		"\t\t.SLAVE_ADDR({\n");
 	fprintf(fp,
 		"\t\t\t// Address width    = %d\n"
-		"\t\t\t// Address LSBs     = %d\n"
-		"\t\t\t// Slave name width = %d\n",
-		address_width(), addr_lsbs, slave_name_width);
+		"\t\t\t// Address LSBs     = %d\n",
+		address_width(), addr_lsbs);
 	for(unsigned k=pl->size()-1; k>0; k=k-1) {
 		PERIPHP	p = (*pl)[k];
 
@@ -174,9 +173,8 @@ void	GENBUS::slave_mask(FILE *fp, PLIST *pl, const int addr_lsbs) {
 	fprintf(fp, "\t\t.SLAVE_MASK({\n");
 	fprintf(fp,
 		"\t\t\t// Address width    = %d\n"
-		"\t\t\t// Address LSBs     = %d\n"
-		"\t\t\t// Slave name width = %d\n",
-		address_width(), addr_lsbs, slave_name_width);
+		"\t\t\t// Address LSBs     = %d\n",
+		address_width(), addr_lsbs);
 	for(unsigned k=pl->size()-1; k>0; k=k-1) {
 		PERIPHP	p = (*pl)[k];
 
