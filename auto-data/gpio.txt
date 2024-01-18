@@ -11,7 +11,7 @@
 ##
 ################################################################################
 ## }}}
-## Copyright (C) 2017-2021, Gisselquist Technology, LLC
+## Copyright (C) 2017-2024, Gisselquist Technology, LLC
 ## {{{
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of the GNU General Public License as published
@@ -39,6 +39,8 @@
 @DEVID=GPIO
 @NADDR=1
 @ACCESS=@$(DEVID)_ACCESS
+@NGPI=16
+@NGPO=16
 @SLAVE.TYPE=SINGLE
 @SLAVE.BUS=wb
 # @SINGLE.OUTPUTS= o_gpio
@@ -66,7 +68,8 @@
 @TOP.DEFNS=
 	// GPIO declarations.  The two wire busses are just virtual lists of
 	// input (or output) ports.
-	wire	[15:0]	i_@$(PREFIX), o_@$(PREFIX);
+	wire	[@$(NGPI)-1:0]	i_@$(PREFIX);
+	wire	[@$(NGPO)-1:0]	o_@$(PREFIX);
 	wire		w_hdmi_out_en;
 	wire		w_hdmi_bypass_sda;
 	wire		w_hdmi_bypass_scl;
@@ -74,6 +77,10 @@
 		// GPIO wires
 		i_@$(PREFIX), o_@$(PREFIX)
 @TOP.INSERT=
+	////////////////////////////////////////////////////////////////////////
+	//
+	// GPIO adjustments
+	// {{{
 	assign	i_gpio = { 10'h0,
 			w_hdmi_in_pll_locked,
 			sysclk_locked, i_gps_3df,
@@ -87,30 +94,37 @@
 	assign	o_hdmi_in_hpa   = o_gpio[5];	// Hotplug assert
 	assign	o_sd_reset      = o_gpio[6];
 	assign	w_hdmi_out_en   = o_gpio[7];
+	// }}}
 @MAIN.PORTLIST=
 		// GPIO ports
 		i_@$(PREFIX), o_@$(PREFIX)
 @MAIN.IODECL=
-	localparam	NGPI = 16, NGPO=16;
+	localparam	NGPI = @$(NGPI), NGPO=@$(NGPO);
 	// @$(DEVID) ports
-	input		[(NGPI-1):0]	i_@$(PREFIX);
+	input	wire	[(NGPI-1):0]	i_@$(PREFIX);
 	output	wire	[(NGPO-1):0]	o_@$(PREFIX);
 @MAIN.DEFNS=
 	wire	sd_reset;
 @MAIN.INSERT=
+	////////////////////////////////////////////////////////////////////////
 	//
 	// @$(DEVID)
-	//
+	// {{{
 	// This interface should allow us to control up to 16 @$(DEVID) inputs, and
 	// another 16 @$(DEVID) outputs.  The interrupt trips when any of the inputs
 	// changes.  (Sorry, which input isn't (yet) selectable.)
 	//
-	localparam	INITIAL_@$(DEVID) = 16'h04f;
-	wbgpio	#(NGPI, NGPO, INITIAL_@$(DEVID))
-		@$(PREFIX)i(i_clk, @$(SLAVE.PORTLIST),
-			i_@$(PREFIX), o_@$(PREFIX), @$(PREFIX)_int);
 
-	assign	sd_reset = o_@$(PREFIX)[6];
+	wbgpio	#(
+		.NIN(NGPI), .NOUT(NGPO), .DEFAULT(INITIAL_@$(DEVID))
+	) @$(PREFIX)i(
+		// {{{
+		i_clk, @$(SLAVE.PORTLIST),
+		i_@$(PREFIX), o_@$(PREFIX), @$(PREFIX)_int
+		// }}}
+	);
+
+	// }}}
 @REGS.N=1
 @REGS.0= 0 R_@$(DEVID) @$(DEVID) GPI GPO
 @BDEF.DEFN=
@@ -156,6 +170,6 @@
 @BDEF.IONAME=	i_@$(PREFIX)
 @BDEF.IOTYPE=	unsigned
 @BDEF.OSDEF=	_BOARD_HAS_@$(DEVID)
-@BDEF.OSVAL=	static volatile @$.BDEF.IOTYPE *const _@$(PREFIX) = ((@$.BDEF.IOTYPE *)@$REGBASE);
+@BDEF.OSVAL=	static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME) = ((@$(BDEF.IOTYPE) *)@$[0x%08x](REGBASE));
 @RTL.MAKE.FILES=wbgpio.v
 @RTL.MAKE.GROUP=@$(DEVID)

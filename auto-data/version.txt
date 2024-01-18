@@ -11,7 +11,7 @@
 ##
 ################################################################################
 ## }}}
-## Copyright (C) 2017-2021, Gisselquist Technology, LLC
+## Copyright (C) 2017-2024, Gisselquist Technology, LLC
 ## {{{
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of the GNU General Public License as published
@@ -37,10 +37,11 @@
 ## }}}
 @PREFIX=version
 @DEVID=VERSION
+@ACCESS=VERSION_ACCESS
 @NADDR=1
 @SLAVE.TYPE=SINGLE
 @SLAVE.BUS=wb
-@MAIN.DEFNS=
+@MAIN.INCLUDE=
 `include "builddate.v"
 @MAIN.INSERT=
 	assign	@$(SLAVE.PREFIX)_idata = `DATESTAMP;
@@ -51,7 +52,7 @@
 @BDEF.IONAME=_@$(PREFIX)
 @BDEF.IOTYPE=unsigned
 @BDEF.OSDEF=_BOARD_HAS_@$(DEVID)
-@BDEF.OSVAL=static volatile @$BDEF.IOTYPE *const @$BDEF.IONAME = ((@$BDEF.IOTYPE *)@$[0x%08x](REGBASE));
+@BDEF.OSVAL=static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME) = ((@$(BDEF.IOTYPE) *)@$[0x%08x](REGBASE));
 ##
 ##
 ##
@@ -72,4 +73,4 @@
 @BDEF.IONAME=_@$(PREFIX)
 @BDEF.IOTYPE=unsigned
 @BDEF.OSDEF=_BOARD_HAS_@$(DEVID)
-@BDEF.OSVAL=static volatile @$BDEF.IOTYPE *const @$BDEF.IONAME = ((@$.BDEF.IOTYPE *)@$[0x%08x](REGBASE));
+@BDEF.OSVAL=static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME) = ((@$(BDEF.IOTYPE) *)@$[0x%08x](REGBASE));

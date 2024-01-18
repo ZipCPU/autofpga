@@ -181,7 +181,7 @@ BDEF.OSDEF	Contains the name of a value that will be #define'd if this
 BDEF.OSVAL	A definition line, to be placed into the board definitions file,
 		that is then used to define a pointer to this type of object
 // Likely to default, in the future, to static volatile @BDEF.IOTYPE *const @BDEF.IONAME = &((@BDEF.IOTYPE *)@BASE);
-(deprecated) IONAME
+(deprecated) IONAME (not BDEF.IONAME)
 (deprecated) CSTRUCT (now BDEF.DEFN)
 
 XDC.FILE	If present, autofpga will open this file and look through it

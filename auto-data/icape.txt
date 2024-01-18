@@ -12,7 +12,7 @@
 ##
 ################################################################################
 ## }}}
-## Copyright (C) 2017-2021, Gisselquist Technology, LLC
+## Copyright (C) 2017-2024, Gisselquist Technology, LLC
 ## {{{
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of the GNU General Public License as published
@@ -41,8 +41,14 @@
 @ACCESS=CFG_ACCESS
 @SLAVE.TYPE=OTHER
 @SLAVE.BUS=wb
+@$LGDIV=3
+@$LGDIVM1=@$(LGDIV)-1
 @MAIN.PARAM=
-	localparam	ICAPE_LGDIV=3;
+	localparam	ICAPE_LGDIV=@$(LGDIV);
+@MAIN.DEFNS=
+	// Verilator lint_off	UNUSED
+	wire	[31:0]	@$(PREFIX)_debug;
+	// Verilator lint_on 	UNUSED
 @MAIN.INSERT=
 `ifdef	VERILATOR
 	reg	r_@$(PREFIX)_ack;
@@ -53,9 +59,21 @@
 	assign	@$(SLAVE.PREFIX)_ack   = r_@$(PREFIX)_ack;
 	assign	@$(SLAVE.PREFIX)_stall = 1'b0;
 	assign	@$(SLAVE.PREFIX)_idata = 32'h00;
+
+	assign	@$(PREFIX)_debug = 32'h00;
+
+	// Verilator lint_off UNUSED
+	wire	@$(PREFIX)_unused;
+	assign	@$(PREFIX)_unused = &{ 1'b0, ICAPE_LGDIV[31:0] };
+	// Verilator lint_on  UNUSED
 `else
-	wbicapetwo #(ICAPE_LGDIV)
-		cfgport(i_clk, @$(SLAVE.PORTLIST));
+	wbicapetwo #(
+		.LGDIV(ICAPE_LGDIV)
+	) u_@$(PREFIX)(
+		.i_clk(i_clk),
+		@$(SLAVE.ANSIPORTLIST),
+		.o_dbg(@$(PREFIX)_debug)
+	);
 `endif
 @REGS.NOTE=// FPGA CONFIG REGISTERS: 0x4e0-0x4ff
 @REGS.N=20
