@@ -98,7 +98,9 @@ int	get_longest_defname(APLIST *alist) {
 			sprintf(nstr, "%d", j);
 			kvp = findkey(*ph,str=STRING("REGS.")+nstr);
 			if (kvp == ph->end()) {
-				fprintf(stderr, "%s not found\n", str.c_str());
+				fprintf(stderr, "%s not found in %s\n",
+					str.c_str(),
+					(*alist)[i]->p_name->c_str());
 				continue;
 			}
 			if (kvp->second.m_typ != MAPT_STRING) {
