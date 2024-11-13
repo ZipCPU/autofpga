@@ -838,7 +838,7 @@ void	build_main_v(     MAPDHASH &master, FILE *fp, STRING &fname) {
 "// Port declarations\n"
 "// {{{\n"
 "// The next step is to declare all of the various ports that were just\n"
-"// listed above.  \n"
+"// listed above.\n"
 "//\n"
 "// The following declarations are taken from the values of the various\n"
 "// @MAIN.IODECL keys.\n"

@@ -72,10 +72,12 @@ bool	get_named_kvpair(MAPSTACK &stack, MAPDHASH &here, STRING &key,
 		assert(kvsub->second.m_typ == MAPT_MAP);
 
 		pair = findkey(*kvsub->second.u.m_m, subkey);
+/*
 if (pair != kvpair->second.u.m_m->end())
 	fprintf(stderr, "  Found a key for %s\n", subkey.c_str());
 else
 	fprintf(stderr, "  %s not found\n", subkey.c_str());
+*/
 		return (pair != kvpair->second.u.m_m->end());
 	} else if (key[0] == '/') {
 		STRING	subkey = key.substr(1);

@@ -1204,7 +1204,7 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 
 	//
 	// First make certain any slaves that cannot produce error wires
-	// can produce
+	// can define
 	//
 	for(unsigned k=0; k<m_info->m_plist->size(); k++) {
 		PERIPHP	p = (*m_info->m_plist)[k];
