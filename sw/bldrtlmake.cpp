@@ -1,9 +1,9 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	bldrtlmake.cpp
-// {{{
-// Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+// Filename:	sw/bldrtlmake.cpp
 //
+// Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+// {{{
 // Purpose:	To draw the information from the master hash database out in
 //		to create a Makefile for an rtl/ directory.
 //
@@ -35,6 +35,7 @@
 // License:	GPL, v3, as defined and found on www.gnu.org,
 // {{{
 //		http://www.gnu.org/licenses/gpl.html
+//
 //
 ////////////////////////////////////////////////////////////////////////////////
 //

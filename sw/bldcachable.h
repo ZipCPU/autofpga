@@ -1,9 +1,9 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	bldcachable.h
-// {{{
-// Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+// Filename:	sw/bldcachable.h
 //
+// Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+// {{{
 // Purpose:	
 //
 // Creator:	Dan Gisselquist, Ph.D.
@@ -11,7 +11,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 // }}}
-// Copyright (C) 2018-2024, Gisselquist Technology, LLC
+// Copyright (C) 2017-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published
@@ -31,6 +31,7 @@
 // License:	GPL, v3, as defined and found on www.gnu.org,
 // {{{
 //		http://www.gnu.org/licenses/gpl.html
+//
 //
 ////////////////////////////////////////////////////////////////////////////////
 //

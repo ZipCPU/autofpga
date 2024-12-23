@@ -1,9 +1,9 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	keys.cpp
-// {{{
-// Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+// Filename:	sw/keys.cpp
 //
+// Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+// {{{
 // Purpose:	Defines the strings AutoFPGA understands.  These strings are
 // 		typically key names, as described by the ICD.  The actual string
 // 	names are (nearly) equal to their C++ name.  However, by defining them
@@ -35,6 +35,7 @@
 // License:	GPL, v3, as defined and found on www.gnu.org,
 // {{{
 //		http://www.gnu.org/licenses/gpl.html
+//
 //
 ////////////////////////////////////////////////////////////////////////////////
 //

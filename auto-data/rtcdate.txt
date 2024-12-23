@@ -1,9 +1,9 @@
 ################################################################################
 ##
-## Filename: 	rtcdate.txt
-## {{{
-## Project:	VideoZip, a ZipCPU SoC supporting video functionality
+## Filename:	auto-data/rtcdate.txt
 ##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## {{{
 ## Purpose:	
 ##
 ## Creator:	Dan Gisselquist, Ph.D.
@@ -32,6 +32,7 @@
 ## {{{
 ##		http://www.gnu.org/licenses/gpl.html
 ##
+##
 ################################################################################
 ##
 ## }}}
@@ -41,13 +42,17 @@
 @ACCESS=@$(DEVID)_ACCESS
 @DEPENDS=RTC_ACCESS
 @SLAVE.TYPE=SINGLE
-@SLAVE.BUS=wb
+@SLAVE.BUS=wb32
 @MAIN.INSERT=
 	//
 	// The Calendar DATE
 	//
-	rtcdate	@$(PREFIX)i(i_clk, rtc_ppd,
-		@$(SLAVE.PORTLIST));
+	rtcdate #(
+		.INITIAL_DATE(`DATESTAMP)
+	) u_@$(PREFIX)(
+		.i_clk(i_clk), .i_ppd(rtc_ppd),
+		@$(SLAVE.ANSIPORTLIST)
+	);
 @REGS.N=1
 @REGS.0= 0 R_@$(DEVID) @$(DEVID) DATE
 @BDEF.IONAME=	_@$(PREFIX)

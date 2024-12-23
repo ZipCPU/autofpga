@@ -1,9 +1,9 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	businfo.cpp
-// {{{
-// Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+// Filename:	sw/businfo.cpp
 //
+// Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+// {{{
 // Purpose:	The businfo structure is a generic object describing a bus
 //		(in general) and all the properties associated with it.  It is
 //	used by the specific bus logic drivers (in bus/*) to know how much
@@ -35,6 +35,7 @@
 // License:	GPL, v3, as defined and found on www.gnu.org,
 // {{{
 //		http://www.gnu.org/licenses/gpl.html
+//
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -822,7 +823,7 @@ BUSINFO *BUSLIST::newbus_aux(STRINGP component, STRINGP bn) {
 		bi = new BUSINFO();
 		push_back(bi);
 		bi->init(bn);
-		gbl_msg.info("ADDING BUS: %s from %s\n", bn->c_str(),
+		gbl_msg.userinfo("BUS: %s (from %s)\n", bn->c_str(),
 			(component) ?  component->c_str() : "(Unnamed component)");
 	}
 
@@ -1140,7 +1141,7 @@ void	BUSLIST::checkforbusdefns(STRINGP prefix, MAPDHASH *map, const STRING &key)
 	}
 }
 
-bool	gbl_ready_for_address_assignment = 0;
+bool	gbl_ready_for_address_assignment = false;
 void	build_bus_list(MAPDHASH &master) {
 	MAPDHASH::iterator	kvpair, kvaccess, kvsearch;
 	BUSLIST	*bl = new BUSLIST;
@@ -1154,6 +1155,7 @@ void	build_bus_list(MAPDHASH &master) {
 	if (NULL != (str = getstring(master, KYDEFAULT_BUS))) {
 		bl->adddefault(master, str);
 	}
+
 	//
 	if (refbus(master)) {
 		STRING	cname = "toplevel";

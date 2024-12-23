@@ -1,9 +1,9 @@
 ################################################################################
 ##
-## Filename: 	wboledbw.txt
-## {{{
-## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## Filename:	auto-data/wboledbw.txt
 ##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## {{{
 ## Purpose:	To describe how to interact with an OLED device driver, in order
 ##		to drive an OLED display.
 ##
@@ -33,62 +33,87 @@
 ## {{{
 ##		http://www.gnu.org/licenses/gpl.html
 ##
+##
 ################################################################################
 ##
 ## }}}
 @PREFIX=oled
 @NADDR=4
+@DEVID=OLEDBW
+@ACCESS=@$(DEVID)_ACCESS
 @SLAVE.TYPE=DOUBLE
-@SLAVE.BUS=wb
-@ACCESS=OLEDBW_ACCESS
-@INT.OLED.WIRE=	oled_int
-@INT.OLED.PIC=altpic
+@SLAVE.BUS=wb32
+@MASTER.TYPE=CPU
+@MASTER.BUS=wbwide
+@MASTER.PREFIX=@$(MASTER.BUS.NAME)_@$(PREFIX)m
+@MASTER.ANSPREFIX=pf_
+@INT.OLED.WIRE=oled_int
+@INT.OLED.PIC=syspic
 @MAIN.PORTLIST=
 		// OLED control interface (roughly SPI)
-		o_oled_sck, o_oled_mosi, o_oled_dcn,
-		o_oled_reset_n, o_oled_panel_en, o_oled_logic_en
+		o_oled_sck, o_oled_mosi, o_oled_dcn
 @MAIN.IODECL=
 	// OLEDBW interface
-	output	wire		o_oled_sck, o_oled_mosi,
-				o_oled_dcn, o_oled_reset_n, o_oled_panel_en,
-				o_oled_logic_en;
+	output	wire		o_oled_sck, o_oled_mosi, o_oled_dcn;
+@MAIN.DEFNS=
+	// OLEDBW
+	// {{{
+	// Verilator lint_off UNUSED
+	wire	[1:0]	w_oled_csn;
+	wire		ign_@$(PREFIX)_valid, ign_@$(PREFIX)_last,
+			ign_@$(PREFIX)_id;
+	wire	[7:0]	ign_@$(PREFIX)_data;
+	wire	[31:0]	@$(PREFIX)_debug;
+	// Verilator lint_on  UNUSED
+	// }}}
 @MAIN.INSERT=
-	wboledbw #(.CBITS(4)) oledctrl(i_clk,
-		@$(SLAVE.PORTLIST),
-		o_oled_sck, o_oled_mosi, o_oled_dcn,
-		{ o_oled_reset_n, o_oled_panel_en, o_oled_logic_en },
-		oled_int);
+	spicpu #(
+		// {{{
+		.ADDRESS_WIDTH(@$(MASTER.BUS.AWID)),
+		.DATA_WIDTH(@$(MASTER.BUS.WIDTH)),
+		.NCE(2),
+		.OPT_MANUAL(1'b1), .OPT_LITTLE_ENDIAN(1'b0),
+		.OPT_START_HALTED(1'b1), .OPT_SHARED_MISO(1'b1)
+		// }}}
+	) u_@$(PREFIX) (
+		// {{{
+		.i_clk(@$(SLAVE.BUS.CLOCK.WIRE)), .i_reset(@$(SLAVE.BUS.CLOCK.RESET)),
+		@$(SLAVE.ANSIPORTLIST),
+		@$(MASTER.ANSIPORTLIST),
+		.o_spi_csn(w_oled_csn), .o_spi_sck(o_oled_sck),
+		.o_spi_mosi(o_oled_mosi), .i_spi_miso(1'b0),
+		.M_AXIS_TVALID(ign_@$(PREFIX)_valid),
+		.M_AXIS_TREADY(1'b1),
+		.M_AXIS_TDATA( ign_@$(PREFIX)_data),
+		.M_AXIS_TLAST( ign_@$(PREFIX)_last),
+		.M_AXIS_TID(   ign_@$(PREFIX)_id),
+		//
+		.o_interrupt(oled_int),
+		.i_sync_signal(rtc_pps),
+		.o_debug(@$(PREFIX)_debug)
+		// }}}
+	);
+
+	assign	o_oled_dcn = w_oled_csn[0];
 @MAIN.ALT=
 	assign	o_oled_sck     = 1'b1;
 	assign	o_oled_mosi    = 1'b1;
 	assign	o_oled_dcn     = 1'b1;
-	assign	o_oled_reset_n = 1'b0;
-	assign	o_oled_panel_en= 1'b0;
-	assign	o_oled_logic_en= 1'b0;
 
 @REGS.N=4
-@REGS.0= 0 R_OLED_CMD		OLED
-@REGS.1= 1 R_OLED_CDATA		OLEDCA
-@REGS.2= 2 R_OLED_CDATB		OLEDCB
-@REGS.3= 3 R_OLED_DATA		ODATA
+@REGS.0= 0 R_OLED		OLED
+@REGS.1= 1 R_OLED_OV		OLEDOV
+@REGS.2= 2 R_OLED_ADDR		OLEDADDR
+@REGS.3= 3 R_OLED_CLK		OLEDCLK
 @BDEF.DEFN=
-// Definitions to interact with the OLED device
-#define	OLED_LOGICEN		0x0010001
-#define	OLED_LOGICEN_OFF	0x0010000
-#define	OLED_IOPWR		OLED_PMODEN
-#define	OLED_DPWREN		0x0020002 // Was VCC
-#define	OLED_DPWR_DISABLE	0x0020000
-#define	OLED_RESET		0x0040000
-#define	OLED_RESET_CLR		0x0040004
-#define	OLED_FULLPOWER		(OLED_PMODEN|OLED_VCCEN|OLED_RESET_CLR)
-#define	OLED_POWER_DOWN		(OLED_PMODEN_OFF|OLED_VCCEN|OLED_RESET_CLR)
-#define	OLED_BUSY(dev)		(dev.o_ctrl & 1)
-#define	OLED_DISPLAYON		0x0af	// To be sent over the control channel
 typedef	struct OLEDBW_S {
-	unsigned	o_ctrl, o_a, o_b, o_data;
+	unsigned	o_cmd, o_override, o_addr, o_clk;
 } OLEDBW;
 
-@BDEF.IONAME=io_oled
+@BDEF.IONAME=_oled
 @BDEF.IOTYPE=OLEDBW
 @BDEF.OSDEF= _BOARD_HAS_OLEDBW
-@BDEF.OSVAL= static volatile @$THIS.BDEF.IOTYPE *const _oledbw = ((@$THIS.BDEF.IOTYPE *)@$REGBASE);
+@BDEF.OSVAL= static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME) = ((@$(BDEF.IOTYPE) *)@$(REGBASE));
+@RTL.MAKE.GROUP=WBSPI
+@RTL.MAKE.SUBD=wbspi
+@RTL.MAKE.FILES=spicpu.v

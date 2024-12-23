@@ -1,9 +1,9 @@
 ################################################################################
 ##
-## Filename:	wbuart.txt
-## {{{
-## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## Filename:	auto-data/wbuart.txt
 ##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## {{{
 ## Purpose:	To describe a UART for autogen to work with.
 ##
 ## Creator:	Dan Gisselquist, Ph.D.
@@ -32,9 +32,10 @@
 ## {{{
 ##		http://www.gnu.org/licenses/gpl.html
 ##
+##
 ################################################################################
 ##
-##
+## }}}
 # The prefix is used to create a series of bus data lines for interaction with
 # the bus.  In this case, these will be uart_sel, uart_stall, uart_ack, and
 # uart_data.
@@ -57,9 +58,8 @@
 #	OTHER (the default), for a peripheral that may take *many* clocks to
 #		respond to a bus transaction, ... one that uses its stall
 #		line of a necessity.
-# }}}
 @SLAVE.TYPE=	OTHER
-@SLAVE.BUS=wb
+@SLAVE.BUS=wb32
 @ACCESS= CONSOLE_ACCESS
 @$BAUDRATE=1000000
 @$UARTSETUP.EXPR=@$CLKFREQHZ/@$.BAUDRATE
@@ -69,11 +69,10 @@
 @SIM.PORTOFFSET=1
 @INT.INTLIST  = @$(PREFIX)rx_int @$(PREFIX)tx_int @$(PREFIX)rxf_int
 @INT.INTLIST += @$(PREFIX)txf_int
-
-@INT.UARTRX.WIRE=uartrx_int
-@INT.UARTTX.WIRE=uarttx_int
-@INT.UARTRXF.WIRE=uartrxf_int
-@INT.UARTTXF.WIRE=uarttxf_int
+@INT.UARTRX.WIRE=@$(PREFIX)rx_int
+@INT.UARTTX.WIRE=@$(PREFIX)tx_int
+@INT.UARTRXF.WIRE=@$(PREFIX)rxf_int
+@INT.UARTTXF.WIRE=@$(PREFIX)txf_int
 @INT.UARTRX.PIC=altpic
 @INT.UARTTX.PIC=altpic
 @INT.UARTRXF.PIC=syspic
@@ -87,12 +86,15 @@
 	input	wire		i_@$(PREFIX)_rx, @$CTS;
 	output	wire		o_@$(PREFIX)_tx, @$RTS;
 @MAIN.INSERT=
-	wbuart #(.INITIAL_SETUP(@$.UARTSETUP))
-		@$(PREFIX)_uart(i_clk, 1'b0,
-			@$(SLAVE.PORTLIST),
-			i_@$(PREFIX)_rx, o_@$(PREFIX)_tx, @$CTS, @$RTS,
-			@$(PREFIX)rx_int, @$(PREFIX)tx_int,
-			@$(PREFIX)rxf_int, @$(PREFIX)txf_int);
+	wbuart #(
+		.INITIAL_SETUP(@$.UARTSETUP)
+	) u_@$(PREFIX)_uart(
+		i_clk, 1'b0,
+		@$(SLAVE.PORTLIST),
+		i_@$(PREFIX)_rx, o_@$(PREFIX)_tx, @$CTS, @$RTS,
+		@$(PREFIX)rx_int, @$(PREFIX)tx_int,
+		@$(PREFIX)rxf_int, @$(PREFIX)txf_int
+	);
 @MAIN.ALT=
 	assign	o_@$(PREFIX)_tx    = 1'b1;
 	assign	@$RTS = 1'b0;

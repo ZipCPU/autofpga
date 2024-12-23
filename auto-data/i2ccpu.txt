@@ -1,0 +1,234 @@
+################################################################################
+##
+## Filename:	auto-data/i2ccpu.txt
+##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## {{{
+## Purpose:	Drive and control the I2C bus
+##
+## Creator:	Dan Gisselquist, Ph.D.
+##		Gisselquist Technology, LLC
+##
+################################################################################
+## }}}
+## Copyright (C) 2017-2024, Gisselquist Technology, LLC
+## {{{
+## This program is free software (firmware): you can redistribute it and/or
+## modify it under the terms of the GNU General Public License as published
+## by the Free Software Foundation, either version 3 of the License, or (at
+## your option) any later version.
+##
+## This program is distributed in the hope that it will be useful, but WITHOUT
+## ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY or
+## FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+## for more details.
+##
+## You should have received a copy of the GNU General Public License along
+## with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
+## target there if the PDF file isn't present.)  If not, see
+## <http://www.gnu.org/licenses/> for a copy.
+## }}}
+## License:	GPL, v3, as defined and found on www.gnu.org,
+## {{{
+##		http://www.gnu.org/licenses/gpl.html
+##
+##
+################################################################################
+##
+## }}}
+@PREFIX=i2c
+@DEVID=I2CCPU
+@NADDR=4
+@ACCESS=@$(DEVID)_ACCESS
+@SLAVE.BUS=wb32
+@SLAVE.TYPE=DOUBLE
+@SLAVE.PREFIX=@$(SLAVE.BUS.NAME)_@$(PREFIX)s
+@MASTER.TYPE=CPU
+@MASTER.BUS=wbwide
+@MASTER.PREFIX=@$(MASTER.BUS.NAME)_@$(PREFIX)m
+@SGP=@$(BUS.PREFIX)
+@WBP=@$(SLAVE.BUS.PREFIX)
+@MASTER.ANSPREFIX=pf_
+@IOSDA=io_sda
+@IOSCL=io_scl
+@IDW=2
+@INTERRUPT=i2c_int
+@INT.I2C.WIRE=@$(INTERRUPT)
+@INT.I2C.PIC=syspic
+@TOP.PORTLIST=
+			@$(IOSCL), @$(IOSDA)
+@TOP.IODECL=
+	inout	wire	@$(IOSCL), @$(IOSDA);
+@TOP.DEFNS=
+	// I2CCPU definitions
+	// {{{
+	wire	i_@$(PREFIX)_sda, i_@$(PREFIX)_scl,
+		o_@$(PREFIX)_sda, o_@$(PREFIX)_scl;
+	// }}}
+@TOP.INSERT=
+	////////////////////////////////////////////////////////////////////////
+	//
+	// I2C IO buffers
+	// {{{
+
+	// We need these in order to (properly) ensure the high impedance
+	// states (pull ups) of the I2C I/O lines.  Our goals are:
+	//
+	//	o_@$(PREFIX)_X	io_@$(PREFIX)_X		Derived:T
+	//	1'b0		1'b0			1'b0
+	//	1'b1		1'bz			1'b1
+	//
+	IOBUF @$(PREFIX)sclp(
+		// {{{
+		.I(1'b0),
+		.T(o_@$(PREFIX)_scl),
+		.O(i_@$(PREFIX)_scl),
+		.IO(@$(IOSCL))
+		// }}}
+	);
+
+	IOBUF @$(PREFIX)sdap(
+		// {{{
+		.I(1'b0),
+		.T(o_@$(PREFIX)_sda),
+		.O(i_@$(PREFIX)_sda),
+		.IO(@$(IOSDA))
+		// }}}
+	);
+	// }}}
+@TOP.MAIN=
+		// I2CCPU
+		i_@$(PREFIX)_sda, i_@$(PREFIX)_scl,
+		o_@$(PREFIX)_sda, o_@$(PREFIX)_scl
+@MAIN.PORTLIST=
+			i_@$(PREFIX)_sda, i_@$(PREFIX)_scl,
+			o_@$(PREFIX)_sda, o_@$(PREFIX)_scl
+@MAIN.IODECL=
+	// I2C Port declarations
+	// {{{
+	input	wire	i_@$(PREFIX)_sda, i_@$(PREFIX)_scl;
+	output	wire	o_@$(PREFIX)_sda, o_@$(PREFIX)_scl;
+	// }}}
+@MAIN.DEFNS=
+	// I2C Controller
+	// {{{
+	// Verilator lint_off UNUSED
+	localparam	@$(DEVID)_WIDTH=(@$(IDW) == 0) ? 1 : @$(IDW);
+
+	wire		@$(PREFIX)_valid, @$(PREFIX)_ready, @$(PREFIX)_last;
+	wire	[7:0]	@$(PREFIX)_data;
+	wire	[@$(DEVID)_WIDTH-1:0]	@$(PREFIX)_id;
+
+	wire	[31:0]	@$(PREFIX)_debug;
+	// Verilator lint_on  UNUSED
+	// }}}
+@MAIN.INSERT=
+	////////////////////////////////////////////////////////////////////////
+	//
+	// The I2C Controller
+	// {{{
+
+	wbi2ccpu #(
+		.ADDRESS_WIDTH(@$(MASTER.BUS.AWID)),
+		.DATA_WIDTH(@$(MASTER.BUS.WIDTH)),
+		.AXIS_ID_WIDTH(@$(IDW))
+	) u_@$(PREFIX) (
+		// {{{
+		.i_clk(@$(SLAVE.BUS.CLOCK.WIRE)), .i_reset(@$(SLAVE.BUS.CLOCK.RESET)),
+		@$(SLAVE.ANSIPORTLIST),
+		@$(MASTER.ANSIPORTLIST),
+		.i_i2c_sda(i_@$(PREFIX)_sda), .i_i2c_scl(i_@$(PREFIX)_scl),
+		.o_i2c_sda(o_@$(PREFIX)_sda), .o_i2c_scl(o_@$(PREFIX)_scl),
+		.M_AXIS_TVALID(@$(PREFIX)_valid), .M_AXIS_TREADY(@$(PREFIX)_ready),
+			.M_AXIS_TDATA(@$(PREFIX)_data), .M_AXIS_TLAST(@$(PREFIX)_last),
+			.M_AXIS_TID(@$(PREFIX)_id),
+		.i_sync_signal(rtc_pps),
+		//
+		.o_interrupt(@$(INTERRUPT)),
+		.o_debug(@$(PREFIX)_debug)
+		// }}}
+	);
+
+	assign	@$(PREFIX)_ready = (!@$(PREFIX)_valid) || (1'b0
+			|| (@$(PREFIX)_id == 0)		// NULL address
+			|| (@$(PREFIX)_id == 1)
+`ifdef	I2CDMA_ACCESS
+			|| (@$(PREFIX)_id == 2 && i2cdma_ready)
+`else
+			|| (@$(PREFIX)_id == 2)
+`endif
+			|| (@$(PREFIX)_id > 2));
+
+	// }}}
+@MAIN.ALT=
+	assign	o_@$(PREFIX)_scl = 1'b1;
+	assign	o_@$(PREFIX)_sda = 1'b1;
+##
+## regdefs.h / regdefs.cpp
+##
+@REGS.N=4
+@REGS.NOTE=// I2C Controller registers
+@REGS.0= 0 R_@$(DEVID) @$(DEVID) @$(DEVID)_CTRL @$(DEVID)CTRL
+@REGS.1= 1 R_@$(DEVID)_OVW  @$(DEVID)_OVW @$(DEVID)_OVERRIDE
+@REGS.2= 2 R_@$(DEVID)_ADDR @$(DEVID)_ADDR @$(DEVID)_ADDRESS
+@REGS.3= 3 R_@$(DEVID)_CKCOUNT  @$(DEVID)CLK @$(DEVID)_CKCOUNT
+##
+## board.h
+##
+@BDEF.DEFN=
+	////////////////////////////////////////////////////////////////////////
+	//
+	// I2C CPU data structures
+	// {{{
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
+#ifndef	@$(DEVID)_H
+#define	@$(DEVID)_H
+
+#define	I2CC_WAITING	0x00800000	// True if waiting for synch signal
+#define	I2CC_HALT	0x00400000	// Halt request
+#define	I2CC_ABORT	0x00200000	// Abort
+#define	I2CC_ERROR	0x00100000
+#define	I2CC_HARDHALT	0x00080000
+#define	I2CC_SCL	0x00000200
+#define	I2CC_SDA	0x00000100
+#define I2CC_STOPPED	I2CC_HARDHALT
+#define I2CC_FAULT	(I2CC_ERROR | I2CC_ABORT)
+#define I2CC_CLEAR	(I2CC_FAULT | I2CC_HALT)
+
+// For the manual port
+#define	I2CC_MANSCL	0x00008000
+#define	I2CC_MANSDA	0x00004000
+#define	I2CC_MANUAL	0x00000800
+#define	I2CC_TVALID	0x00000200
+#define	I2CC_TLAST	0x00000100
+
+typedef	struct	@$(DEVID)_S {
+	volatile unsigned	ic_control,
+				ic_override,
+				ic_address,
+				ic_clkcount;
+} @$(DEVID);
+
+#endif	// @$(DEVID)_H
+	// }}}
+@BDEF.IONAME=_@$(PREFIX)
+@BDEF.IOTYPE=@$(DEVID)
+@BDEF.OSDEF=_BOARD_HAS_@$(DEVID)
+@BDEF.OSVAL=static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME)=((@$(BDEF.IOTYPE) *)@$[0x%08x](REGBASE));
+##
+## Makefile insert info
+##
+@RTL.MAKE.GROUP=@$(DEVID)
+@RTL.MAKE.SUBD=wbi2c
+## RTL.MAKE.FILES *shoul* also include dblfetch, but that's a part of the CPU
+## directory, so we don't include it here a second time
+@RTL.MAKE.FILES=wbi2ccpu.v axisi2c.v
+##
+## Makefile insert info
+##
+@SIM.CLOCK=clk
+@SIM.TICK=
+		m_core->i_@$(PREFIX)_scl = m_core->o_@$(PREFIX)_scl;
+		m_core->i_@$(PREFIX)_sda = m_core->o_@$(PREFIX)_sda;

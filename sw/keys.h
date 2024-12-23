@@ -1,9 +1,9 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	keys.h
-// {{{
-// Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+// Filename:	sw/keys.h
 //
+// Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+// {{{
 // Purpose:	Defines the names of the strings AutoFPGA understands.  These
 //		are the key names understood by AutoFPGA and described by the
 //	ICD.
@@ -33,6 +33,7 @@
 // License:	GPL, v3, as defined and found on www.gnu.org,
 // {{{
 //		http://www.gnu.org/licenses/gpl.html
+//
 //
 ////////////////////////////////////////////////////////////////////////////////
 //

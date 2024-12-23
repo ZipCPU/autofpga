@@ -1,9 +1,9 @@
 ################################################################################
 ##
-## Filename: 	wbubus.txt
-## {{{
-## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## Filename:	auto-data/wbubus.txt
 ##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## {{{
 ## Purpose:	To describe what needs to be done to make the UART to Wishbone
 ##		external bus master a part of the main .v and toplevel.v files.
 ##
@@ -32,6 +32,7 @@
 ## License:	GPL, v3, as defined and found on www.gnu.org,
 ## {{{
 ##		http://www.gnu.org/licenses/gpl.html
+##
 ##
 ################################################################################
 ##
@@ -140,11 +141,3 @@ SIM.TICK=
 @RTL.MAKE.FILES= wbconsole.v wbubus.v wbucompactlines.v wbucompress.v
 	wbuconsole.v wbudecompress.v wbudeword.v wbuexec.v wbufifo.v
 	wbuidleint.v wbuinput.v wbuoutput.v wbureadcw.v wbusixchar.v wbutohex.v
-##
-##
-@PREFIX=wbu_arbiter
-@MASTER.BUS=wb
-@MASTER.TYPE=OTHER
-@SLAVE.BUS=wbu
-@SLAVE.TYPE=OTHER
-@NADDR=1<<@$(MASTER.BUS.AWID)

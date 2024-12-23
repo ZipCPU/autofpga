@@ -1,0 +1,183 @@
+################################################################################
+##
+## Filename:	auto-data/exconsole.txt
+##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## {{{
+## Purpose:	Provide access to both a debugging bus and a console port for
+##		the CPU.  The debugging bus will be given 7-bit transfer codes
+##	with the high bit set, the console the same codes but with bit 8 clear.
+##
+##	This particular version of the console uses the exbus debugging bus.
+##
+## Creator:	Dan Gisselquist, Ph.D.
+##		Gisselquist Technology, LLC
+##
+################################################################################
+## }}}
+## Copyright (C) 2017-2024, Gisselquist Technology, LLC
+## {{{
+## This program is free software (firmware): you can redistribute it and/or
+## modify it under the terms of the GNU General Public License as published
+## by the Free Software Foundation, either version 3 of the License, or (at
+## your option) any later version.
+##
+## This program is distributed in the hope that it will be useful, but WITHOUT
+## ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY or
+## FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+## for more details.
+##
+## You should have received a copy of the GNU General Public License along
+## with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
+## target there if the PDF file isn't present.)  If not, see
+## <http://www.gnu.org/licenses/> for a copy.
+## }}}
+## License:	GPL, v3, as defined and found on www.gnu.org,
+## {{{
+##		http://www.gnu.org/licenses/gpl.html
+##
+##
+################################################################################
+##
+## }}}
+@PREFIX=wbu
+@DEVID=DBGBUS
+@ACCESS=EXBUS_MASTER
+@MASTER.BUS=wbu
+@MASTER.TYPE=HOST
+@MASTER.PREFIX=@$(PREFIX)
+@BUS.NAME=wbu
+@BUS.CLOCK=clk
+@BUS.WIDTH=32
+@BUS.TYPE=wb
+@BUS.OPT_DBLBUFFER=1
+@$BAUDRATE=1000000
+@OFF_TIL_ACCESS=1'b0
+@CLOCK.NAME=clk
+@CLOCK.RESET=i_reset
+@$SETUP=(@$(CLOCK.FREQUENCY) + @$(BAUDRATE)/2) / @$BAUDRATE
+@SETUP.FORMAT=24'h%x
+@$BUS_ADDRESS_WIDTH=@$(MASTER.BUS.AWID)
+@MAIN.PORTLIST=
+		// UART/host to wishbone interface
+		i_@$(PREFIX)_uart_rx, o_@$(PREFIX)_uart_tx
+@MAIN.IODECL=
+	input	wire		i_@$(PREFIX)_uart_rx;
+	output	wire		o_@$(PREFIX)_uart_tx;
+@MAIN.PARAM=
+	////////////////////////////////////////////////////////////////////////
+	//
+	// EXBUS parameters
+	// {{{
+	// Baudrate : @$[%9d](BAUDRATE)
+	// Clock    : @$[%9d](CLOCK.FREQUENCY)
+	localparam [23:0] BUSUART = @$SETUP;	// @$[%9d](BAUDRATE) baud
+	localparam	@$(DEVID)BITS = $clog2(BUSUART);
+	// }}}
+@MAIN.DEFNS=
+	////////////////////////////////////////////////////////////////////////
+	//
+	// EXBUS: USB-UART interface declarations
+	// {{{
+	//
+	wire	[7:0]	@$(PREFIX)_rx_data, @$(PREFIX)_tx_data;
+	wire		@$(PREFIX)_rx_stb;
+	wire		@$(PREFIX)_tx_stb, @$(PREFIX)_tx_busy;
+
+	// Verilator lint_off UNUSED
+	wire	[0:0]	ex_reset;
+	wire	[1:0]	ex_gpio;
+	// Verilator lint_on  UNUSED
+	// }}}
+@MAIN.INSERT=
+	////////////////////////////////////////////////////////////////////////
+	//
+	// EXBUS: USB-UART driven bus master and console
+	// {{{
+	// The Host USB interface, to be used by the WB-UART bus
+	rxuartlite	#(
+		// {{{
+		.TIMER_BITS(@$(DEVID)BITS),
+		.CLOCKS_PER_BAUD(BUSUART[@$(DEVID)BITS-1:0])
+		// }}}
+	) rcv(
+		// {{{
+		.i_clk(      @$(CLOCK.WIRE)),
+		.i_uart_rx(i_@$(PREFIX)_uart_rx),
+		.o_wr(       @$(PREFIX)_rx_stb),
+		.o_data(     @$(PREFIX)_rx_data)
+		// }}}
+	);
+
+	txuartlite	#(
+		// {{{
+		.TIMING_BITS(@$(DEVID)BITS[4:0]),
+		.CLOCKS_PER_BAUD(BUSUART[@$(DEVID)BITS-1:0])
+		// }}}
+	) txv(
+		// {{{
+		.i_clk(    @$(CLOCK.WIRE)),
+		.i_wr(     @$(PREFIX)_tx_stb),
+		.i_data(   @$(PREFIX)_tx_data),
+		.o_uart_tx(o_@$(PREFIX)_uart_tx),
+		.o_busy(   @$(PREFIX)_tx_busy)
+		// }}}
+	);
+
+`ifndef	BUSPIC_ACCESS
+	wire	w_bus_int;
+	assign	w_bus_int = 1'b0;
+`endif
+	// Verilator lint_off UNUSED
+	wire	[29:0]	@$(MASTER.PREFIX)_tmp_addr;
+	// Verilator lint_on  UNUSED
+	exbuswb #(
+		// {{{
+		// .LGWATCHDOG(@$(DEVID)WATCHDOG)
+		.ADDRESS_WIDTH(@$(BUS_ADDRESS_WIDTH))
+		// }}}
+	) u_exbus(
+		// {{{
+		.i_clk(@$(CLOCK.WIRE)), .i_reset(@$(CLOCK.RESET)),
+		.o_reset(ex_reset),
+		.i_rx_stb(@$(PREFIX)_rx_stb), .i_rx_byte(@$(PREFIX)_rx_data),
+		.o_tx_stb(@$(PREFIX)_tx_stb), .o_tx_byte(@$(PREFIX)_tx_data),
+			.i_tx_busy(@$(PREFIX)_tx_busy),
+		//
+		.i_gpio(2'b00), .o_gpio(ex_gpio),
+		//
+		.i_console_stb(w_console_tx_stb),
+			.i_console_byte(w_console_tx_data),
+			.o_console_busy(w_console_busy),
+		.o_console_stb(w_console_rx_stb),
+			.o_console_byte(w_console_rx_data),
+		//
+		.o_wb_cyc(@$(MASTER.PREFIX)_cyc), .o_wb_stb(@$(MASTER.PREFIX)_stb),
+			.o_wb_we(@$(MASTER.PREFIX)_we),
+			.o_wb_addr(@$(MASTER.PREFIX)_addr),
+			.o_wb_data(@$(MASTER.PREFIX)_data),
+			.o_wb_sel(@$(MASTER.PREFIX)_sel),
+		.i_wb_stall(@$(MASTER.PREFIX)_stall),
+			.i_wb_ack(@$(MASTER.PREFIX)_ack),
+		.i_wb_data(@$(MASTER.PREFIX)_idata),
+		.i_wb_err(@$(MASTER.PREFIX)_err),
+		.i_interrupt(w_bus_int)
+		// }}}
+	);
+	// }}}
+@REGDEFS.H.DEFNS=
+#define	BAUDRATE	@$[%d](BAUDRATE)
+@RTL.MAKE.GROUP= EXBUS
+@RTL.MAKE.SUBD=exbus
+@RTL.MAKE.FILES= exbuswb.v excompress.v exdecompress.v exdeword.v
+	exidle.v exmkword.v exwb.v exfifo.v
+@SIM.INCLUDE=
+#include "dbluartsim.h"
+@SIM.CLOCK=@$(CLOCK.NAME)
+@SIM.DEFNS=
+	DBLUARTSIM	*m_@$(PREFIX);
+@SIM.INIT=
+		m_@$(PREFIX) = new DBLUARTSIM();
+		m_@$(PREFIX)->setup(@$[%d](SETUP));
+@SIM.TICK=
+		m_core->i_@$(PREFIX)_uart_rx = (*m_@$(PREFIX))(m_core->o_@$(PREFIX)_uart_tx);

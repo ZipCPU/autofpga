@@ -1,10 +1,10 @@
 ################################################################################
 ##
-## Filename: 	clock.txt
-## {{{
-## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## Filename:	auto-data/wbuarbiter.txt
 ##
-## Purpose:	
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## {{{
+## Purpose:	Connect the debugging bus to the rest of the system.
 ##
 ## Creator:	Dan Gisselquist, Ph.D.
 ##		Gisselquist Technology, LLC
@@ -32,21 +32,47 @@
 ## {{{
 ##		http://www.gnu.org/licenses/gpl.html
 ##
+##
 ################################################################################
 ##
 ## }}}
-@PREFIX=clock
-@CLOCK.NAME=clk
-@CLOCK.TOP=i_clk
-@$CLOCK.FREQUENCY=100000000
-@CLOCK.WIRE=i_clk
-@CLOCK.RESET=i_reset
-@TOP.DEFNS=
-	wire		s_clk, s_reset;
-@TOP.INSERT=
-	assign	s_clk = i_clk;
-	// assign	s_reset = 1'b0; // This design requires local, not global resets
-@REGDEFS.H.DEFNS=
-#define	CLKFREQHZ	@$(CLOCK.FREQUENCY)
-@BDEF.DEFN=
-#define	CLKFREQHZ	@$(CLOCK.FREQUENCY)
+@PREFIX=wbu_arbiter
+@MASTER.BUS=wbwide
+@MASTER.TYPE=ARBITER
+@SLAVE.BUS=wbu
+@SLAVE.TYPE=OTHER
+@ERROR.WIRE=@$(SLAVE.PREFIX)_err
+## @$NADDR=(1<<@$(MASTER.BUS.AWID))
+@IANSI=i_
+@OANSI=o_
+@SLAVE.ANSPREFIX=s
+@MASTER.ANSPREFIX=w
+@MAIN.INSERT=
+	////////////////////////////////////////////////////////////////////////
+	//
+	// WBUBUS "wbu_arbiter" master->slave connection
+	// {{{
+
+	wbupsz #(
+		// {{{
+		// Slave bus address width : @$(SLAVE.BUS.AWID)
+		// Slave address width     : @$(SLAVE.AWID)
+		// Master bus address width: @$(MASTER.BUS.AWID)
+		.ADDRESS_WIDTH(@$(MASTER.BUS.AWID)+$clog2(@$(MASTER.BUS.WIDTH)/8)),
+		.SMALL_DW(@$(SLAVE.BUS.WIDTH)),
+		.WIDE_DW(@$(MASTER.BUS.WIDTH)),
+		.OPT_LITTLE_ENDIAN(1'b0)
+		// }}}
+	) u_@$(SLAVE.BUS.NAME)_@$(MASTER.BUS.NAME)_downsz (
+		// {{{
+		.i_clk(@$(MASTER.BUS.CLOCK.WIRE)),
+		.i_reset(@$(MASTER.BUS.CLOCK.RESET)),
+		@$(SLAVE.ANSIPORTLIST),
+		@$(MASTER.ANSIPORTLIST)
+		// }}}
+	);
+
+	// }}}
+@RTL.MAKE.GROUP=UPSZ
+@RTL.MAKE.SUBD=
+@RTL.MAKE.FILES=wbupsz.v

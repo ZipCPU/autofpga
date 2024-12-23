@@ -1,9 +1,9 @@
 ################################################################################
 ##
-## Filename: 	scopc.txt
-## {{{
-## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## Filename:	auto-data/wbscopc.txt
 ##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## {{{
 ## Purpose:	A generic scope description, from which other internal wbscopes
 ##		may depend upon
 ##
@@ -32,6 +32,7 @@
 ## License:	GPL, v3, as defined and found on www.gnu.org,
 ## {{{
 ##		http://www.gnu.org/licenses/gpl.html
+##
 ##
 ################################################################################
 ##

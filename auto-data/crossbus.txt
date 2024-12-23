@@ -1,0 +1,96 @@
+################################################################################
+##
+## Filename:	auto-data/crossbus.txt
+##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## {{{
+## Purpose:	Provides access to the smaller 32-bit bus from the 512-bit bus.
+##		Accesses are limited to a single controller only, but perhaps
+##	this is okay since I don't expect anything but the CPU and the debugging
+##	port to control the 32-bit bus.
+##
+## Creator:	Dan Gisselquist, Ph.D.
+##		Gisselquist Technology, LLC
+##
+################################################################################
+## }}}
+## Copyright (C) 2017-2024, Gisselquist Technology, LLC
+## {{{
+## This program is free software (firmware): you can redistribute it and/or
+## modify it under the terms of the GNU General Public License as published
+## by the Free Software Foundation, either version 3 of the License, or (at
+## your option) any later version.
+##
+## This program is distributed in the hope that it will be useful, but WITHOUT
+## ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY or
+## FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+## for more details.
+##
+## You should have received a copy of the GNU General Public License along
+## with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
+## target there if the PDF file isn't present.)  If not, see
+## <http://www.gnu.org/licenses/> for a copy.
+## }}}
+## License:	GPL, v3, as defined and found on www.gnu.org,
+## {{{
+##		http://www.gnu.org/licenses/gpl.html
+##
+##
+################################################################################
+##
+## }}}
+@PREFIX=crossbus
+@SLAVE.TYPE=BUS
+@SLAVE.BUS=wbwide
+@SLAVE.ANSPREFIX=w
+@SLAVE.ORDER=0
+@ERROR.WIRE=@$(SLAVE.PREFIX)_err
+## @$SLAVE.AWID=@$(MASTER.AWID) >> (@$(SLAVE.BUS_WIDTH)-@$(MASTER.BUS.WIDTH))
+@MASTER.TYPE=SUBBUS
+@MASTER.BUS=wb32
+@OPT_LITTLE_ENDIAN=1'b0
+@OPT_LOWLOGIC=1'b0
+@MAIN.INSERT=
+	wbdown #(
+		// {{{
+		// Slave bus address width: @$(SLAVE.BUS.AWID)
+		// Slave address width    : @$(SLAVE.AWID)
+		// Master address width   : @$(MASTER.BUS.AWID)
+		.ADDRESS_WIDTH(@$(SLAVE.AWID)+$clog2(@$(SLAVE.BUS.WIDTH)/8)),
+		.WIDE_DW(@$(SLAVE.BUS.WIDTH)),
+		.SMALL_DW(@$(MASTER.BUS.WIDTH)),
+		.OPT_LITTLE_ENDIAN(@$(OPT_LITTLE_ENDIAN)),
+		.OPT_LOWLOGIC(@$(OPT_LOWLOGIC))
+		// }}}
+	) u_@$(PREFIX) (
+		// {{{
+		.i_clk(@$(MASTER.BUS.CLOCK.WIRE)),
+		.i_reset(@$(MASTER.BUS.CLOCK.RESET)),
+		// Slave/incoming
+		// {{{
+		.i_wcyc(  @$(SLAVE.PREFIX)_cyc),
+		.i_wstb(  @$(SLAVE.PREFIX)_stb),
+		.i_wwe(   @$(SLAVE.PREFIX)_we),
+		.i_waddr( @$(SLAVE.PREFIX)_addr[@$(SLAVE.AWID)-1:0]),
+		.i_wdata( @$(SLAVE.PREFIX)_data),
+		.i_wsel(  @$(SLAVE.PREFIX)_sel),
+		.o_wstall(@$(SLAVE.PREFIX)_stall),
+		.o_wack(  @$(SLAVE.PREFIX)_ack),
+		.o_wdata( @$(SLAVE.PREFIX)_idata),
+		.o_werr(  @$(SLAVE.PREFIX)_err),
+		// }}}
+		// Master/down-range/outgoing
+		// {{{
+		.o_scyc(  @$(MASTER.PREFIX)_cyc),
+		.o_sstb(  @$(MASTER.PREFIX)_stb),
+		.o_swe(   @$(MASTER.PREFIX)_we),
+		.o_saddr( @$(MASTER.PREFIX)_addr[@$(MASTER.BUS.AWID)-1:0]),
+		.o_sdata( @$(MASTER.PREFIX)_data),
+		.o_ssel(  @$(MASTER.PREFIX)_sel),
+		.i_sstall(@$(MASTER.PREFIX)_stall),
+		.i_sack(  @$(MASTER.PREFIX)_ack),
+		.i_sdata( @$(MASTER.PREFIX)_idata),
+		.i_serr(  @$(MASTER.PREFIX)_err)
+		// }}}
+		// }}}
+	);

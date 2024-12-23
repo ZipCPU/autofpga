@@ -1,9 +1,9 @@
 ################################################################################
 ##
-## Filename: 	doc/Makefile
-## {{{
-## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## Filename:	doc/Makefile
 ##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## {{{
 ## Purpose:	To coordinate the build of documentation PDFs from their
 ##		LaTeX sources.
 ##

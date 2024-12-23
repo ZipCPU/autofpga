@@ -1,9 +1,9 @@
 ################################################################################
 ##
-## Filename: 	pwrcount.txt
-## {{{
-## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## Filename:	auto-data/pwrcount.txt
 ##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## {{{
 ## Purpose:	
 ##
 ## Creator:	Dan Gisselquist, Ph.D.
@@ -32,6 +32,7 @@
 ## {{{
 ##		http://www.gnu.org/licenses/gpl.html
 ##
+##
 ################################################################################
 ##
 ## }}}
@@ -39,9 +40,9 @@
 @NADDR=1
 @ACCESS=PWRCOUNT_ACCESS
 @SLAVE.TYPE=SINGLE
-@SLAVE.BUS=wb
+@SLAVE.BUS=wb32
 @MAIN.DEFNS=
-	reg	[31:0]	r_pwrcount_data;
+	reg	[31:0]	r_@$(PREFIX)_data;
 @MAIN.INSERT=
 	initial	r_@$(PREFIX)_data = 32'h0;
 	always @(posedge i_clk)

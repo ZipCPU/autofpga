@@ -1,9 +1,9 @@
 ################################################################################
 ##
-## Filename: 	Makefile
-## {{{
-## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## Filename:	sw/Makefile
 ##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## {{{
 ## Purpose:	
 ##
 ## Creator:	Dan Gisselquist, Ph.D.
@@ -31,6 +31,7 @@
 ## License:	GPL, v3, as defined and found on www.gnu.org,
 ## {{{
 ##		http://www.gnu.org/licenses/gpl.html
+##
 ##
 ################################################################################
 ##
@@ -87,15 +88,13 @@ autofpga: $(OBJECTS)
 	echo $(OBJECTS)
 	$(CXX) $(CFLAGS) $(OBJECTS) -o $@
 
-VDATA := bkram.txt buserr.txt clkcounter.txt clock.txt enet.txt		\
-	flash.txt global.txt gpio.txt gps.txt hdmi.txt icape.txt	\
-	legalgen.txt mdio.txt pic.txt pwrcount.txt rtcdate.txt		\
-	rtcgps.txt sdram.txt sdspi.txt spio.txt version.txt wbmouse.txt	\
-	wboledbw.txt wbpmic.txt wbscopc.txt wbscope.txt	wbubus.txt	\
-	xpander.txt zipmaster.txt
-# Unused:
-#	wbuart.txt
-
+VDATA := allclocks.txt bkram.txt buserr.txt clkcheck.txt crossbus.txt	\
+	ddr3.txt edidslvscope.txt edid.txt exconsole.txt flashcfg.txt	\
+	flash.txt global.txt gpio.txt gps.txt hdmi.txt i2ccpu.txt	\
+	i2cdma.txt i2saudio.txt icape.txt meganet.txt mdio.txt pic.txt	\
+	pwrcount.txt rtcdate.txt rtcgps.txt spio.txt sdio.txt		\
+	vadj33.txt version.txt wboledbw.txt wbpmic.txt wbuarbiter.txt	\
+	wbubus.txt zipcpu.txt zipmaster.txt
 
 .PHONY: demo
 demo: runme.sh

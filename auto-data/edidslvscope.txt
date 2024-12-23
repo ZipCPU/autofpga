@@ -1,11 +1,12 @@
 ################################################################################
 ##
-## Filename: 	xpander.txt
-## {{{
-## Project:	VideoZip, a ZipCPU SoC supporting video functionality
+## Filename:	auto-data/edidslvscope.txt
 ##
-## Purpose:	To describe a simple peripheral capable of expanding a bus from
-##		one data width (32) to another (128)
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## {{{
+## Purpose:	Describes how to connect the EDID/I2C debugging port to a
+##		(compressed) wishbone scope, then to be connected to the bus
+##	by autofpga.
 ##
 ## Creator:	Dan Gisselquist, Ph.D.
 ##		Gisselquist Technology, LLC
@@ -33,28 +34,18 @@
 ## {{{
 ##		http://www.gnu.org/licenses/gpl.html
 ##
+##
 ################################################################################
 ##
 ## }}}
-@PREFIX=xpand
-@$NADDR=(1<<@$(AWID))
-@SLAVE.TYPE=OTHER
-@SLAVE.BUS=wb
-@SLAVE.CLOCK=clk
-@BUS=rambus
-@BUS.CLOCK=clk
-@MASTER.BUS=rambus
-## @MASTER.BUS.CLOCK=clk
-@MASTER.TYPE=SUBBUS
-# XPand bus transactions are 128 bits wide
-# Hence we need 4 fewer bus wires than would be necessary for
-@$AWID=@$(MASTER.BUS.AWID)+2
-@ERROR.WIRE=@$(SLAVE.PREFIX)_err
-@MAIN.INSERT=
-	busexpander #(.AWIN(@$(AWID)), .DWIN(@$(SLAVE.BUS.WIDTH)),
-			.DWOUT(@$(MASTER.BUS.WIDTH)))
-		@$(PREFIX)i@$(SLAVE.BUS.WIDTH)x@$(MASTER.BUS.WIDTH)(
-			@$(SLAVE.BUS.CLOCK.WIRE), i_reset,
-			@$(SLAVE.PORTLIST),
-			//
-			@$(MASTER.PORTLIST));
+@PREFIX=edidslvscope
+@DEVID=EDIDSLVSCOPE
+@TARGET=edidslv
+@TRIGGER=edidslv_dbg[31]
+@DEBUG=edidslv_dbg[30:0]
+@LOG_CAPTURE_SIZE=13
+@INCLUDEFILE=wbscopc.txt
+@INT.EDIDSLVSCOPE.PIC=altpic
+@INT.EDIDSLVSCOPE.WIRE=@$(PREFIX)_int
+@$DEFHOLDOFF=0
+@MAIN.DEFNS=

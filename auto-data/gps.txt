@@ -1,9 +1,9 @@
 ################################################################################
 ##
-## Filename: 	gps.txt
-## {{{
-## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## Filename:	auto-data/gps.txt
 ##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## {{{
 ## Purpose:	This file describes the three interfaces created by the GPS:
 ##		1) a GPS-locked clock, 2) a "testbench" which is used to
 ##	measure the performance of the GPS-locked lock, and 3) a wishbone
@@ -36,6 +36,7 @@
 ## {{{
 ##		http://www.gnu.org/licenses/gpl.html
 ##
+##
 ################################################################################
 ##
 ## }}}
@@ -45,7 +46,7 @@
 @ACCESS=@$(DEVID)_ACCESS
 @NADDR=4
 @SLAVE.TYPE=DOUBLE
-@SLAVE.BUS=wb
+@SLAVE.BUS=wb32
 @CLOCK.NAME=clk
 @$CLKFREQHZ=@$(CLOCK.FREQUENCY)
 @$GPS_STEP_EXPONENT=10
@@ -60,7 +61,8 @@
 	//The GPS Clock
 	input	wire		i_gps_pps;
 @MAIN.DEFNS=
-	wire	gps_pps, gps_led, gps_locked, gps_tracking;
+	wire		ck_pps;
+	wire		gps_pps, gps_led, gps_locked, gps_tracking;
 	wire	[63:0]	gps_now, gps_err, gps_step;
 	wire	[1:0]	gps_dbg_tick;
 @MAIN.INSERT=
@@ -68,25 +70,44 @@
 	wire	[1:0]	ck_dbg;
 	// Verilator lint_on  UNUSED
 
-	gpsclock #(.DEFAULT_STEP(GPSCLOCK_DEFAULT_STEP))
-		ppsck(i_clk, 1'b0, gps_pps, ck_pps, gps_led,
-			@$(SLAVE.PORTLIST),
-			gps_tracking, gps_now, gps_step, gps_err, gps_locked,
-			ck_dbg);
+	gpsclock #(
+		.DEFAULT_STEP(GPSCLOCK_DEFAULT_STEP)
+	) ppsck (
+		.i_clk(i_clk), .i_rst(1'b0), .i_pps(gps_pps), .o_pps(ck_pps),
+			.o_led(gps_led),
+		@$(SLAVE.ANSIPORTLIST),
+		.o_tracking(gps_tracking), .o_count(gps_now), .o_step(gps_step),
+		.o_err(gps_err), .o_locked(gps_locked), .o_dbg(ck_dbg)
+	);
+
+	assign	@$(PREFIX)_pps = ck_pps;
+
 @MAIN.ALT=
-	wire	[31:0]	pre_step;
+	reg		r_ck_pps;
+	reg	[63:0]	r_gps_now;
+	reg	[31:0]	r_gps_prior;
+	wire	[47:0]	pre_step;
 	assign	pre_step = { 16'h00, (({GPSCLOCK_DEFAULT_STEP[27:0],20'h00})
 				>>GPSCLOCK_DEFAULT_STEP[31:28]) };
+
+	initial	{ r_ck_pps, r_gps_prior } = 33'h0;
 	always @(posedge i_clk)
-		{ ck_pps, gps_step[31:0] } <= gps_step + pre_step;
-	assign	gck_stall  = 1'b0;
-	assign	gps_now    = 64'h0;
+		{ r_ck_pps, r_gps_prior[31:0] } <= r_gps_prior + pre_step[31:0];
+
+	initial	r_gps_now = 64'h0;
+	always @(posedge i_clk)
+	begin
+		r_gps_now[63:32] <= r_gps_now[63:32]+(r_ck_pps ? 32'h1:32'h0);
+		r_gps_now[31:0]  <= r_gps_prior;
+	end
+	assign	ck_pps     = r_ck_pps;
+	assign	gps_now    = r_gps_now;
 	assign	gps_err    = 64'h0;
-	assign	gps_step   = 64'h0;
+	assign	gps_step   = pre_step;
 	assign	gps_led    = 1'b0;
 	assign	gps_locked = 1'b0;
 
-@INT.PPS.WIRE=ck_pps
+@INT.PPS.WIRE=@$(PREFIX)_pps
 @INT.PPS.PIC=syspic
 @REGS.NOTE= // GPS clock tracker, control loop settings registers
 @REGS.N=4
@@ -103,31 +124,31 @@ typedef	struct	GPSTRACKER_S	{
 @BDEF.IONAME=_gps
 @BDEF.IOTYPE= GPSTRACKER
 @BDEF.OSVAL=
-static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME) = ((@$BDEF.IOTYPE *)@$[0x%08x]REGBASE);
+static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME) = ((@$BDEF.IOTYPE *)@$[0x%08x](REGBASE));
 ##
 ##
 ##
 @PREFIX=gtb
 @NADDR=8
+@DEPENDS=GPSTRK_ACCESS
 @SLAVE.TYPE=DOUBLE
-@SLAVE.BUS=wb
+@SLAVE.BUS=wb32
 @CLOCK.NAME=clk
 @MAIN.DEFNS=
 	wire	tb_pps;
 @MAIN.INSERT=
-`ifdef	GPSTRK_ACCESS
-	gpsclock_tb #(.CLOCK_FREQUENCY_HZ(@$(CLOCK.FREQUENCY)))
-		ppstb(i_clk, ck_pps, tb_pps,
-			@$(SLAVE.PORTLIST),
-			gps_err, gps_now, gps_step);
+	// Generate a PPS signal independent of the GPS--useful for testing
+	gpsclock_tb #(
+		.CLOCK_FREQUENCY_HZ(@$(CLOCK.FREQUENCY))
+	) ppstb(
+		.i_clk(i_clk), .i_lcl_pps(ck_pps), .o_pps(tb_pps),
+		@$(SLAVE.ANSIPORTLIST),
+		.i_err(gps_err), .i_count(gps_now), .i_step(gps_step)
+	);
 
-`ifdef	GPSTB
 	assign	gps_pps = tb_pps;
-`else
+@MAIN.ALT=
 	assign	gps_pps = i_gps_pps;
-`endif
-
-`endif
 
 @REGS.NOTE= // GPS clock test bench registers, for measuring the clock trackers performance
 @REGS.N=8

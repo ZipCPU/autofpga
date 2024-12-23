@@ -1,9 +1,9 @@
 ################################################################################
 ##
 ## Filename:	Makefile
-## {{{
-## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 ##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## {{{
 ## Purpose:	A master project makefile.  It tries to build all targets
 ##		within the project, mostly by directing subdirectory makes.
 ##

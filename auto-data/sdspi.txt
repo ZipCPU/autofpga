@@ -1,9 +1,9 @@
 ################################################################################
 ##
-## Filename: 	sdspi.c
-## {{{
-## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## Filename:	auto-data/sdspi.txt
 ##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## {{{
 ## Purpose:	Describes how to connect an SD-SPI peripheral to a wishbone
 ##		bus, as used by autofpga.  Note how the description requires
 ##	both a description of what needs to take place in a top level file, as
@@ -39,6 +39,7 @@
 ## {{{
 ##		http://www.gnu.org/licenses/gpl.html
 ##
+##
 ################################################################################
 ##
 ## }}}
@@ -47,33 +48,34 @@
 @NADDR=4
 @ACCESS=SDSPI_ACCESS
 @SLAVE.TYPE=OTHER
-@SLAVE.BUS=wb
+@SLAVE.BUS=wb32
 @BUS.NAME=wb
 @INT.SDCARD.WIRE= @$(PREFIX)_int
 @INT.SDCARD.PIC= buspic syspic
+@IOPREFIX=@$(PREFIX)
 @TOP.PORTLIST=
 		// SD Card
-		o_@$(PREFIX)_clk, io_@$(PREFIX)_cmd, io_@$(PREFIX)_dat, i_@$(PREFIX)_cd_n
+		o_@$(IOPREFIX)_clk, io_@$(IOPREFIX)_cmd, io_@$(IOPREFIX)_dat, i_@$(IOPREFIX)_cd_n
 @TOP.IODECL=
 	// SD Card
 	// {{{
-	output	wire		o_@$(PREFIX)_clk;
-	inout	wire		io_@$(PREFIX)_cmd;
-	inout	wire	[3:0]	io_@$(PREFIX)_dat;
-	input	wire		i_@$(PREFIX)_cd_n;
+	output	wire		o_@$(IOPREFIX)_clk;
+	inout	wire		io_@$(IOPREFIX)_cmd;
+	inout	wire	[3:0]	io_@$(IOPREFIX)_dat;
+	input	wire		i_@$(IOPREFIX)_cd_n;
 	// }}}
 @TOP.DEFNS=
 	// SD Card definitions
 	// {{{
-	wire		w_@$(PREFIX)_cmd;
-	wire	[3:0]	w_@$(PREFIX)_data;
+	wire		w_@$(IOPREFIX)_cmd;
+	wire	[3:0]	w_@$(IOPREFIX)_data;
 
-	wire		i_@$(PREFIX)_cmd;
-	wire	[3:0]	i_@$(PREFIX)_data;
+	wire		i_@$(IOPREFIX)_cmd;
+	wire	[3:0]	i_@$(IOPREFIX)_data;
 	// }}}
 @TOP.MAIN=
 		// SD Card
-		o_@$(PREFIX)_clk, w_@$(PREFIX)_cmd, w_@$(PREFIX)_data, i_@$(PREFIX)_data, !i_@$(PREFIX)_cd_n
+		o_@$(IOPREFIX)_clk, w_@$(IOPREFIX)_cmd, w_@$(IOPREFIX)_data, i_@$(IOPREFIX)_data, !i_@$(IOPREFIX)_cd_n
 @TOP.INSERT=
 	//////////////////////////////////////////////////////////////////////
 	//
@@ -92,13 +94,13 @@
 	// assign io_@$(PREFIX)[2] = w_@$(PREFIX)_data[2]? 1'bz:1'b0;
 	// assign io_@$(PREFIX)[3] = w_@$(PREFIX)_data[3]? 1'bz:1'b0;	// CS_n
 	// }}}
-	IOBUF @$(PREFIX)_cmd_bf(.T(1'b0),.O(i_@$(PREFIX)_cmd),.I(w_@$(PREFIX)_cmd),.IO(io_@$(PREFIX)_cmd));// MISO
-	IOBUF @$(PREFIX)_dat0_bf(.T(1'b1),.O(i_@$(PREFIX)_data[0]),.I(1'b1),.IO(io_@$(PREFIX)_dat[0]));// MISO
-	IOBUF @$(PREFIX)_dat1_bf(.T(1'b1),.O(i_@$(PREFIX)_data[1]),.I(1'b1),.IO(io_@$(PREFIX)_dat[1]));
-	IOBUF @$(PREFIX)_dat2_bf(.T(1'b1),.O(i_@$(PREFIX)_data[2]),.I(1'b1),.IO(io_@$(PREFIX)_dat[2]));
+	IOBUF @$(PREFIX)_cmd_bf(.T(1'b0),.O(i_@$(IOPREFIX)_cmd),.I(w_@$(IOPREFIX)_cmd),.IO(io_@$(IOPREFIX)_cmd));// MISO
+	IOBUF @$(PREFIX)_dat0_bf(.T(1'b1),.O(i_@$(IOPREFIX)_data[0]),.I(1'b1),.IO(io_@$(IOPREFIX)_dat[0]));// MISO
+	IOBUF @$(PREFIX)_dat1_bf(.T(1'b1),.O(i_@$(IOPREFIX)_data[1]),.I(1'b1),.IO(io_@$(IOPREFIX)_dat[1]));
+	IOBUF @$(PREFIX)_dat2_bf(.T(1'b1),.O(i_@$(IOPREFIX)_data[2]),.I(1'b1),.IO(io_@$(IOPREFIX)_dat[2]));
 
 	// Implement an open-drain output
-	IOBUF @$(PREFIX)_dat3_bf(.T(w_@$(PREFIX)_data[3]),.O(i_@$(PREFIX)_data[3]),.I(1'b0),.IO(io_@$(PREFIX)_dat[3]));
+	IOBUF @$(PREFIX)_dat3_bf(.T(w_@$(IOPREFIX)_data[3]),.O(i_@$(IOPREFIX)_data[3]),.I(1'b0),.IO(io_@$(IOPREFIX)_dat[3]));
 	// }}}
 @MAIN.PORTLIST=
 		// The SD-Card wires
@@ -109,6 +111,7 @@
 	output	wire		o_@$(PREFIX)_clk, o_@$(PREFIX)_cmd;
 	output	wire	[3:0]	o_@$(PREFIX)_data;
 	// verilator lint_off UNUSED
+	input	wire		i_@$(PREFIX)_cmd;
 	input	wire	[3:0]	i_@$(PREFIX)_data;
 	// verilator lint_on  UNUSED
 	input	wire		i_@$(PREFIX)_detect;
@@ -128,8 +131,13 @@
 	//
 	//
 
-	sdspi
-	u_@$(PREFIX)(
+	sdspi #(
+		// {{{
+		.OPT_CARD_DETECT(1'b1),
+		.OPT_LITTLE_ENDIAN(1'b0),
+		.OPT_SPI_ARBITRATION(1'b0)
+		// }}}
+	) u_@$(PREFIX)(
 		// {{{
 		.i_clk(@$(SLAVE.BUS.CLOCK.WIRE)),
 		.i_sd_reset(@$(SLAVE.BUS.CLOCK.RESET)),
@@ -209,6 +217,109 @@ struct @$(DEVID)_S;
 		m_core->i_@$(PREFIX)_detect = 1;
 #endif	// @$(ACCESS)
 		// }}}
+@SIM.DEFINES=
+////////////////////////////////////////////////////////////////////////////////
+//
+// SD SPI Defines
+// {{{
+////////////////////////////////////////////////////////////////////////////////
+//
+//
+
+#ifndef	VVAR
+#ifdef	ROOT_VERILATOR
+
+#include "Vmain___024root.h"
+#define	VVAR(A)	rootp->main__DOT_ ## A
+
+#elif	defined(NEW_VERILATOR)
+#define	VVAR(A)	main__DOT_ ## A
+#else
+#define	VVAR(A)	v__DOT_ ## A
+#endif
+#endif
+
+#define	sd_cmd_busy	VVAR(_@$(PREFIX)i__DOT__r_cmd_busy)
+#define	sd_clk		VVAR(_@$(PREFIX)i__DOT__r_sdspi_clk)
+#define	sd_cmd_state	VVAR(_@$(PREFIX)i__DOT__r_cmd_state)
+#define	sd_rsp_state	VVAR(_@$(PREFIX)i__DOT__r_rsp_state)
+#define	sd_ll_cmd_stb	VVAR(_@$(PREFIX)__DOT__ll_cmd_stb)
+#define	sd_ll_cmd_dat	VVAR(_@$(PREFIX)__DOT__ll_cmd_dat)
+#define	sd_ll_z_counter	VVAR(_@$(PREFIX)__DOT__lowlevel__DOT__r_z_counter)
+#define	sd_ll_clk_counter	VVAR(_@$(PREFIX)__DOT__lowlevel__DOT__r_clk_counter)
+#define	sd_ll_idle	VVAR(_@$(PREFIX)__DOT__lowlevel__DOT__r_idle)
+#define	sd_ll_state	VVAR(_@$(PREFIX)__DOT__lowlevel__DOT__r_state)
+#define	sd_ll_byte	VVAR(_@$(PREFIX)__DOT__lowlevel__DOT__r_byte)
+#define	sd_ll_ireg	VVAR(_@$(PREFIX)__DOT__lowlevel__DOT__r_ireg)
+#define	sd_ll_out_stb	VVAR(_@$(PREFIX)__DOT__ll_out_stb)
+#define	sd_ll_out_dat	VVAR(_@$(PREFIX)__DOT__ll_out_dat)
+#define	sd_lgblklen	VVAR(_@$(PREFIX)__DOT__r_lgblklen)
+#define	sd_fifo_rd_crc	VVAR(_@$(PREFIX)__DOT__fifo_rd_crc_reg)
+#define	sd_cmd_crc	VVAR(_@$(PREFIX)__DOT__r_cmd_crc)
+#define	sd_cmd_crc_cnt	VVAR(_@$(PREFIX)__DOT__r_cmd_crc_cnt)
+#define	sd_fifo_rd_crc_stb	VVAR(_@$(PREFIX)__DOT__fifo_rd_crc_stb)
+#define	ll_fifo_pkt_state	VVAR(_@$(PREFIX)__DOT__ll_fifo_pkt_state)
+#define	sd_have_data_response_token	VVAR(_@$(PREFIX)__DOT__r_have_data_response_token)
+#define	sd_fifo_wr_crc		VVAR(_@$(PREFIX)__DOT__fifo_wr_crc_reg)
+#define	sd_fifo_wr_crc_stb	VVAR(_@$(PREFIX)__DOT__fifo_wr_crc_stb,)
+#define	sd_ll_fifo_wr_state	VVAR(_@$(PREFIX)__DOT__ll_fifo_wr_state,)
+#define	sd_ll_fifo_wr_complete	VVAR(_@$(PREFIX)__DOT__ll_fifo_wr_complete)
+#define	sd_use_fifo	VVAR(_@$(PREFIX)__DOT__r_use_fifo)
+#define	sd_fifo_wr	VVAR(_@$(PREFIX)__DOT__r_fifo_wr)
+
+@SIM.DEBUG=
+			/*
+			printf(" SDSPI[%d,%d(%d),(%d)]",
+				m_core->sd_cmd_busy,
+				m_core->sd_clk,
+				m_core->sd_cmd_state,
+				m_core->sd_rsp_state);
+			printf(" LL[%d,%2x->CK=%d/%2x,%s,ST=%2d,TX=%2x,RX=%2x->%d,%2x] ",
+				m_core->sd_ll_cmd_stb,
+				m_core->sd_ll_cmd_dat,
+				m_core->sd_ll_z_counter,
+				// (m_core->sd_ll_clk_counter==0)?1:0,
+				m_core->sd_ll_clk_counter,
+				(m_core->sd_ll_idle)?"IDLE":"    ",
+				m_core->sd_ll_state,
+				m_core->sd_ll_byte,
+				m_core->sd_ll_ireg,
+				m_core->sd_ll_out_stb,
+				m_core->sd_ll_out_dat
+				);
+			printf(" CRC=%02x/%2d",
+				m_core->sd_cmd_crc,
+				m_core->sd_cmd_crc_cnt);
+			printf(" SPI(%d,%d,%d/%d,%d)->?",
+				m_core->o_sf_cs_n,
+				m_core->o_sd_cs_n,
+				m_core->o_spi_sck,
+				m_core->@$(VERILATOR_PREFIX)__DOT__sdcard_sck,
+				m_core->o_spi_mosi);
+
+			printf(" CK=%d,LN=%d",
+				m_core->sd_clk,
+				m_core->sd_lgblklen);
+
+
+			if (m_core->sd_use_fifo){
+				printf(" FIFO");
+				if (m_core->sd_fifo_wr)
+					printf("-WR(%04x,%d,%d,%d)",
+						m_core->sd_fifo_rd_crc,
+						m_core->sd_fifo_rd_crc_stb,
+						m_core->sd_ll_fifo_pkt_state,
+						m_core->sd_have_data_response_token);
+				else
+					printf("-RD(%04x,%d,%d,%d)",
+						m_core->sd_fifo_wr_crc,
+						m_core->sd_fifo_wr_crc_stb,
+						m_core->sd_ll_fifo_wr_state,
+						m_core->sd_ll_fifo_wr_complete
+						);
+			}
+			*/
+##
 @RTL.MAKE.GROUP= SDSPI
 @RTL.MAKE.SUBD=sdspi
 @RTL.MAKE.FILES= sdspi.v llsdspi.v spicmd.v spirxdata.v spitxdata.v

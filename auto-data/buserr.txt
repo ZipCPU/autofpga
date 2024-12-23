@@ -1,9 +1,9 @@
 ################################################################################
 ##
-## Filename: 	buserr.txt
-## {{{
-## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## Filename:	auto-data/buserr.txt
 ##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## {{{
 ## Purpose:	Provide a readable memory location containing the address of the
 ##		last bus error.
 ##
@@ -33,13 +33,14 @@
 ## {{{
 ##		http://www.gnu.org/licenses/gpl.html
 ##
+##
 ################################################################################
 ##
 ## }}}
 @PREFIX=buserr
 @NADDR=1
 @SLAVE.TYPE=SINGLE
-@SLAVE.BUS=wb
+@SLAVE.BUS=wb32
 @SINGLE.INPUT= r_bus_err
 @CLOCK.NAME=clk
 @$RWID=(@$(zip.MASTER.BUS.AWID) > @$(wbu.MASTER.BUS.AWID)) ? @$(zip.MASTER.BUS.AWID) : @$(wbu.MASTER.BUS.AWID)

@@ -1,0 +1,72 @@
+################################################################################
+##
+## Filename:	auto-data/rtccount.txt
+##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## {{{
+## Purpose:	Define a very simple peripheral that counts fractions of a
+##		second since startup.
+##
+## Creator:	Dan Gisselquist, Ph.D.
+##		Gisselquist Technology, LLC
+##
+################################################################################
+## }}}
+## Copyright (C) 2015-2024, Gisselquist Technology, LLC
+## {{{
+## This program is free software (firmware): you can redistribute it and/or
+## modify it under the terms of the GNU General Public License as published
+## by the Free Software Foundation, either version 3 of the License, or (at
+## your option) any later version.
+##
+## This program is distributed in the hope that it will be useful, but WITHOUT
+## ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY or
+## FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+## for more details.
+##
+## You should have received a copy of the GNU General Public License along
+## with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
+## target there if the PDF file isn't present.)  If not, see
+## <http://www.gnu.org/licenses/> for a copy.
+## }}}
+## License:	GPL, v3, as defined and found on www.gnu.org,
+## {{{
+##		http://www.gnu.org/licenses/gpl.html
+##
+##
+################################################################################
+##
+## }}}
+@PREFIX=rtccount
+@DEVID=RTCCOUNT
+@ACCESS=@$(DEVID)_ACCESS
+@NADDR=1
+@CLOCK.NAME=clk
+@SLAVE.TYPE=SINGLE
+@SLAVE.BUS=wb32
+@$STEP=((1<<32) + @$(CLOCK.FREQUENCY)/2)/@$(CLOCK.FREQUENCY)
+@MAIN.DEFNS=
+	reg	[31:0]	r_@$(PREFIX)_data;
+@MAIN.INSERT=
+	////////////////////////////////////////////////////////////////////////
+	//
+	// RTC Counter
+	// {{{
+	//
+	// Using clock @$(CLOCK.WIRE) with frequency @$(CLOCK.FREQUENCY)
+	//
+
+	assign	@$(SLAVE.PREFIX)_stall = 1'b0;
+	assign	@$(SLAVE.PREFIX)_ack = @$(SLAVE.PREFIX)_stb;
+
+	initial	r_@$(PREFIX)_data = 32'h0;
+	always @(posedge i_clk)
+		r_@$(PREFIX)_data <= r_@$(PREFIX)_data + @$(STEP);
+	assign	@$(SLAVE.PREFIX)_idata = r_@$(PREFIX)_data;
+	// }}}
+@REGS.N=1
+@REGS.0= 0 R_RTCCOUNT RTCCOUNT
+@BDEF.IONAME=_@$(PREFIX)
+@BDEF.IOTYPE=unsigned
+@BDEF.OSDEF=_BOARD_HAS_@$(DEVID)
+@BDEF.OSVAL= static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME) = ((unsigned *)@$[0x%08x](REGBASE));

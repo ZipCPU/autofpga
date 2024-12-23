@@ -1,9 +1,9 @@
 ################################################################################
 ##
-## Filename: 	bkram.txt
-## {{{
-## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## Filename:	auto-data/bkram.txt
 ##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## {{{
 ## Purpose:	To define the interface to a generic block RAM device for the
 ##		purposes of autofpga.
 ##
@@ -33,6 +33,7 @@
 ## {{{
 ##		http://www.gnu.org/licenses/gpl.html
 ##
+##
 ################################################################################
 ##
 ## }}}
@@ -40,18 +41,18 @@
 @DEVID=BKRAM
 @$LGMEMSZ=20
 @LGMEMSZ.FORMAT=%d
-@$NADDR=(1<<(@$THIS.LGMEMSZ-2))
+@$NADDR=(1<<(@$(THIS.LGMEMSZ)))/(@$(SLAVE.BUS.WIDTH)/8)
 @$NBYTES=(1<<(@$THIS.LGMEMSZ))
 @NBYTES.FORMAT=0x%08x
 @ACCESS=@$(DEVID)_ACCESS
 @SLAVE.TYPE=MEMORY
-@SLAVE.BUS=wb
+@SLAVE.BUS=wbwide
 @MAIN.INSERT=
 	memdev #(
 		.LGMEMSZ(@$(THIS.LGMEMSZ)),
 		.DW(@$(SLAVE.BUS.WIDTH)),
 		.EXTRACLOCK(1)
-	) @$(PREFIX)i(
+	) u_@$(PREFIX) (
 		.i_clk(@$(SLAVE.BUS.CLOCK.WIRE)),
 		.i_reset(@$(SLAVE.BUS.CLOCK.RESET)),
 		@$(SLAVE.ANSIPORTLIST)
@@ -67,6 +68,7 @@
 @LD.PERM=	wx
 @LD.NAME=	@$(MEM.NAME)
 @RTL.MAKE.GROUP= @$(DEVID)
+@RTL.MAKE.SUBD=
 @RTL.MAKE.FILES= memdev.v
 @$NADDRHX = @$NADDR
 @NADDRHX.FORMAT= 0x%x
@@ -85,20 +87,36 @@
 #endif
 #endif
 
-#define	block_ram	VVAR(_@$(PREFIX)i__DOT__mem)
+#define	block_ram	rootp->main__DOT__u_@$(PREFIX)__DOT__mem.m_storage
+
 @$BUSBYTES=@$(SLAVE.BUS.WIDTH)/8
+@SLAVE.ORDER=1
 @SIM.LOAD=
-			char	*mem;
-			start = start & (-(@$(BUSBYTES)));
-			wlen = (wlen+(@$(BUSBYTES)-1))&(-@$(BUSBYTES));
+			start = start & (-4);
+			wlen = (wlen+3)&(-4);
 
 			// Need to byte swap data to get it into the memory
-			//  But ... it's byte swapping at the *WORD* width, not
-			//  the 32-bit width we've built the byteswapbuf() for.
-			mem = (char *)&m_core->block_ram[start];
-			for(unsigned k=0; k<wlen; k++) {
-				unsigned	s;
-				s = (k&(-@$(BUSBYTES)))
-					|((@$(BUSBYTES)-1-k) & (@$(BUSBYTES)-1));
-				mem[s] = buf[k];
+			if (@$(SLAVE.BUS.WIDTH) == 32) {
+				char	*bswapd = new char[len+8];
+				memcpy(bswapd, &buf[offset], wlen);
+				byteswapbuf(len>>2, (uint32_t *)bswapd);
+				memcpy(&m_core->block_ram[start], bswapd, wlen);
+				delete[] bswapd;
+			} else {
+				for(unsigned jk=0; jk<wlen; jk=jk+1) {
+					unsigned word_addr, subword_addr;
+					unsigned	*wp;
+					char		*cp;
+
+					word_addr = start+jk;
+					word_addr /= @$(SLAVE.BUS.WIDTH)/8;
+					wp = m_core->block_ram[word_addr];
+					cp = (char *)wp;
+
+					subword_addr = start+jk;
+					subword_addr = ~subword_addr;
+					subword_addr &= @$(SLAVE.BUS.WIDTH)/8-1;
+					// subword_addr = @$(SLAVE.BUS.WIDTH)/8-subword_addr;
+					cp[subword_addr] = buf[offset+jk];
+				}
 			}

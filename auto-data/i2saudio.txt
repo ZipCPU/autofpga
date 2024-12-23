@@ -1,0 +1,163 @@
+################################################################################
+##
+## Filename:	auto-data/i2saudio.txt
+##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## {{{
+## Purpose:	
+##
+## Creator:	Dan Gisselquist, Ph.D.
+##		Gisselquist Technology, LLC
+##
+################################################################################
+## }}}
+## Copyright (C) 2017-2024, Gisselquist Technology, LLC
+## {{{
+## This program is free software (firmware): you can redistribute it and/or
+## modify it under the terms of the GNU General Public License as published
+## by the Free Software Foundation, either version 3 of the License, or (at
+## your option) any later version.
+##
+## This program is distributed in the hope that it will be useful, but WITHOUT
+## ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY or
+## FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+## for more details.
+##
+## You should have received a copy of the GNU General Public License along
+## with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
+## target there if the PDF file isn't present.)  If not, see
+## <http://www.gnu.org/licenses/> for a copy.
+## }}}
+## License:	GPL, v3, as defined and found on www.gnu.org,
+## {{{
+##		http://www.gnu.org/licenses/gpl.html
+##
+##
+################################################################################
+##
+## }}}
+@PREFIX=i2saudio
+@ACCESS=I2SAUDIO
+@DEPENDS=ARBITRARY_CLOCK_GENERATOR_ACCESS
+@DEVID=AUDIO
+@SOURCE=audio_in
+@SINK=audio_out
+@NADDR=1
+@MAIN.PORTLIST=
+		o_i2s_lrclk, o_i2s_bclk, o_i2s_mclk, o_i2s_dac, i_i2s_adc
+@MAIN.IODECL=
+	output	wire	o_i2s_lrclk, o_i2s_bclk, o_i2s_mclk, o_i2s_dac;
+	input	wire	i_i2s_adc;
+@MAIN.DEFNS=
+	////////////////////////////////////////////////////////////////////////
+	//
+	// I2S Audio signal definitions
+	// {{{
+	wire		w_@$(PREFIX)_en;
+	// Verilator lint_off UNUSED
+	//
+	// These wires may or may not be connected to anything ...
+	wire		w_@$(SINK)_valid, w_@$(SINK)_ready, w_@$(SINK)_last;
+	wire	[23:0]	w_@$(SINK)_data;
+	//
+	// w_@$(SOURCE)... comes from the microphone (if present)
+	wire		w_@$(SOURCE)_valid, w_@$(SOURCE)_ready,
+			w_@$(SOURCE)_last;
+	wire	[23:0]	w_@$(SOURCE)_data;
+
+	wire	[31:0]	w_@$(PREFIX)_debug;
+	// Verilator lint_on  UNUSED
+	// }}}
+@MAIN.INSERT=
+	////////////////////////////////////////////////////////////////////////
+	//
+	// I2S Audio signal handler
+	// {{{
+
+	assign	o_i2s_mclk = i_genclk_clk;
+	assign	w_@$(PREFIX)_en = 1'b1;
+
+	axisi2s #(
+		.BDIV(4'h1)
+	) u_@$(PREFIX) (
+		// {{{
+		.S_AXI_ACLK(i_clk), .S_AXI_ARESETN(!i_reset),
+		//
+		// Inputs to drive the speakers
+		.S_AXIS_TVALID(w_@$(SINK)_valid),
+		.S_AXIS_TREADY(w_@$(SINK)_ready),
+		.S_AXIS_TDATA(w_@$(SINK)_data),
+		.S_AXIS_TLAST(w_@$(SINK)_last),
+		//
+		// Outputs from the microphone
+		.M_AXIS_TVALID(w_@$(SOURCE)_valid),
+		.M_AXIS_TREADY(w_@$(SOURCE)_ready),
+		.M_AXIS_TDATA(w_@$(SOURCE)_data),
+		.M_AXIS_TLAST(w_@$(SOURCE)_last),
+		//
+		.i_mclk(o_i2s_mclk),
+		.i_clken(w_@$(PREFIX)_en),
+		.o_lrclk(o_i2s_lrclk),
+		.o_bclk(o_i2s_bclk),
+		.i_adc(i_i2s_adc),
+		.o_dac(o_i2s_dac),
+		.o_debug(w_@$(PREFIX)_debug)
+		// }}}
+	);
+
+`ifndef	AUDIOSINK_ACCESS
+	assign	w_@$(SINK)_valid = 0;
+	assign	w_@$(SINK)_data  = 0;
+	assign	w_@$(SINK)_last  = 0;
+`endif
+`ifndef	AUDIOSOURCE_ACCESS
+	assign	w_@$(SOURCE)_ready = 1;
+`endif
+	// }}}
+@MAIN.ALT=
+	////////////////////////////////////////////////////////////////////////
+	//
+	// (No) I2S Audio signal handler (option)
+	// {{{
+`ifndef	AUDIOSINK_ACCESS
+	assign	w_@$(SINK)_valid = 0;
+	assign	w_@$(SINK)_data  = 0;
+	assign	w_@$(SINK)_last  = 0;
+`endif
+	assign	w_@$(SINK)_ready = 0;
+
+	assign	w_@$(SOURCE)_valid = 0;
+	assign	w_@$(SOURCE)_data  = 0;
+	assign	w_@$(SOURCE)_last  = 0;
+`ifndef	AUDIOSOURCE_ACCESS
+	assign	w_@$(SOURCE)_ready = 0;
+`endif
+	// }}}
+@XDC.INSERT=
+## set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ sdrami/r_sys_reset* }] -to [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/mclk_reset* }] 10.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/u_adc_fifo/rgray* }] -to [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/u_adc_fifo/rgray_cross* }] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/u_adc_fifo/wgray* }] -to [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/u_adc_fifo/wgray_cross* }] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/u_adc_fifo/mem_reg* }] -to [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/u_adc_fifo/GEN_REGISTERED_READ.o_rd_data* }] 8.0
+##
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/u_dac_fifo/mem_reg* }] -to [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/u_dac_fifo/GEN_REGISTERED_READ.o_rd_data* }] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/u_dac_fifo/rgray* }] -to [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/u_dac_fifo/rgray_cross* }] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/u_dac_fifo/wgray* }] -to [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/u_dac_fifo/wgray_cross* }] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/u_dac_fifo/wr_rgray* }] -to [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/r_dac_data* }] 8.0
+##
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/lli2si/o_lrclk* }] -to [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/xclk_pipe* }] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/lli2si/o_bclk* }] -to [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/xclk_pipe* }] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/lli2si/o_dac* }] -to [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/xclk_pipe* }] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *xgenclki/GEN_PLL.pll* }] -to [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/xclk_pipe* }] 8.0
+set_false_path -hold -from [get_cells -hier -filter {NAME=~ *xgenclki/GEN_PLL.pll* }] -to [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/xclk_pipe* }]
+set_false_path -hold -from [get_cells -hier -filter {NAME=~ *xgenclki/GEN_PLL.pll* }] -rise_to [get_clocks -filter {NAME=~ *clk_pll_i* }]
+##
+## set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/lli2si/o_lrclk* }] -to [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/xclk_debug* }] 8.0
+## set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/lli2si/o_bclk* }] -to [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/xclk_debug* }] 8.0
+## set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/lli2si/o_dac* }] -to [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/xclk_debug* }] 8.0
+## set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *xgenclki/GEN_PLL.pll* }] -to [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/xclk_debug* }] 8.0
+## set_false_path -hold -from [get_cells -hier -filter {NAME=~ *xgenclki/GEN_PLL.pll* }] -to [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/xclk_debug* }]
+@RTL.MAKE.GROUP=AUDIO
+@RTL.MAKE.SUBD=audio
+@RTL.MAKE.FILES=axisi2s.v lli2s.v
+@REGS.N=1
+@REGS.0= 0 R_@$(DEVID) @$(DEVID)

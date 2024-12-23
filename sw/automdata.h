@@ -1,9 +1,9 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	automdata.h
-// {{{
-// Project:	VideoZip, a ZipCPU SoC supporting video functionality
+// Filename:	sw/automdata.h
 //
+// Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+// {{{
 // Purpose:	
 //
 // Creator:	Dan Gisselquist, Ph.D.
@@ -31,6 +31,7 @@
 // License:	GPL, v3, as defined and found on www.gnu.org,
 // {{{
 //		http://www.gnu.org/licenses/gpl.html
+//
 //
 ////////////////////////////////////////////////////////////////////////////////
 //

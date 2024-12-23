@@ -1,0 +1,154 @@
+################################################################################
+##
+## Filename:	auto-data/edid.txt
+##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## {{{
+## Purpose:	Extended Display Identification Data.  This peripheral is
+##		responsible for the ability to both read EDID from the
+##	downstream display, for forwarding it to the upstream (receive)
+##	display generator, and for making things available for the CPU to
+##	read.
+##
+## Creator:	Dan Gisselquist, Ph.D.
+##		Gisselquist Technology, LLC
+##
+################################################################################
+## }}}
+## Copyright (C) 2015-2024, Gisselquist Technology, LLC
+## {{{
+## This program is free software (firmware): you can redistribute it and/or
+## modify it under the terms of the GNU General Public License as published
+## by the Free Software Foundation, either version 3 of the License, or (at
+## your option) any later version.
+##
+## This program is distributed in the hope that it will be useful, but WITHOUT
+## ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY or
+## FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+## for more details.
+##
+## You should have received a copy of the GNU General Public License along
+## with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
+## target there if the PDF file isn't present.)  If not, see
+## <http://www.gnu.org/licenses/> for a copy.
+## }}}
+## License:	GPL, v3, as defined and found on www.gnu.org,
+## {{{
+##		http://www.gnu.org/licenses/gpl.html
+##
+##
+################################################################################
+##
+## }}}
+@PREFIX=edid
+@DEVID=EDID
+@ACCESS=@$(DEVID)_ACCESS
+@INCLUDEFILE=i2ccpu.txt
+@IOSDA=io_hdmitx_sda
+@IOSCL=io_hdmitx_scl
+@INTERRUPT=edid_int
+@INT.I2C.WIRE=
+@INT.I2C.PIC=
+@INT.EDID.WIRE=@$(INTERRUPT)
+@INT.EDID.PIC=syspic
+@BDEF.DEFN=
+@BDEF.IONAME=_@$(PREFIX)
+@BDEF.IOTYPE= I2CCPU
+@BDEF.OSVAL=static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME) = ((@$(BDEF.IOTYPE) *)@$[0x%08x](REGBASE));
+
+@MAIN.INSERT=
+	////////////////////////////////////////////////////////////////////////
+	//
+	// The EDID I2C Controller
+	// {{{
+
+	wbi2ccpu #(
+		.ADDRESS_WIDTH(@$(MASTER.BUS.AWID)),
+		.DATA_WIDTH(@$(MASTER.BUS.WIDTH)),
+		.AXIS_ID_WIDTH(@$(IDW))
+	) u_@$(PREFIX) (
+		// {{{
+		.i_clk(@$(SLAVE.BUS.CLOCK.WIRE)), .i_reset(@$(SLAVE.BUS.CLOCK.RESET)),
+		@$(SLAVE.ANSIPORTLIST),
+		@$(MASTER.ANSIPORTLIST),
+		.i_i2c_sda(i_@$(PREFIX)_sda), .i_i2c_scl(i_@$(PREFIX)_scl),
+		.o_i2c_sda(o_@$(PREFIX)_sda), .o_i2c_scl(o_@$(PREFIX)_scl),
+		.M_AXIS_TVALID(@$(PREFIX)_valid), .M_AXIS_TREADY(@$(PREFIX)_ready),
+			.M_AXIS_TDATA(@$(PREFIX)_data), .M_AXIS_TLAST(@$(PREFIX)_last),
+			.M_AXIS_TID(@$(PREFIX)_id),
+		.i_sync_signal(rtc_pps),
+		//
+		.o_interrupt(@$(INTERRUPT)),
+		.o_debug(@$(PREFIX)_debug)
+		// }}}
+	);
+
+	// }}}
+##
+################################################################################
+################################################################################
+################################################################################
+##
+@PREFIX=edidslv
+@DEVID=EDIDRX
+@NADDR=64
+@SLAVE.BUS=wb32
+@SLAVE.TYPE=DOUBLE
+@STREAM=edid
+@IOSDA=io_hdmirx_sda
+@IOSCL=io_hdmirx_scl
+@TOP.PORTLIST=
+		// EDID RX definitions
+		@$(IOSCL), @$(IOSDA)
+@TOP.IODECL=
+	// EDID RX definitions
+	inout	wire	@$(IOSCL), @$(IOSDA);
+@TOP.DEFNS=
+	wire	w_@$(PREFIX)_scl, w_@$(PREFIX)_sda;
+@TOP.INSERT=
+	assign	@$(IOSCL) = w_@$(PREFIX)_scl ? 1'bz : 1'b0;
+	assign	@$(IOSDA) = w_@$(PREFIX)_sda ? 1'bz : 1'b0;
+@TOP.MAIN=
+	// EDID RX definitions
+	@$(IOSCL), @$(IOSDA),
+	w_@$(PREFIX)_scl,  w_@$(PREFIX)_sda
+@MAIN.PORTLIST=
+		// EDID RX definitions
+		i_@$(PREFIX)_scl, i_@$(PREFIX)_sda,
+		o_@$(PREFIX)_scl, o_@$(PREFIX)_sda
+@MAIN.IODECL=
+	// EDID RX definitions
+	input	wire	i_@$(PREFIX)_scl, i_@$(PREFIX)_sda;
+	output	wire	o_@$(PREFIX)_scl, o_@$(PREFIX)_sda;
+@MAIN.DEFNS=
+	// Verilator lint_off UNUSED
+	wire	[31:0]	@$(PREFIX)_dbg;
+	// Verilator lint_on  UNUSED
+@MAIN.INSERT=
+	////////////////////////////////////////////////////////////////////////
+	//
+	// @$(DEVID)
+	// {{{
+	wbi2cslave #(
+		.AXIS_SUPPORT(1'b1),
+		.SLAVE_ADDRESS(7'h50)
+	) u_@$(PREFIX) (
+		.i_clk(i_clk), .i_reset(i_reset),
+		@$(SLAVE.ANSIPORTLIST),
+		.s_valid(@$(STREAM)_valid), .s_ready(@$(STREAM)_ready),
+			.s_data(@$(STREAM)_data), .s_last(@$(STREAM)_last),
+		.i_i2c_scl(i_@$(PREFIX)_scl), .i_i2c_sda(i_@$(PREFIX)_sda),
+		.o_i2c_scl(o_@$(PREFIX)_scl), .o_i2c_sda(o_@$(PREFIX)_sda),
+		.o_dbg(@$(PREFIX)_dbg)
+	);
+	// }}}
+
+@REGS.N=1
+@REGS.0=0 R_EDIDRX EDIDRX
+@RTL.MAKE.FILES=wbi2cslave.v
+@RTL.MAKE.GROUP=I2CSLV
+@RTL.MAKE.SUBD=wbi2c
+@BDEF.IONAME=_@$(PREFIX)
+@BDEF.IOTYPE=char
+@BDEF.OSVAL=static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME) = ((@$(BDEF.IOTYPE) *)@$[0x%08x](REGBASE));
+

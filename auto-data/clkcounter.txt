@@ -1,9 +1,9 @@
 ################################################################################
 ##
-## Filename: 	clkcounter.txt
-## {{{
-## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## Filename:	auto-data/clkcounter.txt
 ##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## {{{
 ## Purpose:	The clkcounter peripheral counts the number of a given clocks
 ##		ticks per second as defined by a second clock.  This particular
 ##	file tells us how to connect the clkcounter to the rest of the design
@@ -35,25 +35,33 @@
 ## {{{
 ##		http://www.gnu.org/licenses/gpl.html
 ##
+##
 ################################################################################
 ##
 ## }}}
 @PREFIX=sysclk
 @DEVID=SYSCLK
+@ACCESS=@$(DEVID)
 @NADDR=	1
 @SLAVE.TYPE=	SINGLE
-@SLAVE.BUS=	wb
-@DEPENDS=	GPSTRK_ACCESS
+@SLAVE.BUS=wb32
 @TSTCLOCK=i_clk
 # @SINGLE.INPUTS=	ck_pps
 @MAIN.DEFNS=
 	reg	r_@$(PREFIX)_ack;
 @MAIN.INSERT=
-	clkcounter clk@$(PREFIX)ctr(i_clk, ck_pps, @$(TSTCLOCK), @$(SLAVE.PREFIX)_idata);
+	clkcounter #(
+		.CLOCKFREQ_HZ(0)	// We'll count PPS externally
+	) clk@$(PREFIX)ctr(
+		.i_sys_clk(i_clk),
+		.i_tst_clk(@$(TSTCLOCK)),
+		.i_sys_pps(rtc_pps),
+		.o_sys_counts(@$(SLAVE.PREFIX)_idata)
+	);
 
 	initial	r_@$(PREFIX)_ack = 0;
 	always @(posedge i_clk)
-		r_@$(PREFIX)_ack <= (@$(SLAVE.PREFIX)_stb);
+		r_@$(PREFIX)_ack <= !i_reset && @$(SLAVE.PREFIX)_stb;
 	assign	@$(SLAVE.PREFIX)_ack   = r_@$(PREFIX)_ack;
 	assign	@$(SLAVE.PREFIX)_stall = 1'b0;
 @REGS.NOTE = // SYSCLK Clock Counter (measures clock speed)
@@ -61,4 +69,6 @@
 @REGS.0 = 0 R_@$(DEVID) @$(DEVID)
 @BDEF.IONAME=_@$(PREFIX)
 @BDEF.IOTYPE= unsigned
-@BDEF..OSVAL=static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME) = ((@$(BDEF.IOTYPE) *)@$[0x08x](REGBASE));
+@BDEF.OSVAL=static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME) = ((@$(BDEF.IOTYPE) *)@$[0x%08x](REGBASE));
+@XDC.INSERT=
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *clk@$(PREFIX)ctr/avgs*}]       -to [ get_cells -hier -filter {NAME =~*clk@$(PREFIX)ctr/q_v*}]   8.0

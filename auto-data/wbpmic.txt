@@ -1,9 +1,9 @@
 ################################################################################
 ##
-## Filename:	wbpmic.txt
-## {{{
-## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## Filename:	auto-data/wbpmic.txt
 ##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## {{{
 ## Purpose:	To describe the interface of a very simple ADC (PModMIC3) for
 ##		autogen to work with.
 ##
@@ -33,13 +33,14 @@
 ## {{{
 ##		http://www.gnu.org/licenses/gpl.html
 ##
+##
 ################################################################################
 ##
 ## }}}
 @PREFIX=pmic
 @NADDR=	2
 @SLAVE.TYPE=	OTHER
-@SLAVE.BUS=wb
+@SLAVE.BUS=wb32
 @ACCESS= MICROPHONE_ACCESS
 @$SAMPLERATE=48000
 @$CLKSPERSAMPLE.EXPR=@$CLKFREQHZ/@$.SAMPLERATE
@@ -78,4 +79,4 @@ typedef struct  WBMIC_S {
 @BDEF.IONAME= io_wbmic
 @BDEF.IOTYPE= WBMIC
 @BDEF.OSDEF=	_BOARD_HAS_WBMIC
-@BDEF.OSVAL=static volatile @$.BDEF.IOTYPE *const _wbmic = ((@$.BDEF.IOTYPE *)@$.BASE);
+@BDEF.OSVAL=static volatile @$.BDEF.IOTYPE *const _wbmic = ((@$.BDEF.IOTYPE *)@$(REGBASE));

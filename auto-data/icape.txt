@@ -1,9 +1,9 @@
 ################################################################################
 ##
-## Filename: 	icape.txt
-## {{{
-## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## Filename:	auto-data/icape.txt
 ##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## {{{
 ## Purpose:	A description of how to connect the wbicapetwo interface for
 ##		Xilinx's ICAPE2 interface to a wishbone bus.
 ##
@@ -33,23 +33,25 @@
 ## {{{
 ##		http://www.gnu.org/licenses/gpl.html
 ##
+##
 ################################################################################
 ##
 ## }}}
-@PREFIX=cfg
+@PREFIX=icape
 @NADDR=32
 @ACCESS=CFG_ACCESS
 @SLAVE.TYPE=OTHER
-@SLAVE.BUS=wb
-@$LGDIV=3
-@$LGDIVM1=@$(LGDIV)-1
+@SLAVE.BUS=wb32
 @MAIN.PARAM=
-	localparam	ICAPE_LGDIV=@$(LGDIV);
-@MAIN.DEFNS=
-	// Verilator lint_off	UNUSED
-	wire	[31:0]	@$(PREFIX)_debug;
-	// Verilator lint_on 	UNUSED
+	localparam	ICAPE_LGDIV=3;
 @MAIN.INSERT=
+	////////////////////////////////////////////////////////////////////////
+	//
+	// ICAPE2 driver/controller
+	// {{{
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
 `ifdef	VERILATOR
 	reg	r_@$(PREFIX)_ack;
 
@@ -59,22 +61,17 @@
 	assign	@$(SLAVE.PREFIX)_ack   = r_@$(PREFIX)_ack;
 	assign	@$(SLAVE.PREFIX)_stall = 1'b0;
 	assign	@$(SLAVE.PREFIX)_idata = 32'h00;
-
-	assign	@$(PREFIX)_debug = 32'h00;
-
-	// Verilator lint_off UNUSED
-	wire	@$(PREFIX)_unused;
-	assign	@$(PREFIX)_unused = &{ 1'b0, ICAPE_LGDIV[31:0] };
-	// Verilator lint_on  UNUSED
 `else
 	wbicapetwo #(
 		.LGDIV(ICAPE_LGDIV)
-	) u_@$(PREFIX)(
-		.i_clk(i_clk),
-		@$(SLAVE.ANSIPORTLIST),
-		.o_dbg(@$(PREFIX)_debug)
+	) u_@$(PREFIX) (
+		// {{{
+		.i_clk(i_clk), .i_reset(i_reset),
+		@$(SLAVE.ANSIPORTLIST)
+		// }}}
 	);
 `endif
+	// }}}
 @REGS.NOTE=// FPGA CONFIG REGISTERS: 0x4e0-0x4ff
 @REGS.N=20
 @REGS.0=   0 R_CFG_CRC		FPGACRC
@@ -119,9 +116,10 @@
 #define	CFG_BOOTSTS	22
 #define	CFG_CTL1	24
 #define	CFG_BSPI	31
-@BDEF.IONAME=io_icape[32]
+@BDEF.IONAME=_icape[32]
 @BDEF.IOTYPE=unsigned
-@BDEF.OSDEF=_BOARD_HAS_ICAPTETWO
-@BDEF.OSVAL=static volatile @$THIS.BDEF.IOTYPE *const _icape = ((unsigned *)@$[0x%08x](THIS.BASE));
+@BDEF.OSDEF=_BOARD_HAS_ICAPETWO
+@BDEF.OSVAL=static volatile @$THIS.BDEF.IOTYPE *const _icape = ((unsigned *)@$[0x%08x](REGBASE));
 @RTL.MAKE.GROUP=ICAP
+@RTL.MAKE.SUBD=
 @RTL.MAKE.FILES=wbicapetwo.v

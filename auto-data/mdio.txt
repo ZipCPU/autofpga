@@ -1,9 +1,9 @@
 ################################################################################
 ##
-## Filename: 	mdio.txt
-## {{{
-## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## Filename:	auto-data/mdio.txt
 ##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## {{{
 ## Purpose:	This file describes how the network MDIO core is to be
 ##		connected to the rest of the design, for use by the autofpga
 ##	program.
@@ -34,14 +34,15 @@
 ## {{{
 ##		http://www.gnu.org/licenses/gpl.html
 ##
+##
 ################################################################################
 ##
 ## }}}
 @PREFIX=mdio
-@NADDR=32
+@NADDR=1024
 @ACCESS=NETCTRL_ACCESS
 @SLAVE.TYPE=OTHER
-@SLAVE.BUS=wb
+@SLAVE.BUS=wb32
 @TOP.PORTLIST=
 		// Toplevel ethernet MDIO ports
 		o_eth_mdclk, io_eth_mdio
@@ -63,13 +64,19 @@
 	// Ethernet control (MDIO)
 	output	wire		o_mdclk, o_mdio, o_mdwe;
 	input	wire		i_mdio;
-@MAIN.INSERT=
+@MAIN.DEFNS=
 	// Verilator lint_off UNUSED
-	wire[31:0]	mdio_debug;
+	wire[31:0]	@$(PREFIX)_debug;
 	// Verilator lint_on  UNUSED
-	enetctrl #(2)
-		mdio(i_clk, i_reset, @$(SLAVE.PORTLIST),
-			o_mdclk, o_mdio, i_mdio, o_mdwe, mdio_debug);
+@MAIN.INSERT=
+	enetctrl #(
+		.CLKBITS(6)
+	) u_@$(PREFIX) (
+		.i_clk(i_clk), .i_reset(i_reset),
+		@$(SLAVE.ANSIPORTLIST),
+		.o_mdclk(o_mdclk), .o_mdio(o_mdio), .i_mdio(i_mdio),
+		.o_mdwe(o_mdwe), .o_debug(@$(PREFIX)_debug)
+	);
 @MAIN.ALT=
 	assign	o_mdclk = 1'b1;
 	assign	o_mdio  = 1'b1;
@@ -116,17 +123,17 @@
 //
 #define MDIO_BMCR	0x00
 #define MDIO_BMSR	0x01
-#define MDIO_PHYIDR1	0x02
-#define MDIO_PHYIDR2	0x03
-#define MDIO_ANAR	0x04
-#define MDIO_ANLPAR	0x05
-#define MDIO_ANER	0x06
-#define MDIO_ANNPTR	0x07
-#define MDIO_ANNPRR	0x08
-#define MDIO_GBCR	0x09
-#define MDIO_GBSR	0x0a
-#define MDIO_MACR	0x0d
-#define MDIO_MAADR	0x0e
+#define MDIO_PHYIDR1	0x02	// PHY ID Register #1
+#define MDIO_PHYIDR2	0x03	// PHY ID Register #2
+#define MDIO_ANAR	0x04	// Autonegotiation advertisement
+#define MDIO_ANLPAR	0x05	// Autonegotiation link partner ability
+#define MDIO_ANER	0x06	// Autonegotiation expansion
+#define MDIO_ANNPTR	0x07	// Autonegotiation next page
+#define MDIO_ANNPRR	0x08	// Autonegotiation link partner next page
+#define MDIO_GBCR	0x09	// 1GBase-T Control
+#define MDIO_GBSR	0x0a	// 1GBase-T Status
+#define MDIO_MACR	0x0d	// MMD Access control
+#define MDIO_MAADR	0x0e	// MMD Access register/data
 #define MDIO_GBESR	0x0f
 #define MDIO_PHYCR	0x10
 #define MDIO_PHYSR	0x11
@@ -147,13 +154,13 @@
 // #define XMDIO_ACCR	0x1b
 
 typedef struct ENETMDIO_S {
-	unsigned	e_v[32];
+	unsigned	e_v[32][32];
 } ENETMDIO;
 
 @BDEF.IOTYPE= ENETMDIO
 @BDEF.IONAME= io_netmdio
 @BDEF.OSDEF= _BOARD_HAS_NETMDIO
-@BDEF.OSVAL= static volatile @$THIS.BDEF.IOTYPE *const _mdio = ((@$THIS.BDEF.IOTYPE *)@$THIS.BASE);
+@BDEF.OSVAL= static volatile @$THIS.BDEF.IOTYPE *const _mdio = ((@$THIS.BDEF.IOTYPE *)@$[0x%08x](REGBASE));
 @SIM.CLOCK=clk
 @SIM.INCLUDE=
 #include "enetctrlsim.h"
@@ -167,11 +174,12 @@ typedef struct ENETMDIO_S {
 #endif // @$(ACCESS)
 @SIM.TICK=
 #ifdef	@$(ACCESS)
-		m_core->i_mdio = (*m_mdio)((m_core->o_net_reset_n==0)?1:0,
+		m_core->i_mdio = (*m_mdio)((m_core->i_reset)?1:0,
 				m_core->o_mdclk,
 				((m_core->o_mdwe)&&(!m_core->o_mdio))?0:1);
 #else
 		m_core->i_mdio = ((m_core->o_mdwe)&&(!m_core->o_mdio))?0:1;
 #endif // @$(ACCESS)
+@RTL.MAKE.SUBD=ethernet
 @RTL.MAKE.GROUP=ENETMDIO
 @RTL.MAKE.FILES=enetctrl.v

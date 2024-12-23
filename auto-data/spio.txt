@@ -1,9 +1,9 @@
 ################################################################################
 ##
-## Filename: 	spio.txt
-## {{{
-## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## Filename:	auto-data/spio.txt
 ##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## {{{
 ## Purpose:	To describe how to interact with the special purpose device
 ##		controller (spio) for the Nexys Video Board (SW, BTN, LEDs)
 ##
@@ -33,6 +33,7 @@
 ## {{{
 ##		http://www.gnu.org/licenses/gpl.html
 ##
+##
 ################################################################################
 ##
 ## }}}
@@ -40,7 +41,7 @@
 @DEVID=SPIO
 @NADDR=1
 @SLAVE.TYPE=SINGLE
-@SLAVE.BUS=wb
+@SLAVE.BUS=wb32
 @ACCESS=@$(DEVID)_ACCESS
 @INT.SPIO.WIRE=@$(PREFIX)_int
 @INT.SPIO.PIC=buspic
@@ -50,8 +51,10 @@
 @TOP.DEFNS=
 	wire	[@$(NLED)-1:0]	w_led;
 @TOP.INSERT=
-	assign	o_led = { w_led[@$(NLED)-1:2], (w_led[1] || !clocks_locked),
-			w_led[0] | s_reset };
+	assign	o_led = { w_led[@$(NLED)-1:3],
+			(w_led[2] || !syncd_stable[3]),
+			(w_led[1] || !clocks_locked),
+			(w_led[0] || s_reset) };
 @TOP.MAIN=
 		i_sw, i_btnc, i_btnd, i_btnl, i_btnr, i_btnu, w_led
 @MAIN.PORTLIST=
@@ -73,10 +76,10 @@
 
 	spio #(
 		.NBTN(@$(NBTN)), .NLEDS(@$(NLED)), .NSW(@$(NSW))
-	) @$(PREFIX)i(
+	) u_@$(PREFIX) (
 		.i_clk(i_clk), .i_reset(i_reset),
 		@$(SLAVE.ANSIPORTLIST),
-		.i_sw(i_sw), .i_btn(i_btn), .o_led(w_led),
+		.i_sw(i_sw), .i_btn(w_btn), .o_led(w_led),
 		.o_int(@$(PREFIX)_int)
 	);
 

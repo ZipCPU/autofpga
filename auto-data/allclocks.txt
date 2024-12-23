@@ -1,0 +1,223 @@
+################################################################################
+##
+## Filename:	auto-data/allclocks.txt
+##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## {{{
+## Purpose:	Describe how to create the clocks necessary for the design
+##
+## Creator:	Dan Gisselquist, Ph.D.
+##		Gisselquist Technology, LLC
+##
+################################################################################
+## }}}
+## Copyright (C) 2015-2024, Gisselquist Technology, LLC
+## {{{
+## This program is free software (firmware): you can redistribute it and/or
+## modify it under the terms of the GNU General Public License as published
+## by the Free Software Foundation, either version 3 of the License, or (at
+## your option) any later version.
+##
+## This program is distributed in the hope that it will be useful, but WITHOUT
+## ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY or
+## FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+## for more details.
+##
+## You should have received a copy of the GNU General Public License along
+## with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
+## target there if the PDF file isn't present.)  If not, see
+## <http://www.gnu.org/licenses/> for a copy.
+## }}}
+## License:	GPL, v3, as defined and found on www.gnu.org,
+## {{{
+##		http://www.gnu.org/licenses/gpl.html
+##
+##
+################################################################################
+##
+## }}}
+@PREFIX=iclock
+@ACCESS=ALLCLOCKS_PRESENT
+@CLOCK.NAME=clk
+@CLOCK.WIRE=i_clk
+@CLOCK.FREQUENCY=100000000
+@CLOCK.TOP=i_clk
+@BDEFS.DEFN=
+#define	CLOCK_FREQUENCY_HZ	@$(CLOCK.FREQUENCY)
+#define	CLKFREQHZ	@$(CLOCK.FREQUENCY)
+@REGDEFS.H.DEFNS=
+#define	CLKFREQHZ	@$(CLOCK.FREQUENCY)
+#
+#
+@PREFIX=masterclk
+@TOP.DEFNS=
+	// Clock/reset definitions
+	// {{{
+	wire	s_clk_200mhz,  s_clk_200mhz_unbuffered,
+		sysclk_locked, sysclk_feedback, sysclk_feedback_buffered,
+		s_clk_250mhz,  s_clk_250_unbuffered,
+		s_clk_125mhz,  s_clk_125_unbuffered,
+		s_clk_125d,    s_clk_125d_unbuffered,
+		s_clksync,     s_clksync_unbuffered,
+		s_clk_400mhz,  s_clk_400mhz_unbuffered,	// Pixclk * 10
+		s_clk_80mhz_unbuffered,	// 80MHz
+		netclk_locked, netclk_feedback, netclk_feedback_buffered;
+	wire	i_clk_buffered;
+	wire	clocks_locked;
+	wire	dly_ctrl_ready;
+	reg	[3:0]	sysclk_stable, syncd_stable;
+	reg	[4:0]	pll_reset_sreg;
+	reg		pll_reset;
+	// }}}
+@TOP.PORTLIST=
+@TOP.IODECL=
+@TOP.MAIN=
+		// PLL generated clocks
+		s_clk_125mhz
+@TOP.INSERT=
+	// Buffer the incoming clock
+	BUFG @$(PREFIX)clkbufi(.I(i_clk), .O(i_clk_buffered));
+
+	// pll_reset
+	initial	{ pll_reset, pll_reset_sreg } = -1;
+	always @(posedge i_clk_buffered)
+		{ pll_reset, pll_reset_sreg } <= { pll_reset_sreg, 1'b0 };
+
+	////////////////////////////////////////////////////////////////////////
+	//
+	// PLL #1: 100MHz, 200MHz, 400MHz, and 80MHz
+	// {{{
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
+
+	// But ... the delay controller requires a 200 MHz reference clock,
+	// the generic clock generator requires a 400MHz clock and a clock
+	// synchronized to it
+	PLLE2_BASE #(
+		// {{{
+		.CLKFBOUT_MULT(8),
+		.CLKFBOUT_PHASE(0.0),
+		.CLKIN1_PERIOD(10),
+		.CLKOUT0_DIVIDE(4),	// 200 MHz
+		.CLKOUT1_DIVIDE(2),	// 400 MHz
+		.CLKOUT2_DIVIDE(8),	// 100 MHz
+		.CLKOUT3_DIVIDE(10)	//  80 MHz
+		// }}}
+	) gen_sysclk(
+		// {{{
+		.CLKIN1(i_clk_buffered),
+		.CLKOUT0(s_clk_200mhz_unbuffered),
+		.CLKOUT1(s_clk_400mhz_unbuffered),
+		.CLKOUT2(s_clksync_unbuffered),
+		.CLKOUT3(s_clk_80mhz_unbuffered),
+		// .CLKOUT4(),
+		// .CLKOUT5(),
+		.PWRDWN(1'b0), .RST(pll_reset),
+		.CLKFBOUT(sysclk_feedback),
+		.CLKFBIN(sysclk_feedback_buffered),
+		.LOCKED(sysclk_locked)
+		// }}}
+	);
+
+	BUFG	sysbuf(     .I(s_clk_200mhz_unbuffered),.O(s_clk_200mhz));
+	BUFG	clksync_buf(.I(s_clksync_unbuffered),   .O(s_clksync));
+	BUFG	clk4x_buf(  .I(s_clk_400mhz_unbuffered),.O(s_clk_400mhz));
+	BUFG	sys_feedback(.I(sysclk_feedback),.O(sysclk_feedback_buffered));
+
+	// }}}
+	////////////////////////////////////////////////////////////////////////
+	//
+	// PLL #2: 125MHz, 250MHz
+	// {{{
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
+
+	// The ethernet MAC requires a 125MHz clock
+	//   We can't trust the RX 125MHz clock for this, since there's a
+	//   possibility the RX 125MHz clock might arrive at a different rate.
+	//
+	PLLE2_BASE #(
+		// {{{
+		.CLKFBOUT_MULT(10),
+		.CLKFBOUT_PHASE(0.0),
+		.CLKIN1_PERIOD(10),
+		.CLKOUT0_DIVIDE(8),	// 125 MHz
+		.CLKOUT0_PHASE(0),
+		.CLKOUT1_DIVIDE(4),	// 250 MHz
+		.CLKOUT1_PHASE(0)
+		// }}}
+	) gen_netclk(
+		// {{{
+		.CLKIN1(i_clk_buffered),
+		.CLKOUT0(s_clk_125_unbuffered),
+		.CLKOUT1(s_clk_250_unbuffered),
+		// .CLKOUT2(),
+		// .CLKOUT3(),
+		// .CLKOUT4(),
+		// .CLKOUT5(),
+		.PWRDWN(1'b0), .RST(pll_reset),
+		.CLKFBOUT(netclk_feedback),
+		.CLKFBIN(netclk_feedback_buffered),
+		.LOCKED(netclk_locked)
+		// }}}
+	);
+
+	BUFG	netbuf(.I(s_clk_125_unbuffered), .O(s_clk_125mhz));
+	BUFG	netbf5(.I(s_clk_250_unbuffered), .O(s_clk_250mhz));
+	BUFG	netfb(.I(netclk_feedback), .O(netclk_feedback_buffered));
+
+	assign	clocks_locked = (netclk_locked && sysclk_locked && dly_ctrl_ready);
+
+	// }}}
+	////////////////////////////////////////////////////////////////////////
+	//
+	// reg	[3:0]	sysclk_stable;
+	// {{{
+	initial	sysclk_stable = 0;
+	always @(posedge i_clk_buffered or negedge clocks_locked)
+	if (!clocks_locked)
+		sysclk_stable <= 0;
+	else
+		sysclk_stable <= { sysclk_stable[2:0], 1'b1 };
+
+	initial	syncd_stable = 0;
+	always @(posedge i_clk_buffered)
+	if (!sysclk_stable[3])
+		syncd_stable <= 0;
+	else
+		syncd_stable <= { syncd_stable[2:0], 1'b1 };
+
+	// }}}
+	////////////////////////////////////////////////////////////////////////
+	//
+	// IDELAYCTRL
+	IDELAYCTRL
+	u_delay_control (
+		.REFCLK(s_clk_200mhz),
+		.RST(!sysclk_locked),
+		.RDY(dly_ctrl_ready)
+	);
+
+@MAIN.PORTLIST=
+		// Extra clocks
+		i_clk_125mhz
+@MAIN.IODECL=
+	// Extra clocks
+	// Verilator lint_off UNUSED
+	input	wire		i_clk_125mhz;
+	// Verilator lint_on  UNUSED
+@MAIN.DEFNS=
+	wire	i_net_tx_clk;
+@MAIN.INSERT=
+	assign	i_net_tx_clk = i_clk_125mhz;
+@CLOCK.WIRE=i_clk_125mhz
+@CLOCK.NAME=clk_125mhz
+@CLOCK.FREQUENCY=125000000
+@CLOCK.TOP=
+@MAIN.IODECL=
+	input	wire		i_net_tx_clk;
+@XDC.INSERT=
+set_false_path -from [get_cells -hier -filter {NAME=~ pll_reset*}] -to [get_cells -hier -filter {NAME=~ net*/reset_pipe*}]
+set_false_path -from [get_cells -hier -filter {NAME=~ pll_reset*}] -to [get_cells -hier -filter {NAME=~ net*/sync_reset*}]

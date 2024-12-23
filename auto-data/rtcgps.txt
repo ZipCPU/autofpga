@@ -1,9 +1,9 @@
 ################################################################################
 ##
-## Filename: 	rtcgps.txt
-## {{{
-## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## Filename:	auto-data/rtcgps.txt
 ##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## {{{
 ## Purpose:	
 ##
 ## Creator:	Dan Gisselquist, Ph.D.
@@ -32,6 +32,7 @@
 ## {{{
 ##		http://www.gnu.org/licenses/gpl.html
 ##
+##
 ################################################################################
 ##
 ## }}}
@@ -39,7 +40,7 @@
 @DEVID=RTC
 @NADDR=4
 @SLAVE.TYPE=DOUBLE
-@SLAVE.BUS=wb
+@SLAVE.BUS=wb32
 @ACCESS=RTC_ACCESS
 @CLOCK.NAME=clk
 @CLKFREQHZ=@$(CLOCK.FREQUENCY)
@@ -51,26 +52,47 @@
 	// This clock step is designed to match @$(CLOCK.FREQUENCY) Hz
 	localparam	[31:0]	RTC_CLKSTEP = @$[32'h%08x](CLKSTEP);
 	wire	@$(PREFIX)_ppd;
-	reg	r_@$(PREFIX)_ack;
-`ifdef	GPSTRK_ACCESS
 	wire	@$(PREFIX)_pps;
-`endif
 @MAIN.INSERT=
 `ifdef	GPSTRK_ACCESS
-	rtcgps	#(RTC_CLKSTEP) the@$(PREFIX)(i_clk, i_reset,
-		@$(SLAVE.PORTLIST),
-		@$(PREFIX)_int, @$(PREFIX)_ppd,
-		gps_tracking, ck_pps, gps_step[47:16], rtc_pps);
+	rtcgps	#(
+		.DEFAULT_SPEED(RTC_CLKSTEP)
+	) u_@$(PREFIX)(
+		.i_clk(i_clk), .i_reset(i_reset),
+		@$(SLAVE.ANSIPORTLIST),
+		.o_interrupt(@$(PREFIX)_int), .o_ppd(@$(PREFIX)_ppd),
+		.i_gps_valid(gps_tracking), .i_gps_pps(ck_pps),
+			.i_gps_ckspeed(gps_step[47:16]), .o_rtc_pps(rtc_pps)
+	);
 `else
-	rtclight #(@$[32'h%x](CLKSTEP)) the@$(PREFIX)(i_clk, i_reset,
-		wb_cyc, (wb_stb)&&(@$(PREFIX)_sel), wb_we, { 1'b0, wb_addr[1:0] },
-			wb_data, wb_sel,
-		@$(PREFIX)_stall, @$(PREFIX)_ack, @$(PREFIX)_data,
-		@$(PREFIX)_int, @$(PREFIX)_ppd);
+	rtclight #(
+		.DEFAULT_SPEED(@$[32'h%x](CLKSTEP))
+	) u_@$(PREFIX)(
+		.i_clk(i_clk), .i_reset(i_reset),
+		// Can't use the ANSIPORTLIST tag, because the address widths
+		// don't match
+		.i_wb_cyc(@$(SLAVE.PREFIX)_cyc),
+		.i_wb_stb(@$(SLAVE.PREFIX)_stb),
+		.i_wb_we(@$(SLAVE.PREFIX)_we),
+		.i_wb_addr({ 1'b0, @$(SLAVE.PREFIX)_addr[1:0] }),
+		.i_wb_data(@$(SLAVE.PREFIX)_data),
+		.i_wb_sel(@$(SLAVE.PREFIX)_sel),
+		.o_wb_stall(@$(SLAVE.PREFIX)_stall),
+		.o_wb_ack(@$(SLAVE.PREFIX)_ack),
+		.o_wb_data(@$(SLAVE.PREFIX)_idata),
+		.o_interrupt(@$(PREFIX)_int),
+		.o_pps(rtc_pps),
+		.o_ppd(@$(PREFIX)_ppd)
+	);
+
+	// Verilator lint_off UNUSED
+	wire	unused_@$(PREFIX);
+	assign	unused_@$(PREFIX) = &{ 1'b0, i_gps_pps };
+	// Verilator lint_on  UNUSED
 `endif
 @MAIN.ALT=
 `ifdef	GPSTRK_ACCESS
-	assign	@$(PREFIX)_pps = 1'b0;
+	assign	@$(PREFIX)_pps = ck_pps;
 `endif
 	assign	@$(PREFIX)_ppd = 1'b0;
 @REGS.NOTE= // RTC clock registers
@@ -97,7 +119,7 @@ typedef	struct	RTCLIGHT_S	{
 @PREFIX=subseconds
 @DEVID=SUBSECONDS
 @NADDR=1
-@SLAVE.BUS=wb
+@SLAVE.BUS=wb32
 @SLAVE.TYPE=SINGLE
 @MAIN.DEFNS=
 `ifndef	GPSTRK_ACCESS
@@ -109,10 +131,10 @@ typedef	struct	RTCLIGHT_S	{
 `else
 	always @(posedge i_clk)
 	if (@$(SLAVE.PREFIX)_stb && @$(SLAVE.PREFIX)_we)
-		r_@$(PREFIX)_data <= wb_data;
+		r_@$(PREFIX)_data <= @$(SLAVE.PREFIX)_data;
 	else
 		r_@$(PREFIX)_data <= r_@$(PREFIX)_data
-			+ { 16'h0, RTLCLKSTEP[31:16] };
+			+ { 16'h0, RTC_CLKSTEP[31:16] };
 
 	assign	@$(SLAVE.PREFIX)_idata = r_@$(PREFIX)_data;
 `endif
