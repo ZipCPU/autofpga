@@ -430,25 +430,19 @@ void	WBBUS::integrity_check(void) {
 void	WBBUS::writeout_defn_v(FILE *fp, const char* pname,
 		const char *pfx,
 		const int aw, const int dw,
-		const char *errwire, const char *btyp) {
+		const char *btyp) {
 	// {{{
 	STRINGP	n = name();
 
 	fprintf(fp, "\t// Wishbone definitions for bus %s%s, component %s\n",
-		n->c_str(), btyp, pname);
+		n->c_str(), (btyp) ? btyp : "", pname);
 	fprintf(fp, "\t// Verilator lint_off UNUSED\n");
 	fprintf(fp, "\twire\t\t%s_cyc, %s_stb, %s_we;\n",
 		pfx, pfx, pfx);
 	fprintf(fp, "\twire\t[%d:0]\t%s_addr;\n", address_width()-1, pfx);
 	fprintf(fp, "\twire\t[%d:0]\t%s_data;\n", dw-1, pfx);
 	fprintf(fp, "\twire\t[%d:0]\t%s_sel;\n", dw/8-1, pfx);
-	fprintf(fp, "\twire\t\t%s_stall, %s_ack, %s_err", pfx, pfx, pfx);
-	if ((errwire)&&(errwire[0] != '\0')
-			&&(STRING(STRING(pfx)+"_err").compare(errwire)!=0))
-		fprintf(fp, ", %s;\n"
-			"\tassign\t\t%s_err = %s; // P\n", errwire, pfx, errwire);
-	else
-		fprintf(fp, ";\n");
+	fprintf(fp, "\twire\t\t%s_stall, %s_ack, %s_err;\n", pfx, pfx, pfx);
 	fprintf(fp, "\twire\t[%d:0]\t%s_idata;\n", dw-1, pfx);
 	fprintf(fp, "\t// Verilator lint_on UNUSED\n");
 }
@@ -462,12 +456,10 @@ void	WBBUS::writeout_bus_slave_defns_v(FILE *fp) {
 	if (m_slist) {
 		for(PLIST::iterator pp=m_slist->begin();
 				pp != m_slist->end(); pp++) {
-			STRINGP	errwire = getstring((*pp)->p_phash, KYERROR_WIRE);
 			STRINGP	prefix = (*pp)->bus_prefix();
 			writeout_defn_v(fp, (*pp)->p_name->c_str(),
 				prefix->c_str(),
 				0, m_info->data_width(),
-				(errwire)?errwire->c_str(): NULL,
 				"(SIO)");
 		}
 	}
@@ -475,24 +467,20 @@ void	WBBUS::writeout_bus_slave_defns_v(FILE *fp) {
 	if (m_dlist) {
 		for(PLIST::iterator pp=m_dlist->begin();
 				pp != m_dlist->end(); pp++) {
-			STRINGP	errwire = getstring((*pp)->p_phash, KYERROR_WIRE);
 			STRINGP	prefix = (*pp)->bus_prefix();
 			writeout_defn_v(fp, (*pp)->p_name->c_str(),
 				prefix->c_str(),
 				(*pp)->p_awid, m_info->data_width(),
-				(errwire)?errwire->c_str(): NULL,
 				"(DIO)");
 		}
 	}
 
 	if (p) {
 		for(PLIST::iterator pp=p->begin(); pp != p->end(); pp++) {
-			STRINGP	errwire = getstring((*pp)->p_phash, KYERROR_WIRE);
 			STRINGP	prefix = (*pp)->bus_prefix();
 			writeout_defn_v(fp, (*pp)->p_name->c_str(),
 				prefix->c_str(),
-				(*pp)->p_awid, m_info->data_width(),
-				(errwire) ? errwire->c_str() : NULL);
+				(*pp)->p_awid, m_info->data_width());
 		}
 	} else {
 		gbl_msg.error("%s has no slaves\n", n->c_str());
@@ -507,8 +495,7 @@ void	WBBUS::writeout_bus_master_defns_v(FILE *fp) {
 		for(MLIST::iterator pp=m->begin(); pp != m->end(); pp++) {
 			writeout_defn_v(fp, (*pp)->name()->c_str(),
 				(*pp)->bus_prefix()->c_str(),
-				address_width(), m_info->data_width(),
-				NULL);
+				address_width(), m_info->data_width());
 		}
 	} else {
 		gbl_msg.warning("Bus %s has no masters\n", name()->c_str());
@@ -858,9 +845,18 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 				fprintf(fp, "\tassign\t%s_err = %s; // X\n",
 					(*pp)->bus_prefix()->c_str(),
 					strp->c_str());
-		} else
+		} else {
+			STRINGP	access;
+
+			access = getstring((*m_info->m_plist)[0]->p_phash,
+						KYACCESS);
+			if (access)
+				fprintf(fp, "`ifdef\t%s\n", access->c_str());
 			fprintf(fp, "\tassign\t%s_err = 1\'b0;\n",
 				(*pp)->bus_prefix()->c_str());
+			if (access)
+				fprintf(fp, "`endif\t// %s\n", access->c_str());
+		}
 		fprintf(fp, "\tassign\t%s_err = %s_err; // Y\n",
 			(*mp)->bus_prefix()->c_str(), (*pp)->bus_prefix()->c_str());
 		fprintf(fp,
@@ -1228,8 +1224,16 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 				fprintf(fp, "\tassign\t%s_err = %s; // Z\n",
 					pn, err->c_str());
 			}
-		} else
+		} else {
+			STRINGP	access;
+
+			access = getstring(p->p_phash, KYACCESS);
+			if (access)
+				fprintf(fp, "`ifdef\t%s\n", access->c_str());
 			fprintf(fp, "\tassign\t%s_err= 1\'b0;\n", pn);
+			if (access)
+				fprintf(fp, "`endif\t// %s\n", access->c_str());
+		}
 	}
 
 	//
@@ -1258,7 +1262,7 @@ void	WBBUS::writeout_bus_logic_v(FILE *fp) {
 	// OPT_STARVATION_TIMEOUT?
 
 	fprintf(fp,
-	")\n\t%s_xbar(\n"
+	"\n\t) %s_xbar(\n"
 	"\t\t.i_clk(%s), .i_reset(%s),\n",
 		n->c_str(), c->m_wire->c_str(), rst->c_str());
 	xbarcon_master(fp, "\t\t", ".i_mcyc",  "cyc");

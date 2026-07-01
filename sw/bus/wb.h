@@ -68,7 +68,7 @@ public:
 				const int dalines);
 	virtual	void	writeout_defn_v(FILE *fp, const char *pname,
 				const char *pfx, const int aw, const int dw,
-				const char *ewire, const char *btyp = "");
+				const char *btyp = "");
 	virtual	void	writeout_bus_slave_defns_v(FILE *fp);
 	virtual	void	writeout_bus_master_defns_v(FILE *fp);
 

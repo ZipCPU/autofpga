@@ -1215,8 +1215,12 @@ module	main(i_clk, i_reset,
 
 	// info: @ERROR.WIRE for crossflash matches the buses error name, wbwide_crossflash_err
 	// info: @ERROR.WIRE for crossbus matches the buses error name, wbwide_crossbus_err
+`ifdef	BKRAM_ACCESS
 	assign	wbwide_bkram_err= 1'b0;
+`endif	// BKRAM_ACCESS
+`ifdef	SDRAM_ACCESS
 	assign	wbwide_ddr3_err= 1'b0;
+`endif	// SDRAM_ACCESS
 	//
 	// Connect the wbwide bus components together using the wbxbar()
 	//
@@ -1239,8 +1243,8 @@ module	main(i_clk, i_reset,
 			{ 27'h7800000 }, //   crossbus
 			{ 27'h7800000 }  // crossflash
 		}),
-		.OPT_DBLBUFFER(1'b1))
-	wbwide_xbar(
+		.OPT_DBLBUFFER(1'b1)
+	) wbwide_xbar(
 		.i_clk(i_clk), .i_reset(i_reset),
 		.i_mcyc({
 			wbwide_zip_cyc,
@@ -1418,8 +1422,12 @@ module	main(i_clk, i_reset,
 	// No class DOUBLE peripherals on the "wbflash" bus
 	//
 
+`ifdef	SDIO_ACCESS
 	assign	wbflash_sdio_err= 1'b0;
+`endif	// SDIO_ACCESS
+`ifdef	FLASH_ACCESS
 	assign	wbflash_flash_err= 1'b0;
+`endif	// FLASH_ACCESS
 	//
 	// Connect the wbflash bus components together using the wbxbar()
 	//
@@ -1438,8 +1446,8 @@ module	main(i_clk, i_reset,
 			{ 23'h400000 }, // flash
 			{ 23'h600000 }  //  sdio
 		}),
-		.OPT_DBLBUFFER(1'b1))
-	wbflash_xbar(
+		.OPT_DBLBUFFER(1'b1)
+	) wbflash_xbar(
 		.i_clk(i_clk), .i_reset(i_reset),
 		.i_mcyc({
 			wbflash_crossflash_cyc
@@ -1734,17 +1742,35 @@ module	main(i_clk, i_reset,
 	assign	wb32_edidslv_addr= wb32_dio_addr;
 	assign	wb32_edidslv_data= wb32_dio_data;
 	assign	wb32_edidslv_sel = wb32_dio_sel;
+`ifdef	FLASHCFG_ACCESS
 	assign	wb32_flashcfg_err= 1'b0;
+`endif	// FLASHCFG_ACCESS
+`ifdef	EDIDSLVSCOPE_SCOPC
 	assign	wb32_edidslvscope_err= 1'b0;
+`endif	// EDIDSLVSCOPE_SCOPC
+`ifdef	MICROPHONE_ACCESS
 	assign	wb32_pmic_err= 1'b0;
+`endif	// MICROPHONE_ACCESS
+`ifdef	GPSUART_ACCESS
 	assign	wb32_gpsu_err= 1'b0;
+`endif	// GPSUART_ACCESS
+`ifdef	CFG_ACCESS
 	assign	wb32_icape_err= 1'b0;
+`endif	// CFG_ACCESS
+`ifdef	MEGANET_ACCESS
 	assign	wb32_net_err= 1'b0;
+`endif	// MEGANET_ACCESS
+`ifdef	DDR3_PHY_ACCESS
 	assign	wb32_ddr3_phy_err= 1'b0;
+`endif	// DDR3_PHY_ACCESS
 	assign	wb32_pxclk_err= 1'b0;
 	assign	wb32_dio_err= 1'b0;
+`ifdef	VIDPIPE_ACCESS
 	assign	wb32_hdmi_err= 1'b0;
+`endif	// VIDPIPE_ACCESS
+`ifdef	NETCTRL_ACCESS
 	assign	wb32_mdio_err= 1'b0;
+`endif	// NETCTRL_ACCESS
 	//
 	// Connect the wb32 bus components together using the wbxbar()
 	//
@@ -1781,8 +1807,8 @@ module	main(i_clk, i_reset,
 			{ 12'hf80 }, // edidslvscope
 			{ 12'hf80 }  //     flashcfg
 		}),
-		.OPT_DBLBUFFER(1'b1))
-	wb32_xbar(
+		.OPT_DBLBUFFER(1'b1)
+	) wb32_xbar(
 		.i_clk(i_clk), .i_reset(i_reset),
 		.i_mcyc({
 			wb32_crossbus_cyc
@@ -1961,7 +1987,9 @@ module	main(i_clk, i_reset,
 	//
 
 	// info: @ERROR.WIRE for wbu_arbiter matches the buses error name, wbu_wbu_arbiter_err
+`ifdef	INCLUDE_ZIPCPU
 	assign	wbu_zip_err= 1'b0;
+`endif	// INCLUDE_ZIPCPU
 	//
 	// Connect the wbu bus components together using the wbxbar()
 	//
@@ -1980,8 +2008,8 @@ module	main(i_clk, i_reset,
 			{ 30'h38000000 }, //         zip
 			{ 30'h20000000 }  // wbu_arbiter
 		}),
-		.OPT_DBLBUFFER(1'b1))
-	wbu_xbar(
+		.OPT_DBLBUFFER(1'b1)
+	) wbu_xbar(
 		.i_clk(i_clk), .i_reset(i_reset),
 		.i_mcyc({
 			wbu_cyc

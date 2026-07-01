@@ -90,6 +90,23 @@ void	gather_peripherals(APLIST *alist, BUSINFO *bus, PLIST *plist, unsigned base
 			gather_peripherals(alist, subbus, subbus->m_plist, addr+base);
 		}
 	}
+
+	// It's possible for things to move slightly.  Let's make sure their
+	//   base register address copy continues to match.
+	for(unsigned k=0; k<plist->size(); k++) {
+		PERIPH		*p = (*plist)[k];
+		MAPDHASH	*ph = p->p_phash;
+		int	regbase;
+
+		if (!getvalue(*ph, KYREGBASE, regbase))
+			continue;
+		if (p->p_regbase != regbase) {
+			// Registers within subbusses will move
+			// gbl_msg.warning("Peripheral \'%s\' just moved from 0x%08x to 0x%08x\n",
+			//	p->p_name->c_str(), p->p_regbase, regbase);
+			p->p_regbase = regbase;
+		}
+	}
 }
 
 APLIST	*gather_peripherals(BUSINFO *bus) {
