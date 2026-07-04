@@ -100,11 +100,11 @@ void	gather_peripherals(APLIST *alist, BUSINFO *bus, PLIST *plist, unsigned base
 
 		if (!getvalue(*ph, KYREGBASE, regbase))
 			continue;
-		if (p->p_regbase != regbase) {
+		if (p->p_regbase != (regbase & 0x0ffffffff)) {
 			// Registers within subbusses will move
 			// gbl_msg.warning("Peripheral \'%s\' just moved from 0x%08x to 0x%08x\n",
 			//	p->p_name->c_str(), p->p_regbase, regbase);
-			p->p_regbase = regbase;
+			p->p_regbase = (regbase & 0x0ffffffff);
 		}
 	}
 }
