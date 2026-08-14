@@ -526,8 +526,9 @@ void	PLIST::assign_addresses(unsigned dwidth, unsigned nullsz,
 			//
 			total_address_width = min_addr_size_octets(size(),
 					mina, nullsz, daddr_abits);
+			if (total_address_width < mina)
+				break;
 			relevant_address_bits = total_address_width - mina;
-
 			if (total_address_width > min_asz) {
 				// Never increase our # of address lines
 			} else if (relevant_address_bits < min_relevant) {

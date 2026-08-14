@@ -320,15 +320,15 @@ void	mapdump_aux(FILE *fp, MAPDHASH &fm, int offset) {
 	for(kvpair = fm.begin(); kvpair != fm.end(); kvpair++) {
 		if (offset == 0)
 			fprintf(fp, "\n");
-		fprintf(fp, "%*s%s: ", offset, "", (*kvpair).first.c_str());
+		fprintf(fp, "%*s%s:", offset, "", (*kvpair).first.c_str());
 		if ((*kvpair).second.m_typ == MAPT_MAP) {
 			fprintf(fp, "\n");
 			mapdump_aux(fp, *(*kvpair).second.u.m_m, offset+1);
 		} else if ((*kvpair).second.m_typ == MAPT_INT) {
-			fprintf(fp, "%d\n", (*kvpair).second.u.m_v);
+			fprintf(fp, " %d\n", (*kvpair).second.u.m_v);
 		} else if ((*kvpair).second.m_typ == MAPT_AST) {
 			AST	*ast = kvpair->second.u.m_a;
-			fprintf(fp, "<AST>");
+			fprintf(fp, " <AST>");
 			if (ast->isdefined()) {
 				fprintf(fp, "\tDEFINED and = %08lx\n", ast->eval());
 			} else
@@ -338,11 +338,11 @@ void	mapdump_aux(FILE *fp, MAPDHASH &fm, int offset) {
 			STRINGP	s = (*kvpair).second.u.m_s;
 			size_t	pos;
 			if ((pos=s->find("\n")) == STRING::npos) {
-				fprintf(fp, "%s\n", s->c_str());
+				fprintf(fp, " %s\n", s->c_str());
 			} else if (pos == s->length()-1) {
-				fprintf(fp, "%s", s->c_str());
+				fprintf(fp, " %s", s->c_str());
 			} else	{
-				fprintf(fp, "<Multi-line-String>\n");
+				fprintf(fp, " <Multi-line-String>\n");
 				fprintf(fp, "%s\n----------------\n", s->c_str());
 			}
 		}
