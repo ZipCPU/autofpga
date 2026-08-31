@@ -19,7 +19,7 @@ the generic [UART](https://github.com/ZipCPU/wbuart),
 the [QSPI flash controller](https://github.com/ZipCPU/qspiflash),
 the [SD-card controller](https://github.com/ZipCPU/sdspi),
 the [block RAM controller](https://github.com/ZipCPU/openarty/blob/master/rtl/memdev.v),
-the [RMII Ethernet Controller](https://github.com/ZipCPU/openarty/blob/master/rtl/enetpackets.v),
+the [RMII Ethernet Controller](https://github.com/ZipCPU/openarty/blob/master/rtl/enet/enetpackets.v),
 the [Real-Time Clock](https://github.com/ZipCPU/rtcclock), the [Real-Time
 Date](https://github.com/ZipCPU/rtcclock/blob/master/rtl/rtcdate.v), the
 [Organic LED controller](https://github.com/ZipCPU/openarty/blob/master/rtl/wboled.v),
